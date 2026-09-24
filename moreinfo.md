@@ -830,6 +830,36 @@ Power changes and wakes are recorded in
 `~/.cache/immich_kiosk_pi/screen_control.log`, which is the quickest way to tell
 whether a touch was seen at all.
 
+
+#### Touching it awake
+
+"Off" is the backlight at zero, not the panel powered down — cut the DSI output
+and the touch controller loses power with it, and nothing but Alexa can bring
+the screen back. So the panel keeps reporting touches while it is dark, which
+used to mean the touch that woke it also landed on whatever was underneath: the
+TV remote's power button, a headline, a link.
+
+Now `screen_control.py` takes the touchscreen for itself while the screen is
+off (Linux's `EVIOCGRAB`), so touches reach it and nothing else. The first one
+wakes the screen, and the device is held until that finger lifts, so the whole
+touch is swallowed. The next touch is an ordinary one. It is done below the
+compositor, so it covers every window — the kiosk, the TV remote app and any
+browser open on top.
+
+Two things it is careful about:
+
+- **It never grabs mid-touch.** A grab taken while a finger is down would hide
+  the lift from the compositor, leaving the app holding a touch that never
+  ends. It waits for the panel to be still first.
+- **It does not hold on for ever** if a lift is never reported: three seconds
+  with no input at all and the device is given back.
+
+The logic is tested on its own, without a panel:
+
+```bash
+python3 -m unittest deploy/test_screen_control.py
+```
+
 ### TV Remote
 
 Two separate things share this name.
