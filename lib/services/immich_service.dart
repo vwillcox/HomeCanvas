@@ -175,6 +175,57 @@ class ImmichService with ImmichUrls implements MediaSource {
         .toList();
   }
 
+  /// Today's "on this day" photos: Immich's own memories, newest year first.
+  ///
+  /// Each comes with the year it is a memory of, from the memory itself
+  /// rather than the photo's date, which can be wrong on a scanned print.
+  Future<List<({Asset asset, int year})>> getMemories(DateTime day) async {
+    // The date alone: Immich 3 answers a full timestamp with a 400.
+    final r = await _dio().get('/api/memories', queryParameters: {
+      'for': '${day.year.toString().padLeft(4, '0')}-'
+          '${day.month.toString().padLeft(2, '0')}-'
+          '${day.day.toString().padLeft(2, '0')}',
+    });
+    final data = r.data;
+    if (data is! List) return const [];
+    final out = <({Asset asset, int year})>[];
+    for (final m in data.whereType<Map<String, dynamic>>()) {
+      if (m['type'] != 'on_this_day') continue;
+      final year = (m['data'] as Map?)?['year'];
+      for (final a in (m['assets'] as List? ?? const [])
+          .whereType<Map<String, dynamic>>()) {
+        final asset = Asset.fromJson(a);
+        if (!asset.isImage) continue;
+        out.add((
+          asset: asset,
+          year: year is num ? year.toInt() : (asset.taken?.year ?? day.year),
+        ));
+      }
+    }
+    out.sort((a, b) => b.year.compareTo(a.year));
+    return out;
+  }
+
+  final Map<String, String?> _places = {};
+
+  /// Where a photo was taken — "Whitstable" — from its
+  /// location data, or null when it has none. Remembered, as it never changes.
+  Future<String?> placeOf(String assetId) async {
+    if (_places.containsKey(assetId)) return _places[assetId];
+    try {
+      final r = await _dio().get('/api/assets/$assetId');
+      final exif = (r.data as Map?)?['exifInfo'] as Map?;
+      final city = '${exif?['city'] ?? ''}'.trim();
+      final country = '${exif?['country'] ?? ''}'.trim();
+      // The town alone reads best on a caption; the country only when there
+      // is no town to give.
+      final place = city.isNotEmpty ? city : (country.isEmpty ? null : country);
+      return _places[assetId] = place;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Disk-cached album contents, for an instant paint before the refresh lands.
   Future<List<Asset>?> getCachedAlbumAssets(
     String albumId, {

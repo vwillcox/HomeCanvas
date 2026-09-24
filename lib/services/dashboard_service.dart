@@ -15,6 +15,7 @@ import '../dashboard/tile_renderer.dart';
 import '../config/app_config.dart' show SenderToken;
 import '../dashboard/widget_registry.dart';
 import 'config_service.dart';
+import 'notes_service.dart';
 
 /// Hosts the dashboard's web editor and the small API behind it.
 ///
@@ -54,6 +55,9 @@ class DashboardService extends ChangeNotifier {
   /// once it is in the widget tree; null before then, or in tests, where the
   /// editor falls back to its text preview.
   Future<List<int>?> Function(TileRenderRequest)? renderTile;
+
+  /// The household notes board, for its page and API. Null in tests.
+  NotesService? notes;
 
   DashboardSettings get settings => _config.config.dashboard;
 
@@ -144,7 +148,7 @@ class DashboardService extends ChangeNotifier {
 
       if (request.method == 'OPTIONS') {
         request.response.headers
-          ..set('Access-Control-Allow-Methods', 'GET, PUT, POST, OPTIONS')
+          ..set('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE, OPTIONS')
           ..set('Access-Control-Allow-Headers', 'Content-Type');
         request.response.statusCode = HttpStatus.noContent;
         await request.response.close();
@@ -182,6 +186,28 @@ class DashboardService extends ChangeNotifier {
       }
       if (path == '/api/dashboard' && request.method == 'PUT') {
         return await _save(request);
+      }
+
+      // The notes board: a page for posting from any phone in the house,
+      // and its API. Local network only, like the senders page — a note
+      // goes straight onto the wall.
+      if (path == '/notes' || path == '/notes/') {
+        if (!_requireLocal(request)) return;
+        return await _serveAsset(
+            request, 'assets/dashboard/notes.html', ContentType.html);
+      }
+      if (path == '/api/notes') {
+        if (!_requireLocal(request)) return;
+        // Only from the notes page itself. The server answers every origin
+        // for the editor's sake, which would otherwise let any web page open
+        // on a phone in the house post onto the wall.
+        if (!sameOrigin(request.headers.value('origin'),
+            request.headers.value(HttpHeaders.hostHeader))) {
+          request.response.statusCode = HttpStatus.forbidden;
+          await request.response.close();
+          return;
+        }
+        return await _notesApi(request);
       }
 
       // Managing who may share to the panel. Held to the local network
@@ -373,6 +399,51 @@ class DashboardService extends ChangeNotifier {
       ..headers.contentType = ContentType.json
       ..write(jsonEncode(body));
     await request.response.close();
+  }
+
+  /// Whether a request's Origin, if it sent one, is this server. No Origin
+  /// means it did not come from a web page at all — curl, or a same-origin
+  /// GET — and is let through.
+  @visibleForTesting
+  static bool sameOrigin(String? origin, String? host) {
+    if (origin == null || origin.isEmpty) return true;
+    final o = Uri.tryParse(origin);
+    if (o == null || host == null) return false;
+    return o.hasAuthority &&
+        '${o.host}${o.hasPort ? ':${o.port}' : ''}' == host;
+  }
+
+  Future<void> _notesApi(HttpRequest request) async {
+    final board = notes;
+    if (board == null) {
+      request.response.statusCode = HttpStatus.serviceUnavailable;
+      await request.response.close();
+      return;
+    }
+    switch (request.method) {
+      case 'POST':
+        final body = await utf8.decoder.bind(request).join();
+        final data = body.isEmpty ? null : jsonDecode(body);
+        final text = data is Map ? '${data['text'] ?? ''}' : '';
+        final from = data is Map ? '${data['from'] ?? ''}' : '';
+        if (board.add(text, from: from.length > 40 ? from.substring(0, 40) : from) ==
+            null) {
+          request.response.statusCode = HttpStatus.badRequest;
+          await request.response.close();
+          return;
+        }
+      case 'DELETE':
+        board.remove(request.uri.queryParameters['id'] ?? '');
+      case 'GET':
+        break;
+      default:
+        request.response.statusCode = HttpStatus.methodNotAllowed;
+        await request.response.close();
+        return;
+    }
+    await _json(request, {
+      'notes': [for (final n in board.notes) n.toJson()],
+    });
   }
 
   /// A picture of one tile, drawn by the real widget.

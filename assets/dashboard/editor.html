@@ -1287,10 +1287,12 @@ function listField(w, o) {
         input.type = f.kind === "number" ? "number" : "text";
         input.value = row[f.key] != null ? String(row[f.key]) : "";
       }
+      // The canvas only: redrawing the form as well replaced this very box
+      // on every keystroke, and typing lost its place after each letter.
       input.oninput = () => {
         row[f.key] = f.kind === "number" ? Number(input.value) : input.value;
         markDirty();
-        render();
+        render(true);
       };
       card.appendChild(input);
     }
@@ -1359,7 +1361,7 @@ function field(w, o) {
       input.type = "color";
       input.style.height = "42px";
       input.value = normaliseColour(value != null ? String(value) : "#7dd3fc");
-      input.oninput = () => { w.options[o.key] = input.value; markDirty(); render(); };
+      input.oninput = () => { w.options[o.key] = input.value; markDirty(); render(true); };
     } else if (o.kind === "choice") {
       input = document.createElement("select");
       // A list the kiosk supplies — which albums exist, say — rather than one

@@ -9,6 +9,10 @@ import 'package:provider/provider.dart';
 import 'models/immich_models.dart';
 import 'dashboard/live_preview.dart';
 import 'dashboard/tile_renderer.dart';
+import 'services/air_quality_service.dart';
+import 'services/bins_service.dart';
+import 'services/notes_service.dart';
+import 'services/timer_service.dart';
 import 'dashboard/widgets/widgets.dart';
 import 'services/audio_levels_service.dart';
 import 'services/kiosk_control_service.dart';
@@ -128,6 +132,28 @@ void main() async {
   // on, which the screen service checks for itself.
   shareInbox.onItemArrived = screenIdle.wakeForNotification;
 
+  // The household notes board. Text shared from the phone app goes on it as
+  // well as popping up; the editor server has a page for posting to it.
+  final notes = NotesService();
+  unawaited(notes.load());
+  shareInbox.onShared = (item) {
+    if (item.type == ShareType.text && (item.content ?? '').trim().isNotEmpty) {
+      notes.add(item.content!, from: item.sender);
+    }
+  };
+  dashboard.notes = notes;
+
+  // Kitchen timers, owned up here so they keep running — and still speak —
+  // after the panel has left the dashboard.
+  final timers = TimerService(
+    speak: speech.speak,
+    onFinished: screenIdle.wakeForNotification,
+  );
+
+  // Bin-day reminders, spoken the evening before whether or not the
+  // dashboard is showing.
+  final bins = BinsService(config, speak: speech.speak)..start();
+
   runApp(
     MultiProvider(
       providers: [
@@ -153,6 +179,11 @@ void main() async {
         // Idle until the visualiser asks it for something: creating it costs
         // nothing, and it starts no capture until a widget attaches.
         ChangeNotifierProvider(create: (_) => AudioLevelsService()),
+        ChangeNotifierProvider.value(value: notes),
+        ChangeNotifierProvider.value(value: timers),
+        ChangeNotifierProvider.value(value: bins),
+        // Made when an Air & pollen widget first asks, and not before.
+        ChangeNotifierProvider(create: (_) => AirQualityService(config)),
       ],
       child: const ImmichKioskPiApp(),
     ),

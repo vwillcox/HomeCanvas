@@ -68,6 +68,9 @@ class ShareInboxService extends ChangeNotifier {
   /// business knowing how the panel is switched on.
   Future<void> Function()? onItemArrived;
 
+  /// Told about each thing shared, so text can also go on the Notes board.
+  void Function(SharedItem item)? onShared;
+
   ShareInboxSettings get _settings => _configService.config.shareInbox;
 
   /// The panel's end-to-end encryption identity. Rotated on a schedule; see
@@ -364,6 +367,7 @@ class ShareInboxService extends ChangeNotifier {
   void _enqueue(SharedItem item) {
     _queue.add(item);
     notifyListeners();
+    onShared?.call(item);
     if (!_settings.dndMuted) {
       unawaited(_playChime());
       unawaited(_speak(item));

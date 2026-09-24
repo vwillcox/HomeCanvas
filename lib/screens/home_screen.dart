@@ -535,6 +535,16 @@ class _MiniPlayer extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 20),
+                  // Liked or not at a glance, and one tap to change it —
+                  // the same as the heart in the full player. Only where
+                  // the source can say: Bluetooth audio has no library.
+                  if (source.canLike) ...[
+                    _LikeButton(
+                      liked: source.isLiked,
+                      onPressed: source.toggleLike,
+                    ),
+                    const SizedBox(width: 14),
+                  ],
                   _TransportButton(
                     icon: Icons.skip_previous_rounded,
                     label: 'Previous',
@@ -557,6 +567,53 @@ class _MiniPlayer extends StatelessWidget {
                   ),
                   const SizedBox(width: 6),
                 ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The heart on the mini player. Pink and filled when the track is in your
+/// Liked Songs; a pop when that changes, so a tap visibly took.
+class _LikeButton extends StatelessWidget {
+  const _LikeButton({required this.liked, required this.onPressed});
+
+  final bool liked;
+  final VoidCallback onPressed;
+
+  static const _pink = Color(0xFFFF6B81);
+
+  @override
+  Widget build(BuildContext context) {
+    const size = 68.0;
+    return Semantics(
+      button: true,
+      toggled: liked,
+      label: liked ? 'Remove from Liked Songs' : 'Add to Liked Songs',
+      child: Material(
+        color: liked
+            ? _pink.withValues(alpha: 0.16)
+            : Colors.white.withValues(alpha: 0.08),
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onPressed,
+          child: SizedBox(
+            width: size,
+            height: size,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 260),
+              switchInCurve: Curves.easeOutBack,
+              transitionBuilder: (child, animation) =>
+                  ScaleTransition(scale: animation, child: child),
+              child: Icon(
+                liked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                key: ValueKey(liked),
+                size: size * 0.5,
+                color: liked ? _pink : Colors.white,
               ),
             ),
           ),
