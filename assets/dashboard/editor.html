@@ -156,7 +156,12 @@
     .tile .handle::before { width: 7px; height: 7px; border-width: 2px; }
   }
 
-  .stage { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  /* As wide as its column allows, but never so tall the panel runs off the
+     bottom of the window — see fitStage(). Centred in whatever is left. */
+  .stage {
+    display: flex; flex-direction: column; gap: 14px; min-width: 0;
+    width: 100%; justify-self: center;
+  }
   .toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .segmented {
     display: inline-flex; align-items: center; gap: 4px; padding: 4px;
@@ -936,7 +941,11 @@ function render(canvasOnly) {
   // rather than part of building them.
   fitAllPreviews();
 
-  document.getElementById("clashWarning").hidden = !anyClash;
+  const warning = document.getElementById("clashWarning");
+  if (warning.hidden !== !anyClash) {
+    warning.hidden = !anyClash;
+    fitStage();
+  }
   if (!canvasOnly) renderSettings();
 }
 
@@ -1628,6 +1637,7 @@ async function load(quiet) {
       ...state.dashboard.widgets.map(w => (w.page || 0) + 1),
     );
     installFonts();
+    fitStage();
     installPanels();
     renderPalette();
     renderThemes();
@@ -1671,6 +1681,38 @@ setInterval(refreshLive, 20000);
      does change whether it fits.
    - The dashboard fonts arrive after the page does. Anything measured before
      they land was measured in the fallback face, which is a different width. */
+/* Size the panel preview to the window: the largest 16:10 canvas that fits
+   both the column's width and the height left under the top bar, so the whole
+   panel is in view without scrolling, however the window is shaped. Tiles are
+   sized in container units, so everything in them scales with it. */
+function fitStage() {
+  const stage = document.querySelector(".stage");
+  const wrap = document.getElementById("canvasWrap");
+  const header = document.querySelector("header.appbar");
+  const toolbar = document.querySelector(".stage .toolbar");
+  const warning = document.getElementById("clashWarning");
+  // Only a pinned header takes height from the view; an unpinned one scrolls
+  // away, and the canvas can have the whole window below it.
+  const pinned = getComputedStyle(header).position === "sticky";
+  const main = getComputedStyle(document.querySelector("main"));
+  const wrapStyle = getComputedStyle(wrap);
+  const frame = parseFloat(wrapStyle.paddingTop) + parseFloat(wrapStyle.paddingBottom) +
+    parseFloat(wrapStyle.borderTopWidth) + parseFloat(wrapStyle.borderBottomWidth);
+  const across = parseFloat(wrapStyle.paddingLeft) + parseFloat(wrapStyle.paddingRight) +
+    parseFloat(wrapStyle.borderLeftWidth) + parseFloat(wrapStyle.borderRightWidth);
+  const gap = parseFloat(getComputedStyle(stage).rowGap) || 0;
+  const room = window.innerHeight -
+    (pinned ? header.offsetHeight : 0) -
+    parseFloat(main.paddingTop) - parseFloat(main.paddingBottom) -
+    toolbar.offsetHeight - gap - frame -
+    // Room for the overlap warning too, so it appearing does not push the
+    // canvas's bottom edge out of view.
+    (warning.hidden ? 0 : warning.offsetHeight + gap);
+  const width = Math.max(320, room * PANEL_W / PANEL_H + across);
+  stage.style.maxWidth = width + "px";
+}
+window.addEventListener("resize", fitStage);
+
 if (window.ResizeObserver) {
   new ResizeObserver(() => fitAllPreviews()).observe(canvas);
 }
