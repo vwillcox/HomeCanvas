@@ -34,6 +34,7 @@ import 'screens/dashboard_screen.dart';
 import 'screens/gallery_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/locked_folder_screen.dart';
+import 'screens/settings_screen.dart';
 import 'screens/setup_screen.dart';
 import 'screens/slideshow_screen.dart';
 import 'screens/video_player_screen.dart';
@@ -271,6 +272,9 @@ class _RootGate extends StatelessWidget {
     }
     if ((Platform.environment['IMMICH_KIOSK_TEST_ABOUT'] ?? '').isNotEmpty) {
       return const AboutScreen();
+    }
+    if ((Platform.environment['IMMICH_KIOSK_TEST_SETTINGS'] ?? '').isNotEmpty) {
+      return const SettingsScreen();
     }
     final testDashboard = Platform.environment['IMMICH_KIOSK_TEST_DASHBOARD'];
     if (testDashboard != null && testDashboard.isNotEmpty) {

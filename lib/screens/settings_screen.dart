@@ -21,6 +21,7 @@ import '../services/spotify_service.dart';
 import '../services/tv_service.dart';
 import '../services/weather_service.dart';
 import '../widgets/weather_overlay.dart';
+import '../widgets/glass.dart';
 import 'about_screen.dart';
 import 'setup_screen.dart';
 
@@ -33,8 +34,9 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _editConnection() async {
-    await Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const SetupScreen()));
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const SetupScreen()));
     if (mounted) setState(() {});
   }
 
@@ -64,17 +66,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       final r = await Process.run('systemctl', [action]);
       if (r.exitCode != 0 && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(
-            'Could not $verb (${r.stderr.toString().trim()}). '
-            'Run deploy/enable-poweroff.sh on the Pi.',
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Could not $verb (${r.stderr.toString().trim()}). '
+              'Run deploy/enable-poweroff.sh on the Pi.',
+            ),
           ),
-        ));
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Could not $verb: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not $verb: $e')));
       }
     }
   }
@@ -87,140 +92,182 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ? '—'
         : '${config.apiKey.substring(0, config.apiKey.length.clamp(0, 4))}••••••••';
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        children: [
-          _section('Connection'),
-          ListTile(
-            leading: const Icon(Icons.dns),
-            title: const Text('Immich server'),
-            subtitle:
-                Text(config.immichUrl.isEmpty ? 'Not set' : config.immichUrl),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: _editConnection,
-          ),
-          ListTile(
-            leading: const Icon(Icons.key),
-            title: const Text('API key'),
-            subtitle: Text(maskedKey),
-            onTap: _editConnection,
-          ),
-
-          const Divider(height: 32),
-          _section('Locked Folder'),
-          ListTile(
-            leading: Icon(locked.canUse ? Icons.lock : Icons.lock_open,
-                color: locked.canUse ? null : const Color(0xFFFFC46B)),
-            title: const Text('Immich account login'),
-            subtitle: Text(
-              locked.canUse
-                  ? 'Signed in as ${config.immichEmail} — open the Locked Folder '
-                      'tile on the home screen and enter your PIN.'
-                  : 'Not configured. Run set-immich-login.sh on the Pi to store '
-                      'your Immich email + password (required to open the '
-                      'server-side Locked Folder).',
+    return ModernScaffold(
+      header: ScreenHeader(
+        onBack: () => Navigator.of(context).maybePop(),
+        title: 'Settings',
+        subtitle: config.immichUrl.isEmpty
+            ? 'Not connected to Immich yet'
+            : 'Connected to ${Uri.tryParse(config.immichUrl)?.host ?? config.immichUrl}',
+      ),
+      // A readable column rather than rows stretched across 1,920 pixels, and
+      // larger type throughout: this is read standing, at arm's length.
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1180),
+          child: ListTileTheme(
+            data: const ListTileThemeData(
+              contentPadding: EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+              minVerticalPadding: 12,
+              iconColor: Colors.white70,
+              titleTextStyle: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+              subtitleTextStyle: TextStyle(
+                fontSize: 16,
+                height: 1.35,
+                color: Colors.white60,
+              ),
             ),
-            isThreeLine: true,
-          ),
-
-          const Divider(height: 32),
-          _section('Weather'),
-          const _WeatherSettingsTile(),
-
-          const Divider(height: 32),
-          _section('Home Assistant'),
-          const _HomeAssistantSettingsTile(),
-
-          const Divider(height: 32),
-          _section('Now playing'),
-          const _NowPlayingSettingsTile(),
-
-          const Divider(height: 32),
-          _section('Spotify'),
-          const _SpotifySettingsTile(),
-
-          const Divider(height: 32),
-          _section('Screen'),
-          const _ScreenSettingsTile(),
-
-          const Divider(height: 32),
-          _section('Television'),
-          const _TvSettingsTile(),
-
-          const Divider(height: 32),
-          _section('Dashboard'),
-          const _DashboardSettingsTile(),
-
-          const Divider(height: 32),
-          _section('Camera'),
-          const _CameraSettingsTile(),
-
-          const Divider(height: 32),
-          _section('Share Inbox'),
-          const _ShareInboxSettingsTile(),
-
-          const Divider(height: 32),
-          _section('Slideshow'),
-          const _SlideshowSettingsTile(),
-
-          const Divider(height: 32),
-          _section('Storage'),
-          const _CacheTile(),
-
-          const Divider(height: 32),
-          _section('Device'),
-          ListTile(
-            leading: const Icon(Icons.restart_alt),
-            title: const Text('Restart'),
-            onTap: () => _confirmPower(
-                title: 'Restart', action: 'reboot', verb: 'Restart'),
-          ),
-          ListTile(
-            leading: const Icon(Icons.power_settings_new,
-                color: Color(0xFFFF6B6B)),
-            title: const Text('Power off',
-                style: TextStyle(color: Color(0xFFFF8A8A))),
-            onTap: () => _confirmPower(
-                title: 'Power off', action: 'poweroff', verb: 'Power off'),
-          ),
-          const Divider(height: 32),
-          _section('About'),
-          ListTile(
-            leading: const Icon(Icons.info_outline),
-            title: const Text('About ImmichKioskPi'),
-            subtitle: const Text(
-                'Version, open-source libraries, licences and credits'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const AboutScreen()),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(32, 12, 32, 48),
+              children: [
+                GlassSection(
+                  title: 'Connection',
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.dns),
+                      title: const Text('Immich server'),
+                      subtitle: Text(
+                        config.immichUrl.isEmpty ? 'Not set' : config.immichUrl,
+                      ),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: _editConnection,
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.key),
+                      title: const Text('API key'),
+                      subtitle: Text(maskedKey),
+                      onTap: _editConnection,
+                    ),
+                  ],
+                ),
+                GlassSection(
+                  title: 'Locked Folder',
+                  children: [
+                    ListTile(
+                      leading: Icon(
+                        locked.canUse ? Icons.lock : Icons.lock_open,
+                        color: locked.canUse ? null : const Color(0xFFFFC46B),
+                      ),
+                      title: const Text('Immich account login'),
+                      subtitle: Text(
+                        locked.canUse
+                            ? 'Signed in as ${config.immichEmail} — open the Locked Folder '
+                                  'tile on the home screen and enter your PIN.'
+                            : 'Not configured. Run set-immich-login.sh on the Pi to store '
+                                  'your Immich email + password (required to open the '
+                                  'server-side Locked Folder).',
+                      ),
+                      isThreeLine: true,
+                    ),
+                  ],
+                ),
+                GlassSection(
+                  title: 'Weather',
+                  children: [const _WeatherSettingsTile()],
+                ),
+                GlassSection(
+                  title: 'Home Assistant',
+                  children: [const _HomeAssistantSettingsTile()],
+                ),
+                GlassSection(
+                  title: 'Now playing',
+                  children: [const _NowPlayingSettingsTile()],
+                ),
+                GlassSection(
+                  title: 'Spotify',
+                  children: [const _SpotifySettingsTile()],
+                ),
+                GlassSection(
+                  title: 'Screen',
+                  children: [const _ScreenSettingsTile()],
+                ),
+                GlassSection(
+                  title: 'Television',
+                  children: [const _TvSettingsTile()],
+                ),
+                GlassSection(
+                  title: 'Dashboard',
+                  children: [const _DashboardSettingsTile()],
+                ),
+                GlassSection(
+                  title: 'Camera',
+                  children: [const _CameraSettingsTile()],
+                ),
+                GlassSection(
+                  title: 'Share Inbox',
+                  children: [const _ShareInboxSettingsTile()],
+                ),
+                GlassSection(
+                  title: 'Slideshow',
+                  children: [const _SlideshowSettingsTile()],
+                ),
+                GlassSection(title: 'Storage', children: [const _CacheTile()]),
+                GlassSection(
+                  title: 'Device',
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.restart_alt),
+                      title: const Text('Restart'),
+                      onTap: () => _confirmPower(
+                        title: 'Restart',
+                        action: 'reboot',
+                        verb: 'Restart',
+                      ),
+                    ),
+                    ListTile(
+                      leading: const Icon(
+                        Icons.power_settings_new,
+                        color: Color(0xFFFF6B6B),
+                      ),
+                      title: const Text(
+                        'Power off',
+                        style: TextStyle(color: Color(0xFFFF8A8A)),
+                      ),
+                      onTap: () => _confirmPower(
+                        title: 'Power off',
+                        action: 'poweroff',
+                        verb: 'Power off',
+                      ),
+                    ),
+                  ],
+                ),
+                GlassSection(
+                  title: 'About',
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.info_outline),
+                      title: const Text('About ImmichKioskPi'),
+                      subtitle: const Text(
+                        'Version, open-source libraries, licences and credits',
+                      ),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const AboutScreen()),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Center(
+                  child: Text(
+                    'Immich Kiosk - Pi • Immich viewer',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.3),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-
-          const SizedBox(height: 24),
-          Center(
-            child: Text('Immich Kiosk - Pi • Immich viewer',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.3))),
-          ),
-          const SizedBox(height: 24),
-        ],
+        ),
       ),
     );
   }
-
-  Widget _section(String title) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-        child: Text(
-          title.toUpperCase(),
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.primary,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.2,
-            fontSize: 13,
-          ),
-        ),
-      );
 }
 
 class _WeatherSettingsTile extends StatelessWidget {
@@ -323,24 +370,30 @@ class _WeatherSettingsTile extends StatelessWidget {
             },
           ),
         ),
-        Builder(builder: (context) {
-          final sensor = context.watch<IndoorSensorService>();
-          return SwitchListTile(
-            secondary: Icon(Icons.home_outlined,
-                color: sensor.available ? const Color(0xFFFF8A65) : null),
-            title: const Text('Show indoor temperature'),
-            subtitle: Text(sensor.available
-                ? '${sensor.temperatureC!.toStringAsFixed(1)}°C · '
-                    '${sensor.humidity?.round() ?? '—'}% · '
-                    'battery ${sensor.battery ?? '—'}%'
-                : 'Not reading — check the Home Assistant section below'),
-            value: s.showIndoor,
-            onChanged: (v) {
-              s.showIndoor = v;
-              service.updateSettings(s);
-            },
-          );
-        }),
+        Builder(
+          builder: (context) {
+            final sensor = context.watch<IndoorSensorService>();
+            return SwitchListTile(
+              secondary: Icon(
+                Icons.home_outlined,
+                color: sensor.available ? const Color(0xFFFF8A65) : null,
+              ),
+              title: const Text('Show indoor temperature'),
+              subtitle: Text(
+                sensor.available
+                    ? '${sensor.temperatureC!.toStringAsFixed(1)}°C · '
+                          '${sensor.humidity?.round() ?? '—'}% · '
+                          'battery ${sensor.battery ?? '—'}%'
+                    : 'Not reading — check the Home Assistant section below',
+              ),
+              value: s.showIndoor,
+              onChanged: (v) {
+                s.showIndoor = v;
+                service.updateSettings(s);
+              },
+            );
+          },
+        ),
         SwitchListTile(
           secondary: const Icon(Icons.thermostat),
           title: const Text('Use Celsius'),
@@ -424,14 +477,18 @@ class _CornerPicker extends StatelessWidget {
       opacity: enabled ? 1 : 0.4,
       child: Column(
         children: [
-          Row(children: [
-            cell(OverlayCorner.topLeft, Alignment.topLeft),
-            cell(OverlayCorner.topRight, Alignment.topRight),
-          ]),
-          Row(children: [
-            cell(OverlayCorner.bottomLeft, Alignment.bottomLeft),
-            cell(OverlayCorner.bottomRight, Alignment.bottomRight),
-          ]),
+          Row(
+            children: [
+              cell(OverlayCorner.topLeft, Alignment.topLeft),
+              cell(OverlayCorner.topRight, Alignment.topRight),
+            ],
+          ),
+          Row(
+            children: [
+              cell(OverlayCorner.bottomLeft, Alignment.bottomLeft),
+              cell(OverlayCorner.bottomRight, Alignment.bottomRight),
+            ],
+          ),
         ],
       ),
     );
@@ -453,8 +510,10 @@ class _SlideshowSettingsTile extends StatelessWidget {
         ListTile(
           leading: const Icon(Icons.timer_outlined),
           title: const Text('Time per photo'),
-          trailing:
-              Text('${s.intervalSeconds}s', style: const TextStyle(fontSize: 18)),
+          trailing: Text(
+            '${s.intervalSeconds}s',
+            style: const TextStyle(fontSize: 18),
+          ),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -478,13 +537,21 @@ class _SlideshowSettingsTile extends StatelessWidget {
             underline: const SizedBox.shrink(),
             items: const [
               DropdownMenuItem(
-                  value: SlideshowTransition.fade, child: Text('Fade')),
+                value: SlideshowTransition.fade,
+                child: Text('Fade'),
+              ),
               DropdownMenuItem(
-                  value: SlideshowTransition.slide, child: Text('Slide')),
+                value: SlideshowTransition.slide,
+                child: Text('Slide'),
+              ),
               DropdownMenuItem(
-                  value: SlideshowTransition.kenBurns, child: Text('Ken Burns')),
+                value: SlideshowTransition.kenBurns,
+                child: Text('Ken Burns'),
+              ),
               DropdownMenuItem(
-                  value: SlideshowTransition.pageTurn, child: Text('Page turn')),
+                value: SlideshowTransition.pageTurn,
+                child: Text('Page turn'),
+              ),
             ],
             onChanged: (v) {
               if (v != null) {
@@ -546,9 +613,9 @@ class _CacheTileState extends State<_CacheTile> {
     await _measure();
     if (mounted) {
       setState(() => _busy = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cache cleared')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Cache cleared')));
     }
   }
 
@@ -564,7 +631,10 @@ class _CacheTileState extends State<_CacheTile> {
       ),
       trailing: _busy
           ? const SizedBox(
-              width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5))
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2.5),
+            )
           : TextButton(onPressed: _clear, child: const Text('Clear')),
     );
   }
@@ -592,10 +662,10 @@ class _NowPlayingSettingsTile extends StatelessWidget {
           subtitle: Text(
             service.available
                 ? (n.hasTrack
-                    ? 'Connected to ${n.deviceName.isEmpty ? "phone" : n.deviceName} — ${n.title}'
-                    : 'Connected to ${n.deviceName.isEmpty ? "phone" : n.deviceName} — nothing playing')
+                      ? 'Connected to ${n.deviceName.isEmpty ? "phone" : n.deviceName} — ${n.title}'
+                      : 'Connected to ${n.deviceName.isEmpty ? "phone" : n.deviceName} — nothing playing')
                 : 'No phone connected. Pair one over Bluetooth and play '
-                    'something with media audio routed to this device.',
+                      'something with media audio routed to this device.',
           ),
           isThreeLine: !service.available,
           value: s.enabled,
@@ -615,7 +685,7 @@ class _NowPlayingSettingsTile extends StatelessWidget {
               s.playAudioHere
                   ? 'Music plays through the Pi\'s speaker.'
                   : 'Music stays on the phone (e.g. your headphones) and this '
-                      'screen is just a remote control.',
+                        'screen is just a remote control.',
             ),
             isThreeLine: !s.playAudioHere,
             value: s.playAudioHere,
@@ -632,19 +702,21 @@ class _NowPlayingSettingsTile extends StatelessWidget {
             subtitle: Text(
               s.playAudioHere
                   ? 'Drawn in the full-screen player, between the scrubber '
-                      'and the transport controls.'
+                        'and the transport controls.'
                   : 'Needs the audio playing on this device — with it staying '
-                      'on the phone there is no sound here to draw.',
+                        'on the phone there is no sound here to draw.',
             ),
             isThreeLine: !s.playAudioHere,
             trailing: DropdownButton<VisualiserStyle>(
               value: s.visualiser,
               underline: const SizedBox.shrink(),
               items: VisualiserStyle.values
-                  .map((v) => DropdownMenuItem(
-                        value: v,
-                        child: Text(visualiserLabel(v)),
-                      ))
+                  .map(
+                    (v) => DropdownMenuItem(
+                      value: v,
+                      child: Text(visualiserLabel(v)),
+                    ),
+                  )
                   .toList(),
               onChanged: (v) {
                 if (v != null) {
@@ -663,10 +735,10 @@ class _NowPlayingSettingsTile extends StatelessWidget {
               value: s.corner,
               underline: const SizedBox.shrink(),
               items: OverlayCorner.values
-                  .map((c) => DropdownMenuItem(
-                        value: c,
-                        child: Text(cornerLabel(c)),
-                      ))
+                  .map(
+                    (c) =>
+                        DropdownMenuItem(value: c, child: Text(cornerLabel(c))),
+                  )
                   .toList(),
               onChanged: (v) {
                 if (v != null) {
@@ -734,8 +806,10 @@ class _HomeAssistantSettingsTile extends StatelessWidget {
                 StatefulBuilder(
                   builder: (context, setLocal) => SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Read the indoor sensor',
-                        style: TextStyle(fontSize: 18)),
+                    title: const Text(
+                      'Read the indoor sensor',
+                      style: TextStyle(fontSize: 18),
+                    ),
                     subtitle: const Text(
                       'Off stops polling Home Assistant and hides the indoor '
                       'reading, keeping these settings for later.',
@@ -748,8 +822,11 @@ class _HomeAssistantSettingsTile extends StatelessWidget {
                 const SizedBox(height: 6),
                 field('Server', url, hint: 'http://localhost:8123'),
                 field('Long-lived access token', token),
-                field('Temperature entity', temp,
-                    hint: 'sensor.h5104_145e_temperature'),
+                field(
+                  'Temperature entity',
+                  temp,
+                  hint: 'sensor.h5104_145e_temperature',
+                ),
                 field('Humidity entity', hum),
                 field('Battery entity', batt),
               ],
@@ -786,15 +863,17 @@ class _HomeAssistantSettingsTile extends StatelessWidget {
     final s = context.watch<ConfigService>().config.homeAssistant;
     final sensor = context.watch<IndoorSensorService>();
     return ListTile(
-      leading: Icon(Icons.home_outlined,
-          color: sensor.available ? const Color(0xFFFF8A65) : null),
+      leading: Icon(
+        Icons.home_outlined,
+        color: sensor.available ? const Color(0xFFFF8A65) : null,
+      ),
       title: const Text('Home Assistant'),
       subtitle: Text(
         !s.isConfigured
             ? 'Not configured — no indoor temperature'
             : sensor.available
-                ? '${s.baseUrl} — reading ${sensor.temperatureC!.toStringAsFixed(1)}°C'
-                : '${s.baseUrl} — configured, but no reading yet',
+            ? '${s.baseUrl} — reading ${sensor.temperatureC!.toStringAsFixed(1)}°C'
+            : '${s.baseUrl} — configured, but no reading yet',
       ),
       trailing: const Icon(Icons.chevron_right),
       onTap: () => _edit(context),
@@ -824,15 +903,17 @@ class _SpotifySettingsTile extends StatelessWidget {
     final s = context.watch<ConfigService>().config.spotify;
     final spotify = context.watch<SpotifyService>();
     return ListTile(
-      leading: Icon(Icons.podcasts,
-          color: spotify.available ? const Color(0xFF1ED760) : null),
+      leading: Icon(
+        Icons.podcasts,
+        color: spotify.available ? const Color(0xFF1ED760) : null,
+      ),
       title: const Text('Spotify'),
       subtitle: Text(
         !s.isConfigured
             ? 'Not connected — full playback control alongside the phone'
             : spotify.available
-                ? 'Connected — playing "${spotify.now.title}"'
-                : 'Connected, but nothing playing right now',
+            ? 'Connected — playing "${spotify.now.title}"'
+            : 'Connected, but nothing playing right now',
       ),
       trailing: const Icon(Icons.chevron_right),
       onTap: () => _edit(context),
@@ -850,8 +931,9 @@ class _SpotifyDialog extends StatefulWidget {
 }
 
 class _SpotifyDialogState extends State<_SpotifyDialog> {
-  late final TextEditingController _clientId =
-      TextEditingController(text: widget.config.config.spotify.clientId);
+  late final TextEditingController _clientId = TextEditingController(
+    text: widget.config.config.spotify.clientId,
+  );
   bool _connecting = false;
   String? _error;
 
@@ -921,8 +1003,7 @@ class _SpotifyDialogState extends State<_SpotifyDialog> {
               ),
               if (_error != null) ...[
                 const SizedBox(height: 10),
-                Text(_error!,
-                    style: const TextStyle(color: Color(0xFFFF8A8A))),
+                Text(_error!, style: const TextStyle(color: Color(0xFFFF8A8A))),
               ],
               if (_connecting) ...[
                 const SizedBox(height: 14),
@@ -953,8 +1034,10 @@ class _SpotifyDialogState extends State<_SpotifyDialog> {
         if (isConfigured)
           TextButton(
             onPressed: _connecting ? null : _disconnect,
-            child: const Text('Disconnect',
-                style: TextStyle(color: Color(0xFFFF8A8A))),
+            child: const Text(
+              'Disconnect',
+              style: TextStyle(color: Color(0xFFFF8A8A)),
+            ),
           ),
         TextButton(
           onPressed: _connecting ? null : () => Navigator.of(context).pop(),
@@ -990,10 +1073,12 @@ class _ShareInboxSettingsTile extends StatelessWidget {
     return ListTile(
       leading: const Icon(Icons.ios_share),
       title: const Text('Share Inbox'),
-      subtitle: Text(s.senderTokens.isEmpty
-          ? 'Listening on :${s.listenPort} — no senders added yet'
-          : 'Listening on :${s.listenPort} — ${s.senderTokens.length} '
-              '${s.senderTokens.length == 1 ? 'sender' : 'senders'}'),
+      subtitle: Text(
+        s.senderTokens.isEmpty
+            ? 'Listening on :${s.listenPort} — no senders added yet'
+            : 'Listening on :${s.listenPort} — ${s.senderTokens.length} '
+                  '${s.senderTokens.length == 1 ? 'sender' : 'senders'}',
+      ),
       trailing: const Icon(Icons.chevron_right),
       onTap: () => _edit(context),
     );
@@ -1057,15 +1142,17 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
 
   void _copy(String token) {
     Clipboard.setData(ClipboardData(text: token));
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Token copied')));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Token copied')));
   }
 
   Future<void> _save() async {
     final port = int.tryParse(_port.text.trim());
     if (port == null || port < 1 || port > 65535) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Enter a port between 1 and 65535')));
+        const SnackBar(content: Text('Enter a port between 1 and 65535')),
+      );
       return;
     }
     final s = widget.config.config.shareInbox;
@@ -1110,13 +1197,21 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
               const SizedBox(height: 18),
               Row(
                 children: [
-                  const Icon(Icons.notifications, color: Colors.white70, size: 20),
+                  const Icon(
+                    Icons.notifications,
+                    color: Colors.white70,
+                    size: 20,
+                  ),
                   const SizedBox(width: 10),
-                  const Text('Notification volume',
-                      style: TextStyle(color: Colors.white)),
+                  const Text(
+                    'Notification volume',
+                    style: TextStyle(color: Colors.white),
+                  ),
                   const Spacer(),
-                  Text('${_volume.round()}%',
-                      style: const TextStyle(color: Colors.white54)),
+                  Text(
+                    '${_volume.round()}%',
+                    style: const TextStyle(color: Colors.white54),
+                  ),
                 ],
               ),
               Slider(
@@ -1134,8 +1229,10 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
 
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Read notes aloud',
-                    style: TextStyle(color: Colors.white)),
+                title: const Text(
+                  'Read notes aloud',
+                  style: TextStyle(color: Colors.white),
+                ),
                 subtitle: const Text(
                   'Text notes only. Photos have nothing to read, and a link '
                   'read out is a stream of letters nobody can follow.',
@@ -1147,21 +1244,30 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
               if (_speak) ...[
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Say who it is from first',
-                      style: TextStyle(color: Colors.white)),
+                  title: const Text(
+                    'Say who it is from first',
+                    style: TextStyle(color: Colors.white),
+                  ),
                   value: _speakSender,
                   onChanged: (v) => setState(() => _speakSender = v),
                 ),
                 Row(
                   children: [
-                    const Icon(Icons.record_voice_over,
-                        color: Colors.white70, size: 20),
+                    const Icon(
+                      Icons.record_voice_over,
+                      color: Colors.white70,
+                      size: 20,
+                    ),
                     const SizedBox(width: 10),
-                    const Text('Speech volume',
-                        style: TextStyle(color: Colors.white)),
+                    const Text(
+                      'Speech volume',
+                      style: TextStyle(color: Colors.white),
+                    ),
                     const Spacer(),
-                    Text('${_speechVolume.round()}%',
-                        style: const TextStyle(color: Colors.white54)),
+                    Text(
+                      '${_speechVolume.round()}%',
+                      style: const TextStyle(color: Colors.white54),
+                    ),
                   ],
                 ),
                 Slider(
@@ -1178,15 +1284,21 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
                 ),
               ],
               const SizedBox(height: 18),
-              const Text('Senders',
-                  style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.w600)),
+              const Text(
+                'Senders',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               const SizedBox(height: 8),
               if (_tokens.isEmpty)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 8),
-                  child: Text('No one added yet',
-                      style: TextStyle(color: Colors.white54)),
+                  child: Text(
+                    'No one added yet',
+                    style: TextStyle(color: Colors.white54),
+                  ),
                 ),
               for (final t in _tokens)
                 Padding(
@@ -1195,8 +1307,10 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
                     children: [
                       Expanded(
                         flex: 2,
-                        child: Text(t.name,
-                            style: const TextStyle(color: Colors.white)),
+                        child: Text(
+                          t.name,
+                          style: const TextStyle(color: Colors.white),
+                        ),
                       ),
                       Expanded(
                         flex: 3,
@@ -1205,9 +1319,10 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                              color: Colors.white54,
-                              fontFamily: 'monospace',
-                              fontSize: 13),
+                            color: Colors.white54,
+                            fontFamily: 'monospace',
+                            fontSize: 13,
+                          ),
                         ),
                       ),
                       IconButton(
@@ -1216,8 +1331,11 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
                         onPressed: () => _copy(t.token),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.delete,
-                            size: 20, color: Color(0xFFFF8A8A)),
+                        icon: const Icon(
+                          Icons.delete,
+                          size: 20,
+                          color: Color(0xFFFF8A8A),
+                        ),
                         tooltip: 'Remove',
                         onPressed: () => setState(() => _tokens.remove(t)),
                       ),
@@ -1240,10 +1358,7 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  FilledButton(
-                    onPressed: _addSender,
-                    child: const Text('Add'),
-                  ),
+                  FilledButton(onPressed: _addSender, child: const Text('Add')),
                 ],
               ),
             ],
@@ -1279,8 +1394,9 @@ class _ScreenSettingsTile extends StatelessWidget {
           secondary: const Icon(Icons.brightness_4),
           title: const Text('Turn the screen off when idle'),
           subtitle: const Text(
-              'Once nothing is playing, no slideshow is running and nobody '
-              'has touched it. A touch brings it straight back.'),
+            'Once nothing is playing, no slideshow is running and nobody '
+            'has touched it. A touch brings it straight back.',
+          ),
           isThreeLine: true,
           value: s.autoOffEnabled,
           onChanged: (v) {
@@ -1313,8 +1429,9 @@ class _ScreenSettingsTile extends StatelessWidget {
             secondary: const Icon(Icons.music_note),
             title: const Text('Wake when music starts'),
             subtitle: const Text(
-                'Only undoes a switch-off this setting made — it leaves the '
-                'screen alone if you turned it off by voice.'),
+              'Only undoes a switch-off this setting made — it leaves the '
+              'screen alone if you turned it off by voice.',
+            ),
             isThreeLine: true,
             value: s.wakeOnMusic,
             onChanged: (v) {
@@ -1347,21 +1464,24 @@ class _CameraSettingsTile extends StatelessWidget {
     final rotate = TextEditingController(text: '${s.rotate}');
     final turns = TextEditingController(text: '${s.viewQuarterTurns}');
 
-    Widget field(String label, TextEditingController c,
-            {String? hint, bool obscure = false}) =>
-        Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: TextField(
-            controller: c,
-            obscureText: obscure,
-            style: const TextStyle(fontSize: 18),
-            decoration: InputDecoration(
-              labelText: label,
-              hintText: hint,
-              border: const OutlineInputBorder(),
-            ),
-          ),
-        );
+    Widget field(
+      String label,
+      TextEditingController c, {
+      String? hint,
+      bool obscure = false,
+    }) => Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextField(
+        controller: c,
+        obscureText: obscure,
+        style: const TextStyle(fontSize: 18),
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: hint,
+          border: const OutlineInputBorder(),
+        ),
+      ),
+    );
 
     final saved = await showDialog<bool>(
       context: context,
@@ -1385,11 +1505,18 @@ class _CameraSettingsTile extends StatelessWidget {
                 field('Username', user),
                 field('Password', pass, obscure: true),
                 field('Stream size', resolution, hint: '1920x1080'),
-                field('Rotate on the phone (degrees)', rotate,
-                    hint: '0, 90, 180 or 270 — MJPEG only'),
-                field('Turn the picture here (quarter turns)', turns,
-                    hint: '0-3, for when the phone gets its own orientation '
-                        'wrong'),
+                field(
+                  'Rotate on the phone (degrees)',
+                  rotate,
+                  hint: '0, 90, 180 or 270 — MJPEG only',
+                ),
+                field(
+                  'Turn the picture here (quarter turns)',
+                  turns,
+                  hint:
+                      '0-3, for when the phone gets its own orientation '
+                      'wrong',
+                ),
               ],
             ),
           ),
@@ -1430,8 +1557,9 @@ class _CameraSettingsTile extends StatelessWidget {
           secondary: const Icon(Icons.videocam),
           title: const Text('Phone camera'),
           subtitle: const Text(
-              'Shows a live view from a phone running android-ip-camera, '
-              'from a button in the top bar.'),
+            'Shows a live view from a phone running android-ip-camera, '
+            'from a button in the top bar.',
+          ),
           isThreeLine: true,
           value: s.enabled,
           onChanged: (v) {
@@ -1463,10 +1591,10 @@ class _CameraSettingsTile extends StatelessWidget {
               s.address.isEmpty
                   ? 'Not configured'
                   : status == null
-                      ? '${s.address} — ${camera.lastError ?? 'not reached yet'}'
-                      : '${s.address} — ${status.lenses.length} lens'
-                          '${status.lenses.length == 1 ? '' : 'es'}'
-                          '${status.batteryPercent == null ? '' : ', battery ${status.batteryPercent}%'}',
+                  ? '${s.address} — ${camera.lastError ?? 'not reached yet'}'
+                  : '${s.address} — ${status.lenses.length} lens'
+                        '${status.lenses.length == 1 ? '' : 'es'}'
+                        '${status.batteryPercent == null ? '' : ', battery ${status.batteryPercent}%'}',
             ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _edit(context),
@@ -1547,8 +1675,9 @@ class _DashboardSettingsTile extends StatelessWidget {
           secondary: const Icon(Icons.dashboard_outlined),
           title: const Text('Widget dashboard'),
           subtitle: const Text(
-              'A screen of widgets — clock, weather, calendar, news, now '
-              'playing — arranged from a browser. Adds a button to the top bar.'),
+            'A screen of widgets — clock, weather, calendar, news, now '
+            'playing — arranged from a browser. Adds a button to the top bar.',
+          ),
           isThreeLine: true,
           value: s.enabled,
           onChanged: (v) async {
@@ -1568,18 +1697,19 @@ class _DashboardSettingsTile extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.palette_outlined),
             title: const Text('Theme'),
-            subtitle: Text('${theme.name} · '
-                '${s.widgets.length} widget${s.widgets.length == 1 ? '' : 's'}'),
+            subtitle: Text(
+              '${theme.name} · '
+              '${s.widgets.length} widget${s.widgets.length == 1 ? '' : 's'}',
+            ),
             trailing: DropdownButton<String>(
               value: dashboard.themes.all.any((t) => t.id == s.themeId)
                   ? s.themeId
                   : dashboard.themes.all.first.id,
               underline: const SizedBox.shrink(),
               items: dashboard.themes.all
-                  .map((t) => DropdownMenuItem(
-                        value: t.id,
-                        child: Text(t.name),
-                      ))
+                  .map(
+                    (t) => DropdownMenuItem(value: t.id, child: Text(t.name)),
+                  )
                   .toList(),
               onChanged: (v) {
                 if (v == null) return;
@@ -1681,8 +1811,9 @@ class _TvSettingsTile extends StatelessWidget {
           secondary: const Icon(Icons.tv),
           title: const Text('Television remote'),
           subtitle: const Text(
-              'Adds a TV remote to the dashboard widgets — power, volume and '
-              'a direction pad for a Hisense VIDAA set.'),
+            'Adds a TV remote to the dashboard widgets — power, volume and '
+            'a direction pad for a Hisense VIDAA set.',
+          ),
           isThreeLine: true,
           value: s.enabled,
           onChanged: (v) {
@@ -1692,8 +1823,10 @@ class _TvSettingsTile extends StatelessWidget {
         ),
         if (s.enabled)
           ListTile(
-            leading: Icon(Icons.settings_remote,
-                color: tv.conn == ConnState.connected ? Colors.greenAccent : null),
+            leading: Icon(
+              Icons.settings_remote,
+              color: tv.conn == ConnState.connected ? Colors.greenAccent : null,
+            ),
             title: const Text('Address and pairing'),
             subtitle: Text(status),
             trailing: const Icon(Icons.chevron_right),

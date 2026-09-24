@@ -12,6 +12,7 @@ import '../dashboard/widget_registry.dart';
 import '../services/config_service.dart';
 import '../services/dashboard_service.dart';
 import '../services/screen_idle_service.dart';
+import '../widgets/glass.dart';
 
 /// The dashboard: widgets laid out on a grid, drawn in the chosen theme.
 ///
@@ -33,8 +34,9 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   ScreenIdleService? _screenIdle;
 
-  late final PageController _pages =
-      PageController(initialPage: widget.initialPage);
+  late final PageController _pages = PageController(
+    initialPage: widget.initialPage,
+  );
   Timer? _flip;
   late int _page = widget.initialPage;
 
@@ -58,10 +60,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void _debugPopup() {
     final which = Platform.environment['IMMICH_KIOSK_TEST_POPUP'];
     if (which == null || which.isEmpty) return;
-    final theme = context
-        .read<DashboardService>()
-        .themes
-        .byId(context.read<ConfigService>().config.dashboard.themeId);
+    final theme = context.read<DashboardService>().themes.byId(
+      context.read<ConfigService>().config.dashboard.themeId,
+    );
     if (which == 'forecast') unawaited(showWeatherForecast(context, theme));
     if (which == 'inputs') unawaited(showTvInputs(context, theme));
   }
@@ -130,58 +131,116 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // the browser takes effect without leaving and re-entering the dashboard.
     _syncFlipTimer(settings);
 
+    final grid = Stack(
+      children: [
+        if (settings.widgets.isEmpty)
+          _Empty(theme: theme, address: dashboard.editorAddress)
+        else
+          // Behind the widgets, not over them: a translucent layer on
+          // top would swallow every tap meant for a widget. This only
+          // sees taps that fell on empty grid.
+          GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: () => _tapped(settings),
+            child: PageView.builder(
+              controller: _pages,
+              itemCount: pageCount,
+              // Swiping works whatever the settings say — it is
+              // unambiguous in a way that tapping is not.
+              onPageChanged: (i) => setState(() => _page = i),
+              itemBuilder: (context, page) =>
+                  _Grid(settings: settings, theme: theme, page: page),
+            ),
+          ),
+        // With the top bar off: the panel has no keyboard and no
+        // window chrome, so without this there is no way off the
+        // dashboard at all.
+        if (!settings.topBar) ...[
+          Positioned(left: 12, bottom: 12, child: _BackButton(theme: theme)),
+          if (pageCount > 1)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 16,
+              child: Center(
+                child: _PageDots(
+                  count: pageCount,
+                  current: _page,
+                  theme: theme,
+                  onTap: (i) => _goTo(i, pageCount),
+                ),
+              ),
+            ),
+        ],
+      ],
+    );
+
     return Scaffold(
       body: Container(
         decoration: theme.backgroundDecoration,
         child: SafeArea(
-          child: Stack(
-            children: [
-              if (settings.widgets.isEmpty)
-                _Empty(theme: theme, address: dashboard.editorAddress)
-              else
-                // Behind the widgets, not over them: a translucent layer on
-                // top would swallow every tap meant for a widget. This only
-                // sees taps that fell on empty grid.
-                GestureDetector(
-                  behavior: HitTestBehavior.translucent,
-                  onTap: () => _tapped(settings),
-                  child: PageView.builder(
-                    controller: _pages,
-                    itemCount: pageCount,
-                    // Swiping works whatever the settings say — it is
-                    // unambiguous in a way that tapping is not.
-                    onPageChanged: (i) => setState(() => _page = i),
-                    itemBuilder: (context, page) => _Grid(
-                      settings: settings,
+          child: !settings.topBar
+              ? grid
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // The same bar as every other screen, in the theme's
+                    // colours: back on the left, the greeting and date, and
+                    // the pages on the right where the dots used to float
+                    // over the widgets.
+                    _TopBar(
                       theme: theme,
-                      page: page,
+                      pageCount: pageCount,
+                      page: _page,
+                      onPage: (i) => _goTo(i, pageCount),
                     ),
-                  ),
+                    Expanded(child: grid),
+                  ],
                 ),
-              // The panel has no keyboard and no window chrome, so without
-              // this there is no way off the dashboard at all. Drawn in the
-              // theme's own colours so it belongs to the dashboard rather
-              // than sitting on top of it.
-              Positioned(
-                left: 12,
-                bottom: 12,
-                child: _BackButton(theme: theme),
-              ),
-              if (pageCount > 1)
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 16,
-                  child: _PageDots(
-                    count: pageCount,
-                    current: _page,
-                    theme: theme,
-                    onTap: (i) => _goTo(i, pageCount),
-                  ),
-                ),
-            ],
-          ),
         ),
+      ),
+    );
+  }
+}
+
+/// The kiosk's top bar, drawn for the dashboard.
+///
+/// [ScreenHeader] in the dashboard theme's colours rather than the app's, so
+/// it belongs to whichever theme is chosen — under Glass it is the home
+/// screen's bar exactly; under Nightstand it is amber on black.
+class _TopBar extends StatelessWidget {
+  const _TopBar({
+    required this.theme,
+    required this.pageCount,
+    required this.page,
+    required this.onPage,
+  });
+
+  final DashboardTheme theme;
+  final int pageCount;
+  final int page;
+  final void Function(int) onPage;
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTextStyle.merge(
+      style: TextStyle(color: theme.textPrimary),
+      child: ScreenHeader(
+        onBack: () => Navigator.of(context).maybePop(),
+        titleWidget: GreetingTitle(
+          colour: theme.textPrimary,
+          secondary: theme.textSecondary,
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 14, 24, 6),
+        iconColour: theme.textPrimary,
+        trailing: pageCount > 1
+            ? _PageDots(
+                count: pageCount,
+                current: page,
+                theme: theme,
+                onTap: onPage,
+              )
+            : null,
       ),
     );
   }
@@ -195,32 +254,20 @@ class _BackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      // Never fully transparent, even under a theme whose tiles are: a
-      // control you cannot see is a control you cannot find.
-      color: Color.alphaBlend(
-          theme.surface, theme.background.first.withValues(alpha: 1)),
-      shape: CircleBorder(
-          side: BorderSide(color: theme.textSecondary.withValues(alpha: 0.4))),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => Navigator.of(context).maybePop(),
-        child: SizedBox(
-          width: 76,
-          height: 76,
-          child: Icon(Icons.arrow_back, color: theme.textPrimary, size: 38),
-        ),
-      ),
+    // Glass like every other screen's back button, but never fully clear: a
+    // control you cannot see is a control you cannot find.
+    return GlassIconButton(
+      icon: Icons.arrow_back_rounded,
+      tooltip: 'Back',
+      size: 72,
+      colour: theme.textPrimary,
+      onPressed: () => Navigator.of(context).maybePop(),
     );
   }
 }
 
 class _Grid extends StatelessWidget {
-  const _Grid({
-    required this.settings,
-    required this.theme,
-    this.page = 0,
-  });
+  const _Grid({required this.settings, required this.theme, this.page = 0});
 
   final DashboardSettings settings;
   final DashboardTheme theme;
@@ -236,7 +283,7 @@ class _Grid extends StatelessWidget {
         // from each other.
         final cellWidth =
             (c.maxWidth - gap * (DashboardGrid.columns + 1)) /
-                DashboardGrid.columns;
+            DashboardGrid.columns;
         final cellHeight =
             (c.maxHeight - gap * (DashboardGrid.rows + 1)) / DashboardGrid.rows;
 
@@ -311,8 +358,9 @@ class _Tile extends StatelessWidget {
       child: DefaultTextStyle(
         style: TextStyle(
           color: theme.textPrimary,
-          fontFamily:
-              config.fontFamily.isEmpty ? theme.fontFamily : config.fontFamily,
+          fontFamily: config.fontFamily.isEmpty
+              ? theme.fontFamily
+              : config.fontFamily,
         ),
         child: Container(
           decoration: theme.tileDecorationWith(
@@ -342,15 +390,19 @@ class _Empty extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.dashboard_customize_outlined,
-              size: 64, color: theme.textSecondary),
+          Icon(
+            Icons.dashboard_customize_outlined,
+            size: 64,
+            color: theme.textSecondary,
+          ),
           const SizedBox(height: 20),
           Text(
             'No widgets yet',
             style: TextStyle(
-                color: theme.textPrimary,
-                fontSize: 28,
-                fontWeight: FontWeight.w600),
+              color: theme.textPrimary,
+              fontSize: 28,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 10),
           Text(
@@ -391,31 +443,38 @@ class _PageDots extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        for (var i = 0; i < count; i++)
-          GestureDetector(
-            onTap: () => onTap(i),
-            behavior: HitTestBehavior.opaque,
-            child: Padding(
-              // The padding is the touch target; the dot itself stays small
-              // so it does not compete with the widgets for attention.
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 220),
-                width: i == current ? 30 : 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: i == current
-                      ? theme.accent
-                      : theme.textSecondary.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(6),
+    // In a glass pill, like every other control on the kiosk's screens.
+    return Glass(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < count; i++)
+            GestureDetector(
+              onTap: () => onTap(i),
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                // The padding is the touch target; the dot itself stays small
+                // so it does not compete with the widgets for attention.
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 12,
+                ),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 220),
+                  width: i == current ? 30 : 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: i == current
+                        ? theme.accent
+                        : theme.textSecondary.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
                 ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -223,6 +224,282 @@ class AmbientBackground extends StatelessWidget {
           colors: [accent.withValues(alpha: 0.16), const Color(0xFF0B0C10)],
           stops: const [0.0, 0.7],
         ),
+      ),
+    );
+  }
+}
+
+/// The top of every screen: a big title, and the controls in glass.
+///
+/// One widget so the home screen, albums, settings, the dashboard and the
+/// rest cannot drift apart — the top bar is where a mismatch shows first.
+///
+/// Give it [onBack] for a round back button on the left; [actions] for icon
+/// buttons, which are gathered into one frosted pill on the right; and
+/// [trailing] for anything else there, such as a single highlighted button.
+class ScreenHeader extends StatelessWidget {
+  const ScreenHeader({
+    super.key,
+    this.title,
+    this.titleWidget,
+    this.subtitle,
+    this.onBack,
+    this.backIcon = Icons.arrow_back_rounded,
+    this.backTooltip = 'Back',
+    this.actions = const [],
+    this.trailing,
+    this.padding,
+    this.iconColour,
+  }) : assert(title != null || titleWidget != null);
+
+  final String? title;
+
+  /// In place of [title] and [subtitle], for a title that is more than text.
+  final Widget? titleWidget;
+  final String? subtitle;
+  final VoidCallback? onBack;
+  final IconData backIcon;
+  final String backTooltip;
+  final List<Widget> actions;
+  final Widget? trailing;
+  final EdgeInsetsGeometry? padding;
+
+  /// The back button's colour. White unless a theme says otherwise.
+  final Color? iconColour;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding:
+          padding ?? EdgeInsets.fromLTRB(onBack != null ? 28 : 40, 20, 28, 12),
+      child: Row(
+        children: [
+          if (onBack != null) ...[
+            GlassIconButton(
+              icon: backIcon,
+              tooltip: backTooltip,
+              onPressed: onBack,
+              colour: iconColour,
+            ),
+            const SizedBox(width: 24),
+          ],
+          Expanded(
+            child:
+                titleWidget ?? HeaderTitle(title: title!, subtitle: subtitle),
+          ),
+          if (trailing != null) ...[const SizedBox(width: 16), trailing!],
+          if (actions.isNotEmpty) ...[
+            const SizedBox(width: 16),
+            Glass(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              child: Row(mainAxisSize: MainAxisSize.min, children: actions),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// A screen's title and the line under it, in the header's type.
+class HeaderTitle extends StatelessWidget {
+  const HeaderTitle({
+    super.key,
+    required this.title,
+    this.subtitle,
+    this.colour = Colors.white,
+    this.secondary = Colors.white60,
+  });
+
+  final String title;
+  final String? subtitle;
+
+  /// White on the kiosk's own screens; the dashboard passes its theme's, so
+  /// the bar stays readable on a light theme too.
+  final Color colour;
+  final Color secondary;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 44,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.8,
+            height: 1.1,
+            color: colour,
+          ),
+        ),
+        if (subtitle != null && subtitle!.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(
+            subtitle!,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 20, color: secondary),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// "Good afternoon" over today's date and whatever [detail] adds.
+///
+/// Keeps its own one-minute timer, so the greeting turns over at noon and
+/// the date at midnight without rebuilding the screen around it.
+class GreetingTitle extends StatefulWidget {
+  const GreetingTitle({
+    super.key,
+    this.detail,
+    this.colour = Colors.white,
+    this.secondary = Colors.white60,
+  });
+
+  final String? detail;
+  final Color colour;
+  final Color secondary;
+
+  @override
+  State<GreetingTitle> createState() => _GreetingTitleState();
+}
+
+class _GreetingTitleState extends State<GreetingTitle> {
+  late final Timer _tick;
+  DateTime _now = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    _tick = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) setState(() => _now = DateTime.now());
+    });
+  }
+
+  @override
+  void dispose() {
+    _tick.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => HeaderTitle(
+    colour: widget.colour,
+    secondary: widget.secondary,
+    title: greetingFor(_now),
+    subtitle: [
+      longDate(_now),
+      if (widget.detail != null) widget.detail!,
+    ].join('  ·  '),
+  );
+}
+
+/// The white, pill-shaped button used for a screen's one main action —
+/// Slideshow, Try again, Save.
+ButtonStyle whitePillButton() => FilledButton.styleFrom(
+  backgroundColor: Colors.white,
+  foregroundColor: const Color(0xFF0B0C10),
+  shape: const StadiumBorder(),
+  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 18),
+  textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+);
+
+/// A titled group of rows on a glass card — settings, lists of options.
+class GlassSection extends StatelessWidget {
+  const GlassSection({super.key, required this.title, required this.children});
+
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.2,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.09)),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: Material(
+                type: MaterialType.transparency,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: children,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The background, header and body every full screen shares.
+///
+/// Screens pass their [header] and [body]; the ambient glow and the safe
+/// area are handled here so no screen can forget them.
+class ModernScaffold extends StatelessWidget {
+  const ModernScaffold({
+    super.key,
+    required this.header,
+    required this.body,
+    this.overlays = const [],
+  });
+
+  final Widget header;
+  final Widget body;
+
+  /// Drawn over everything — the now-playing player, for one.
+  final List<Widget> overlays;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = Theme.of(context).colorScheme.primary;
+    return Scaffold(
+      backgroundColor: const Color(0xFF0B0C10),
+      body: Stack(
+        children: [
+          Positioned.fill(child: AmbientBackground(accent: accent)),
+          SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                header,
+                Expanded(child: body),
+              ],
+            ),
+          ),
+          ...overlays,
+        ],
       ),
     );
   }

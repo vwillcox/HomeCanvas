@@ -208,6 +208,9 @@
         <div class="row">
           <label class="toggle"><input type="checkbox" id="tapToFlip"> Tap to flip</label>
         </div>
+        <div class="row">
+          <label class="toggle" title="The kiosk's own top bar — back, greeting and date, and the pages — so the dashboard matches every other screen. Off gives the widgets the whole panel."><input type="checkbox" id="topBar"> Top bar</label>
+        </div>
       </div>
     </section>
 
@@ -1014,6 +1017,13 @@ function renderPaging() {
   tap.checked = !!state.dashboard.tapToFlip;
   tap.onchange = () => {
     state.dashboard.tapToFlip = tap.checked;
+    markDirty();
+  };
+  // On unless switched off, so a dashboard saved before this existed gets it.
+  const bar = document.getElementById("topBar");
+  bar.checked = state.dashboard.topBar !== false;
+  bar.onchange = () => {
+    state.dashboard.topBar = bar.checked;
     markDirty();
   };
 }

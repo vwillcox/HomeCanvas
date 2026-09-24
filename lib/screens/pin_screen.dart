@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../widgets/numeric_keypad.dart';
+import '../widgets/glass.dart';
 
 /// Numeric PIN entry. Returns the entered PIN string via [onSubmit]-style
 /// Navigator.pop(pin), or pop(null) on cancel. Use [title]/[subtitle] to
@@ -60,13 +61,12 @@ class _PinScreenState extends State<PinScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () => Navigator.of(context).pop(null),
-        ),
-        title: Text(widget.title),
+    return ModernScaffold(
+      header: ScreenHeader(
+        onBack: () => Navigator.of(context).pop(null),
+        backIcon: Icons.close,
+        backTooltip: 'Cancel',
+        title: widget.title,
       ),
       body: Center(
         child: ConstrainedBox(
@@ -77,8 +77,10 @@ class _PinScreenState extends State<PinScreen> {
               if (widget.subtitle.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 16),
-                  child: Text(widget.subtitle,
-                      style: const TextStyle(fontSize: 18, color: Colors.white70)),
+                  child: Text(
+                    widget.subtitle,
+                    style: const TextStyle(fontSize: 18, color: Colors.white70),
+                  ),
                 ),
               // PIN dots
               Row(
@@ -102,11 +104,18 @@ class _PinScreenState extends State<PinScreen> {
                 height: 28,
                 child: Text(
                   _error ?? '',
-                  style: const TextStyle(color: Color(0xFFFF6B6B), fontSize: 16),
+                  style: const TextStyle(
+                    color: Color(0xFFFF6B6B),
+                    fontSize: 16,
+                  ),
                 ),
               ),
               const SizedBox(height: 8),
-              NumericKeypad(onDigit: _press, onBackspace: _backspace, onEnter: _submit),
+              NumericKeypad(
+                onDigit: _press,
+                onBackspace: _backspace,
+                onEnter: _submit,
+              ),
             ],
           ),
         ),

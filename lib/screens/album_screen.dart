@@ -131,92 +131,30 @@ class _AlbumScreenState extends State<AlbumScreen> {
   @override
   Widget build(BuildContext context) {
     final assets = _assets;
-    final accent = Theme.of(context).colorScheme.primary;
-    return Scaffold(
-      backgroundColor: const Color(0xFF0B0C10),
-      body: Stack(
-        children: [
-          Positioned.fill(child: AmbientBackground(accent: accent)),
-          SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(28, 20, 40, 16),
-                  child: _header(assets),
-                ),
-                Expanded(child: _buildBody(assets)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _header(List<Asset>? assets) {
     final photos = assets?.where((a) => a.isImage).length ?? 0;
     final videos = assets?.where((a) => a.isVideo).length ?? 0;
-    final detail = assets == null
-        ? '${widget.album.assetCount} items'
-        : [
-            if (photos > 0) plural(photos, 'photo'),
-            if (videos > 0) plural(videos, 'video'),
-            if (dateSpan(assets) case final span?) span,
-          ].join('  ·  ');
-    return Row(
-      children: [
-        GlassIconButton(
-          icon: Icons.arrow_back_rounded,
-          tooltip: 'Back',
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-        const SizedBox(width: 24),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                widget.album.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 44,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.8,
-                  height: 1.1,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                detail,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 20, color: Colors.white60),
-              ),
-            ],
-          ),
-        ),
-        if (assets != null && assets.any((a) => a.isImage)) ...[
-          const SizedBox(width: 16),
-          FilledButton.icon(
-            onPressed: _startSlideshow,
-            icon: const Icon(Icons.play_arrow_rounded, size: 30),
-            label: const Text('Slideshow'),
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: const Color(0xFF0B0C10),
-              shape: const StadiumBorder(),
-              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 18),
-              textStyle: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ],
+    return ModernScaffold(
+      header: ScreenHeader(
+        onBack: () => Navigator.of(context).maybePop(),
+        title: widget.album.name,
+        subtitle: assets == null
+            ? plural(widget.album.assetCount, 'item')
+            : [
+                if (photos > 0) plural(photos, 'photo'),
+                if (videos > 0) plural(videos, 'video'),
+                if (dateSpan(assets) case final span?) span,
+              ].join('  ·  '),
+        padding: const EdgeInsets.fromLTRB(28, 20, 40, 16),
+        trailing: assets != null && assets.any((a) => a.isImage)
+            ? FilledButton.icon(
+                onPressed: _startSlideshow,
+                icon: const Icon(Icons.play_arrow_rounded, size: 30),
+                label: const Text('Slideshow'),
+                style: whitePillButton(),
+              )
+            : null,
+      ),
+      body: _buildBody(assets),
     );
   }
 

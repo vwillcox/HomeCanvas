@@ -467,6 +467,29 @@ written with a "Z" it does not mean — so it is read as-is, never converted to
 the Pi's time zone, or a photo from late on the last of a month would move to
 the next one.
 
+### One look throughout
+
+Every screen shares one set of parts, in `lib/widgets/glass.dart`, so they
+cannot drift apart:
+
+- **`ScreenHeader`** — the top bar: a round glass back button, a large title
+  and the line under it, and the screen's controls gathered into one frosted
+  pill on the right (or a single white pill button, such as Slideshow).
+- **`ModernScaffold`** — the near-black background with a soft glow of the
+  accent from the top left, and the safe area.
+- **`GlassSection`** — a titled group of rows on a glass card, as in Settings.
+
+The home screen, albums, Settings, the Locked Folder, PIN entry, About and
+first-run setup all use them.
+
+**The dashboard** matches through its **Glass** theme — the same background,
+glow and accent (the accent is taken from the app's own colour scheme, and a
+test fails if the two ever differ) — and the same top bar, drawn in whichever
+theme is chosen so it still reads under a light one such as Paper. The top bar
+has a switch in the editor; off, the widgets get the whole panel and a floating
+glass back button returns. A theme can carry a `glow` colour of its own in its
+JSON to get the same effect.
+
 ### Reading the news
 
 Tapping a headline shows the feed's own summary first; **Read the page** opens
@@ -1044,6 +1067,7 @@ screenshots or testing a screen in isolation. Inert unless set.
 | `IMMICH_KIOSK_TEST_LOCKED=<pin>` | the Locked Folder, unlocked |
 | `IMMICH_KIOSK_TEST_LOCKED_VIDEO=<pin>` | the first locked video |
 | `IMMICH_KIOSK_TEST_ABOUT=1` | the About screen |
+| `IMMICH_KIOSK_TEST_SETTINGS=1` | the Settings screen |
 | `IMMICH_KIOSK_TEST_NOWPLAYING=1` | the now-playing panel on a blank background |
 | `IMMICH_KIOSK_TEST_DASHBOARD=<page>` | the dashboard, opened at that page |
 | `IMMICH_KIOSK_TEST_POPUP=forecast` or `inputs` | with the above, opens the full forecast or the TV inputs over the dashboard |

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../config/credits.dart';
+import '../widgets/glass.dart';
 
 /// Version shown on the About screen. Keep in step with pubspec.yaml.
 const String kAppVersion = '1.0.0';
@@ -13,10 +14,14 @@ class AboutScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = Theme.of(context).colorScheme.primary;
-    return Scaffold(
-      appBar: AppBar(title: const Text('About')),
+    return ModernScaffold(
+      header: ScreenHeader(
+        onBack: () => Navigator.of(context).maybePop(),
+        title: 'About',
+        subtitle: 'Version, libraries, licences and credits',
+      ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+        padding: const EdgeInsets.fromLTRB(40, 8, 40, 40),
         children: [
           const _Header(),
 
@@ -73,19 +78,24 @@ class _Header extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.photo_library,
-                  size: 44, color: Theme.of(context).colorScheme.primary),
+              Icon(
+                Icons.photo_library,
+                size: 44,
+                color: Theme.of(context).colorScheme.primary,
+              ),
               const SizedBox(width: 14),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('ImmichKioskPi',
-                      style: TextStyle(
-                          fontSize: 28, fontWeight: FontWeight.w600)),
-                  Text('Version $kAppVersion',
-                      style: const TextStyle(
-                          color: Colors.white54, fontSize: 17)),
+                  const Text(
+                    'ImmichKioskPi',
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
+                  ),
+                  Text(
+                    'Version $kAppVersion',
+                    style: const TextStyle(color: Colors.white54, fontSize: 17),
+                  ),
                 ],
               ),
             ],
@@ -159,12 +169,16 @@ class _CreditTile extends StatelessWidget {
                 child: Text(
                   credit.name,
                   style: const TextStyle(
-                      fontSize: 20, fontWeight: FontWeight.w600),
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
@@ -177,8 +191,10 @@ class _CreditTile extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 4),
-          Text(credit.purpose,
-              style: const TextStyle(fontSize: 16, color: Colors.white70)),
+          Text(
+            credit.purpose,
+            style: const TextStyle(fontSize: 16, color: Colors.white70),
+          ),
           const SizedBox(height: 6),
           SelectableText(
             credit.url,
@@ -206,13 +222,19 @@ class _SourceTile extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(source.what,
-              style:
-                  const TextStyle(fontSize: 19, fontWeight: FontWeight.w600)),
+          Text(
+            source.what,
+            style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w600),
+          ),
           const SizedBox(height: 4),
-          Text(source.detail,
-              style: const TextStyle(
-                  fontSize: 16, color: Colors.white70, height: 1.35)),
+          Text(
+            source.detail,
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.white70,
+              height: 1.35,
+            ),
+          ),
           if (source.url != null) ...[
             const SizedBox(height: 6),
             SelectableText(
@@ -241,8 +263,10 @@ class _Licence extends StatelessWidget {
       child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Licence',
-              style: TextStyle(fontSize: 19, fontWeight: FontWeight.w600)),
+          Text(
+            'Licence',
+            style: TextStyle(fontSize: 19, fontWeight: FontWeight.w600),
+          ),
           SizedBox(height: 6),
           Text(
             'ImmichKioskPi is released under the MIT Licence. It talks only to '

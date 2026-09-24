@@ -233,162 +233,102 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final accent = Theme.of(context).colorScheme.primary;
-    return Scaffold(
-      backgroundColor: const Color(0xFF0B0C10),
-      // The weather overlay is deliberately not shown here — it's for the
-      // slideshow (photo-frame mode) only. The now-playing player, on the
-      // other hand, takes over full-screen here when music is playing and no
-      // slideshow is running — there's nothing better to show — but stays
-      // out of the way while picking albums for a multi-select slideshow.
-      body: Stack(
-        children: [
-          Positioned.fill(child: AmbientBackground(accent: accent)),
-          SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Fixed rather than scrolled away: Settings has to stay
-                // reachable when Immich is down and there is nothing to
-                // scroll.
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(40, 20, 28, 12),
-                  child: _selectionMode ? _selectionHeader() : _header(),
-                ),
-                Expanded(child: _buildBody()),
-              ],
-            ),
+    // The weather overlay is deliberately not shown here — it's for the
+    // slideshow (photo-frame mode) only. The now-playing player, on the other
+    // hand, takes over full-screen here when music is playing and no
+    // slideshow is running — there's nothing better to show — but stays out
+    // of the way while picking albums for a multi-select slideshow.
+    //
+    // The header is fixed rather than scrolled away: Settings has to stay
+    // reachable when Immich is down and there is nothing to scroll.
+    return ModernScaffold(
+      header: _selectionMode ? _selectionHeader() : _header(),
+      body: _buildBody(),
+      overlays: [
+        if (!_selectionMode)
+          NowPlayingOverlay(
+            startExpanded: true,
+            anchor: _miniPlayer,
+            controller: _player,
           ),
-          if (!_selectionMode)
-            NowPlayingOverlay(
-              startExpanded: true,
-              anchor: _miniPlayer,
-              controller: _player,
-            ),
-        ],
-      ),
+      ],
     );
   }
 
   Widget _header() {
     final albums = visibleAlbums(_albums ?? const <Album>[]);
     final photos = albums.fold<int>(0, (n, a) => n + a.assetCount);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Expanded(
-          child: _Greeting(
-            detail: albums.isEmpty
-                ? null
-                : '${plural(albums.length, 'album')} · '
-                      '${plural(photos, 'item')}',
+    return ScreenHeader(
+      titleWidget: GreetingTitle(
+        detail: albums.isEmpty
+            ? null
+            : '${plural(albums.length, 'album')} · ${plural(photos, 'item')}',
+      ),
+      actions: [
+        if (_remoteRunning)
+          PillIconButton(
+            icon: Icons.settings_remote,
+            tooltip: 'TV Remote',
+            onPressed: () => Process.run('wlrctl', [
+              'toplevel',
+              'focus',
+              'app_id:$_remoteAppId',
+            ]),
           ),
+        if (context.watch<LockedFolderService>().canUse)
+          PillIconButton(
+            icon: Icons.lock_outline,
+            tooltip: 'Locked Folder',
+            onPressed: _openLockedFolder,
+          ),
+        if (context.watch<ConfigService>().config.dashboard.enabled)
+          PillIconButton(
+            icon: Icons.dashboard_outlined,
+            tooltip: 'Dashboard',
+            onPressed: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const DashboardScreen())),
+          ),
+        if (context.watch<CameraService>().isConfigured)
+          PillIconButton(
+            icon: context.watch<CameraService>().isOpen
+                ? Icons.videocam_off_outlined
+                : Icons.videocam_outlined,
+            tooltip: 'Camera',
+            onPressed: context.read<CameraService>().toggleOpen,
+          ),
+        const _DndSwitch(),
+        PillIconButton(
+          icon: Icons.refresh,
+          tooltip: 'Refresh',
+          onPressed: () => _load(force: true),
         ),
-        const SizedBox(width: 16),
-        Glass(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (_remoteRunning)
-                PillIconButton(
-                  icon: Icons.settings_remote,
-                  tooltip: 'TV Remote',
-                  onPressed: () => Process.run('wlrctl', [
-                    'toplevel',
-                    'focus',
-                    'app_id:$_remoteAppId',
-                  ]),
-                ),
-              if (context.watch<LockedFolderService>().canUse)
-                PillIconButton(
-                  icon: Icons.lock_outline,
-                  tooltip: 'Locked Folder',
-                  onPressed: _openLockedFolder,
-                ),
-              if (context.watch<ConfigService>().config.dashboard.enabled)
-                PillIconButton(
-                  icon: Icons.dashboard_outlined,
-                  tooltip: 'Dashboard',
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const DashboardScreen()),
-                  ),
-                ),
-              if (context.watch<CameraService>().isConfigured)
-                PillIconButton(
-                  icon: context.watch<CameraService>().isOpen
-                      ? Icons.videocam_off_outlined
-                      : Icons.videocam_outlined,
-                  tooltip: 'Camera',
-                  onPressed: context.read<CameraService>().toggleOpen,
-                ),
-              const _DndSwitch(),
-              PillIconButton(
-                icon: Icons.refresh,
-                tooltip: 'Refresh',
-                onPressed: () => _load(force: true),
-              ),
-              PillIconButton(
-                icon: Icons.settings_outlined,
-                tooltip: 'Settings',
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                ),
-              ),
-            ],
-          ),
+        PillIconButton(
+          icon: Icons.settings_outlined,
+          tooltip: 'Settings',
+          onPressed: () => Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const SettingsScreen())),
         ),
       ],
     );
   }
 
   Widget _selectionHeader() {
-    final n = _selected.length;
-    return Row(
-      children: [
-        GlassIconButton(
-          icon: Icons.close,
-          tooltip: 'Cancel selection',
-          onPressed: _clearSelection,
-        ),
-        const SizedBox(width: 20),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '$n selected',
-                style: const TextStyle(
-                  fontSize: 40,
-                  fontWeight: FontWeight.w700,
-                  height: 1.1,
-                ),
-              ),
-              const Text(
-                'Tap more albums to add them to one slideshow',
-                style: TextStyle(fontSize: 19, color: Colors.white60),
-              ),
-            ],
-          ),
-        ),
-        FilledButton.icon(
-          onPressed: _slideshowFromSelection,
-          icon: const Icon(Icons.play_arrow_rounded, size: 30),
-          label: const Text('Slideshow'),
-          style: _whitePill,
-        ),
-      ],
+    return ScreenHeader(
+      onBack: _clearSelection,
+      backIcon: Icons.close,
+      backTooltip: 'Cancel selection',
+      title: '${_selected.length} selected',
+      subtitle: 'Tap more albums to add them to one slideshow',
+      trailing: FilledButton.icon(
+        onPressed: _slideshowFromSelection,
+        icon: const Icon(Icons.play_arrow_rounded, size: 30),
+        label: const Text('Slideshow'),
+        style: whitePillButton(),
+      ),
     );
   }
-
-  static final ButtonStyle _whitePill = FilledButton.styleFrom(
-    backgroundColor: Colors.white,
-    foregroundColor: const Color(0xFF0B0C10),
-    shape: const StadiumBorder(),
-    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 18),
-    textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-  );
 
   Widget _buildBody() {
     if (_error != null) {
@@ -419,7 +359,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 onPressed: () => _load(force: true),
                 icon: const Icon(Icons.refresh),
                 label: const Text('Try again'),
-                style: _whitePill,
+                style: whitePillButton(),
               ),
             ],
           ),
@@ -777,69 +717,6 @@ class _TransportButton extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-/// "Good afternoon", today's date and the library in numbers.
-///
-/// Its own widget with its own timer, so the greeting turns over at noon and
-/// the date at midnight without the whole home screen rebuilding each minute.
-class _Greeting extends StatefulWidget {
-  const _Greeting({this.detail});
-
-  final String? detail;
-
-  @override
-  State<_Greeting> createState() => _GreetingState();
-}
-
-class _GreetingState extends State<_Greeting> {
-  late Timer _tick;
-  DateTime _now = DateTime.now();
-
-  @override
-  void initState() {
-    super.initState();
-    _tick = Timer.periodic(const Duration(minutes: 1), (_) {
-      if (mounted) setState(() => _now = DateTime.now());
-    });
-  }
-
-  @override
-  void dispose() {
-    _tick.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          greetingFor(_now),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            fontSize: 44,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.8,
-            height: 1.1,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          [
-            longDate(_now),
-            if (widget.detail != null) widget.detail!,
-          ].join('  ·  '),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 20, color: Colors.white60),
-        ),
-      ],
     );
   }
 }

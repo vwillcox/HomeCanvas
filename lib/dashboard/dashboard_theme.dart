@@ -42,6 +42,10 @@ class DashboardTheme {
   /// Widget tiles cast a soft shadow. Off suits flat and light themes.
   final bool shadow;
 
+  /// A soft glow of colour from the top left, over [background] — the look of
+  /// the kiosk's own home screen. Null for a plain background.
+  final Color? glow;
+
   const DashboardTheme({
     required this.id,
     required this.name,
@@ -55,6 +59,7 @@ class DashboardTheme {
     this.gap = 14,
     this.fontFamily,
     this.shadow = true,
+    this.glow,
   });
 
   static Color _colour(Object? v, Color fallback) {
@@ -82,40 +87,55 @@ class DashboardTheme {
       gap: (j['gap'] as num?)?.toDouble() ?? 14,
       fontFamily: j['fontFamily'] as String?,
       shadow: j['shadow'] as bool? ?? true,
+      glow: j['glow'] == null ? null : _colour(j['glow'], Colors.transparent),
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'background': background
-            .map((c) =>
-                '#${c.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}')
-            .toList(),
-        'surface': _hex(surface),
-        'border': _hex(border),
-        'textPrimary': _hex(textPrimary),
-        'textSecondary': _hex(textSecondary),
-        'accent': _hex(accent),
-        'cornerRadius': cornerRadius,
-        'gap': gap,
-        'fontFamily': fontFamily,
-        'shadow': shadow,
-      };
+    'id': id,
+    'name': name,
+    'background': background
+        .map(
+          (c) =>
+              '#${c.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}',
+        )
+        .toList(),
+    'surface': _hex(surface),
+    'border': _hex(border),
+    'textPrimary': _hex(textPrimary),
+    'textSecondary': _hex(textSecondary),
+    'accent': _hex(accent),
+    'cornerRadius': cornerRadius,
+    'gap': gap,
+    'fontFamily': fontFamily,
+    'shadow': shadow,
+    if (glow != null) 'glow': _hex(glow!),
+  };
 
   static String _hex(Color c) =>
       '#${c.toARGB32().toRadixString(16).padLeft(8, '0')}';
 
-  BoxDecoration get backgroundDecoration => BoxDecoration(
-        gradient: background.length > 1
-            ? LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: background,
-              )
-            : null,
-        color: background.length == 1 ? background.first : null,
-      );
+  BoxDecoration get backgroundDecoration => glow != null
+      ? BoxDecoration(
+          color: background.first,
+          // The same glow, in the same place, as the home screen's.
+          gradient: RadialGradient(
+            center: const Alignment(-0.85, -1.1),
+            radius: 1.4,
+            colors: [glow!, background.first],
+            stops: const [0.0, 0.7],
+          ),
+        )
+      : BoxDecoration(
+          gradient: background.length > 1
+              ? LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: background,
+                )
+              : null,
+          color: background.length == 1 ? background.first : null,
+        );
 
   BoxDecoration get tileDecoration => tileDecorationWith();
 
@@ -141,6 +161,22 @@ class DashboardTheme {
 /// Shipped themes. Each is a plain value, so any of them can be copied into a
 /// JSON file and adjusted.
 const List<DashboardTheme> kBuiltInThemes = [
+  // The kiosk's own look — the home screen, albums and settings — so the
+  // dashboard can match them: the same near-black with a soft blue glow, and
+  // tiles like the frosted cards everywhere else.
+  DashboardTheme(
+    id: 'glass',
+    name: 'Glass',
+    background: [Color(0xFF0B0C10)],
+    glow: Color(0x29A6C8FF),
+    surface: Color(0x12FFFFFF),
+    border: Color(0x1CFFFFFF),
+    textPrimary: Color(0xFFFFFFFF),
+    textSecondary: Color(0x99FFFFFF),
+    accent: Color(0xFFA6C8FF),
+    cornerRadius: 24,
+    gap: 18,
+  ),
   DashboardTheme(
     id: 'midnight',
     name: 'Midnight',

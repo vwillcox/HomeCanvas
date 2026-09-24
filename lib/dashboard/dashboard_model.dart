@@ -77,7 +77,10 @@ class DashboardWidgetConfig {
     return DashboardWidgetConfig(
       id: j['id'] as String? ?? '',
       type: j['type'] as String? ?? '',
-      x: ((j['x'] as num?)?.toInt() ?? 0).clamp(0, DashboardGrid.columns - width),
+      x: ((j['x'] as num?)?.toInt() ?? 0).clamp(
+        0,
+        DashboardGrid.columns - width,
+      ),
       y: ((j['y'] as num?)?.toInt() ?? 0).clamp(0, DashboardGrid.rows - height),
       width: width,
       height: height,
@@ -92,17 +95,17 @@ class DashboardWidgetConfig {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'type': type,
-        'x': x,
-        'y': y,
-        'width': width,
-        'height': height,
-        'page': page,
-        'fontFamily': fontFamily,
-        'fontScale': fontScale,
-        'options': options,
-      };
+    'id': id,
+    'type': type,
+    'x': x,
+    'y': y,
+    'width': width,
+    'height': height,
+    'page': page,
+    'fontFamily': fontFamily,
+    'fontScale': fontScale,
+    'options': options,
+  };
 
   /// True when this widget's cells overlap [other]'s.
   ///
@@ -152,6 +155,11 @@ class DashboardSettings {
   /// turn the page every time you pressed one of them.
   bool tapToFlip;
 
+  /// The kiosk's top bar across the dashboard — back, the greeting and date,
+  /// and the pages — matching every other screen. Off gives the widgets the
+  /// whole panel, with a floating back button instead.
+  bool topBar;
+
   List<DashboardWidgetConfig> widgets;
 
   DashboardSettings({
@@ -163,6 +171,7 @@ class DashboardSettings {
     this.tileShadows = true,
     this.pageSeconds = 0,
     this.tapToFlip = false,
+    this.topBar = true,
     List<DashboardWidgetConfig>? widgets,
   }) : widgets = widgets ?? [];
 
@@ -173,9 +182,11 @@ class DashboardSettings {
         showOnLaunch: j['showOnLaunch'] as bool? ?? false,
         editorPort: (j['editorPort'] as num?)?.toInt() ?? 8090,
         // Migrated from the three-way settings these replaced.
-        roundedCorners: j['roundedCorners'] as bool? ??
+        roundedCorners:
+            j['roundedCorners'] as bool? ??
             (j['corners'] == null ? true : j['corners'] != 'square'),
-        tileShadows: j['tileShadows'] as bool? ??
+        tileShadows:
+            j['tileShadows'] as bool? ??
             (j['shadows'] == null ? true : j['shadows'] != 'off'),
         // Floored at 3s: anything quicker is unreadable, and a config typo
         // of 1 would make the panel strobe.
@@ -184,6 +195,7 @@ class DashboardSettings {
           return v <= 0 ? 0 : v.clamp(3, 3600);
         }(),
         tapToFlip: j['tapToFlip'] as bool? ?? false,
+        topBar: j['topBar'] as bool? ?? true,
         widgets: ((j['widgets'] as List?) ?? const [])
             .whereType<Map<String, dynamic>>()
             .map(DashboardWidgetConfig.fromJson)
@@ -192,16 +204,17 @@ class DashboardSettings {
       );
 
   Map<String, dynamic> toJson() => {
-        'enabled': enabled,
-        'themeId': themeId,
-        'showOnLaunch': showOnLaunch,
-        'editorPort': editorPort,
-        'roundedCorners': roundedCorners,
-        'tileShadows': tileShadows,
-        'pageSeconds': pageSeconds,
-        'tapToFlip': tapToFlip,
-        'widgets': widgets.map((w) => w.toJson()).toList(),
-      };
+    'enabled': enabled,
+    'themeId': themeId,
+    'showOnLaunch': showOnLaunch,
+    'editorPort': editorPort,
+    'roundedCorners': roundedCorners,
+    'tileShadows': tileShadows,
+    'pageSeconds': pageSeconds,
+    'tapToFlip': tapToFlip,
+    'topBar': topBar,
+    'widgets': widgets.map((w) => w.toJson()).toList(),
+  };
 
   /// The corner radius to draw with, given what the theme asked for.
   double radiusOver(double themeRadius) =>
@@ -218,8 +231,14 @@ class DashboardSettings {
     for (var y = 0; y <= DashboardGrid.rows - height; y++) {
       for (var x = 0; x <= DashboardGrid.columns - width; x++) {
         final candidate = DashboardWidgetConfig(
-            id: '', type: '', x: x, y: y, width: width, height: height,
-            page: page);
+          id: '',
+          type: '',
+          x: x,
+          y: y,
+          width: width,
+          height: height,
+          page: page,
+        );
         if (!widgets.any(candidate.overlaps)) return (x: x, y: y);
       }
     }
