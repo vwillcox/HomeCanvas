@@ -466,6 +466,36 @@ own **×**, top left, goes to the original page.
 Chromium, the fallback browser, has no reader view that can be opened by
 address, so with Chromium articles always open as the site serves them.
 
+### Keeping adverts out of the news
+
+Some feeds are more shopping than news. On the day this was added, 25 of
+WIRED's 50 items were coupon posts — "Peacock Promo Codes: 40% Off", "Motley
+Fool Promo Code: $200 Off" — and four of the seven headlines on the tile were
+selling something. The news widget now drops them, on any one of three signals:
+
+- **the headline** — promo codes, coupons, vouchers, discount codes, "40% off",
+  "$20 off", sponsored, paid post, partner content, a leading `[Ad]`, and named
+  sales ("Black Friday deals");
+- **the address** — `/story/peacock-promo-code/`, `/sponsored/`, `/deals/`;
+- **the publisher's own category** — WIRED files its coupon posts under
+  "Gear / Deals"; "Sponsored" and "Coupons" are caught the same way.
+
+Filtered before the feeds are blended and counted, so a tile of seven stays a
+tile of seven real headlines rather than three and some gaps.
+
+What it deliberately leaves alone:
+
+- **"deal" on its own** — a trade deal, a pay deal and a transfer deal are news;
+- **a price on its own** — "Apple's $250 Million Siri Settlement" is a story,
+  "$250 off" is not;
+- **reviews and buying guides** — "The Best Linux Laptops (2026)" is editorial
+  even when it earns commission. If those are not wanted either, they are a
+  category away (`Buying Guides`), but that is a different decision.
+
+Checked against the live feeds before it shipped: all 25 WIRED coupon posts
+hidden, and nothing from the BBC or The Verge. **Hide promo codes, coupons and
+sponsored posts** in the widget's settings turns it off.
+
 ### The full forecast
 
 Tap the weather widget for the whole picture, over the dashboard:

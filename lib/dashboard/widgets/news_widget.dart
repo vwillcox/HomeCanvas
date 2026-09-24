@@ -28,7 +28,16 @@ class DashboardNewsWidget extends StatelessWidget {
 
     final feeds = context.watch<FeedService>();
     final maxAge = Duration(minutes: refreshMinutes(w));
-    final lists = [for (final u in urls) feeds.feed(u, maxAge: maxAge)];
+    // Filtered before mixing and counting, so a tile of seven stays a tile of
+    // seven headlines rather than three headlines and four gaps.
+    final hidePromos = w.option('hidePromotions', true);
+    final lists = [
+      for (final u in urls)
+        [
+          for (final item in feeds.feed(u, maxAge: maxAge))
+            if (!hidePromos || !isPromotional(item)) item,
+        ],
+    ];
     final error = urls.map(feeds.errorFor).whereType<String>().firstOrNull;
 
     final maxItems = w.option('maxItems', 5);
@@ -283,6 +292,15 @@ final newsWidgetType = DashboardWidgetType(
           'Turn off for a panel nobody should be browsing from.',
     ),
     WidgetOption(
+      key: 'hidePromotions',
+      label: 'Hide promo codes, coupons and sponsored posts',
+      kind: OptionKind.boolean,
+      defaultValue: true,
+      help: 'Some feeds are more shopping than news — WIRED’s is mostly coupon '
+          'posts. Judged from the headline, the address and the publisher’s '
+          'own category. Reviews and buying guides are kept.',
+    ),
+    WidgetOption(
       key: 'readerView',
       label: 'Open articles in reader view',
       kind: OptionKind.boolean,
@@ -336,7 +354,14 @@ final newsWidgetType = DashboardWidgetType(
     if (urls.isEmpty) return const [];
 
     final shown = (config.options['maxItems'] as num?)?.toInt() ?? 5;
-    final lists = [for (final u in urls) data.feeds!.feed(u)];
+    final hidePromos = config.options['hidePromotions'] != false;
+    final lists = [
+      for (final u in urls)
+        [
+          for (final item in data.feeds!.feed(u))
+            if (!hidePromos || !isPromotional(item)) item,
+        ],
+    ];
     // Blended exactly as the panel blends them, so the preview is not a
     // different selection of headlines from the one on the wall.
     final items = lists.length == 1

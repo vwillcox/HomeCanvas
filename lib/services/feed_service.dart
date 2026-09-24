@@ -13,8 +13,89 @@ class FeedItem {
   final DateTime? published;
   final String? link;
 
-  const FeedItem({required this.title, this.summary, this.published, this.link});
+  /// The publisher's own tags — RSS `<category>`, Atom `term`. WIRED files
+  /// its coupon posts under "Gear / Deals", which is a plainer signal than
+  /// anything in the headline.
+  final List<String> categories;
+
+  const FeedItem({
+    required this.title,
+    this.summary,
+    this.published,
+    this.link,
+    this.categories = const [],
+  });
 }
+
+/// Whether [item] is selling something rather than reporting something.
+///
+/// Built from what the panel's own feeds actually carry. On the day this was
+/// written, 26 of WIRED's first 40 items were coupon posts — "Peacock Promo
+/// Codes: 40% Off September 2026", "Motley Fool Promo Code: \$200 Off" —
+/// crowding the news out of a seven-line tile. They give themselves away three
+/// ways, and any one is enough:
+///
+/// - the **headline**: promo codes, coupons, vouchers, "40% off", "\$20 off",
+///   and anything labelled sponsored or paid for;
+/// - the **address**: `/story/peacock-promo-code/`, `/sponsored/`;
+/// - the **publisher's category**: "Deals", "Coupons", "Sponsored".
+///
+/// Deliberately not "deal" on its own: a trade deal, a Brexit deal and a pay
+/// deal are all news. Nor buying guides and reviews, which are editorial even
+/// when they earn commission.
+bool isPromotional(FeedItem item) {
+  final title = item.title.toLowerCase();
+  if (_promoTitle.hasMatch(title)) return true;
+
+  final link = item.link;
+  if (link != null) {
+    final path = (Uri.tryParse(link)?.path ?? link).toLowerCase();
+    if (_promoPath.hasMatch(path)) return true;
+  }
+
+  for (final c in item.categories) {
+    // "Gear / Deals" — the last part is the one that says what it is.
+    final leaf = c.split('/').last.trim().toLowerCase();
+    if (_promoCategories.contains(leaf)) return true;
+  }
+  return false;
+}
+
+final _promoTitle = RegExp(
+  r'\bpromo(tional)? codes?\b'
+  r'|\bcoupons?\b'
+  r'|\b(discount|voucher|referral) codes?\b'
+  r'|\bvouchers?\b'
+  r'|\b\d+% off\b'
+  r'|[$£€]\s?\d[\d,.]*\s+off\b'
+  r'|\bsponsored\b|\bpaid (post|content|partnership)\b'
+  r'|\bpartner content\b|\badvertorial\b|\badvertisement\b'
+  r'|^\s*\[ad\]|^\s*ad\s*[:|\-–]|\(ad\)'
+  r'|\b(black friday|cyber monday|prime day|boxing day) deals?\b'
+  r'|\bdeal alert\b|\btoday.s best deals\b',
+);
+
+final _promoPath = RegExp(
+  r'promo-codes?\b|\bcoupons?\b|coupon-codes?|discount-codes?'
+  r'|voucher-codes?|/sponsored\b|/paid-post|/partner-content|/advertorial'
+  r'|/deals/',
+);
+
+const _promoCategories = {
+  'deals',
+  'coupons',
+  'coupon',
+  'promo codes',
+  'promotions',
+  'promotion',
+  'sponsored',
+  'sponsored content',
+  'partner content',
+  'paid content',
+  'paid post',
+  'advertisement',
+  'advertorial',
+};
 
 /// One event from an iCalendar feed.
 class CalendarEvent {
@@ -265,6 +346,10 @@ class FeedService extends ChangeNotifier {
         summary: _stripHtml(text(item, 'description')),
         published: _parseDate(text(item, 'pubDate')),
         link: text(item, 'link'),
+        categories: [
+          for (final c in item.findElements('category'))
+            if (c.innerText.trim().isNotEmpty) _unescape(c.innerText.trim()),
+        ],
       ));
     }
 
@@ -280,6 +365,11 @@ class FeedService extends ChangeNotifier {
             .findElements('link')
             .firstOrNull
             ?.getAttribute('href'),
+        categories: [
+          for (final c in entry.findElements('category'))
+            if ((c.getAttribute('term') ?? '').trim().isNotEmpty)
+              c.getAttribute('term')!.trim(),
+        ],
       ));
     }
 
