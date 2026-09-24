@@ -13,6 +13,7 @@ import '../services/config_service.dart';
 import '../services/dashboard_service.dart';
 import '../services/screen_idle_service.dart';
 import '../widgets/glass.dart';
+import '../widgets/module_bar.dart';
 
 /// The dashboard: widgets laid out on a grid, drawn in the chosen theme.
 ///
@@ -226,21 +227,32 @@ class _TopBar extends StatelessWidget {
     return DefaultTextStyle.merge(
       style: TextStyle(color: theme.textPrimary),
       child: ScreenHeader(
-        onBack: () => Navigator.of(context).maybePop(),
         titleWidget: GreetingTitle(
           colour: theme.textPrimary,
           secondary: theme.textSecondary,
         ),
-        padding: const EdgeInsets.fromLTRB(20, 14, 24, 6),
-        iconColour: theme.textPrimary,
-        trailing: pageCount > 1
-            ? _PageDots(
+        padding: const EdgeInsets.fromLTRB(28, 14, 20, 4),
+        // The home screen's own bar, rather than a back button: Photos takes
+        // you home, and everything else is where it is there.
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (pageCount > 1) ...[
+              _PageDots(
                 count: pageCount,
                 current: page,
                 theme: theme,
                 onTap: onPage,
-              )
-            : null,
+              ),
+              const SizedBox(width: 12),
+            ],
+            ModuleBar(
+              current: KioskModule.dashboard,
+              colour: theme.textPrimary,
+              accent: theme.accent,
+            ),
+          ],
+        ),
       ),
     );
   }

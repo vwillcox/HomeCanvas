@@ -1,26 +1,20 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/immich_models.dart';
-import '../services/camera_service.dart';
 import '../services/immich_service.dart';
 import '../services/config_service.dart';
-import '../services/locked_folder_service.dart';
 import '../services/now_playing_service.dart';
 import '../services/playback_source.dart';
 import '../services/spotify_service.dart';
 import '../widgets/glass.dart';
+import '../widgets/module_bar.dart';
 import '../widgets/now_playing_overlay.dart';
 import '../widgets/remote_image.dart';
 import 'album_screen.dart';
-import 'dashboard_screen.dart';
-import 'locked_folder_screen.dart';
-import 'pin_screen.dart';
-import 'settings_screen.dart';
 import 'slideshow_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -46,47 +40,16 @@ class _HomeScreenState extends State<HomeScreen> {
   final GlobalKey _miniPlayer = GlobalKey();
   final NowPlayingOverlayController _player = NowPlayingOverlayController();
 
-  /// Whether the VIDAA TV remote app is currently running, so the "TV Remote"
-  /// button is only shown when it can actually flip to it.
-  bool _remoteRunning = false;
-  Timer? _remotePoll;
-  static const String _remoteAppId = 'com.vwillcox.vidaa_remote';
-
   @override
   void initState() {
     super.initState();
     _loadFast();
-    _checkRemote();
-    _remotePoll = Timer.periodic(
-      const Duration(seconds: 4),
-      (_) => _checkRemote(),
-    );
   }
 
   @override
   void dispose() {
-    _remotePoll?.cancel();
     _player.dispose();
     super.dispose();
-  }
-
-  /// Detect the remote's window via wlrctl; hide the button if wlrctl is
-  /// missing or the remote isn't running.
-  Future<void> _checkRemote() async {
-    var running = false;
-    try {
-      final r = await Process.run('wlrctl', ['toplevel', 'list']);
-      running =
-          r.exitCode == 0 &&
-          (r.stdout as String)
-              .split('\n')
-              .any((line) => line.startsWith('$_remoteAppId:'));
-    } catch (_) {
-      running = false;
-    }
-    if (mounted && running != _remoteRunning) {
-      setState(() => _remoteRunning = running);
-    }
   }
 
   /// Paint from the disk cache immediately (instant cold start), then refresh
@@ -193,41 +156,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Future<void> _openLockedFolder() async {
-    final locked = context.read<LockedFolderService>();
-    final pin = await Navigator.of(context).push<String>(
-      MaterialPageRoute(
-        builder: (_) => const PinScreen(
-          title: 'Locked Folder',
-          subtitle: 'Enter your Immich Locked Folder PIN',
-        ),
-      ),
-    );
-    if (pin == null || !mounted) return;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
-    );
-    final result = await locked.unlock(pin);
-    if (!mounted) return;
-    Navigator.of(context).pop(); // dismiss loading
-
-    switch (result) {
-      case UnlockResult.success:
-        Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (_) => const LockedFolderScreen()));
-      case UnlockResult.wrongPin:
-        _snack('Incorrect PIN');
-      case UnlockResult.notConfigured:
-        _snack('Locked Folder login is not configured');
-      case UnlockResult.error:
-        _snack('Could not sign in to Immich for the Locked Folder');
-    }
-  }
-
   void _snack(String msg) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
 
@@ -264,53 +192,10 @@ class _HomeScreenState extends State<HomeScreen> {
             ? null
             : '${plural(albums.length, 'album')} · ${plural(photos, 'item')}',
       ),
-      actions: [
-        if (_remoteRunning)
-          PillIconButton(
-            icon: Icons.settings_remote,
-            tooltip: 'TV Remote',
-            onPressed: () => Process.run('wlrctl', [
-              'toplevel',
-              'focus',
-              'app_id:$_remoteAppId',
-            ]),
-          ),
-        if (context.watch<LockedFolderService>().canUse)
-          PillIconButton(
-            icon: Icons.lock_outline,
-            tooltip: 'Locked Folder',
-            onPressed: _openLockedFolder,
-          ),
-        if (context.watch<ConfigService>().config.dashboard.enabled)
-          PillIconButton(
-            icon: Icons.dashboard_outlined,
-            tooltip: 'Dashboard',
-            onPressed: () => Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const DashboardScreen())),
-          ),
-        if (context.watch<CameraService>().isConfigured)
-          PillIconButton(
-            icon: context.watch<CameraService>().isOpen
-                ? Icons.videocam_off_outlined
-                : Icons.videocam_outlined,
-            tooltip: 'Camera',
-            onPressed: context.read<CameraService>().toggleOpen,
-          ),
-        const _DndSwitch(),
-        PillIconButton(
-          icon: Icons.refresh,
-          tooltip: 'Refresh',
-          onPressed: () => _load(force: true),
-        ),
-        PillIconButton(
-          icon: Icons.settings_outlined,
-          tooltip: 'Settings',
-          onPressed: () => Navigator.of(
-            context,
-          ).push(MaterialPageRoute(builder: (_) => const SettingsScreen())),
-        ),
-      ],
+      trailing: ModuleBar(
+        current: KioskModule.photos,
+        onRefresh: () => _load(force: true),
+      ),
     );
   }
 
@@ -851,41 +736,6 @@ class _AlbumTile extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// Mutes the incoming-share chime — a "slider" rather than an icon button
-/// since that's specifically what was asked for, kept in the top bar so it's
-/// reachable in one tap rather than buried in Settings.
-class _DndSwitch extends StatelessWidget {
-  const _DndSwitch();
-
-  @override
-  Widget build(BuildContext context) {
-    final config = context.watch<ConfigService>();
-    final muted = config.config.shareInbox.dndMuted;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            muted
-                ? Icons.notifications_off_outlined
-                : Icons.notifications_outlined,
-            color: muted ? Colors.white54 : Colors.white,
-            size: 26,
-          ),
-          Switch(
-            value: !muted,
-            onChanged: (on) {
-              config.config.shareInbox.dndMuted = !on;
-              config.save();
-            },
-          ),
-        ],
       ),
     );
   }

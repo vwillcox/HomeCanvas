@@ -95,6 +95,8 @@ class PillIconButton extends StatelessWidget {
     required this.onPressed,
     this.tooltip,
     this.colour,
+    this.selected = false,
+    this.selectedColour,
   });
 
   final IconData icon;
@@ -102,16 +104,27 @@ class PillIconButton extends StatelessWidget {
   final String? tooltip;
   final Color? colour;
 
+  /// Lit: a soft disc of [selectedColour] behind the icon — "you are here".
+  final bool selected;
+  final Color? selectedColour;
+
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      onPressed: onPressed,
-      tooltip: tooltip,
-      icon: Icon(icon, color: colour ?? Colors.white),
-      iconSize: 30,
-      style: IconButton.styleFrom(
-        minimumSize: const Size(60, 60),
-        padding: const EdgeInsets.all(12),
+    final lit = selectedColour ?? Theme.of(context).colorScheme.primary;
+    return Semantics(
+      selected: selected,
+      child: IconButton(
+        onPressed: onPressed,
+        tooltip: tooltip,
+        icon: Icon(icon, color: colour ?? Colors.white),
+        iconSize: 30,
+        style: IconButton.styleFrom(
+          minimumSize: const Size(60, 60),
+          padding: const EdgeInsets.all(12),
+          backgroundColor: selected
+              ? lit.withValues(alpha: 0.22)
+              : Colors.transparent,
+        ),
       ),
     );
   }

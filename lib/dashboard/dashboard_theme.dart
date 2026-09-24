@@ -175,7 +175,9 @@ const List<DashboardTheme> kBuiltInThemes = [
     textSecondary: Color(0x99FFFFFF),
     accent: Color(0xFFA6C8FF),
     cornerRadius: 24,
-    gap: 18,
+    // Tight, like the photo wall: the tiles read as one panel of glass
+    // rather than islands with a channel of background between each.
+    gap: 10,
   ),
   DashboardTheme(
     id: 'midnight',

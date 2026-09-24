@@ -48,11 +48,11 @@ class NowPlayingOverlay extends StatefulWidget {
   /// Opens the full player from outside. Only needed with [anchor].
   final NowPlayingOverlayController? controller;
 
-  /// Start already expanded to the full player rather than the small corner
-  /// card. Used on the home screen — there's no slideshow to keep clear
-  /// there, so if music is playing there's nothing better to show than the
-  /// player itself; tapping it still shrinks to the corner like anywhere
-  /// else, uncovering the album grid to go start a slideshow.
+  /// Start already expanded to the full player rather than small. Used on the
+  /// home screen — there's no slideshow to keep clear there, so if music is
+  /// playing when the kiosk starts there's nothing better to show than the
+  /// player itself. Only until it has been shrunk by hand: after that it
+  /// stays small, however often the overlay is rebuilt.
   final bool startExpanded;
 
   const NowPlayingOverlay({
@@ -82,17 +82,25 @@ class _NowPlayingOverlayState extends State<NowPlayingOverlay>
 
   bool get _expanded => _controller.value > 0.5;
 
-  /// Only set on the home screen (see [NowPlayingOverlay.startExpanded]) —
-  /// shrinking there is meant as a brief "let me pick an album" detour, not
-  /// a standing preference, so it pops back up on its own if nothing came of
-  /// it within [_autoExpandDelay].
-  Timer? _autoExpandTimer;
-  static const Duration _autoExpandDelay = Duration(seconds: 10);
+  /// Whether the full player has been shrunk by hand, for the life of the
+  /// app.
+  ///
+  /// Static, because the overlay itself does not live that long: the home
+  /// screen drops it while albums are being picked for a slideshow and makes
+  /// a new one afterwards, and a new one starting full-screen was the player
+  /// popping back up after being put away. It used to re-open itself ten
+  /// seconds after being shrunk, too — reasonable when "small" meant a
+  /// corner card over the albums, not now there is a proper mini player.
+  /// Once shrunk, it stays shrunk until someone opens it again.
+  static bool _shrunkByUser = false;
+
+  @visibleForTesting
+  static void resetForTest() => _shrunkByUser = false;
 
   @override
   void initState() {
     super.initState();
-    if (widget.startExpanded) _controller.value = 1;
+    if (widget.startExpanded && !_shrunkByUser) _controller.value = 1;
     widget.controller?.addListener(_expandFromOutside);
     startDrift();
   }
@@ -106,10 +114,7 @@ class _NowPlayingOverlayState extends State<NowPlayingOverlay>
     }
   }
 
-  void _expandFromOutside() {
-    _autoExpandTimer?.cancel();
-    _controller.forward();
-  }
+  void _expandFromOutside() => _controller.forward();
 
   /// The anchor's rectangle in this overlay's coordinates, or null when it is
   /// not laid out — scrolled out of the list, or not built at all.
@@ -124,7 +129,6 @@ class _NowPlayingOverlayState extends State<NowPlayingOverlay>
   @override
   void dispose() {
     widget.controller?.removeListener(_expandFromOutside);
-    _autoExpandTimer?.cancel();
     stopDrift();
     _controller.dispose();
     super.dispose();
@@ -132,15 +136,9 @@ class _NowPlayingOverlayState extends State<NowPlayingOverlay>
 
   void _toggle() {
     if (_expanded) {
+      _shrunkByUser = true;
       _controller.reverse();
-      if (widget.startExpanded) {
-        _autoExpandTimer?.cancel();
-        _autoExpandTimer = Timer(_autoExpandDelay, () {
-          if (mounted && !_expanded) _controller.forward();
-        });
-      }
     } else {
-      _autoExpandTimer?.cancel();
       _controller.forward();
     }
   }
