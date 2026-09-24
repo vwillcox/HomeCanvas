@@ -36,11 +36,20 @@ class Asset {
   final String? fileName;
   final Duration? duration;
 
+  /// When the photo was taken, as the camera's clock read it.
+  ///
+  /// From Immich's `localDateTime`, which is wall-clock time written with a
+  /// trailing "Z" even though it is not UTC. Kept as parsed — read its year
+  /// and month directly, never `.toLocal()` it, or a photo taken late on the
+  /// last day of a month moves into the next one.
+  final DateTime? taken;
+
   const Asset({
     required this.id,
     required this.type,
     this.fileName,
     this.duration,
+    this.taken,
   });
 
   bool get isImage => type == AssetType.image;
@@ -55,6 +64,8 @@ class Asset {
           : (t == 'IMAGE' ? AssetType.image : AssetType.other),
       fileName: j['originalFileName'] as String?,
       duration: _parseDuration(j['duration']?.toString()),
+      taken: DateTime.tryParse(
+          (j['localDateTime'] ?? j['fileCreatedAt'] ?? '').toString()),
     );
   }
 }

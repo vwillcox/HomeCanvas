@@ -28,8 +28,25 @@ String _fmt(Duration d) {
 /// transport controls, and tapping again shrinks it back.
 ///
 /// Place inside a Stack that fills the screen (slideshow only).
+/// Lets something outside the overlay open the full player — the home
+/// screen's mini player, which is part of the page rather than the overlay.
+class NowPlayingOverlayController extends ChangeNotifier {
+  void expand() => notifyListeners();
+}
+
 class NowPlayingOverlay extends StatefulWidget {
   final EdgeInsets margin;
+
+  /// Where the player lives when it is small, instead of a corner.
+  ///
+  /// The home screen gives it the mini player in its page: the full player
+  /// then grows out of that and shrinks back into it, and while small the
+  /// overlay draws nothing of its own — the page's mini player is the small
+  /// player. Without it, the small player is the corner card.
+  final GlobalKey? anchor;
+
+  /// Opens the full player from outside. Only needed with [anchor].
+  final NowPlayingOverlayController? controller;
 
   /// Start already expanded to the full player rather than the small corner
   /// card. Used on the home screen — there's no slideshow to keep clear
@@ -42,6 +59,8 @@ class NowPlayingOverlay extends StatefulWidget {
     super.key,
     this.margin = const EdgeInsets.all(28),
     this.startExpanded = false,
+    this.anchor,
+    this.controller,
   });
 
   @override
@@ -74,11 +93,37 @@ class _NowPlayingOverlayState extends State<NowPlayingOverlay>
   void initState() {
     super.initState();
     if (widget.startExpanded) _controller.value = 1;
+    widget.controller?.addListener(_expandFromOutside);
     startDrift();
   }
 
   @override
+  void didUpdateWidget(NowPlayingOverlay old) {
+    super.didUpdateWidget(old);
+    if (old.controller != widget.controller) {
+      old.controller?.removeListener(_expandFromOutside);
+      widget.controller?.addListener(_expandFromOutside);
+    }
+  }
+
+  void _expandFromOutside() {
+    _autoExpandTimer?.cancel();
+    _controller.forward();
+  }
+
+  /// The anchor's rectangle in this overlay's coordinates, or null when it is
+  /// not laid out — scrolled out of the list, or not built at all.
+  Rect? _anchorRect() {
+    final box = widget.anchor?.currentContext?.findRenderObject();
+    final me = context.findRenderObject();
+    if (box is! RenderBox || me is! RenderBox) return null;
+    if (!box.attached || !box.hasSize || !me.attached) return null;
+    return box.localToGlobal(Offset.zero, ancestor: me) & box.size;
+  }
+
+  @override
   void dispose() {
+    widget.controller?.removeListener(_expandFromOutside);
     _autoExpandTimer?.cancel();
     stopDrift();
     _controller.dispose();
@@ -127,14 +172,23 @@ class _NowPlayingOverlayState extends State<NowPlayingOverlay>
       child: LayoutBuilder(
         builder: (context, constraints) {
           final screen = Size(constraints.maxWidth, constraints.maxHeight);
-          final collapsed =
-              applyDrift(_collapsedRect(screen, settings.corner), screen);
           final expanded = _expandedRect(screen);
 
           return AnimatedBuilder(
             animation: _t,
             builder: (context, _) {
               final v = _t.value;
+              // Anchored and small: the page's own mini player is showing, so
+              // there is nothing for the overlay to draw.
+              if (widget.anchor != null && v == 0) {
+                return const SizedBox.shrink();
+              }
+              // Measured each frame of the animation rather than once, so the
+              // player lands on the mini player wherever it has scrolled to.
+              final collapsed = widget.anchor != null
+                  ? (_anchorRect() ??
+                      _collapsedRect(screen, settings.corner))
+                  : applyDrift(_collapsedRect(screen, settings.corner), screen);
               final rect = Rect.lerp(collapsed, expanded, v)!;
               return Stack(
                 children: [

@@ -439,6 +439,34 @@ Set **Run automatically every (hours)** to have it test on its own; 0 leaves it
 manual. Each run moves a few hundred megabytes, so keep it well spaced on a
 metered connection.
 
+### The photo browser
+
+The home screen leads with a greeting, the date and the library in numbers,
+with the controls gathered into one frosted pill at the top right rather than a
+title bar. Albums are cards with the cover edge to edge and the name over a
+shadow at the foot, sortable by **Recent**, **A–Z** or **Most items**. **Empty
+albums are hidden** — a grey tile that opens onto "This album is empty" is not
+worth a place on a wall of photographs — and the counts in the header only
+count what is shown.
+
+When something is playing and the now-playing player is switched on, a **mini
+player** sits above the albums, with its own previous, play/pause and next.
+Tap anywhere else on it and the full player grows out of it; close the full
+player and it shrinks back into it, wherever the page has scrolled to.
+
+Inside an album there is a large header with the counts and the years it
+covers, a Slideshow button, and a photo wall with thin gaps. Headings follow
+the photos rather than the calendar: a month with a row's worth keeps its own
+heading, and runs of thin months share one — "May – July 2026", "2016 – 2025".
+Grouping strictly by month made the Family album a heading over every lone
+picture: 36 months, 19 of them holding fewer than four photos. A full month is
+never folded into a range, and undated photos are never given a date by one.
+
+Dates come from Immich's `localDateTime`, which is the camera's wall-clock time
+written with a "Z" it does not mean — so it is read as-is, never converted to
+the Pi's time zone, or a photo from late on the last of a month would move to
+the next one.
+
 ### Reading the news
 
 Tapping a headline shows the feed's own summary first; **Read the page** opens
