@@ -15,6 +15,11 @@ import 'package:flutter/material.dart';
 /// few degrees, so an upload of 20 and one of 2 look identical — which is
 /// precisely when you are looking. Each power of ten gets equal sweep.
 class SpeedGauge extends StatelessWidget {
+  /// How far the dial reaches from the centre of a [size] box — for checking
+  /// that it stays inside, whatever shape of box it is given.
+  @visibleForTesting
+  static double reachIn(Size size) => _GaugePainter.reach(size);
+
   const SpeedGauge({
     super.key,
     required this.downloadMbps,
@@ -139,6 +144,38 @@ class _GaugePainter extends CustomPainter {
 
   /// A 270° dial with the gap at the bottom — the familiar speedometer shape,
   /// and the gap is where the text sits comfortably.
+  /// Where the dial sits in a box of [size], and how big its parts are.
+  ///
+  /// From the shorter side. Beside the readout the dial sits in a row slot
+  /// that forces its width, so its box can be wider than it is tall; sized
+  /// from the width, the circle ran off the top and bottom of the tile.
+  static ({Offset centre, double outer, double inner, double width}) dims(
+    Size size,
+  ) {
+    final side = math.min(size.width, size.height);
+    return (
+      centre: Offset(size.width / 2, size.height / 2),
+      outer: side * 0.42,
+      inner: side * 0.305,
+      width: side * 0.075,
+    );
+  }
+
+  /// The furthest anything is drawn from the centre: the outer ring's edge,
+  /// or the end of a decade tick, whichever reaches further.
+  static double reach(Size size) {
+    final d = dims(size);
+    return math.max(d.outer + d.width / 2, d.outer + d.width * _tickOut) +
+        tickStroke(d.width) / 2; // the tick's own round cap
+  }
+
+  static const double _tickOut = 0.85;
+
+  /// A tick's thickness, from the ring's. Fixed at two pixels, a tick on a
+  /// very small dial poked past the edge of its box.
+  static double tickStroke(double ringWidth) =>
+      (ringWidth * 0.14).clamp(1.0, 2.0);
+
   static const double _start = math.pi * 0.75;
   static const double _sweep = math.pi * 1.5;
 
@@ -155,10 +192,11 @@ class _GaugePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final centre = Offset(size.width / 2, size.height / 2);
-    final outer = size.width * 0.44;
-    final inner = size.width * 0.32;
-    final width = size.width * 0.075;
+    final d = dims(size);
+    final centre = d.centre;
+    final outer = d.outer;
+    final inner = d.inner;
+    final width = d.width;
 
     void arc(double radius, double fraction, Color colour, double strokeWidth) {
       final rect = Rect.fromCircle(center: centre, radius: radius);
@@ -185,14 +223,14 @@ class _GaugePainter extends CustomPainter {
   void _decadeTicks(Canvas canvas, Offset centre, double radius, double width) {
     final paint = Paint()
       ..color = tick
-      ..strokeWidth = 2
+      ..strokeWidth = tickStroke(width)
       ..strokeCap = StrokeCap.round;
     final top = math.max(maxMbps, 10);
     for (double decade = 10; decade <= top; decade *= 10) {
       final f = fraction(decade, maxMbps);
       final angle = _start + _sweep * f;
-      final r1 = radius + width * 0.62;
-      final r2 = radius + width * 0.95;
+      final r1 = radius + width * 0.55;
+      final r2 = radius + width * _tickOut;
       canvas.drawLine(
         centre + Offset(math.cos(angle) * r1, math.sin(angle) * r1),
         centre + Offset(math.cos(angle) * r2, math.sin(angle) * r2),

@@ -165,6 +165,15 @@ class DashboardWidgetType {
 
   final Widget Function(BuildContext context, DashboardWidgetContext w) build;
 
+  /// The widget sizes its own text from the space it is given, so the tile
+  /// should not also shrink it by [contentScale].
+  ///
+  /// The generic shrink judges by whichever dimension shrank most, which
+  /// suits a widget with fixed type. It is exactly wrong for one that fills
+  /// its tile: a list on a wide, one-row strip was cut to 45% for being short,
+  /// and rendered its names at seven pixels on a tile with room for forty.
+  final bool fitsItself;
+
   const DashboardWidgetType({
     required this.type,
     required this.name,
@@ -178,6 +187,7 @@ class DashboardWidgetType {
     this.options = const [],
     this.preview = const [],
     this.live,
+    this.fitsItself = false,
   });
 
   /// How much to shrink this widget's contents at [width]x[height] cells.

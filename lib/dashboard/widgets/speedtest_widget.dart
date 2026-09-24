@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../services/speedtest_service.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
+import 'fit_canvas.dart';
 import 'speed_gauge.dart';
 
 /// Runs Ookla's speedtest and shows it happening.
@@ -101,11 +102,13 @@ class _DashboardSpeedtestWidgetState extends State<DashboardSpeedtestWidget> {
               ],
             );
           }
+          // The readout gets a share of the height rather than whatever it
+          // asks for, so it can scale to fill its part of the tile.
           return Column(
             children: [
-              Expanded(child: gauge),
+              Expanded(flex: 3, child: gauge),
               const SizedBox(height: 8),
-              readout,
+              Expanded(flex: 2, child: readout),
             ],
           );
         },
@@ -134,94 +137,156 @@ class _Readout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = state;
-    if (s.phase == SpeedtestPhase.failed) {
-      return Center(
-        child: Text(
-          s.error ?? 'Speedtest failed',
-          textAlign: TextAlign.center,
-          maxLines: 3,
-          style: TextStyle(color: theme.textSecondary, fontSize: 14),
-        ),
-      );
-    }
-
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _line(Icons.download, 'Down', _mbps(s.downloadMbps),
-            active: s.phase == SpeedtestPhase.download, colour: theme.accent),
-        const SizedBox(height: 6),
-        _line(Icons.upload, 'Up', _mbps(s.uploadMbps),
-            active: s.phase == SpeedtestPhase.upload,
-            colour: _DashboardSpeedtestWidgetState._uploadColour(theme)),
-        const Divider(height: 16),
-        _small('Ping', s.latencyMs == null
-            ? '—'
-            : '${s.latencyMs!.toStringAsFixed(0)} ms'),
-        _small('Jitter', s.jitterMs == null
-            ? '—'
-            : '${s.jitterMs!.toStringAsFixed(1)} ms'),
-        if (s.packetLoss != null)
-          _small('Loss', '${s.packetLoss!.toStringAsFixed(0)}%'),
-        if (s.isp.isNotEmpty) ...[
-          const SizedBox(height: 6),
-          Text(
-            s.isp,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: theme.textSecondary, fontSize: 12),
-          ),
-        ],
-        if (s.serverLocation.isNotEmpty)
-          Text(
-            'via ${s.serverLocation}',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: theme.textSecondary, fontSize: 11),
-          ),
-      ],
+    // Drawn on a canvas and scaled to fill the space beside or below the
+    // dial, rather than at fixed sizes then shrunk for the tile — which left
+    // ten-pixel labels in a panel with room for three times that.
+    return FitCanvas(
+      designHeight: 175,
+      maxScale: 2.2,
+      builder: (context, _) {
+        if (s.phase == SpeedtestPhase.failed) {
+          return Center(
+            child: Text(
+              s.error ?? 'Speedtest failed',
+              textAlign: TextAlign.center,
+              maxLines: 4,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: theme.textSecondary, fontSize: 14),
+            ),
+          );
+        }
+        return Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _readoutLine(
+              theme,
+              Icons.download,
+              'Down',
+              _mbps(s.downloadMbps),
+              active: s.phase == SpeedtestPhase.download,
+              colour: theme.accent,
+            ),
+            const SizedBox(height: 6),
+            _readoutLine(
+              theme,
+              Icons.upload,
+              'Up',
+              _mbps(s.uploadMbps),
+              active: s.phase == SpeedtestPhase.upload,
+              colour: _DashboardSpeedtestWidgetState._uploadColour(theme),
+            ),
+            const Divider(height: 16),
+            _small(
+              'Ping',
+              s.latencyMs == null
+                  ? '—'
+                  : '${s.latencyMs!.toStringAsFixed(0)} ms',
+            ),
+            _small(
+              'Jitter',
+              s.jitterMs == null ? '—' : '${s.jitterMs!.toStringAsFixed(1)} ms',
+            ),
+            if (s.packetLoss != null)
+              _small('Loss', '${s.packetLoss!.toStringAsFixed(0)}%'),
+            if (s.isp.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                s.isp,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: theme.textSecondary, fontSize: 12),
+              ),
+            ],
+            if (s.serverLocation.isNotEmpty)
+              Text(
+                'via ${s.serverLocation}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: theme.textSecondary, fontSize: 11),
+              ),
+          ],
+        );
+      },
     );
   }
 
   static String _mbps(double v) =>
       v <= 0 ? '—' : (v >= 100 ? v.toStringAsFixed(0) : v.toStringAsFixed(1));
 
-  Widget _line(IconData icon, String name, String value,
-      {required bool active, required Color colour}) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: active ? colour : theme.textSecondary),
-        const SizedBox(width: 6),
-        Text(name,
-            style: TextStyle(color: theme.textSecondary, fontSize: 13)),
-        const Spacer(),
-        Text(
-          value,
-          style: TextStyle(
-            color: active ? colour : theme.textPrimary,
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _small(String name, String value) {
     return Padding(
       padding: const EdgeInsets.only(top: 2),
       child: Row(
         children: [
-          Text(name,
-              style: TextStyle(color: theme.textSecondary, fontSize: 12)),
-          const Spacer(),
-          Text(value,
-              style: TextStyle(color: theme.textPrimary, fontSize: 13)),
+          Expanded(
+            child: _shrink(
+              Text(
+                name,
+                style: TextStyle(color: theme.textSecondary, fontSize: 12),
+              ),
+            ),
+          ),
+          Expanded(
+            child: _shrink(
+              Text(
+                value,
+                style: TextStyle(color: theme.textPrimary, fontSize: 13),
+              ),
+              right: true,
+            ),
+          ),
         ],
       ),
     );
   }
+}
+
+/// Text that shrinks to its share of a row rather than running past the end.
+Widget _shrink(Widget child, {bool right = false}) => FittedBox(
+  fit: BoxFit.scaleDown,
+  alignment: right ? Alignment.centerRight : Alignment.centerLeft,
+  child: child,
+);
+
+/// A name and a value on one line, each in its own share of the row.
+Widget _readoutLine(
+  DashboardTheme theme,
+  IconData icon,
+  String name,
+  String value, {
+  required bool active,
+  required Color colour,
+}) {
+  return Row(
+    children: [
+      Icon(icon, size: 18, color: active ? colour : theme.textSecondary),
+      const SizedBox(width: 6),
+      Expanded(
+        flex: 4,
+        child: _shrink(
+          Text(
+            name,
+            style: TextStyle(color: theme.textSecondary, fontSize: 13),
+          ),
+        ),
+      ),
+      Expanded(
+        flex: 5,
+        child: _shrink(
+          Text(
+            value,
+            style: TextStyle(
+              color: active ? colour : theme.textPrimary,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          right: true,
+        ),
+      ),
+    ],
+  );
 }
 
 final speedtestWidgetType = DashboardWidgetType(
@@ -242,7 +307,8 @@ final speedtestWidgetType = DashboardWidgetType(
       label: 'Top of the dial (Mbps)',
       kind: OptionKind.number,
       defaultValue: 1000,
-      help: 'The scale is logarithmic, so this only needs to be the right '
+      help:
+          'The scale is logarithmic, so this only needs to be the right '
           'order of magnitude for your line.',
     ),
     WidgetOption(
@@ -250,7 +316,8 @@ final speedtestWidgetType = DashboardWidgetType(
       label: 'Run automatically every (hours)',
       kind: OptionKind.number,
       defaultValue: 0,
-      help: '0 to only run when tapped. Each test uses a few hundred MB, so '
+      help:
+          '0 to only run when tapped. Each test uses a few hundred MB, so '
           'keep this well apart on a metered connection.',
     ),
   ],
@@ -260,5 +327,6 @@ final speedtestWidgetType = DashboardWidgetType(
     PreviewLine('↓ 192.6   ↑ 78.0', scale: 0.11, centre: true),
     PreviewLine('16 ms · 1.0 jitter', scale: 0.09, muted: true, centre: true),
   ],
+  fitsItself: true,
   build: (context, w) => DashboardSpeedtestWidget(w: w),
 );

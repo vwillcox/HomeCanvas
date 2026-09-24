@@ -359,12 +359,15 @@ class _Tile extends StatelessWidget {
     // placed at 1x1, where a 17-point heading and 16 pixels of padding on
     // each side simply do not fit.
     final fit = type?.contentScale(config.width, config.height) ?? 1.0;
+    // A widget that fits its own text to the tile gets the user's font size
+    // untouched; shrinking it here as well would undo the fitting.
+    final textFit = (type?.fitsItself ?? false) ? 1.0 : fit;
 
     final media = MediaQuery.of(context);
     return MediaQuery(
       data: media.copyWith(
         textScaler: TextScaler.linear(
-          media.textScaler.scale(1) * config.fontScale * fit,
+          media.textScaler.scale(1) * config.fontScale * textFit,
         ),
       ),
       child: DefaultTextStyle(

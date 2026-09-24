@@ -8,6 +8,7 @@ import '../../services/unifi_models.dart';
 import '../../services/unifi_service.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
+import 'fit_canvas.dart';
 
 /// Five views onto a UniFi console, sharing one service and one poll.
 ///
@@ -29,10 +30,10 @@ class _Waiting extends StatelessWidget {
     final message = !s.enabled
         ? 'UniFi is switched off in Settings'
         : s.apiKey.isEmpty
-            ? 'No API key set'
-            : service.error != null
-                ? 'Waiting for the console…'
-                : 'Reading the network…';
+        ? 'No API key set'
+        : service.error != null
+        ? 'Waiting for the console…'
+        : 'Reading the network…';
     return Center(
       child: Text(
         message,
@@ -65,10 +66,12 @@ class _Stat extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: theme.textSecondary, fontSize: 12 * scale)),
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(color: theme.textSecondary, fontSize: 12 * scale),
+        ),
         FittedBox(
           fit: BoxFit.scaleDown,
           alignment: Alignment.centerLeft,
@@ -90,7 +93,30 @@ class _Stat extends StatelessWidget {
 // 1. Network health
 // ---------------------------------------------------------------------------
 
+/// How [UnifiHealthWidget] arranges itself for a tile of a given shape.
+enum HealthLayout {
+  /// A long, thin strip: the status above one row of all five figures.
+  strip,
+
+  /// The usual tile: status, then down and up large, then the smaller three.
+  stacked,
+
+  /// Taller than wide: one figure to a line.
+  column,
+}
+
+/// The arrangement that suits a tile [aspect] (width over height) best.
+HealthLayout healthLayoutFor(double aspect) {
+  if (aspect >= 3.4) return HealthLayout.strip;
+  if (aspect >= 1.05) return HealthLayout.stacked;
+  return HealthLayout.column;
+}
+
 /// Is the internet up, and is anything wrong.
+///
+/// Fills its tile: everything is drawn on a [FitCanvas], so the figures grow
+/// with the tile, and the arrangement follows its shape — a strip, the usual
+/// stack, or a column — rather than one layout shrunk to fit all of them.
 class UnifiHealthWidget extends StatelessWidget {
   const UnifiHealthWidget({super.key, required this.w});
   final DashboardWidgetContext w;
@@ -109,80 +135,274 @@ class UnifiHealthWidget extends StatelessWidget {
     // zero: a quiet connection is not a broken one.
     final wanUp = stats.txRateBps != null || stats.rxRateBps != null;
     final good = wanUp && offline.isEmpty;
+    final statusText = good
+        ? 'Network healthy'
+        : (!wanUp ? 'WAN down' : '${offline.length} device(s) offline');
+    final statusColour = good ? const Color(0xFF4ADE80) : Colors.orangeAccent;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
+    String pct(double? v) => v == null ? '—' : '${v.toStringAsFixed(0)}%';
+    final down = ('Down', formatBps(stats.rxRateBps), t.accent);
+    final up = ('Up', formatBps(stats.txRateBps), null);
+    final small = [
+      ('Clients', '${unifi.clients.length}', null),
+      ('CPU', pct(stats.cpuPct), null),
+      ('Memory', pct(stats.memoryPct), null),
+    ];
+
+    return FitCanvas(
+      builder: (context, design) {
+        // The status line sizes itself from its row; the number is kept so
+        // the three layouts below still read alike.
+        Widget status(double _) => _FitStatus(
+          icon: good ? Icons.check_circle : Icons.error,
+          iconColour: statusColour,
+          text: statusText,
+          textColour: t.textPrimary,
+        );
+
+        Widget stat((String, String, Color?) s, double label, double value) =>
+            _FitStat(
+              theme: t,
+              label: s.$1,
+              value: s.$2,
+              colour: s.$3,
+              labelSize: label,
+              valueSize: value,
+            );
+
+        Widget updatesLine(double _) => LayoutBuilder(
+          builder: (context, c) => _Fit(
+            Text(
+              '${updates.length} firmware update(s) available',
+              style: TextStyle(
+                color: t.textSecondary,
+                fontSize: c.maxHeight * 0.7,
+                height: 1.15,
+              ),
+            ),
+          ),
+        );
+
+        switch (healthLayoutFor(design.width / design.height)) {
+          case HealthLayout.strip:
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(flex: 30, child: status(18)),
+                Expanded(
+                  flex: 62,
+                  child: Row(
+                    children: [
+                      for (final s in [down, up, ...small])
+                        Expanded(child: stat(s, 13, 30)),
+                    ],
+                  ),
+                ),
+                if (updates.isNotEmpty)
+                  Expanded(flex: 12, child: updatesLine(10)),
+              ],
+            );
+          case HealthLayout.stacked:
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(flex: 20, child: status(15)),
+                Expanded(
+                  flex: 42,
+                  child: Row(
+                    children: [
+                      Expanded(child: stat(down, 10, 28)),
+                      Expanded(child: stat(up, 10, 28)),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  flex: 30,
+                  child: Row(
+                    children: [
+                      for (final s in small) Expanded(child: stat(s, 9, 19)),
+                    ],
+                  ),
+                ),
+                if (updates.isNotEmpty)
+                  Expanded(flex: 10, child: updatesLine(8)),
+              ],
+            );
+          case HealthLayout.column:
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(flex: 14, child: status(11)),
+                for (final s in [down, up, ...small])
+                  Expanded(
+                    flex: 15,
+                    child: LayoutBuilder(
+                      builder: (context, c) => Row(
+                        children: [
+                          Expanded(
+                            flex: 4,
+                            child: _Fit(
+                              Text(
+                                s.$1,
+                                style: TextStyle(
+                                  color: t.textSecondary,
+                                  fontSize: c.maxHeight * 0.45,
+                                  height: 1.15,
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 6,
+                            child: _Fit(
+                              Text(
+                                s.$2,
+                                style: TextStyle(
+                                  color: s.$3 ?? t.textPrimary,
+                                  fontSize: c.maxHeight * 0.72,
+                                  fontWeight: FontWeight.w700,
+                                  height: 1.15,
+                                ),
+                              ),
+                              alignment: Alignment.centerRight,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                if (updates.isNotEmpty)
+                  Expanded(flex: 10, child: updatesLine(7)),
+              ],
+            );
+        }
+      },
+    );
+  }
+}
+
+/// Text that shrinks to fit its width, and never grows.
+///
+/// Inside a [FitCanvas] the sizes are already right for the tile; this only
+/// catches the long value — "1.24 Gb/s" in a narrow column — that would
+/// otherwise run off the edge.
+class _Fit extends StatelessWidget {
+  const _Fit(this.child, {this.alignment = Alignment.centerLeft});
+
+  final Widget child;
+  final Alignment alignment;
+
+  @override
+  Widget build(BuildContext context) =>
+      FittedBox(fit: BoxFit.scaleDown, alignment: alignment, child: child);
+}
+
+/// A label over a value, sized from the height it is given.
+///
+/// Sized from its own box rather than in fixed canvas units: fixed units that
+/// added up to a hair more than a row's share overflowed by a pixel or two at
+/// some tile sizes. As fractions of the box, with line spacing counted, the
+/// pair always fits. [labelSize] and [valueSize] set the proportion between
+/// the two.
+class _FitStat extends StatelessWidget {
+  const _FitStat({
+    required this.theme,
+    required this.label,
+    required this.value,
+    required this.labelSize,
+    required this.valueSize,
+    this.colour,
+  });
+
+  final DashboardTheme theme;
+  final String label;
+  final String value;
+  final double labelSize;
+  final double valueSize;
+  final Color? colour;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, c) {
+        final share = c.maxHeight * 0.86 / (labelSize + valueSize);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(good ? Icons.check_circle : Icons.error,
-                color: good ? const Color(0xFF4ADE80) : Colors.orangeAccent,
-                size: 22),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                good
-                    ? 'Network healthy'
-                    : (!wanUp ? 'WAN down' : '${offline.length} device(s) offline'),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+            _Fit(
+              Text(
+                label,
                 style: TextStyle(
-                    color: t.textPrimary,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w600),
+                  color: theme.textSecondary,
+                  fontSize: share * labelSize / 1.17,
+                  height: 1.17,
+                ),
+              ),
+            ),
+            _Fit(
+              Text(
+                value,
+                style: TextStyle(
+                  color: colour ?? theme.textPrimary,
+                  fontSize: share * valueSize / 1.1,
+                  fontWeight: FontWeight.w700,
+                  height: 1.1,
+                ),
               ),
             ),
           ],
-        ),
-        const SizedBox(height: 10),
-        Row(
+        );
+      },
+    );
+  }
+}
+
+/// An icon and a line of text, sized from the height it is given — the
+/// status line, which has to fit its share of the canvas at any size.
+class _FitStatus extends StatelessWidget {
+  const _FitStatus({
+    required this.icon,
+    required this.iconColour,
+    required this.text,
+    required this.textColour,
+  });
+
+  final IconData icon;
+  final Color iconColour;
+  final String text;
+  final Color textColour;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, c) {
+        final h = c.maxHeight;
+        // Limited by the width as well: on a tile one cell wide and six tall
+        // the row is narrower than it is high, and an icon sized from the
+        // height alone left no room for the text at all.
+        final icon = math.min(h * 0.78, c.maxWidth * 0.3);
+        final gap = math.min(h * 0.3, c.maxWidth * 0.08);
+        return Row(
           children: [
+            Icon(this.icon, color: iconColour, size: icon),
+            SizedBox(width: gap),
             Expanded(
-                child: _Stat(
-                    theme: t,
-                    label: 'Down',
-                    value: formatBps(stats.rxRateBps),
-                    colour: t.accent)),
-            Expanded(
-                child: _Stat(
-                    theme: t, label: 'Up', value: formatBps(stats.txRateBps))),
+              child: _Fit(
+                Text(
+                  text,
+                  style: TextStyle(
+                    color: textColour,
+                    fontSize: h * 0.62,
+                    fontWeight: FontWeight.w600,
+                    height: 1.15,
+                  ),
+                ),
+              ),
+            ),
           ],
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-                child: _Stat(
-                    theme: t,
-                    label: 'Clients',
-                    value: '${unifi.clients.length}',
-                    scale: 0.8)),
-            Expanded(
-                child: _Stat(
-                    theme: t,
-                    label: 'CPU',
-                    value: stats.cpuPct == null
-                        ? '—'
-                        : '${stats.cpuPct!.toStringAsFixed(0)}%',
-                    scale: 0.8)),
-            Expanded(
-                child: _Stat(
-                    theme: t,
-                    label: 'Memory',
-                    value: stats.memoryPct == null
-                        ? '—'
-                        : '${stats.memoryPct!.toStringAsFixed(0)}%',
-                    scale: 0.8)),
-          ],
-        ),
-        if (updates.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          Text('${updates.length} firmware update(s) available',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: t.textSecondary, fontSize: 12)),
-        ],
-      ],
+        );
+      },
     );
   }
 }
@@ -219,14 +439,19 @@ class UnifiPresenceWidget extends StatelessWidget {
       // A named list is the useful mode: thirty clients is an inventory, five
       // people's phones is a question you might actually ask.
       list = list
-          .where((c) => watch.any((wanted) =>
-              c.displayName.toLowerCase().contains(wanted) ||
-              c.macAddress.toLowerCase() == wanted))
+          .where(
+            (c) => watch.any(
+              (wanted) =>
+                  c.displayName.toLowerCase().contains(wanted) ||
+                  c.macAddress.toLowerCase() == wanted,
+            ),
+          )
           .toList();
     }
-    list.sort((a, b) => a.displayName
-        .toLowerCase()
-        .compareTo(b.displayName.toLowerCase()));
+    list.sort(
+      (a, b) =>
+          a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()),
+    );
 
     if (list.isEmpty) {
       return Center(
@@ -240,9 +465,13 @@ class UnifiPresenceWidget extends StatelessWidget {
     // Names present are the point; whoever is watched but absent is shown
     // greyed rather than omitted, so the list does not change shape.
     final missing = watch
-        .where((wanted) => !list.any((c) =>
-            c.displayName.toLowerCase().contains(wanted) ||
-            c.macAddress.toLowerCase() == wanted))
+        .where(
+          (wanted) => !list.any(
+            (c) =>
+                c.displayName.toLowerCase().contains(wanted) ||
+                c.macAddress.toLowerCase() == wanted,
+          ),
+        )
         .toList();
 
     return ListView(
@@ -304,8 +533,10 @@ class _PresenceRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Text(detail,
-              style: TextStyle(color: theme.textSecondary, fontSize: 12)),
+          Text(
+            detail,
+            style: TextStyle(color: theme.textSecondary, fontSize: 12),
+          ),
         ],
       ),
     );
@@ -316,63 +547,167 @@ class _PresenceRow extends StatelessWidget {
 // 3. Devices and firmware
 // ---------------------------------------------------------------------------
 
+/// Every adopted UniFi device, with its state, model and uptime.
+///
+/// Spreads its entries across the tile rather than listing them down one
+/// edge: two devices on a wide, one-row strip sit side by side, each as large
+/// as the strip allows. The text is sized from each entry's share of the
+/// tile, so it fills a big tile and still fits a small one. Only when there
+/// are too many to show legibly at once does it fall back to a scrolling
+/// list at a fixed, readable size.
 class UnifiDevicesWidget extends StatelessWidget {
   const UnifiDevicesWidget({super.key, required this.w});
   final DashboardWidgetContext w;
+
+  /// Below this a grid entry's name would be too small to read across a
+  /// room, and the list scrolls instead.
+  static const double minEntryHeight = 44;
+
+  /// An entry's shape, width over height: a name and a detail line beside
+  /// an icon want roughly this.
+  static const double entryAspect = 3.2;
 
   @override
   Widget build(BuildContext context) {
     final t = w.theme;
     final unifi = context.watch<UnifiService>();
     if (!unifi.hasContent) return _Waiting(theme: t, service: unifi);
+    final devices = unifi.devices;
+    if (devices.isEmpty) {
+      return Center(
+        child: Text(
+          'No devices',
+          style: TextStyle(color: t.textSecondary, fontSize: 16),
+        ),
+      );
+    }
 
-    return ListView(
-      children: [
-        for (final d in unifi.devices)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Row(
-              children: [
-                Icon(
-                  d.online ? Icons.router : Icons.router_outlined,
-                  size: 20,
-                  color: d.online ? t.accent : Colors.orangeAccent,
+    String detail(UnifiDevice d) => [
+      d.model,
+      if (d.firmwareVersion.isNotEmpty) d.firmwareVersion,
+      if (unifi.statsFor(d.id).uptimeSec != null)
+        'up ${formatUptime(Duration(seconds: unifi.statsFor(d.id).uptimeSec!))}',
+    ].join(' · ');
+
+    return LayoutBuilder(
+      builder: (context, c) {
+        final grid = bestGrid(
+          devices.length,
+          c.biggest,
+          cellAspect: entryAspect,
+        );
+        final cellW = c.maxWidth / grid.columns;
+        final cellH = c.maxHeight / grid.rows;
+
+        if (cellH < minEntryHeight) {
+          return ListView(
+            children: [
+              for (final d in devices)
+                SizedBox(
+                  height: minEntryHeight + 8,
+                  child: _DeviceEntry(theme: t, device: d, detail: detail(d)),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(d.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              color: t.textPrimary,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600)),
-                      Text(
-                        [
-                          d.model,
-                          if (d.firmwareVersion.isNotEmpty) d.firmwareVersion,
-                          if (unifi.statsFor(d.id).uptimeSec != null)
-                            'up ${formatUptime(Duration(seconds: unifi.statsFor(d.id).uptimeSec!))}',
-                        ].join(' · '),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style:
-                            TextStyle(color: t.textSecondary, fontSize: 12),
+            ],
+          );
+        }
+
+        return Column(
+          children: [
+            for (var r = 0; r < grid.rows; r++)
+              Expanded(
+                child: Row(
+                  children: [
+                    for (var col = 0; col < grid.columns; col++)
+                      Expanded(
+                        child: r * grid.columns + col < devices.length
+                            ? Padding(
+                                padding: EdgeInsets.all(
+                                  math.min(cellW, cellH) * 0.04,
+                                ),
+                                child: _DeviceEntry(
+                                  theme: t,
+                                  device: devices[r * grid.columns + col],
+                                  detail: detail(
+                                    devices[r * grid.columns + col],
+                                  ),
+                                ),
+                              )
+                            : const SizedBox.shrink(),
                       ),
-                    ],
+                  ],
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// One device, drawn to fill whatever box it is given.
+class _DeviceEntry extends StatelessWidget {
+  const _DeviceEntry({
+    required this.theme,
+    required this.device,
+    required this.detail,
+  });
+
+  final DashboardTheme theme;
+  final UnifiDevice device;
+  final String detail;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = theme;
+    final d = device;
+    // A 50-unit canvas: name 17, detail 11, icon 22. Capped so a large tile
+    // with two devices does not draw names a hand high.
+    return FitCanvas(
+      designHeight: 50,
+      maxScale: 3,
+      builder: (context, _) => Row(
+        children: [
+          Icon(
+            d.online ? Icons.router : Icons.router_outlined,
+            size: 22,
+            color: d.online ? t.accent : Colors.orangeAccent,
+          ),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _Fit(
+                  Text(
+                    d.name,
+                    style: TextStyle(
+                      color: t.textPrimary,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                      height: 1.15,
+                    ),
                   ),
                 ),
-                if (d.firmwareUpdatable)
-                  Icon(Icons.system_update_alt,
-                      size: 18, color: t.accent),
+                _Fit(
+                  Text(
+                    detail,
+                    style: TextStyle(
+                      color: t.textSecondary,
+                      fontSize: 11,
+                      height: 1.2,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
-      ],
+          if (d.firmwareUpdatable) ...[
+            const SizedBox(width: 6),
+            Icon(Icons.system_update_alt, size: 16, color: t.accent),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -397,7 +732,8 @@ class UnifiClientsWidget extends StatelessWidget {
     if (!unifi.hasContent) return _Waiting(theme: t, service: unifi);
 
     final byId = {for (final d in unifi.devices) d.id: d};
-    final clients = [...unifi.clients]..sort((a, b) {
+    final clients = [...unifi.clients]
+      ..sort((a, b) {
         // Newest arrivals first: what just joined is the interesting end.
         final x = a.connectedAt, y = b.connectedAt;
         if (x == null && y == null) return 0;
@@ -413,15 +749,20 @@ class UnifiClientsWidget extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Row(
               children: [
-                Icon(c.wireless ? Icons.wifi : Icons.settings_ethernet,
-                    size: 16, color: t.textSecondary),
+                Icon(
+                  c.wireless ? Icons.wifi : Icons.settings_ethernet,
+                  size: 16,
+                  color: t.textSecondary,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   flex: 3,
-                  child: Text(c.displayName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: t.textPrimary, fontSize: 14)),
+                  child: Text(
+                    c.displayName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: t.textPrimary, fontSize: 14),
+                  ),
                 ),
                 Expanded(
                   flex: 2,
@@ -455,7 +796,8 @@ class UnifiThroughputWidget extends StatelessWidget {
     final unifi = context.watch<UnifiService>();
     if (!unifi.hasContent) return _Waiting(theme: t, service: unifi);
 
-    final window = windows[w.option('window', '1h')] ?? const Duration(hours: 1);
+    final window =
+        windows[w.option('window', '1h')] ?? const Duration(hours: 1);
     final showVolume = w.option('showVolume', true);
     final up = _uploadColour(t);
 
@@ -474,17 +816,21 @@ class UnifiThroughputWidget extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                    child: _Stat(
-                        theme: t,
-                        label: 'Down',
-                        value: formatBps(latest?.rx),
-                        colour: t.accent)),
+                  child: _Stat(
+                    theme: t,
+                    label: 'Down',
+                    value: formatBps(latest?.rx),
+                    colour: t.accent,
+                  ),
+                ),
                 Expanded(
-                    child: _Stat(
-                        theme: t,
-                        label: 'Up',
-                        value: formatBps(latest?.tx),
-                        colour: up)),
+                  child: _Stat(
+                    theme: t,
+                    label: 'Up',
+                    value: formatBps(latest?.tx),
+                    colour: up,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 6),
@@ -493,13 +839,16 @@ class UnifiThroughputWidget extends StatelessWidget {
                 builder: (context, c) {
                   // One point per pixel column at most: handing a 400-pixel
                   // graph 1,440 values only overdraws the same columns.
-                  final points =
-                      h.series(window, math.max(2, c.maxWidth.floor()));
+                  final points = h.series(
+                    window,
+                    math.max(2, c.maxWidth.floor()),
+                  );
                   if (points.length < 2) {
                     return Center(
-                      child: Text('Collecting…',
-                          style: TextStyle(
-                              color: t.textSecondary, fontSize: 13)),
+                      child: Text(
+                        'Collecting…',
+                        style: TextStyle(color: t.textSecondary, fontSize: 13),
+                      ),
                     );
                   }
                   return CustomPaint(
@@ -584,8 +933,13 @@ class _ThroughputPainter extends CustomPainter {
     // rather than noise amplified to fill the graph.
     peak = math.max(peak, 1000000);
 
-    canvas.drawLine(Offset(0, size.height), Offset(size.width, size.height),
-        Paint()..color = gridColour..strokeWidth = 1);
+    canvas.drawLine(
+      Offset(0, size.height),
+      Offset(size.width, size.height),
+      Paint()
+        ..color = gridColour
+        ..strokeWidth = 1,
+    );
 
     void trace(double Function(ThroughputPoint) pick, Color colour) {
       final path = Path()..moveTo(0, size.height);
@@ -606,11 +960,12 @@ class _ThroughputPainter extends CustomPainter {
         i == 0 ? line.moveTo(x, y) : line.lineTo(x, y);
       }
       canvas.drawPath(
-          line,
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 2
-            ..color = colour);
+        line,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2
+          ..color = colour,
+      );
     }
 
     trace((p) => p.rx, downColour);
@@ -644,6 +999,7 @@ final unifiHealthWidgetType = DashboardWidgetType(
     PreviewLine('↓ 24.1 Mb/s   ↑ 1.2 Mb/s', scale: 0.13),
     PreviewLine('30 clients · CPU 34% · Mem 72%', scale: 0.10, muted: true),
   ],
+  fitsItself: true,
   build: (context, w) => UnifiHealthWidget(w: w),
 );
 
@@ -664,7 +1020,8 @@ final unifiPresenceWidgetType = DashboardWidgetType(
       label: 'Only these, comma separated',
       kind: OptionKind.text,
       defaultValue: '',
-      help: 'Part of a device name, or a MAC address. Leave empty to list '
+      help:
+          'Part of a device name, or a MAC address. Leave empty to list '
           'everything. Anything named here but absent is shown greyed out, so '
           'the list keeps its shape.',
     ),
@@ -700,6 +1057,7 @@ final unifiDevicesWidgetType = DashboardWidgetType(
     PreviewLine('UDR7 · 5.1.19 · up 57d', scale: 0.10, muted: true),
     PreviewLine('USW Flex 2.5G 5', scale: 0.14),
   ],
+  fitsItself: true,
   build: (context, w) => UnifiDevicesWidget(w: w),
 );
 
@@ -718,7 +1076,11 @@ final unifiClientsWidgetType = DashboardWidgetType(
   preview: const [
     PreviewLine('Vincents-Mini        Dream Router 7', scale: 0.11),
     PreviewLine('Hisense Vision       USW Flex 2.5G', scale: 0.11),
-    PreviewLine('KP303                Dream Router 7', scale: 0.11, muted: true),
+    PreviewLine(
+      'KP303                Dream Router 7',
+      scale: 0.11,
+      muted: true,
+    ),
   ],
   build: (context, w) => UnifiClientsWidget(w: w),
 );
@@ -747,7 +1109,8 @@ final unifiThroughputWidgetType = DashboardWidgetType(
         '6h': 'Last 6 hours',
         '24h': 'Last 24 hours',
       },
-      help: 'Ten minutes and under is drawn from the per-second samples and '
+      help:
+          'Ten minutes and under is drawn from the per-second samples and '
           'moves as you watch. Longer spans use per-minute peaks. How far back '
           'history is kept at all is set in Settings → UniFi.',
     ),
@@ -762,6 +1125,7 @@ final unifiThroughputWidgetType = DashboardWidgetType(
     PreviewLine('↓ 24.1 Mb/s      ↑ 1.2 Mb/s', scale: 0.14, accent: true),
     PreviewLine('▁▂▅▇▆▃▂▁▂▄▆▇▅▂▁', scale: 0.20, centre: true),
   ],
+  fitsItself: true,
   build: (context, w) => UnifiThroughputWidget(w: w),
 );
 
@@ -803,18 +1167,23 @@ class UnifiIspWidget extends StatelessWidget {
       children: [
         Row(
           children: [
-            Icon(isp.ok ? Icons.speed : Icons.warning_amber,
-                size: 20,
-                color: isp.ok ? t.accent : Colors.orangeAccent),
+            Icon(
+              isp.ok ? Icons.speed : Icons.warning_amber,
+              size: 20,
+              color: isp.ok ? t.accent : Colors.orangeAccent,
+            ),
             const SizedBox(width: 8),
             Expanded(
-              child: Text('ISP speed test',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                      color: t.textPrimary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600)),
+              child: Text(
+                'ISP speed test',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: t.textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ],
         ),
@@ -822,33 +1191,39 @@ class UnifiIspWidget extends StatelessWidget {
         Row(
           children: [
             Expanded(
-                child: _Stat(
-                    theme: t,
-                    label: 'Down',
-                    value: isp.downMbps == null
-                        ? '—'
-                        : '${isp.downMbps!.toStringAsFixed(0)} Mb/s',
-                    colour: t.accent)),
+              child: _Stat(
+                theme: t,
+                label: 'Down',
+                value: isp.downMbps == null
+                    ? '—'
+                    : '${isp.downMbps!.toStringAsFixed(0)} Mb/s',
+                colour: t.accent,
+              ),
+            ),
             Expanded(
-                child: _Stat(
-                    theme: t,
-                    label: 'Up',
-                    value: isp.upMbps == null
-                        ? '—'
-                        : '${isp.upMbps!.toStringAsFixed(0)} Mb/s')),
+              child: _Stat(
+                theme: t,
+                label: 'Up',
+                value: isp.upMbps == null
+                    ? '—'
+                    : '${isp.upMbps!.toStringAsFixed(0)} Mb/s',
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 8),
         Row(
           children: [
             Expanded(
-                child: _Stat(
-                    theme: t,
-                    label: 'Ping',
-                    value: isp.pingMs == null
-                        ? '—'
-                        : '${isp.pingMs!.toStringAsFixed(0)} ms',
-                    scale: 0.8)),
+              child: _Stat(
+                theme: t,
+                label: 'Ping',
+                value: isp.pingMs == null
+                    ? '—'
+                    : '${isp.pingMs!.toStringAsFixed(0)} ms',
+                scale: 0.8,
+              ),
+            ),
             Expanded(
               child: _Stat(
                 theme: t,

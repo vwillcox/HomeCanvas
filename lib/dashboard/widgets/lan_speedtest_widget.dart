@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../services/lan_speedtest_service.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
+import 'fit_canvas.dart';
 import 'speed_gauge.dart';
 
 /// Speed between this panel and another machine on the network.
@@ -84,17 +85,23 @@ class _DashboardLanSpeedtestWidgetState
           );
 
           if (wide) {
-            return Row(children: [
-              Expanded(flex: 3, child: gauge),
-              const SizedBox(width: 12),
-              Expanded(flex: 2, child: readout),
-            ]);
+            return Row(
+              children: [
+                Expanded(flex: 3, child: gauge),
+                const SizedBox(width: 12),
+                Expanded(flex: 2, child: readout),
+              ],
+            );
           }
-          return Column(children: [
-            Expanded(child: gauge),
-            const SizedBox(height: 8),
-            readout,
-          ]);
+          // The readout gets a share of the height rather than whatever it
+          // asks for, so it can scale to fill its part of the tile.
+          return Column(
+            children: [
+              Expanded(flex: 3, child: gauge),
+              const SizedBox(height: 8),
+              Expanded(flex: 2, child: readout),
+            ],
+          );
         },
       ),
     );
@@ -127,61 +134,114 @@ class _Readout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (state.phase == LanPhase.failed) {
-      return Center(
-        child: Text(
-          state.error ?? 'Test failed',
-          textAlign: TextAlign.center,
-          maxLines: 3,
-          style: TextStyle(color: theme.textSecondary, fontSize: 13),
-        ),
-      );
-    }
-
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _line(Icons.download, 'Down', _mbps(state.downloadMbps),
-            active: state.phase == LanPhase.download, colour: theme.accent),
-        const SizedBox(height: 6),
-        _line(Icons.upload, 'Up', _mbps(state.uploadMbps),
-            active: state.phase == LanPhase.upload,
-            colour: _DashboardLanSpeedtestWidgetState._uploadColour(theme)),
-        const Divider(height: 16),
-        Text('to $target',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: theme.textSecondary, fontSize: 12)),
-        Text('on your own network',
-            style: TextStyle(color: theme.textSecondary, fontSize: 11)),
-      ],
+    // Scaled to fill its share of the tile, as the internet test's is.
+    return FitCanvas(
+      designHeight: 120,
+      maxScale: 2.2,
+      builder: (context, _) {
+        if (state.phase == LanPhase.failed) {
+          return Center(
+            child: Text(
+              state.error ?? 'Test failed',
+              textAlign: TextAlign.center,
+              maxLines: 4,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: theme.textSecondary, fontSize: 13),
+            ),
+          );
+        }
+        return Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _readoutLine(
+              theme,
+              Icons.download,
+              'Down',
+              _mbps(state.downloadMbps),
+              active: state.phase == LanPhase.download,
+              colour: theme.accent,
+            ),
+            const SizedBox(height: 6),
+            _readoutLine(
+              theme,
+              Icons.upload,
+              'Up',
+              _mbps(state.uploadMbps),
+              active: state.phase == LanPhase.upload,
+              colour: _DashboardLanSpeedtestWidgetState._uploadColour(theme),
+            ),
+            const Divider(height: 16),
+            Text(
+              'to $target',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: theme.textSecondary, fontSize: 12),
+            ),
+            Text(
+              'on your own network',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: theme.textSecondary, fontSize: 11),
+            ),
+          ],
+        );
+      },
     );
   }
 
   static String _mbps(double v) => v <= 0
       ? '—'
       : (v >= 1000
-          ? '${(v / 1000).toStringAsFixed(2)} Gb'
-          : v.toStringAsFixed(0));
+            ? '${(v / 1000).toStringAsFixed(2)} Gb'
+            : v.toStringAsFixed(0));
+}
 
-  Widget _line(IconData icon, String name, String value,
-      {required bool active, required Color colour}) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: active ? colour : theme.textSecondary),
-        const SizedBox(width: 6),
-        Text(name, style: TextStyle(color: theme.textSecondary, fontSize: 13)),
-        const Spacer(),
-        Text(value,
+/// Text that shrinks to its share of a row rather than running past the end.
+Widget _shrink(Widget child, {bool right = false}) => FittedBox(
+  fit: BoxFit.scaleDown,
+  alignment: right ? Alignment.centerRight : Alignment.centerLeft,
+  child: child,
+);
+
+/// A name and a value on one line, each in its own share of the row.
+Widget _readoutLine(
+  DashboardTheme theme,
+  IconData icon,
+  String name,
+  String value, {
+  required bool active,
+  required Color colour,
+}) {
+  return Row(
+    children: [
+      Icon(icon, size: 18, color: active ? colour : theme.textSecondary),
+      const SizedBox(width: 6),
+      Expanded(
+        flex: 4,
+        child: _shrink(
+          Text(
+            name,
+            style: TextStyle(color: theme.textSecondary, fontSize: 13),
+          ),
+        ),
+      ),
+      Expanded(
+        flex: 5,
+        child: _shrink(
+          Text(
+            value,
             style: TextStyle(
               color: active ? colour : theme.textPrimary,
               fontSize: 20,
               fontWeight: FontWeight.w700,
-            )),
-      ],
-    );
-  }
+            ),
+          ),
+          right: true,
+        ),
+      ),
+    ],
+  );
 }
 
 final lanSpeedtestWidgetType = DashboardWidgetType(
@@ -202,7 +262,8 @@ final lanSpeedtestWidgetType = DashboardWidgetType(
       label: 'Server address',
       kind: OptionKind.text,
       defaultValue: '',
-      help: 'The OpenSpeedTest server, e.g. http://10.0.0.218:3000 — run it '
+      help:
+          'The OpenSpeedTest server, e.g. http://10.0.0.218:3000 — run it '
           'with: docker run -d --restart=unless-stopped --name openspeedtest '
           '-p 3000:3000 -p 3001:3001 openspeedtest/latest',
     ),
@@ -211,7 +272,8 @@ final lanSpeedtestWidgetType = DashboardWidgetType(
       label: 'Call it',
       kind: OptionKind.text,
       defaultValue: '',
-      help: 'A friendly name for the other machine. Its address is used if '
+      help:
+          'A friendly name for the other machine. Its address is used if '
           'this is empty.',
     ),
     WidgetOption(
@@ -219,7 +281,8 @@ final lanSpeedtestWidgetType = DashboardWidgetType(
       label: 'Top of the dial (Mbps)',
       kind: OptionKind.number,
       defaultValue: 2500,
-      help: 'The scale is logarithmic, so this only needs the right order of '
+      help:
+          'The scale is logarithmic, so this only needs the right order of '
           'magnitude. 2500 suits a 2.5 Gb link, 1000 a gigabit one.',
     ),
   ],
@@ -229,5 +292,6 @@ final lanSpeedtestWidgetType = DashboardWidgetType(
     PreviewLine('↓ 1420   ↑ 980', scale: 0.11, centre: true),
     PreviewLine('to Mac mini', scale: 0.09, muted: true, centre: true),
   ],
+  fitsItself: true,
   build: (context, w) => DashboardLanSpeedtestWidget(w: w),
 );
