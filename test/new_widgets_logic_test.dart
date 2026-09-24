@@ -512,6 +512,63 @@ void main() {
       expect(m.worstDisk, DiskState.warning);
     });
 
+    test('reads SMART as this Glances sends it: values as padded text', () {
+      // The NAS's own drive, as Glances 4.3.1 reported it.
+      final h = DiskHealth.fromGlances([
+        {
+          'DeviceName': 'sda ST8000DM004-2U9188',
+          '1': {
+            'name': 'Raw_Read_Error_Rate',
+            'raw': '23369400',
+            'value': '074',
+            'worst': 64,
+            'threshold': 6,
+            'when_failed': '-',
+          },
+          '5': {
+            'name': 'Reallocated_Sector_Ct',
+            'raw': '0',
+            'value': '100',
+            'threshold': 10,
+            'when_failed': '-',
+          },
+          '9': {
+            'name': 'Power_On_Hours',
+            'raw': '23152h+02m+54.791s',
+            'value': '074',
+            'threshold': 0,
+            'when_failed': '-',
+          },
+          '190': {
+            'name': 'Airflow_Temperature_Cel',
+            'raw': '40 (Min/Max 32/47)',
+            'value': '060',
+            'threshold': 40,
+            'when_failed': '-',
+          },
+          '194': {
+            'name': 'Temperature_Celsius',
+            'raw': '40 (0 21 0 0 0)',
+            'value': '040',
+            'threshold': 0,
+            'when_failed': '-',
+          },
+          '197': {
+            'name': 'Current_Pending_Sector',
+            'raw': '0',
+            'value': '100',
+            'threshold': 0,
+            'when_failed': '-',
+          },
+        },
+      ]).single;
+      expect(h.device, 'sda');
+      expect(h.model, 'ST8000DM004-2U9188');
+      expect(h.state, DiskState.healthy);
+      expect(h.temperature, 40);
+      expect(h.powerOnHours, 23152);
+    });
+
     test('a drive past its SMART threshold is failing', () {
       final h = DiskHealth.fromGlances([
         {
