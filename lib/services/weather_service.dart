@@ -43,6 +43,23 @@ class DailyForecast {
 }
 
 /// Current conditions for the configured location.
+/// One hour of the forecast, for the day view.
+class HourlyForecast {
+  final DateTime time;
+  final double temperature;
+  final int weatherCode;
+  final int precipitationChance;
+  final bool isDay;
+
+  const HourlyForecast({
+    required this.time,
+    required this.temperature,
+    required this.weatherCode,
+    required this.precipitationChance,
+    required this.isDay,
+  });
+}
+
 class Weather {
   final double temperature;
   final double feelsLike;
@@ -57,6 +74,9 @@ class Weather {
   final String windUnit;
   final List<DailyForecast> daily;
 
+  /// The next day, an hour at a time, starting with the current hour.
+  final List<HourlyForecast> hourly;
+
   const Weather({
     required this.temperature,
     required this.feelsLike,
@@ -70,9 +90,37 @@ class Weather {
     this.windSpeed = 0,
     this.windUnit = 'km/h',
     this.daily = const [],
+    this.hourly = const [],
   });
 
   String get description => weatherCodeDescription(weatherCode);
+}
+
+/// Open-Meteo's `hourly` block as a list, one entry per hour.
+///
+/// Tolerant of a block that is missing or short in any column: a forecast
+/// with no hourly data is still a forecast, and the day view just has
+/// nothing to draw.
+List<HourlyForecast> parseHourly(Object? block) {
+  if (block is! Map) return const [];
+  final times = (block['time'] as List?)?.cast<Object?>() ?? const [];
+  num? at(String key, int i) {
+    final col = block[key];
+    if (col is! List || i >= col.length) return null;
+    return col[i] as num?;
+  }
+
+  return [
+    for (var i = 0; i < times.length; i++)
+      if (DateTime.tryParse('${times[i]}') case final time?)
+        HourlyForecast(
+          time: time,
+          temperature: at('temperature_2m', i)?.toDouble() ?? 0,
+          weatherCode: at('weather_code', i)?.toInt() ?? 0,
+          precipitationChance: at('precipitation_probability', i)?.toInt() ?? 0,
+          isDay: (at('is_day', i) ?? 1) == 1,
+        ),
+  ];
 }
 
 /// WMO weather interpretation codes used by Open-Meteo.
@@ -275,6 +323,11 @@ class WeatherService extends ChangeNotifier {
           // something to show. Open-Meteo serves up to 16; anything reading
           // this list takes only as many as it needs.
           'forecast_days': 14,
+          // Twenty-five, so "the next day" still reaches the same hour
+          // tomorrow when the current hour is the first.
+          'hourly': 'temperature_2m,weather_code,precipitation_probability,'
+              'is_day',
+          'forecast_hours': 25,
           'timezone': 'auto',
           'temperature_unit': unit,
         },
@@ -312,6 +365,7 @@ class WeatherService extends ChangeNotifier {
         }
 
         _weather = Weather(
+          hourly: parseHourly(data['hourly']),
           temperature: (c['temperature_2m'] as num).toDouble(),
           feelsLike: (c['apparent_temperature'] as num).toDouble(),
           tempMax: daily.isNotEmpty ? daily.first.tempMax : 0,

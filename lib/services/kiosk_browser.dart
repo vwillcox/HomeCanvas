@@ -21,6 +21,24 @@ import 'package:flutter/foundation.dart';
 /// simply never arrive. `MOZ_ENABLE_WAYLAND=1` is set explicitly rather than
 /// relying on Firefox's own default, which varies by build and would fail
 /// silently and confusingly if it ever changed.
+/// How an article should look in Firefox's reader view.
+///
+/// Reader view strips a page down to its text — no adverts, no cookie
+/// banners, no autoplaying video — which is most of what is wrong with
+/// reading the news on a wall. Its look is set through Firefox preferences,
+/// written into the viewer's profile on each launch.
+class ReaderStyle {
+  const ReaderStyle({this.fontStep = 11, this.colourScheme = 'dark'});
+
+  /// Firefox's own `reader.font_size` step, 1–15. See
+  /// [KioskBrowser.readerFontPx] for what each one means in pixels.
+  final int fontStep;
+
+  /// `reader.color_scheme`: `dark`, `light`, `sepia`, `auto`, `contrast` or
+  /// `gray`.
+  final String colourScheme;
+}
+
 class KioskBrowser {
   KioskBrowser._();
 
@@ -78,6 +96,7 @@ class KioskBrowser {
     Size? screen,
     double bottomGutter = 0,
     bool chromeless = false,
+    ReaderStyle? reader,
   }) async {
     final browser = await resolve();
     if (browser == null) {
@@ -92,11 +111,26 @@ class KioskBrowser {
 
     final window = windowFor(screen, bottomGutter);
 
+    // Only Firefox has a reader view that can be asked for by URL; Chromium's
+    // reading mode is a side panel with no address of its own. And only for
+    // what looks like an article, because reader view on a video page is not
+    // a simplified video page — it is "Failed to load article from page", on
+    // a wall, with no link back to the original.
+    final useReader =
+        reader != null && browser == 'firefox' && looksLikeArticle(url);
+    final target = useReader ? readerUrl(url) : url;
+    final extraPrefs = useReader
+        ? readerPrefs(reader, windowWidth: window?.width ?? screen?.width)
+        : '';
+
     try {
       if (browser == 'firefox') {
         if (dir != null) {
           await _writeProfile(dir,
-              window: window, screen: screen, chromeless: chromeless);
+              window: window,
+              screen: screen,
+              chromeless: chromeless,
+              extraPrefs: extraPrefs);
         }
         return await Process.start(
           'firefox',
@@ -105,7 +139,7 @@ class KioskBrowser {
             // which on this panel would be a different viewer entirely.
             '--new-instance',
             if (dir != null) ...['--profile', dir],
-            url,
+            target,
           ],
           environment: const {'MOZ_ENABLE_WAYLAND': '1'},
         );
@@ -156,11 +190,17 @@ class KioskBrowser {
   /// start: a preference added in a later version of this app then takes
   /// effect on an existing profile, instead of only on a fresh one.
   static Future<void> _writeProfile(String dir,
-      {Size? window, Size? screen, bool chromeless = false}) async {
+      {Size? window,
+      Size? screen,
+      bool chromeless = false,
+      String extraPrefs = ''}) async {
     try {
       await Directory(dir).create(recursive: true);
-      await File('$dir/user.js')
-          .writeAsString(chromeless ? '$_prefs\n$_chromelessPrefs' : _prefs);
+      await File('$dir/user.js').writeAsString([
+        _prefs,
+        if (chromeless) _chromelessPrefs,
+        if (extraPrefs.isNotEmpty) extraPrefs,
+      ].join('\n'));
 
       // Firefox has no equivalent of Chromium's --app, and its --kiosk takes
       // the whole screen, so the chrome is hidden with a stylesheet instead.
@@ -194,6 +234,82 @@ class KioskBrowser {
       // touch and privacy preferences are what this is for.
       debugPrint('KioskBrowser: could not write profile $dir: $e');
     }
+  }
+
+  /// [url] opened in Firefox's reader view.
+  ///
+  /// Firefox accepts this from the command line — checked on the panel's own
+  /// build, 153, since it refuses most `about:` pages from outside and this
+  /// one could as easily have been on that list.
+  static String readerUrl(String url) =>
+      'about:reader?url=${Uri.encodeComponent(url)}';
+
+  /// Whether [url] is worth opening in reader view at all.
+  ///
+  /// Deliberately crude: the path alone, no fetching. A news feed mixes
+  /// articles with video clips and live pages, and reader view has nothing to
+  /// extract from either. Getting one of those wrong costs a normal page;
+  /// getting it wrong the other way costs a dead end.
+  static bool looksLikeArticle(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri == null || !uri.hasScheme || !uri.scheme.startsWith('http')) {
+      return false;
+    }
+    final host = uri.host.toLowerCase();
+    if (host.endsWith('youtube.com') || host == 'youtu.be') return false;
+    final path = uri.path.toLowerCase();
+    const notArticles = [
+      '/video', '/videos/', '/live/', '/av/', '/watch', '/sounds/',
+      '/iplayer/', '/gallery', '/galleries/', '/pictures/', '/in-pictures',
+    ];
+    return !notArticles.any(path.contains);
+  }
+
+  /// What Firefox's reader view renders a `reader.font_size` step as, in px.
+  ///
+  /// Mirrors `AboutReader._setFontSize` in Firefox 153: steps 1–9 are
+  /// 10 + 2n, and 10–15 jump through a fixed list for people who need the
+  /// text much larger than the old slider went.
+  static double readerFontPx(int step) {
+    const extended = [32, 40, 56, 72, 96, 128];
+    final s = step.clamp(1, 15);
+    return s <= 9 ? 10.0 + 2 * s : extended[s - 10].toDouble();
+  }
+
+  /// The widest `reader.content_width` step whose column fits [windowWidth].
+  ///
+  /// This is the "fit to the screen" part. Firefox measures the column in
+  /// ems — steps 1–9 are 20em to 60em — so the same step is a narrow strip at
+  /// small text and wider than the window at large text. Worked out from the
+  /// window instead, the column fills it at whatever size was chosen.
+  ///
+  /// [margin] is left for the reader's own toolbar, which sits in the left
+  /// gutter beside the column and would otherwise be pushed over the text.
+  static int readerWidthStep(double windowWidth, int fontStep,
+      {double margin = 160}) {
+    final available = windowWidth - margin;
+    final px = readerFontPx(fontStep);
+    for (var n = 9; n >= 1; n--) {
+      if ((20 + 5 * (n - 1)) * px <= available) return n;
+    }
+    return 1;
+  }
+
+  /// The `user.js` lines for reader view in [style].
+  ///
+  /// Rewritten on every launch like the rest of the profile, so changing the
+  /// size on the panel with the reader's own "Aa" lasts until the article is
+  /// closed and no longer — the widget's setting is the one that sticks.
+  static String readerPrefs(ReaderStyle style, {double? windowWidth}) {
+    final step = style.fontStep.clamp(1, 15);
+    final width = readerWidthStep(windowWidth ?? 1872, step);
+    return '''
+// --- Reader view -----------------------------------------------------------
+user_pref("reader.font_size", $step);
+user_pref("reader.content_width", $width);
+user_pref("reader.color_scheme", "${style.colourScheme}");
+user_pref("reader.toolbar.vertical", true);
+''';
   }
 
   /// The preferences that make Firefox usable on this panel.

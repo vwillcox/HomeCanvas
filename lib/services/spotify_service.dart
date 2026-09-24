@@ -405,6 +405,111 @@ display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
     }
   }
 
+  // ---- Reading the player ---------------------------------------------------
+
+  /// Spotify's DJ playlist. During X's voice segments the API reports this as
+  /// the context with no item at all.
+  static const String djPlaylistId = '37i9dQZF1EYkqdzj48dyYq';
+
+  /// How long replies may say nothing before the player is hidden.
+  static const Duration emptyGrace = Duration(seconds: 12);
+
+  /// Whether nothing has been playing for long enough to hide the player.
+  @visibleForTesting
+  static bool emptyLongEnough(DateTime? since, DateTime now) =>
+      since != null && now.difference(since) >= emptyGrace;
+
+  /// What a `/me/player` reply means for the panel.
+  ///
+  /// The case this exists for is Spotify's DJ. While X is talking between
+  /// tracks the API says `is_playing: true` and gives no `item` — there is no
+  /// track, so there is nothing to describe. This used to read as "nothing
+  /// playing", and the full-screen player folded itself away every time the
+  /// DJ spoke. Something playing with nothing named is now treated as exactly
+  /// that: audio, most likely the DJ, and worth keeping the player up for.
+  @visibleForTesting
+  static PlayerReply readPlayer(Map<String, dynamic> data) {
+    final playing = data['is_playing'] as bool? ?? false;
+    final item = data['item'] as Map<String, dynamic>?;
+    final device = data['device'] as Map<String, dynamic>?;
+
+    NowPlaying base({
+      required String title,
+      String artist = '',
+      String album = '',
+      Duration duration = Duration.zero,
+      String trackId = '',
+    }) =>
+        NowPlaying(
+          title: title,
+          artist: artist,
+          album: album,
+          duration: duration,
+          position: duration == Duration.zero
+              ? Duration.zero
+              : Duration(milliseconds: data['progress_ms'] as int? ?? 0),
+          status: playing ? 'playing' : 'paused',
+          repeat: repeatStateFrom(data['repeat_state'] as String? ?? 'off'),
+          shuffle: data['shuffle_state'] as bool? ?? false,
+          deviceName: device?['name'] as String? ?? 'Spotify',
+          trackId: trackId,
+        );
+
+    if (item == null) {
+      if (!playing) {
+        return const PlayerReply(PlayerReplyKind.nothing, NowPlaying());
+      }
+      final context = (data['context'] as Map?)?['uri'] as String? ?? '';
+      if (context.endsWith(djPlaylistId)) {
+        return PlayerReply(PlayerReplyKind.dj,
+            base(title: 'DJ X', artist: 'Talking between tracks'));
+      }
+      // Playing, but the API will not say what: an ad, a DJ it does not
+      // label, something new. Still audio, so still worth showing.
+      return PlayerReply(
+          PlayerReplyKind.unlabelled, base(title: 'Playing on Spotify'));
+    }
+
+    String? firstImage(Object? images) {
+      final list = images as List? ?? const [];
+      return list.isNotEmpty ? (list.first as Map)['url'] as String? : null;
+    }
+
+    final duration = Duration(milliseconds: item['duration_ms'] as int? ?? 0);
+    if (item['type'] == 'episode') {
+      final show = item['show'] as Map<String, dynamic>?;
+      return PlayerReply(
+        PlayerReplyKind.episode,
+        // No trackId: liking works on tracks, and an episode's id sent there
+        // would like nothing or the wrong thing.
+        base(
+          title: item['name'] as String? ?? '',
+          artist: show?['name'] as String? ?? '',
+          album: show?['publisher'] as String? ?? '',
+          duration: duration,
+        ),
+        artUrl: firstImage(item['images']) ?? firstImage(show?['images']),
+      );
+    }
+
+    final album = item['album'] as Map<String, dynamic>?;
+    final artists = (item['artists'] as List? ?? [])
+        .map((a) => (a as Map)['name'] as String? ?? '')
+        .where((n) => n.isNotEmpty)
+        .join(', ');
+    return PlayerReply(
+      PlayerReplyKind.track,
+      base(
+        title: item['name'] as String? ?? '',
+        artist: artists,
+        album: album?['name'] as String? ?? '',
+        duration: duration,
+        trackId: item['id'] as String? ?? '',
+      ),
+      artUrl: firstImage(album?['images']),
+    );
+  }
+
   // ---- Polling --------------------------------------------------------------
 
   Future<void> _poll() async {
@@ -413,6 +518,9 @@ display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
     try {
       final r = await _dio.get(
         '$_apiBase/me/player',
+        // Without this a podcast episode comes back as `item: null` — which
+        // read as "nothing playing" and hid the player mid-episode.
+        queryParameters: const {'additional_types': 'track,episode'},
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
       if (r.statusCode == 204 || r.data is! Map) {
@@ -427,7 +535,18 @@ display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
     }
   }
 
+  /// When the replies started saying nothing is playing, or null while they
+  /// say something is.
+  DateTime? _emptySince;
+
   void _applyNothingPlaying() {
+    final now = DateTime.now();
+    _emptySince ??= now;
+    // Held for a moment rather than hidden on the first empty reply. Spotify
+    // answers with nothing for a poll or two at some handovers, and a player
+    // that vanished and came back every time would be worse than one that
+    // lingers a few seconds after the music genuinely stops.
+    if (_available && !emptyLongEnough(_emptySince, now)) return;
     if (_available) {
       _available = false;
       _now = const NowPlaying();
@@ -442,38 +561,25 @@ display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
   }
 
   void _applyPlayerState(Map<String, dynamic> data) {
-    final item = data['item'] as Map<String, dynamic>?;
-    if (item == null) {
+    final reply = readPlayer(data);
+    if (reply.kind == PlayerReplyKind.nothing) {
       _applyNothingPlaying();
       return;
     }
+    _emptySince = null;
     _speedUpPolling();
 
-    final artists = (item['artists'] as List? ?? [])
-        .map((a) => (a as Map)['name'] as String? ?? '')
-        .where((n) => n.isNotEmpty)
-        .join(', ');
-    final album = item['album'] as Map<String, dynamic>?;
-    final images = (album?['images'] as List? ?? []);
-    final art = images.isNotEmpty ? images.first['url'] as String? : null;
-
     final device = data['device'] as Map<String, dynamic>?;
-    final repeatState = data['repeat_state'] as String? ?? 'off';
-
-    final trackId = item['id'] as String? ?? '';
-    _now = NowPlaying(
-      title: item['name'] as String? ?? '',
-      artist: artists,
-      album: album?['name'] as String? ?? '',
-      duration: Duration(milliseconds: item['duration_ms'] as int? ?? 0),
-      position: Duration(milliseconds: data['progress_ms'] as int? ?? 0),
-      status: (data['is_playing'] as bool? ?? false) ? 'playing' : 'paused',
-      repeat: repeatStateFrom(repeatState),
-      shuffle: data['shuffle_state'] as bool? ?? false,
-      deviceName: device?['name'] as String? ?? 'Spotify',
-      trackId: trackId,
-    );
-    _artUrl = art;
+    final trackId = reply.now.trackId;
+    _now = reply.now;
+    // The DJ has no artwork of its own that the API will give out, so the
+    // last track's stays up rather than the backdrop flashing to nothing
+    // every time X starts talking.
+    if (reply.kind != PlayerReplyKind.dj &&
+        reply.kind != PlayerReplyKind.unlabelled) {
+      _artUrl = reply.artUrl;
+    }
+    if (trackId.isEmpty) _isLiked = false;
     if (trackId.isNotEmpty && !_rateLimited('liked-status')) {
       final now = DateTime.now();
       final trackChanged = trackId != _lastLikedRecheckTrackId;
@@ -943,4 +1049,30 @@ display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
     _dio.close();
     super.dispose();
   }
+}
+
+/// What a `/me/player` reply turned out to be.
+enum PlayerReplyKind {
+  track,
+  episode,
+
+  /// Spotify's DJ, talking between tracks.
+  dj,
+
+  /// Playing, but the reply does not say what.
+  unlabelled,
+
+  /// Nothing playing.
+  nothing,
+}
+
+class PlayerReply {
+  const PlayerReply(this.kind, this.now, {this.artUrl});
+
+  final PlayerReplyKind kind;
+  final NowPlaying now;
+
+  /// The artwork to show. Null for [PlayerReplyKind.dj] and
+  /// [PlayerReplyKind.unlabelled], which keep whatever was showing.
+  final String? artUrl;
 }

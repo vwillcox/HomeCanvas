@@ -28,20 +28,39 @@ String _fmt(Duration d) {
 /// transport controls, and tapping again shrinks it back.
 ///
 /// Place inside a Stack that fills the screen (slideshow only).
+/// Lets something outside the overlay open the full player — the home
+/// screen's mini player, which is part of the page rather than the overlay.
+class NowPlayingOverlayController extends ChangeNotifier {
+  void expand() => notifyListeners();
+}
+
 class NowPlayingOverlay extends StatefulWidget {
   final EdgeInsets margin;
 
-  /// Start already expanded to the full player rather than the small corner
-  /// card. Used on the home screen — there's no slideshow to keep clear
-  /// there, so if music is playing there's nothing better to show than the
-  /// player itself; tapping it still shrinks to the corner like anywhere
-  /// else, uncovering the album grid to go start a slideshow.
+  /// Where the player lives when it is small, instead of a corner.
+  ///
+  /// The home screen gives it the mini player in its page: the full player
+  /// then grows out of that and shrinks back into it, and while small the
+  /// overlay draws nothing of its own — the page's mini player is the small
+  /// player. Without it, the small player is the corner card.
+  final GlobalKey? anchor;
+
+  /// Opens the full player from outside. Only needed with [anchor].
+  final NowPlayingOverlayController? controller;
+
+  /// Start already expanded to the full player rather than small. Used on the
+  /// home screen — there's no slideshow to keep clear there, so if music is
+  /// playing when the kiosk starts there's nothing better to show than the
+  /// player itself. Only until it has been shrunk by hand: after that it
+  /// stays small, however often the overlay is rebuilt.
   final bool startExpanded;
 
   const NowPlayingOverlay({
     super.key,
     this.margin = const EdgeInsets.all(28),
     this.startExpanded = false,
+    this.anchor,
+    this.controller,
   });
 
   @override
@@ -63,23 +82,53 @@ class _NowPlayingOverlayState extends State<NowPlayingOverlay>
 
   bool get _expanded => _controller.value > 0.5;
 
-  /// Only set on the home screen (see [NowPlayingOverlay.startExpanded]) —
-  /// shrinking there is meant as a brief "let me pick an album" detour, not
-  /// a standing preference, so it pops back up on its own if nothing came of
-  /// it within [_autoExpandDelay].
-  Timer? _autoExpandTimer;
-  static const Duration _autoExpandDelay = Duration(seconds: 10);
+  /// Whether the full player has been shrunk by hand, for the life of the
+  /// app.
+  ///
+  /// Static, because the overlay itself does not live that long: the home
+  /// screen drops it while albums are being picked for a slideshow and makes
+  /// a new one afterwards, and a new one starting full-screen was the player
+  /// popping back up after being put away. It used to re-open itself ten
+  /// seconds after being shrunk, too — reasonable when "small" meant a
+  /// corner card over the albums, not now there is a proper mini player.
+  /// Once shrunk, it stays shrunk until someone opens it again.
+  static bool _shrunkByUser = false;
+
+  @visibleForTesting
+  static void resetForTest() => _shrunkByUser = false;
 
   @override
   void initState() {
     super.initState();
-    if (widget.startExpanded) _controller.value = 1;
+    if (widget.startExpanded && !_shrunkByUser) _controller.value = 1;
+    widget.controller?.addListener(_expandFromOutside);
     startDrift();
   }
 
   @override
+  void didUpdateWidget(NowPlayingOverlay old) {
+    super.didUpdateWidget(old);
+    if (old.controller != widget.controller) {
+      old.controller?.removeListener(_expandFromOutside);
+      widget.controller?.addListener(_expandFromOutside);
+    }
+  }
+
+  void _expandFromOutside() => _controller.forward();
+
+  /// The anchor's rectangle in this overlay's coordinates, or null when it is
+  /// not laid out — scrolled out of the list, or not built at all.
+  Rect? _anchorRect() {
+    final box = widget.anchor?.currentContext?.findRenderObject();
+    final me = context.findRenderObject();
+    if (box is! RenderBox || me is! RenderBox) return null;
+    if (!box.attached || !box.hasSize || !me.attached) return null;
+    return box.localToGlobal(Offset.zero, ancestor: me) & box.size;
+  }
+
+  @override
   void dispose() {
-    _autoExpandTimer?.cancel();
+    widget.controller?.removeListener(_expandFromOutside);
     stopDrift();
     _controller.dispose();
     super.dispose();
@@ -87,15 +136,9 @@ class _NowPlayingOverlayState extends State<NowPlayingOverlay>
 
   void _toggle() {
     if (_expanded) {
+      _shrunkByUser = true;
       _controller.reverse();
-      if (widget.startExpanded) {
-        _autoExpandTimer?.cancel();
-        _autoExpandTimer = Timer(_autoExpandDelay, () {
-          if (mounted && !_expanded) _controller.forward();
-        });
-      }
     } else {
-      _autoExpandTimer?.cancel();
       _controller.forward();
     }
   }
@@ -127,14 +170,23 @@ class _NowPlayingOverlayState extends State<NowPlayingOverlay>
       child: LayoutBuilder(
         builder: (context, constraints) {
           final screen = Size(constraints.maxWidth, constraints.maxHeight);
-          final collapsed =
-              applyDrift(_collapsedRect(screen, settings.corner), screen);
           final expanded = _expandedRect(screen);
 
           return AnimatedBuilder(
             animation: _t,
             builder: (context, _) {
               final v = _t.value;
+              // Anchored and small: the page's own mini player is showing, so
+              // there is nothing for the overlay to draw.
+              if (widget.anchor != null && v == 0) {
+                return const SizedBox.shrink();
+              }
+              // Measured each frame of the animation rather than once, so the
+              // player lands on the mini player wherever it has scrolled to.
+              final collapsed = widget.anchor != null
+                  ? (_anchorRect() ??
+                      _collapsedRect(screen, settings.corner))
+                  : applyDrift(_collapsedRect(screen, settings.corner), screen);
               final rect = Rect.lerp(collapsed, expanded, v)!;
               return Stack(
                 children: [
@@ -508,20 +560,25 @@ class _DetailContent extends StatelessWidget {
                               color: Colors.white54, fontSize: 22),
                         ),
                       ],
-                      const SizedBox(height: 26),
-                      _ProgressBar(service: service),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(_fmt(n.position),
-                              style: const TextStyle(
-                                  color: Colors.white60, fontSize: 18)),
-                          Text(_fmt(n.duration),
-                              style: const TextStyle(
-                                  color: Colors.white60, fontSize: 18)),
-                        ],
-                      ),
+                      // Nothing to scrub while Spotify's DJ is talking —
+                      // there is no track, so no length — and "00:00 /
+                      // 00:00" under the DJ's name reads as a fault.
+                      if (n.duration > Duration.zero) ...[
+                        const SizedBox(height: 26),
+                        _ProgressBar(service: service),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(_fmt(n.position),
+                                style: const TextStyle(
+                                    color: Colors.white60, fontSize: 18)),
+                            Text(_fmt(n.duration),
+                                style: const TextStyle(
+                                    color: Colors.white60, fontSize: 18)),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),

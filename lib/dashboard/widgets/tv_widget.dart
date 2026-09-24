@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../services/tv_service.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
+import 'tv_inputs_sheet.dart';
 
 /// A remote control for the television.
 ///
@@ -47,8 +48,11 @@ class _DashboardTvWidgetState extends State<DashboardTvWidget> {
       case ConnState.error:
         return _Message(
           theme: t,
-          text: tv.lastError ?? 'Could not reach the television.',
-          action: ('Try again', () => unawaited(tv.connect())),
+          // It is already trying again, so say so rather than leaving a
+          // button as the only way back. The button stays for impatience.
+          text: '${tv.lastError ?? 'Could not reach the television.'}'
+              '${tv.retryPending ? '\nTrying again…' : ''}',
+          action: ('Try now', () => unawaited(tv.connect())),
         );
       case ConnState.disconnected:
         return _Message(
@@ -121,7 +125,58 @@ class _Status extends StatelessWidget {
             style: TextStyle(color: theme.textSecondary, fontSize: 15),
           ),
         ),
+        const SizedBox(width: 8),
+        _InputButton(theme: theme),
       ],
+    );
+  }
+}
+
+/// Opens the inputs pop-up.
+///
+/// Up here beside what the television is showing, rather than in the row of
+/// transport keys: it reads as "change this", next to the "this", and the
+/// transport keys keep their six-across sizing.
+class _InputButton extends StatelessWidget {
+  const _InputButton({required this.theme});
+
+  final DashboardTheme theme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Switch input',
+      child: Material(
+        color: theme.accent.withValues(alpha: 0.16),
+        shape: StadiumBorder(
+          side: BorderSide(color: theme.accent.withValues(alpha: 0.6)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => showTvInputs(context, theme),
+          child: Padding(
+            // Taller than it looks: the pill is small on the tile, but the
+            // target is thumb-sized.
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.input, color: theme.accent, size: 20),
+                const SizedBox(width: 6),
+                Text(
+                  'Input',
+                  style: TextStyle(
+                    color: theme.accent,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -426,7 +481,9 @@ final tvWidgetType = DashboardWidgetType(
       kind: OptionKind.boolean,
       defaultValue: false,
       help: 'Each input the television reports, with a dot showing whether '
-          'anything is connected to it. Tap one to switch.',
+          'anything is connected to it. Tap one to switch. The Input button '
+          'on the remote opens the same choice as a pop-up, so this is only '
+          'worth it on a tile with room to spare.',
     ),
     WidgetOption(
       key: 'compact',

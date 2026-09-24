@@ -99,7 +99,8 @@ Work in progress on `pullMessages`, not yet merged to `main`.
 **Browser**
 - Firefox's built-in cookie-banner blocking is patchy; banners on sites it has
   no rule for still appear on a first visit. `sudo apt install
-  webext-ublock-origin-firefox` catches far more.
+  webext-ublock-origin-firefox` catches far more. News articles sidestep it
+  entirely by opening in reader view.
 - Firefox's real `--kiosk` flag is deliberately **not** used: it takes the whole
   screen and ignores any geometry asked of it, which would bury the kiosk's own
   close button. The chrome is hidden with `userChrome.css` instead.
@@ -329,6 +330,28 @@ quality Connect carries (the default is 160 without it). True lossless isn't
 reachable on any Connect device — Spotify's Lossless tier only streams inside
 its own apps, over a different pipeline entirely.
 
+
+#### Spotify's DJ, and podcasts
+
+While Spotify's DJ, X, is talking between tracks, the Web API says it is
+playing but names no track — `item` is null and the context is the DJ's
+playlist. The kiosk used to read that as "nothing playing", so the full-screen
+player folded itself away every time the DJ spoke. It now shows **DJ X ·
+Talking between tracks** instead, keeps the last track's artwork behind it,
+and hides the scrubber, since there is no track to scrub.
+
+Anything else that is playing but unnamed shows as **Playing on Spotify** and
+keeps the player up the same way. That is the fallback if Spotify ever changes
+the DJ playlist's id: the label goes generic, but the player stays.
+
+Podcasts had the same problem for a different reason: the API leaves episodes
+out unless asked. The poll now asks, so an episode shows its title and show.
+It cannot be liked from the panel, since liking works on tracks.
+
+And the player no longer hides on the first empty reply. Spotify answers with
+nothing for a poll or two at some handovers; the panel now waits twelve seconds
+of genuinely nothing before folding away.
+
 ### The widget dashboard
 
 An alternate screen mode: clock, weather, calendar, RSS news, Spotify and a TV
@@ -347,10 +370,12 @@ placeholders, so what you lay out is what appears on the panel.
 - **Weather** — current conditions on their own, a 5/7/14-day forecast, or both.
 - **Calendar** — month or schedule view, several ICS URLs, a colour per source.
 - **News** — several feeds blended by a recency-and-fairness score so one busy
-  feed can't crowd out the rest; tap an item to read it.
+  feed can't crowd out the rest; tap an item to read it, in reader view —
+  see below.
 - **Spotify** — artwork that repositions with the tile's shape, a fade like the
   full player's, and transport controls sized for a quick tap.
 - **Speed test** — see below.
+- **Omarchy hotkeys** — see below.
 
 #### Pages
 
@@ -413,6 +438,266 @@ speed.
 Set **Run automatically every (hours)** to have it test on its own; 0 leaves it
 manual. Each run moves a few hundred megabytes, so keep it well spaced on a
 metered connection.
+
+### The photo browser
+
+The home screen leads with a greeting, the date and the library in numbers,
+with the controls gathered into one frosted pill at the top right rather than a
+title bar. Albums are cards with the cover edge to edge and the name over a
+shadow at the foot, sortable by **Recent**, **A–Z** or **Most items**. **Empty
+albums are hidden** — a grey tile that opens onto "This album is empty" is not
+worth a place on a wall of photographs — and the counts in the header only
+count what is shown.
+
+When something is playing and the now-playing player is switched on, a **mini
+player** sits above the albums, with its own previous, play/pause and next.
+Tap anywhere else on it and the full player grows out of it; close the full
+player and it shrinks back into it, wherever the page has scrolled to.
+
+Inside an album there is a large header with the counts and the years it
+covers, a Slideshow button, and a photo wall with thin gaps. Headings follow
+the photos rather than the calendar: a month with a row's worth keeps its own
+heading, and runs of thin months share one — "May – July 2026", "2016 – 2025".
+Grouping strictly by month made the Family album a heading over every lone
+picture: 36 months, 19 of them holding fewer than four photos. A full month is
+never folded into a range, and undated photos are never given a date by one.
+
+Dates come from Immich's `localDateTime`, which is the camera's wall-clock time
+written with a "Z" it does not mean — so it is read as-is, never converted to
+the Pi's time zone, or a photo from late on the last of a month would move to
+the next one.
+
+### One look throughout
+
+Every screen shares one set of parts, in `lib/widgets/glass.dart`, so they
+cannot drift apart:
+
+- **`ScreenHeader`** — the top bar: a round glass back button, a large title
+  and the line under it, and the screen's controls gathered into one frosted
+  pill on the right (or a single white pill button, such as Slideshow).
+- **`ModernScaffold`** — the near-black background with a soft glow of the
+  accent from the top left, and the safe area.
+- **`GlassSection`** — a titled group of rows on a glass card, as in Settings.
+
+The home screen, albums, Settings, the Locked Folder, PIN entry, About and
+first-run setup all use them.
+
+**The dashboard** matches through its **Glass** theme — the same background,
+glow and accent (the accent is taken from the app's own colour scheme, and a
+test fails if the two ever differ) — and the same top bar, drawn in whichever
+theme is chosen so it still reads under a light one such as Paper. The top bar
+has a switch in the editor; off, the widgets get the whole panel and a floating
+glass back button returns. A theme can carry a `glow` colour of its own in its
+JSON to get the same effect.
+
+### The control bar, from the TV remote too
+
+The pill at the top right of the photos and the dashboard — Photos, Dashboard,
+TV remote, then Locked Folder, camera, the notifications switch, Refresh and
+Settings — is one widget, `ModuleBar`, with the screen you are on lit.
+
+The TV remote app carries the same bar. It is a separate program, so its
+buttons cannot reach into the kiosk directly; the kiosk listens for them on a
+small control endpoint instead, **on the loopback address only**:
+
+| Request | Does |
+|---|---|
+| `GET /state` | which buttons would work: dashboard on, Locked Folder available, camera set up, notifications muted |
+| `POST /open/photos`, `/open/dashboard`, `/open/settings`, `/open/locked-folder` | opens that place, as the kiosk's own button would |
+| `POST /camera` | shows or hides the camera |
+| `POST /dnd?muted=true` | sets the notifications switch |
+
+on `127.0.0.1:8766`, one up from `screen_control.py`'s 8765. Nothing on the
+network can reach it — a request to the Pi's own LAN address is refused — and
+it only opens what the kiosk's buttons open; the Locked Folder still asks for
+its PIN. The remote asks for `/state` every few seconds and shows only what
+the kiosk says would work; while the kiosk is not running it shows only its
+own buttons. After a command it brings the kiosk's window forward.
+
+### Settings, in tabs
+
+Fifteen sections in one scroll meant hunting for the one you wanted, so they
+are grouped by what you come to change, in a glass pill of tabs at the top
+right:
+
+| Tab | Sections |
+|---|---|
+| **Photos** | Connection, Locked Folder, Slideshow, Storage |
+| **Music** | Now playing, Spotify |
+| **Home** | Weather, Home Assistant, Television, Camera |
+| **Display** | Screen, Dashboard |
+| **Sharing** | Share Inbox |
+| **System** | Device, About |
+
+Each tab opens at the top, and Settings reopens on the tab last used for as
+long as the kiosk is running.
+
+### Reading the news
+
+Tapping a headline shows the feed's own summary first; **Read the page** opens
+the article in Firefox's **reader view** — the text and pictures only, with no
+adverts, no cookie banner and no autoplaying video. On a panel with nobody in
+front of it most of the time, that last part matters: a consent dialog nobody
+answers leaves the page unusable.
+
+It is asked for by address, `about:reader?url=…`, on Firefox's command line.
+That was checked on the panel's own Firefox 153 rather than assumed, because
+Firefox refuses most `about:` pages from outside and this one could as easily
+have been on that list.
+
+**The text is sized to fill the screen.** Firefox measures the reader's column
+in *ems* — its width slider runs from 20em to 60em — so the same setting is a
+narrow strip at small text and wider than the window at large text. The kiosk
+works it out from the window instead: at whatever size you pick, it chooses
+the widest column that fits beside the reader's toolbar. On this panel's
+1872px article window:
+
+| Reader text size | Font | Column |
+|---|---|---|
+| Medium | 32px | 50em — 1600px |
+| Large (default) | 40px | 40em — 1600px |
+| Very large | 56px | 30em — 1680px |
+
+The mapping from Firefox's settings to pixels was read out of Firefox 153's own
+`AboutReader.sys.mjs`, not guessed: steps 1–9 are `10 + 2n` px, and 10–15 jump
+through 32, 40, 56, 72, 96 and 128. If a future Firefox changes that, the
+column will be the wrong width until `KioskBrowser.readerFontPx` is updated to
+match.
+
+The size, width and colours are rewritten into the viewer's profile on every
+launch, so changing them on the panel with the reader's own **Aa** lasts until
+the article is closed. The widget's settings are the ones that stick: **Open
+articles in reader view**, **Reader text size** and **Reader colours**.
+
+**Video and live pages open normally.** Reader view has nothing to extract from
+them, and what it shows instead is "Failed to load article from page" — with no
+link back to the original. So links whose path says `/videos/`, `/live/`,
+`/av/`, `/watch` and the like, and anything on YouTube, skip it. The check is
+the address alone, deliberately: fetching every page first to ask would add a
+second or so to every tap. It will occasionally be wrong in the other
+direction — an article with nothing Firefox can extract — and then the reader's
+own **×**, top left, goes to the original page.
+
+Chromium, the fallback browser, has no reader view that can be opened by
+address, so with Chromium articles always open as the site serves them.
+
+### Keeping adverts out of the news
+
+Some feeds are more shopping than news. On the day this was added, 25 of
+WIRED's 50 items were coupon posts — "Peacock Promo Codes: 40% Off", "Motley
+Fool Promo Code: $200 Off" — and four of the seven headlines on the tile were
+selling something. The news widget now drops them, on any one of three signals:
+
+- **the headline** — promo codes, coupons, vouchers, discount codes, "40% off",
+  "$20 off", sponsored, paid post, partner content, a leading `[Ad]`, and named
+  sales ("Black Friday deals");
+- **the address** — `/story/peacock-promo-code/`, `/sponsored/`, `/deals/`;
+- **the publisher's own category** — WIRED files its coupon posts under
+  "Gear / Deals"; "Sponsored" and "Coupons" are caught the same way.
+
+Filtered before the feeds are blended and counted, so a tile of seven stays a
+tile of seven real headlines rather than three and some gaps.
+
+What it deliberately leaves alone:
+
+- **"deal" on its own** — a trade deal, a pay deal and a transfer deal are news;
+- **a price on its own** — "Apple's $250 Million Siri Settlement" is a story,
+  "$250 off" is not;
+- **reviews and buying guides** — "The Best Linux Laptops (2026)" is editorial
+  even when it earns commission. If those are not wanted either, they are a
+  category away (`Buying Guides`), but that is a different decision.
+
+Checked against the live feeds before it shipped: all 25 WIRED coupon posts
+hidden, and nothing from the BBC or The Verge. **Hide promo codes, coupons and
+sponsored posts** in the widget's settings turns it off.
+
+### The full forecast
+
+Tap the weather widget for the whole picture, over the dashboard:
+
+- **Now** — the reading, with feels-like, humidity, wind, chance of rain, the
+  UV index in the Met Office's words, and sunrise and sunset.
+- **The next 24 hours** — the sky and a temperature curve an hour at a time,
+  with the chance of rain wherever it is worth an umbrella (20% or more).
+  "Now" shows the same reading as the headline rather than Open-Meteo's
+  forecast for the top of the hour, which by twenty past can be a couple of
+  degrees out and reads as a mistake beside the big number.
+- **The week** — each day's low-to-high as a bar on one shared scale, so a
+  warm day sits visibly to the right of a cold one, with a dot on today's for
+  the current temperature.
+
+Close it with the **×**, a tap outside it, or a swipe down; it closes itself
+after two minutes so the dashboard is not left behind it. **Tap for the full
+forecast** in the widget's settings turns it off.
+
+The hourly data is one extra field on the request the widget already makes —
+`forecast_hours=25`, so "the next day" still reaches the same hour tomorrow.
+
+### Switching TV inputs
+
+The remote has an **Input** button beside what the television is showing. It
+opens every input the set reports, each with what is plugged into it:
+
+- a **green** dot — something connected and on, named where the television
+  knows it (over HDMI-CEC);
+- **amber** — a device the television remembers but cannot see, usually
+  something switched off at the wall;
+- **grey** — nothing connected.
+
+The one showing now is highlighted. Pick one and the television switches and
+the pop-up closes; left alone, it closes itself after 45 seconds.
+
+It uses the list the television sent when the remote connected, and does
+**not** ask again just because the pop-up opened. Asking makes the set run its
+pairing check, which flashes a code over whatever is being watched. If there
+is no list yet, the pop-up offers to ask once, and says up front that a code
+may flash.
+
+The **Show a row of inputs** setting still exists for a tile with room to
+spare; the button works on any size of tile.
+
+### Omarchy hotkeys
+
+All 224 shortcuts from [omarchy.org/manual/hotkeys](https://omarchy.org/manual/hotkeys/),
+as a cheat sheet sized for a page of its own — drop it in at 12×8 and give it
+a dashboard page to itself.
+
+They will not all fit on a screen at a size anybody can read from across a
+room, so it does not try. It shows one of twenty sections at a time, and there
+are three ways to move:
+
+- **Tap a section tab.** The strip scrolls, and it follows the selection, so
+  the highlight is never off the side where you cannot see which one you are
+  on.
+- **Tap the sheet** to turn the page; past the last page of a section it moves
+  to the next one. The whole sheet is the target, not the rows — most of a
+  short section is empty space.
+- **A timer**, off by default. Under three seconds is treated as three, for the
+  same reason the dashboard's own page timer has a floor.
+
+Combinations are drawn as keycaps, split on the manual's own notation: ` + `
+between the keys of one combination, ` or ` between alternatives, so
+`Super + W or Super + Q` reads as two ways of doing the same thing rather than
+a four-key chord. Anything else — `1/2/3/4`, `Print Screen`, `CapsLock M S` —
+is left exactly as written and goes on one cap, because that is the manual's
+own shorthand and rewriting it would invent notation you have never seen on
+the page you are trying to memorise.
+
+Columns, rows and page count are all worked out from the tile, so **larger
+text means more pages rather than smaller rows**. Three sizes; the largest is
+meant to be read from a sofa. On a tile too small for the page dots to mean
+anything they become a `3 / 12` counter instead.
+
+The list is **baked into the build**, not fetched. This is a cheat sheet on a
+wall: it has to be right when the network is not, and scraping a documentation
+page would put the panel one redesign away from showing nothing. The cost is
+that it goes stale quietly, so `omarchyHotkeysFetched` in
+`lib/dashboard/widgets/omarchy_hotkeys.dart` records when it was taken. Re-read
+the manual and update that file when Omarchy changes.
+
+> The **Quick emojis** section is transcribed verbatim, and one of its entries
+> is crude. Pin the widget to a different section, or edit
+> `omarchy_hotkeys.dart`, if the panel is somewhere that matters.
 
 ### Share Inbox
 
@@ -638,6 +923,36 @@ Power changes and wakes are recorded in
 `~/.cache/immich_kiosk_pi/screen_control.log`, which is the quickest way to tell
 whether a touch was seen at all.
 
+
+#### Touching it awake
+
+"Off" is the backlight at zero, not the panel powered down — cut the DSI output
+and the touch controller loses power with it, and nothing but Alexa can bring
+the screen back. So the panel keeps reporting touches while it is dark, which
+used to mean the touch that woke it also landed on whatever was underneath: the
+TV remote's power button, a headline, a link.
+
+Now `screen_control.py` takes the touchscreen for itself while the screen is
+off (Linux's `EVIOCGRAB`), so touches reach it and nothing else. The first one
+wakes the screen, and the device is held until that finger lifts, so the whole
+touch is swallowed. The next touch is an ordinary one. It is done below the
+compositor, so it covers every window — the kiosk, the TV remote app and any
+browser open on top.
+
+Two things it is careful about:
+
+- **It never grabs mid-touch.** A grab taken while a finger is down would hide
+  the lift from the compositor, leaving the app holding a touch that never
+  ends. It waits for the panel to be still first.
+- **It does not hold on for ever** if a lift is never reported: three seconds
+  with no input at all and the device is given back.
+
+The logic is tested on its own, without a panel:
+
+```bash
+python3 -m unittest deploy/test_screen_control.py
+```
+
 ### TV Remote
 
 Two separate things share this name.
@@ -794,7 +1109,10 @@ screenshots or testing a screen in isolation. Inert unless set.
 | `IMMICH_KIOSK_TEST_LOCKED=<pin>` | the Locked Folder, unlocked |
 | `IMMICH_KIOSK_TEST_LOCKED_VIDEO=<pin>` | the first locked video |
 | `IMMICH_KIOSK_TEST_ABOUT=1` | the About screen |
+| `IMMICH_KIOSK_TEST_SETTINGS=1` | the Settings screen |
 | `IMMICH_KIOSK_TEST_NOWPLAYING=1` | the now-playing panel on a blank background |
+| `IMMICH_KIOSK_TEST_DASHBOARD=<page>` | the dashboard, opened at that page |
+| `IMMICH_KIOSK_TEST_POPUP=forecast` or `inputs` | with the above, opens the full forecast or the TV inputs over the dashboard |
 
 ### Screen burn-in
 

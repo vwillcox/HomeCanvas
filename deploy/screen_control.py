@@ -19,11 +19,13 @@ Binds to localhost only. Home Assistant uses host networking, so it can reach
 this, but nothing off the machine can.
 """
 
+import fcntl
 import glob
 import json
 import os
 import re
 import selectors
+import struct
 import subprocess
 import threading
 import time
@@ -206,6 +208,7 @@ class Handler(BaseHTTPRequestHandler):
                 set_brightness(value)
                 if value:
                     _restore_to = value
+                waker.note_power(value > 0)
                 return self._reply(state())
             self._reply({"error": "not found"}, 404)
         except Exception as exc:  # noqa: BLE001 - report, don't take the server down
@@ -240,49 +243,159 @@ def pointer_devices():
     return found
 
 
-class Waker:
-    """Turns the screen back on when the panel is touched.
+# struct input_event from <linux/input.h>, in this machine's native layout:
+# a timeval (two longs), then type, code and value.
+EVENT = struct.Struct("llHHi")
+EV_KEY = 0x01
+EV_ABS = 0x03
+BTN_TOUCH = 0x14A
+ABS_MT_TRACKING_ID = 0x39
 
-    Powering the output down stops the compositor drawing, and nothing brings it
-    back on its own — without this the only way back is the HTTP endpoint or
-    asking Alexa.
+# _IOW('E', 0x90, int): take the device for ourselves, or give it back.
+EVIOCGRAB = 0x40044590
+
+
+class WakeTouch:
+    """Decides what to do with the touchscreen while the screen is off.
+
+    Pure logic, fed with events and the time, so it can be tested without a
+    panel to touch. `Waker` does the reading and grabbing.
+
+    The problem it solves: "off" is only the backlight at zero, so the panel
+    keeps reporting touches, and the touch that woke the screen also landed on
+    whatever was underneath it — the TV remote's power button, a headline, a
+    link. Now, while the screen is off, the device is grabbed: touches come
+    here and nowhere else. The first one wakes the screen, and the grab is held
+    until that finger lifts, so the whole touch is swallowed. The next touch is
+    an ordinary one.
+
+    Grabbing is never done mid-touch. A grab taken while a finger is down
+    would leave the compositor seeing the finger go down but never come up,
+    and the app could be left holding a touch that never ends. So it waits for
+    the panel to be still first, and lets go only once the finger has lifted.
     """
 
-    # Trust our own view of the power state between checks: while the screen is
-    # on, touches stream in constantly and shelling out to wlopm per event would
-    # be absurd. Re-read occasionally in case something else changed it.
-    RECHECK = 30.0
-
-    # Ignore input for a moment after powering down: a finger still resting on
-    # the panel would otherwise wake it straight back up.
+    # Ignore touches for a moment after the screen goes off: a finger still
+    # resting on the panel would otherwise wake it straight back up.
     SETTLE = 1.5
 
+    # How long the panel must have been still before it is grabbed.
+    QUIET = 0.3
+
+    # After the waking finger lifts, how long before the device is given back.
+    RELEASE_AFTER = 0.25
+
+    # A lift that is never reported must not hold the device for ever: after
+    # this long with the screen on and no input at all, it is given back.
+    GIVE_UP = 3.0
+
     def __init__(self):
-        self._on = True
-        self._checked = 0.0
-        self._off_at = 0.0
+        self.off = False
+        self.grabbed = False
+        self.waking = False
+        self._off_at = float("-inf")
+        self._last_input = float("-inf")
+        self._lifted_at = None
+        # Whether a finger is on the panel, carried across reads: a quick tap
+        # can arrive as one read holding both the touch and the lift.
+        self._down = False
+        # Once BTN_TOUCH has been seen it is trusted over tracking ids, which
+        # only describe one finger at a time.
+        self._has_btn_touch = False
+
+    def screen(self, on, now):
+        """The screen was switched on or off (by anyone)."""
+        if on == (not self.off):
+            return
+        self.off = not on
+        if self.off:
+            self._off_at = now
+            self.waking = False
+
+    def events(self, batch, now):
+        """Input arrived. Returns True when it should wake the screen."""
+        self._last_input = now
+        for type_, code, value in batch:
+            if type_ == EV_KEY and code == BTN_TOUCH:
+                self._has_btn_touch = True
+                self._down = value == 1
+            elif (
+                type_ == EV_ABS
+                and code == ABS_MT_TRACKING_ID
+                and not self._has_btn_touch
+            ):
+                self._down = value != -1
+
+        woke = False
+        if self.off and self.grabbed and now - self._off_at >= self.SETTLE:
+            # The waking touch: from here until the finger lifts, it is ours.
+            self.off = False
+            self.waking = True
+            woke = True
+        if self.waking:
+            if self._down:
+                self._lifted_at = None
+            elif self._lifted_at is None:
+                self._lifted_at = now
+        return woke
+
+    def want_grab(self, now):
+        """Whether the device should be held right now."""
+        if self.off:
+            # Take it once the panel is still, never mid-touch.
+            return self.grabbed or now - self._last_input >= self.QUIET
+        if self.waking:
+            lifted = (
+                self._lifted_at is not None
+                and now - self._lifted_at >= self.RELEASE_AFTER
+            )
+            stale = now - self._last_input >= self.GIVE_UP
+            if lifted or stale:
+                self.waking = False
+                return False
+            return True
+        return False
+
+
+class Waker:
+    """Turns the screen back on when the panel is touched — and keeps that
+    touch to itself. See `WakeTouch` for why and how.
+    """
+
+    # How often to check the backlight for changes made some other way — the
+    # brightness endpoint, or anything writing sysfs directly. A file read,
+    # so cheap enough to do often.
+    RECHECK = 2.0
+
+    def __init__(self):
+        self.touch = WakeTouch()
         self._lock = threading.Lock()
+        self._checked = 0.0
 
     def note_power(self, on):
         """Record a state we set ourselves, so the watcher stays in step."""
         with self._lock:
-            self._on = on
+            self.touch.screen(on, time.monotonic())
             self._checked = time.monotonic()
-            if not on:
-                self._off_at = time.monotonic()
 
-    def _settling(self):
+    def _resync(self, now):
+        if now - self._checked < self.RECHECK:
+            return
+        level = brightness()
         with self._lock:
-            return time.monotonic() - self._off_at < self.SETTLE
+            self._checked = now
+            if level is not None and not self.touch.waking:
+                self.touch.screen(level > 0, now)
 
-    def _is_on(self):
-        with self._lock:
-            fresh = time.monotonic() - self._checked < self.RECHECK
-            if fresh:
-                return self._on
-        powered = state()["on"]
-        self.note_power(powered)
-        return powered
+    def _set_grab(self, fds, want):
+        if want == self.touch.grabbed:
+            return
+        for fd in fds:
+            try:
+                fcntl.ioctl(fd, EVIOCGRAB, 1 if want else 0)
+            except OSError as exc:
+                log(f"could not {'grab' if want else 'release'} touch: {exc}")
+        self.touch.grabbed = want
 
     def run(self):
         devices = pointer_devices()
@@ -300,19 +413,29 @@ class Waker:
         if not opened:
             return
         while True:
-            for key, _ in sel.select():
-                # The content doesn't matter, only that input happened. Reading
-                # also drains the buffer, which has to happen regardless.
+            now = time.monotonic()
+            self._resync(now)
+            with self._lock:
+                self._set_grab(opened, self.touch.want_grab(now))
+            # Short while anything is changing hands, so a lift is acted on
+            # promptly; long otherwise, since nothing needs doing.
+            busy = self.touch.off or self.touch.waking
+            for key, _ in sel.select(timeout=0.05 if busy else 1.0):
                 try:
-                    key.fileobj.read(1024)
+                    raw = key.fileobj.read(EVENT.size * 64)
                 except OSError:
                     continue
-                if self._settling():
-                    continue
-                if not self._is_on():
-                    log("touch detected while off - waking")
+                batch = [
+                    EVENT.unpack_from(raw, i)[2:]
+                    for i in range(0, len(raw) - EVENT.size + 1, EVENT.size)
+                ]
+                with self._lock:
+                    wake = self.touch.events(batch, time.monotonic())
+                if wake:
+                    log("touch while off - waking, and keeping that touch")
                     set_power(True)
-                    self.note_power(True)
+                    with self._lock:
+                        self._checked = time.monotonic()
 
 
 waker = Waker()

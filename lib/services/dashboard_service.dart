@@ -384,6 +384,7 @@ class DashboardService extends ChangeNotifier {
     current.tileShadows = incoming.tileShadows;
     current.pageSeconds = incoming.pageSeconds;
     current.tapToFlip = incoming.tapToFlip;
+    current.topBar = incoming.topBar;
     current.widgets = incoming.widgets;
     await _config.save();
     notifyListeners();

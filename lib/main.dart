@@ -10,6 +10,7 @@ import 'models/immich_models.dart';
 import 'dashboard/live_preview.dart';
 import 'dashboard/widgets/widgets.dart';
 import 'services/audio_levels_service.dart';
+import 'services/kiosk_control_service.dart';
 import 'services/camera_service.dart';
 import 'services/config_service.dart';
 import 'services/dashboard_service.dart';
@@ -28,11 +29,14 @@ import 'services/tts_service.dart';
 import 'services/tv_service.dart';
 import 'services/unifi_service.dart';
 import 'services/weather_service.dart';
+import 'widgets/module_bar.dart' show openLockedFolder;
 import 'screens/about_screen.dart';
 import 'screens/album_screen.dart';
+import 'screens/dashboard_screen.dart';
 import 'screens/gallery_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/locked_folder_screen.dart';
+import 'screens/settings_screen.dart';
 import 'screens/setup_screen.dart';
 import 'screens/slideshow_screen.dart';
 import 'screens/video_player_screen.dart';
@@ -152,6 +156,54 @@ void main() async {
       child: const ImmichKioskPiApp(),
     ),
   );
+
+  // Lets the TV remote app's copy of the control bar reach in here: open
+  // the dashboard, Settings, the Locked Folder and so on. Local only — see
+  // KioskControlService.
+  unawaited(KioskControlService(
+    state: () {
+      final context = rootNavigatorKey.currentContext;
+      final camera = context?.read<CameraService>();
+      return KioskState(
+        dashboard: config.config.dashboard.enabled,
+        lockedFolder: context?.read<LockedFolderService>().canUse ?? false,
+        camera: camera?.isConfigured ?? false,
+        cameraOpen: camera?.isOpen ?? false,
+        dnd: config.config.shareInbox.dndMuted,
+      );
+    },
+    run: (command) => runKioskCommand(command, config),
+    setDnd: (muted) {
+      config.config.shareInbox.dndMuted = muted;
+      unawaited(config.save());
+    },
+  ).start());
+}
+
+/// Carries out a command from [KioskControlService], the way the kiosk's own
+/// control bar would.
+void runKioskCommand(KioskCommand command, ConfigService config) {
+  final navigator = rootNavigatorKey.currentState;
+  final context = rootNavigatorKey.currentContext;
+  if (navigator == null || context == null) return;
+  switch (command) {
+    case KioskCommand.photos:
+      navigator.popUntil((route) => route.isFirst);
+    case KioskCommand.dashboard:
+      if (!config.config.dashboard.enabled) return;
+      navigator.popUntil((route) => route.isFirst);
+      navigator
+          .push(MaterialPageRoute(builder: (_) => const DashboardScreen()));
+    case KioskCommand.settings:
+      navigator.push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
+    case KioskCommand.lockedFolder:
+      if (context.read<LockedFolderService>().canUse) {
+        unawaited(openLockedFolder(context));
+      }
+    case KioskCommand.camera:
+      final camera = context.read<CameraService>();
+      if (camera.isConfigured) camera.toggleOpen();
+  }
 }
 
 /// The overlay added in [ImmichKioskPiApp]'s `builder` sits as a *sibling* of
@@ -222,6 +274,7 @@ class _RootGate extends StatelessWidget {
     //   IMMICH_KIOSK_TEST_SLIDESHOW=<albumId>   boot into the slideshow
     //   IMMICH_KIOSK_TEST_GALLERY=<albumId>     boot into the photo gallery
     //   IMMICH_KIOSK_TEST_WEATHER=expanded      open the weather detail card
+    //   IMMICH_KIOSK_TEST_DASHBOARD=<page>      open the dashboard at a page
     final immich = context.read<ImmichService>();
     final testVideo = Platform.environment['IMMICH_KIOSK_TEST_VIDEO'];
     if (testVideo != null && testVideo.isNotEmpty) {
@@ -269,6 +322,13 @@ class _RootGate extends StatelessWidget {
     }
     if ((Platform.environment['IMMICH_KIOSK_TEST_ABOUT'] ?? '').isNotEmpty) {
       return const AboutScreen();
+    }
+    if ((Platform.environment['IMMICH_KIOSK_TEST_SETTINGS'] ?? '').isNotEmpty) {
+      return const SettingsScreen();
+    }
+    final testDashboard = Platform.environment['IMMICH_KIOSK_TEST_DASHBOARD'];
+    if (testDashboard != null && testDashboard.isNotEmpty) {
+      return DashboardScreen(initialPage: int.tryParse(testDashboard) ?? 0);
     }
     if ((Platform.environment['IMMICH_KIOSK_TEST_NOWPLAYING'] ?? '').isNotEmpty) {
       return const Scaffold(

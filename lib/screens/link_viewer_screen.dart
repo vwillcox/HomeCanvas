@@ -24,11 +24,16 @@ class LinkViewerScreen extends StatefulWidget {
     super.key,
     required this.url,
     this.title,
+    this.reader,
     this.timeout = const Duration(minutes: 5),
   });
 
   final String url;
   final String? title;
+
+  /// Open the page in Firefox's reader view, looking like this. Null for the
+  /// page as the site serves it.
+  final ReaderStyle? reader;
 
   /// Closes itself eventually. A kiosk left on an article is a kiosk showing
   /// an article tomorrow morning.
@@ -75,6 +80,7 @@ class _LinkViewerScreenState extends State<LinkViewerScreen> {
       screen: screen,
       bottomGutter: kBrowserCloseGutter,
       chromeless: true,
+      reader: widget.reader,
     );
     if (proc == null) {
       if (mounted) setState(() => _error = 'Could not open the page.');

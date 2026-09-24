@@ -5,6 +5,7 @@ import '../models/immich_models.dart';
 import '../services/locked_folder_service.dart';
 import '../services/media_source.dart';
 import '../widgets/remote_image.dart';
+import '../widgets/glass.dart';
 import 'gallery_screen.dart';
 
 /// Shows the assets in Immich's server-side Locked Folder. Assumes the session
@@ -49,14 +50,16 @@ class _LockedFolderScreenState extends State<LockedFolderScreen> {
     await _locked.ensureElevated();
     final source = _locked.mediaSource;
     if (source == null || !mounted) return;
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => GalleryScreen(
-        assets: _assets!,
-        initialIndex: index,
-        source: source,
-        onBeforeVideo: _locked.ensureElevated,
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => GalleryScreen(
+          assets: _assets!,
+          initialIndex: index,
+          source: source,
+          onBeforeVideo: _locked.ensureElevated,
+        ),
       ),
-    ));
+    );
   }
 
   @override
@@ -65,15 +68,17 @@ class _LockedFolderScreenState extends State<LockedFolderScreen> {
     return PopScope(
       canPop: true,
       onPopInvokedWithResult: (didPop, _) => _relockAndLeave(),
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Row(
-            children: [
-              Icon(Icons.lock, size: 22),
-              SizedBox(width: 10),
-              Text('Locked Folder'),
-            ],
-          ),
+      child: ModernScaffold(
+        header: ScreenHeader(
+          onBack: () => Navigator.of(context).maybePop(),
+          title: 'Locked Folder',
+          subtitle: 'Locks again when you leave',
+          actions: const [
+            Padding(
+              padding: EdgeInsets.all(15),
+              child: Icon(Icons.lock_outline, color: Colors.white, size: 30),
+            ),
+          ],
         ),
         body: _buildBody(source),
       ),
@@ -108,8 +113,10 @@ class _LockedFolderScreenState extends State<LockedFolderScreen> {
     }
     if (assets.isEmpty) {
       return const Center(
-        child: Text('The Locked Folder is empty',
-            style: TextStyle(fontSize: 20, color: Colors.white60)),
+        child: Text(
+          'The Locked Folder is empty',
+          style: TextStyle(fontSize: 20, color: Colors.white60),
+        ),
       );
     }
     return GridView.builder(
@@ -139,8 +146,11 @@ class _LockedFolderScreenState extends State<LockedFolderScreen> {
                     alignment: Alignment.bottomRight,
                     child: Padding(
                       padding: EdgeInsets.all(6),
-                      child: Icon(Icons.play_circle_fill,
-                          color: Colors.white, size: 22),
+                      child: Icon(
+                        Icons.play_circle_fill,
+                        color: Colors.white,
+                        size: 22,
+                      ),
                     ),
                   ),
               ],

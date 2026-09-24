@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../services/config_service.dart';
 import '../services/immich_service.dart';
+import '../widgets/glass.dart';
 
 /// First-run / edit connection screen for Immich URL + API key.
 class SetupScreen extends StatefulWidget {
@@ -66,8 +67,11 @@ class _SetupScreenState extends State<SetupScreen> {
   @override
   Widget build(BuildContext context) {
     final canSave = _url.text.trim().isNotEmpty && _key.text.trim().isNotEmpty;
-    return Scaffold(
-      appBar: AppBar(title: const Text('Connect to Immich')),
+    return ModernScaffold(
+      header: const ScreenHeader(
+        title: 'Connect to Immich',
+        subtitle: 'Your server address and an API key',
+      ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -76,8 +80,10 @@ class _SetupScreenState extends State<SetupScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text('Immich server URL',
-                    style: TextStyle(fontSize: 16, color: Colors.white70)),
+                const Text(
+                  'Immich server URL',
+                  style: TextStyle(fontSize: 16, color: Colors.white70),
+                ),
                 const SizedBox(height: 8),
                 TextField(
                   controller: _url,
@@ -91,8 +97,10 @@ class _SetupScreenState extends State<SetupScreen> {
                   onChanged: (_) => setState(() {}),
                 ),
                 const SizedBox(height: 20),
-                const Text('API key',
-                    style: TextStyle(fontSize: 16, color: Colors.white70)),
+                const Text(
+                  'API key',
+                  style: TextStyle(fontSize: 16, color: Colors.white70),
+                ),
                 const SizedBox(height: 8),
                 TextField(
                   controller: _key,
@@ -104,7 +112,8 @@ class _SetupScreenState extends State<SetupScreen> {
                     prefixIcon: const Icon(Icons.key),
                     suffixIcon: IconButton(
                       icon: Icon(
-                          _obscure ? Icons.visibility : Icons.visibility_off),
+                        _obscure ? Icons.visibility : Icons.visibility_off,
+                      ),
                       onPressed: () => setState(() => _obscure = !_obscure),
                     ),
                   ),
