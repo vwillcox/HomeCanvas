@@ -267,6 +267,16 @@
        content did not fit. */
     flex: 0 0 auto;
   }
+  /* The real widget, drawn by the kiosk. Laid over the whole tile, border
+     included, because that is the box the kiosk drew it in; what it drew
+     there is transparent, so the frame beneath shows through. */
+  .tile.rendered { padding: 0; }
+  .tile.rendered .body { display: none; }
+  .tile img.shot {
+    position: absolute; left: -1px; top: -1px;
+    width: calc(100% + 2px); height: calc(100% + 2px);
+    pointer-events: none; -webkit-user-drag: none; user-select: none;
+  }
   .tile .line.muted { color: var(--t-muted); }
   .tile .line.accent { color: var(--t-accent); }
   /* Which widget this is. Only while you are pointing at it or editing it —
@@ -505,6 +515,9 @@ function setStatus(text, tone) {
 function markDirty() {
   state.dirty = true;
   setStatus("Unsaved changes", "dirty");
+  // An option typed into the form changes how the widget looks without
+  // redrawing the canvas, so its picture is asked for again from here.
+  requestShots();
 }
 
 function typeOf(name) {
@@ -654,6 +667,106 @@ function previewBody(w, t, el) {
   return html + "</div>";
 }
 
+/* ---------- pictures of the real widgets ----------
+
+   The kiosk draws each tile with the widget itself — at the tile's size in
+   the panel's pixels, in the chosen theme and font — and sends a picture of
+   it. That is the only way a preview can look like the thing: the text
+   stand-ins below cannot draw a dial, a graph or an album cover. They are
+   still used until a picture arrives, and whenever one cannot be had.
+
+   One request at a time, never mid-drag, and only when something that
+   changes the drawing has changed, so the Pi is not asked to redraw a tile
+   for every pixel of a drag. */
+const shots = {};          // widget id -> { key, url, stale, failed }
+let shotTimer = null;
+let shotBusy = false;
+let shotsUnsupported = false;
+
+function tilePx(w) {
+  const { columns, rows } = state.schema.grid;
+  const t = currentTheme();
+  const gap = t && t.gap != null ? t.gap : 14;
+  const gridH = PANEL_H - (state.dashboard.topBar !== false ? TOP_BAR_H : 0);
+  const cellW = (PANEL_W - gap * (columns + 1)) / columns;
+  const cellH = (gridH - gap * (rows + 1)) / rows;
+  return {
+    width: Math.round(w.width * cellW + (w.width - 1) * gap),
+    height: Math.round(w.height * cellH + (w.height - 1) * gap),
+  };
+}
+
+function shotKey(w) {
+  const px = tilePx(w);
+  const d = state.dashboard;
+  return JSON.stringify([w.type, w.options, w.fontFamily || "", w.fontScale || 1,
+    px.width, px.height, d.themeId, d.roundedCorners !== false, d.tileShadows !== false]);
+}
+
+function requestShots(delay) {
+  if (shotsUnsupported) return;
+  clearTimeout(shotTimer);
+  shotTimer = setTimeout(pumpShots, delay == null ? 350 : delay);
+}
+
+async function pumpShots() {
+  if (shotBusy || drag || shotsUnsupported || !state.schema) return;
+  const w = widgetsOnPage().find(w => {
+    const s = shots[w.id];
+    return !s || s.stale || s.key !== shotKey(w);
+  });
+  if (!w) return;
+  shotBusy = true;
+  const key = shotKey(w);
+  const px = tilePx(w);
+  const had = shots[w.id];
+  try {
+    const r = await fetch("/api/render", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        widget: w,
+        themeId: state.dashboard.themeId,
+        roundedCorners: state.dashboard.roundedCorners !== false,
+        tileShadows: state.dashboard.tileShadows !== false,
+        width: px.width, height: px.height,
+      }),
+    });
+    // A kiosk from before this existed: stop asking.
+    if (r.status === 404) { shotsUnsupported = true; return; }
+    if (!r.ok) throw new Error("render " + r.status);
+    const url = URL.createObjectURL(await r.blob());
+    if (had && had.url) URL.revokeObjectURL(had.url);
+    shots[w.id] = { key, url };
+    showShot(w.id);
+  } catch (e) {
+    // Keep whatever picture there was, and do not ask again until something
+    // about the tile changes or the next refresh.
+    shots[w.id] = { key, url: had && had.url, failed: true };
+  } finally {
+    shotBusy = false;
+    if (!shotsUnsupported) requestShots(0);
+  }
+}
+
+/* Puts a tile's picture in place without redrawing the canvas — which would
+   rebuild the settings form under the cursor of someone typing in it. */
+function showShot(id) {
+  const shot = shots[id];
+  const tile = grid.querySelector('.tile[data-id="' + CSS.escape(id) + '"]');
+  if (!tile || !shot || !shot.url) return;
+  let img = tile.querySelector("img.shot");
+  if (!img) {
+    img = document.createElement("img");
+    img.className = "shot";
+    img.alt = "";
+    img.draggable = false;
+    tile.prepend(img);
+  }
+  img.src = shot.url;
+  tile.classList.add("rendered");
+}
+
 /* ---------- the panel's own furniture ---------- */
 
 const ICONS = {
@@ -749,7 +862,9 @@ function escapeHtml(s) {
   })[c]);
 }
 
-function render() {
+/* [canvasOnly] leaves the settings form alone: rebuilding it on the live
+   refresh threw away whatever was being typed into it every twenty seconds. */
+function render(canvasOnly) {
   const { columns, rows } = state.schema.grid;
   renderPageBar();
   const t = currentTheme();
@@ -810,14 +925,19 @@ function render() {
       : "system-ui, sans-serif";
 
     grid.appendChild(el);
+    // The last picture of this tile, even if it is out of date: while a tile
+    // is being resized, its old picture stretched is a better guide than the
+    // text stand-in, and the new one follows as soon as the drag ends.
+    showShot(w.id);
   }
+  requestShots();
 
   // Only measurable once the tiles are laid out, so this is a second pass
   // rather than part of building them.
   fitAllPreviews();
 
   document.getElementById("clashWarning").hidden = !anyClash;
-  renderSettings();
+  if (!canvasOnly) renderSettings();
 }
 
 /* Shrink preview text that does not fit its tile.
@@ -1526,11 +1646,19 @@ async function load(quiet) {
 async function refreshLive() {
   try {
     state.live = await api.get("/api/preview");
-    if (state.schema) render();
+    if (state.schema) render(true);
   } catch (e) {
     // A preview that can't be fetched isn't worth interrupting editing for.
   }
 }
+
+/* Redraw the pictures now and then, so a clock or a headline moves on here
+   as it does on the wall. Kept slow: each is real work for the Pi. */
+setInterval(() => {
+  if (document.hidden) return;
+  for (const s of Object.values(shots)) s.stale = true;
+  requestShots(0);
+}, 30000);
 
 load().then(refreshLive);
 setInterval(refreshLive, 20000);
