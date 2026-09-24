@@ -5,11 +5,13 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/widgets.dart' show Size;
 
 import '../dashboard/dashboard_fonts.dart';
 import '../dashboard/dashboard_model.dart';
 import '../dashboard/dashboard_theme.dart';
 import '../dashboard/live_preview.dart';
+import '../dashboard/tile_renderer.dart';
 import '../config/app_config.dart' show SenderToken;
 import '../dashboard/widget_registry.dart';
 import 'config_service.dart';
@@ -47,6 +49,11 @@ class DashboardService extends ChangeNotifier {
 
   HttpServer? _server;
   String? _editorHtml;
+
+  /// Draws a tile with the real widget, as a PNG. Set by [TileRenderHost]
+  /// once it is in the widget tree; null before then, or in tests, where the
+  /// editor falls back to its text preview.
+  Future<List<int>?> Function(TileRenderRequest)? renderTile;
 
   DashboardSettings get settings => _config.config.dashboard;
 
@@ -137,7 +144,7 @@ class DashboardService extends ChangeNotifier {
 
       if (request.method == 'OPTIONS') {
         request.response.headers
-          ..set('Access-Control-Allow-Methods', 'GET, PUT, OPTIONS')
+          ..set('Access-Control-Allow-Methods', 'GET, PUT, POST, OPTIONS')
           ..set('Access-Control-Allow-Headers', 'Content-Type');
         request.response.statusCode = HttpStatus.noContent;
         await request.response.close();
@@ -166,6 +173,9 @@ class DashboardService extends ChangeNotifier {
       }
       if (path == '/api/preview' && request.method == 'GET') {
         return await _json(request, _previewLines());
+      }
+      if (path == '/api/render' && request.method == 'POST') {
+        return await _render(request);
       }
       if (path == '/api/dashboard' && request.method == 'GET') {
         return await _json(request, settings.toJson());
@@ -362,6 +372,59 @@ class DashboardService extends ChangeNotifier {
     request.response
       ..headers.contentType = ContentType.json
       ..write(jsonEncode(body));
+    await request.response.close();
+  }
+
+  /// A picture of one tile, drawn by the real widget.
+  ///
+  /// Posted rather than fetched because what is drawn is the editor's copy —
+  /// options changed, theme picked, tile resized — not what has been saved.
+  ///
+  ///     POST /api/render
+  ///     {"widget": {...}, "themeId": "glass", "roundedCorners": true,
+  ///      "tileShadows": true, "width": 620, "height": 380}
+  Future<void> _render(HttpRequest request) async {
+    final render = renderTile;
+    final body = await utf8.decoder.bind(request).join();
+    final data = jsonDecode(body);
+    if (data is! Map<String, dynamic> || data['widget'] is! Map) {
+      request.response.statusCode = HttpStatus.badRequest;
+      await request.response.close();
+      return;
+    }
+    if (render == null) {
+      request.response.statusCode = HttpStatus.serviceUnavailable;
+      await request.response.close();
+      return;
+    }
+    double dimension(Object? v, double max) =>
+        (v is num ? v.toDouble() : 0).clamp(16, max).toDouble();
+    final size = Size(
+      dimension(data['width'], 1920),
+      dimension(data['height'], 1200),
+    );
+    // Only the look is taken from the request; everything else about the
+    // dashboard stays as saved.
+    final look = DashboardSettings.fromJson({
+      ...settings.toJson(),
+      if (data['roundedCorners'] is bool)
+        'roundedCorners': data['roundedCorners'],
+      if (data['tileShadows'] is bool) 'tileShadows': data['tileShadows'],
+    });
+    final png = await render(TileRenderRequest(
+      config: DashboardWidgetConfig.fromJson(
+          (data['widget'] as Map).cast<String, dynamic>()),
+      theme: themes.byId('${data['themeId'] ?? settings.themeId}'),
+      settings: look,
+      size: size,
+    ));
+    if (png == null) {
+      request.response.statusCode = HttpStatus.serviceUnavailable;
+      await request.response.close();
+      return;
+    }
+    request.response.headers.contentType = ContentType('image', 'png');
+    request.response.add(png);
     await request.response.close();
   }
 

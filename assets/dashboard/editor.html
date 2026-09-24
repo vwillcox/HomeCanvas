@@ -3,101 +3,263 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0c10">
 <title>Kiosk dashboard</title>
 <style>
+  /* The kiosk's own look: near-black with a cool glow from the top left,
+     frosted glass surfaces, white pill buttons, the pale blue accent. The
+     same tokens as lib/widgets/glass.dart, so the editor and the panel read
+     as one product. */
   :root {
-    --bg: #0e1016; --panel: #171a22; --line: #262b36;
-    --text: #eef1f6; --muted: #9aa3b2; --accent: #7dd3fc; --danger: #f87171;
-    --radius: 12px;
+    --bg: #0b0c10;
+    --glow: rgba(166, 200, 255, .16);
+    --glass: rgba(255, 255, 255, .055);
+    --glass-hi: rgba(255, 255, 255, .09);
+    --glass-press: rgba(255, 255, 255, .14);
+    --line: rgba(255, 255, 255, .10);
+    --line-hi: rgba(255, 255, 255, .18);
+    --text: #ffffff;
+    --muted: rgba(255, 255, 255, .62);
+    --faint: rgba(255, 255, 255, .40);
+    --accent: #a6c8ff;
+    --accent-ink: #0b1a33;
+    --danger: #ff8a8a;
+    --ok: #7ee2a8;
+    --radius: 24px;
+    --radius-sm: 14px;
+    --shadow: 0 18px 40px rgba(0, 0, 0, .38), 0 2px 6px rgba(0, 0, 0, .25);
+    --ui: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color-scheme: dark;
   }
   * { box-sizing: border-box; }
+  html { background: var(--bg); }
   body {
-    margin: 0; background: var(--bg); color: var(--text);
-    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    margin: 0; min-height: 100vh; color: var(--text);
+    font: 15px/1.45 var(--ui);
+    background:
+      radial-gradient(1200px 800px at 8% -12%, var(--glow), transparent 70%),
+      var(--bg);
+    background-attachment: fixed;
     -webkit-text-size-adjust: 100%;
+    -webkit-font-smoothing: antialiased;
   }
-  header {
+
+  /* ---------- top bar ---------- */
+  header.appbar {
     display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-    padding: 14px 18px; border-bottom: 1px solid var(--line); background: var(--panel);
-    position: sticky; top: 0; z-index: 10;
+    padding: 22px 28px 14px;
+    position: sticky; top: 0; z-index: 20;
+    background: linear-gradient(to bottom, rgba(11,12,16,.92), rgba(11,12,16,.72));
+    backdrop-filter: blur(18px) saturate(1.2);
+    -webkit-backdrop-filter: blur(18px) saturate(1.2);
   }
-  header h1 { font-size: 17px; margin: 0; font-weight: 600; flex: 1; }
+  .titles { flex: 1; min-width: 200px; }
+  .titles h1 { font-size: 30px; line-height: 1.1; margin: 0; font-weight: 700; letter-spacing: -.02em; }
+  .titles p { margin: 3px 0 0; color: var(--muted); font-size: 15px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 0 14px; height: 40px; border-radius: 999px;
+    background: var(--glass); border: 1px solid var(--line);
+    color: var(--muted); font-size: 14px; white-space: nowrap;
+  }
+  .chip::before {
+    content: ""; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--faint); flex: none;
+  }
+  .chip[data-tone="ok"]::before { background: var(--ok); }
+  .chip[data-tone="dirty"] { color: var(--text); }
+  .chip[data-tone="dirty"]::before { background: var(--accent); box-shadow: 0 0 0 4px rgba(166,200,255,.18); }
+  .chip[data-tone="error"] { color: var(--danger); }
+  .chip[data-tone="error"]::before { background: var(--danger); }
+
+  /* ---------- controls ---------- */
   button, select {
-    font: inherit; color: var(--text); background: #212734;
-    border: 1px solid var(--line); border-radius: 9px; padding: 9px 14px;
-    cursor: pointer; min-height: 40px;
+    font: inherit; color: var(--text);
+    background: var(--glass); border: 1px solid var(--line);
+    border-radius: 999px; padding: 0 18px; min-height: 42px;
+    cursor: pointer; transition: background .15s, border-color .15s, transform .08s;
   }
-  button.primary { background: var(--accent); color: #06232e; border-color: transparent; font-weight: 600; }
+  button:hover { background: var(--glass-hi); border-color: var(--line-hi); }
+  button:active { background: var(--glass-press); transform: scale(.98); }
+  button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+  button.primary {
+    background: #fff; color: #0b0c10; border-color: transparent; font-weight: 650;
+    box-shadow: 0 6px 18px rgba(0,0,0,.35);
+  }
+  button.primary:hover { background: #eef3ff; }
   button.danger { color: var(--danger); }
-  #pageBar { display: inline-flex; align-items: center; gap: 6px; }
-  #pageBar button { min-width: 36px; }
-  #pageLabel { color: var(--muted); font-size: 13px; min-width: 84px;
-               text-align: center; }
-  #pageSeconds { width: 64px; }
-  button:disabled { opacity: .5; cursor: default; }
-  #status { color: var(--muted); font-size: 13px; min-width: 8ch; }
-  .toggle {
-    display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
-    background: #212734; border: 1px solid var(--line); border-radius: 9px;
-    padding: 0 14px; min-height: 40px; font-size: 14px; white-space: nowrap;
+  button.danger:hover { background: rgba(255,138,138,.10); border-color: rgba(255,138,138,.3); }
+  button:disabled { opacity: .4; cursor: default; transform: none; }
+  button.icon { width: 42px; padding: 0; display: inline-grid; place-items: center; font-size: 18px; }
+  select {
+    appearance: none; -webkit-appearance: none; border-radius: var(--radius-sm);
+    padding: 0 40px 0 14px; width: 100%;
+    background:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23ffffff' stroke-opacity='.6' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 16px center,
+      rgba(0,0,0,.28);
   }
-  .toggle input { width: 18px; height: 18px; accent-color: var(--accent); }
+  select option, select optgroup { background: #16181f; color: var(--text); }
+  input[type=text], input[type=number], textarea {
+    width: 100%; background: rgba(0,0,0,.28); border: 1px solid var(--line);
+    border-radius: var(--radius-sm); padding: 11px 14px; color: var(--text); font: inherit;
+    transition: border-color .15s;
+  }
+  input[type=text]:hover, input[type=number]:hover, textarea:hover, select:hover { border-color: var(--line-hi); }
+  input[type=color] {
+    width: 100%; height: 44px; padding: 4px; border-radius: var(--radius-sm);
+    background: rgba(0,0,0,.28); border: 1px solid var(--line); cursor: pointer;
+  }
+  textarea { min-height: 84px; resize: vertical; }
 
-  main { display: grid; grid-template-columns: minmax(0,1fr) 320px; gap: 18px; padding: 18px; align-items: start; }
-  @media (max-width: 900px) { main { grid-template-columns: minmax(0,1fr); } }
+  /* Every checkbox is a switch, like the panel's own settings. */
+  input[type=checkbox] {
+    appearance: none; -webkit-appearance: none; margin: 0; flex: none;
+    width: 46px; height: 28px; border-radius: 999px; cursor: pointer;
+    background: rgba(255,255,255,.14); position: relative;
+    transition: background .18s;
+  }
+  input[type=checkbox]::after {
+    content: ""; position: absolute; top: 3px; left: 3px;
+    width: 22px; height: 22px; border-radius: 50%; background: #fff;
+    box-shadow: 0 2px 6px rgba(0,0,0,.35); transition: transform .18s;
+  }
+  input[type=checkbox]:checked { background: var(--accent); }
+  input[type=checkbox]:checked::after { transform: translateX(18px); }
 
-  /* The canvas mirrors the kiosk's 1920x1200 panel. */
-  #canvasWrap { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px; }
-  /* The canvas is a real preview: the selected theme's own background,
-     tiles and colours, at the panel's proportions. */
+  /* A labelled setting: the words on the left, the control on the right. */
+  .setting {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    min-height: 52px; padding: 6px 0; cursor: pointer;
+    border-top: 1px solid rgba(255,255,255,.06);
+    color: var(--text); font-size: 15px; margin: 0;
+  }
+  .setting:first-child { border-top: none; }
+  .setting small { display: block; color: var(--muted); font-size: 12.5px; line-height: 1.35; margin-top: 2px; }
+  .setting input[type=number] { width: 84px; text-align: center; padding: 9px 8px; }
+  .settings-list { display: flex; flex-direction: column; }
+
+  /* ---------- layout ---------- */
+  main {
+    display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 22px;
+    padding: 8px 28px 28px; align-items: start;
+  }
+  @media (max-width: 1000px) {
+    main { grid-template-columns: minmax(0, 1fr); padding: 8px 16px 24px; }
+    /* Wrapped onto three lines here, so pinning it would eat the screen. */
+    header.appbar { padding: 16px 16px 12px; position: static; }
+    .titles h1 { font-size: 26px; }
+    #canvasWrap { padding: 8px; border-radius: 22px; }
+    #canvas { border-radius: 14px; }
+    .tile .handle { width: 20px; height: 20px; right: 2px; bottom: 2px; border-radius: 7px; }
+    .tile .handle::before { width: 7px; height: 7px; border-width: 2px; }
+  }
+
+  .stage { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  .toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .segmented {
+    display: inline-flex; align-items: center; gap: 4px; padding: 4px;
+    background: var(--glass); border: 1px solid var(--line); border-radius: 999px;
+  }
+  .segmented button {
+    border: none; background: transparent; min-height: 36px; min-width: 36px;
+    padding: 0 14px; color: var(--muted); font-weight: 600;
+  }
+  .segmented button:hover { background: var(--glass-hi); color: var(--text); }
+  .segmented button.on { background: #fff; color: #0b0c10; }
+  .segmented .add { color: var(--text); font-size: 18px; font-weight: 500; }
+  .toolbar .hint { margin-left: auto; color: var(--faint); font-size: 13px; }
+  @media (hover: none) { .toolbar .hint { display: none; } }
+
+  #canvasWrap {
+    padding: 12px; border-radius: calc(var(--radius) + 6px);
+    background: var(--glass); border: 1px solid var(--line);
+    box-shadow: var(--shadow);
+  }
+  /* The canvas is the panel: 1920x1200, the chosen theme's background and
+     tiles, the top bar where the panel puts it. */
   #canvas {
     position: relative; width: 100%; aspect-ratio: 1920 / 1200;
-    background: var(--t-bg, #0b0d13);
-    border-radius: 8px; overflow: hidden; touch-action: none;
-    container-type: size;
+    border-radius: 18px; overflow: hidden; touch-action: none;
+    container-type: size; isolation: isolate;
+    font-family: system-ui, sans-serif;
   }
-  #gridlines {
-    position: absolute; inset: 0; pointer-events: none;
-    background:
-      linear-gradient(to right, rgba(128,128,128,.16) 1px, transparent 1px) 0 0 / calc(100%/12) 100%,
-      linear-gradient(to bottom, rgba(128,128,128,.16) 1px, transparent 1px) 0 0 / 100% calc(100%/8);
+  /* A layer of its own so the glow can be sized in the canvas's units —
+     an element's container units measure its parent container, not itself. */
+  #bgLayer { position: absolute; inset: 0; background: var(--t-bg, #0b0d13); z-index: -1; }
+
+  #topbarMock {
+    position: absolute; left: 0; right: 0; top: 0; height: calc(100% * 100 / 1200);
+    display: flex; align-items: center; gap: 1.2cqw;
+    padding: 0 1.1cqw 0 1.46cqw; pointer-events: none;
+    color: var(--t-text);
   }
+  #topbarMock[hidden] { display: none; }
+  #topbarMock .greet { flex: 1; min-width: 0; }
+  #topbarMock .greet b { display: block; font-size: 3.4cqh; line-height: 1.1; font-weight: 700; letter-spacing: -.01em; }
+  #topbarMock .greet span { display: block; font-size: 1.75cqh; color: var(--t-muted); margin-top: .2cqh; }
+  .mockPill {
+    display: flex; align-items: center; gap: .55cqw; height: 5.4cqh; padding: 0 .9cqw;
+    border-radius: 999px; background: rgba(255,255,255,.07);
+    border: 1px solid rgba(255,255,255,.08);
+  }
+  .mockPill .dot { width: .8cqh; height: .8cqh; border-radius: 99px; background: currentColor; opacity: .4; }
+  .mockPill .dot.on { width: 2.6cqh; opacity: .95; background: var(--t-accent); }
+  .mockPill.pages { height: 3.8cqh; gap: .7cqw; padding: 0 1cqw; }
+  .mockPill svg { width: 2.4cqh; height: 2.4cqh; opacity: .85; flex: none; }
+  .mockPill .sel { display: grid; place-items: center; width: 4.4cqh; height: 4.4cqh; border-radius: 50%; background: rgba(255,255,255,.12); }
+  .mockPill .sep { width: 1px; height: 2.6cqh; background: currentColor; opacity: .2; }
+  .mockPill .sw { width: 4cqh; height: 2.4cqh; border-radius: 99px; background: var(--t-accent); opacity: .85; }
+  /* With the top bar off, the panel floats a back button and page dots over
+     the grid instead. */
+  #floatMock { position: absolute; inset: 0; pointer-events: none; color: var(--t-text); }
+  #floatMock[hidden] { display: none; }
+  #floatMock .back {
+    position: absolute; left: 1cqw; bottom: 1.6cqh; width: 5cqh; height: 5cqh;
+    border-radius: 50%; background: rgba(255,255,255,.12); display: grid; place-items: center;
+  }
+  #floatMock .back svg { width: 2.4cqh; height: 2.4cqh; }
+  #floatMock .mockPill { position: absolute; bottom: 1.8cqh; left: 50%; transform: translateX(-50%); }
+
+  /* Everything below the top bar. Its own size container, so a tile's text,
+     sized as a fraction of this height, is a fraction of the same height the
+     panel lays its grid out in. */
+  #grid { position: absolute; left: 0; right: 0; bottom: 0; top: 0; container-type: size; }
+  #cells { position: absolute; inset: 0; pointer-events: none; }
+  #cells i {
+    position: absolute; border-radius: var(--t-radius, 10px);
+    border: 1px dashed rgba(160,170,190,.16);
+  }
+  /* Under a widget the outline would show through a see-through tile, which
+     the panel never shows. */
+  #cells i.used { visibility: hidden; }
+
   .tile {
     position: absolute;
     background: var(--t-surface, #1d2331);
     border: 1px solid var(--t-border, #313a4d);
     border-radius: var(--t-radius, 10px);
     box-shadow: var(--t-shadow, none);
-    padding: 8px; overflow: hidden; cursor: grab;
-    display: flex; flex-direction: column; gap: 2px; user-select: none;
+    padding: .9cqh 1cqw; overflow: hidden; cursor: grab;
+    display: flex; flex-direction: column; user-select: none;
+    transition: box-shadow .15s;
   }
-  .tile.selected { outline: 2px solid var(--accent); outline-offset: 2px; }
-  /* The tile under the finger goes above the others. Without this it is drawn
-     in configuration order, so dragging one over an earlier tile hides it
-     behind the thing it is being moved past — which is exactly when you need
-     to see it. The lift and shadow say which one is being moved. */
-  .tile.dragging {
-    z-index: 5;
-    box-shadow: 0 10px 28px rgba(0, 0, 0, .55);
-    cursor: grabbing;
-  }
-  /* Selected sits above the rest too, just below whatever is being dragged,
-     so the tile you are editing is not obscured while you set it up. */
-  .tile.selected { z-index: 3; }
-  .tile.clash { outline: 2px solid var(--danger); outline-offset: 2px; }
-  .tile .glyph { font-size: 18px; line-height: 1; }
-  .tile .name {
-    font-size: 12px; color: var(--t-muted, var(--muted));
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
+  .tile:hover { box-shadow: var(--t-shadow, none), 0 0 0 2px rgba(166,200,255,.45); }
+  .tile.selected { box-shadow: var(--t-shadow, none), 0 0 0 3px var(--accent), 0 0 24px rgba(166,200,255,.35); z-index: 3; }
+  /* The tile under the finger goes above the others, so dragging it past an
+     earlier tile does not hide it behind the thing it is moving past. */
+  .tile.dragging { z-index: 5; box-shadow: 0 0 0 3px var(--accent), 0 16px 40px rgba(0,0,0,.6); cursor: grabbing; }
+  .tile.clash { box-shadow: 0 0 0 3px var(--danger), 0 0 24px rgba(255,138,138,.4); }
   /* Stand-in content, so a tile shows what it will look like rather than
      what it is called. */
   .tile .body {
     flex: 1; min-height: 0; display: flex; flex-direction: column;
     justify-content: center; gap: .18em; overflow: hidden;
   }
+  .tile .body.list { justify-content: flex-start; gap: .35em; padding-top: .4em; }
   .tile .line {
-    line-height: 1.1; white-space: nowrap; overflow: hidden;
+    line-height: 1.12; white-space: nowrap; overflow: hidden;
     text-overflow: ellipsis; color: var(--t-text);
     /* Never squashed. As flex children these shrank to fit the body instead
        of overflowing it, which made lines overlap and — worse — made
@@ -105,126 +267,198 @@
        content did not fit. */
     flex: 0 0 auto;
   }
+  /* The real widget, drawn by the kiosk. Laid over the whole tile, border
+     included, because that is the box the kiosk drew it in; what it drew
+     there is transparent, so the frame beneath shows through. */
+  .tile.rendered { padding: 0; }
+  .tile.rendered .body { display: none; }
+  .tile img.shot {
+    position: absolute; left: -1px; top: -1px;
+    width: calc(100% + 2px); height: calc(100% + 2px);
+    pointer-events: none; -webkit-user-drag: none; user-select: none;
+  }
   .tile .line.muted { color: var(--t-muted); }
   .tile .line.accent { color: var(--t-accent); }
+  /* Which widget this is. Only while you are pointing at it or editing it —
+     otherwise it would sit over the preview it is labelling. */
   .tile .badge {
-    position: absolute; top: 4px; left: 6px; font-size: 11px; opacity: .55;
-    pointer-events: none;
+    position: absolute; top: 8px; left: 8px; max-width: calc(100% - 16px);
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 10px 4px 7px; border-radius: 999px;
+    background: rgba(11,12,16,.78); color: #fff; font: 600 12px/1.2 var(--ui);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    pointer-events: none; opacity: 0; transform: translateY(-3px);
+    transition: opacity .15s, transform .15s;
   }
+  .tile:hover .badge, .tile.selected .badge { opacity: 1; transform: none; }
   .tile .handle {
-    position: absolute; right: 0; bottom: 0; width: 26px; height: 26px; cursor: nwse-resize;
-    background: linear-gradient(135deg, transparent 50%, var(--t-accent, var(--accent)) 50%);
-    opacity: .8; border-bottom-right-radius: 9px;
+    position: absolute; right: 4px; bottom: 4px; width: 28px; height: 28px; cursor: nwse-resize;
+    border-radius: 10px; display: grid; place-items: center;
+    background: rgba(11,12,16,.6); opacity: 0; transition: opacity .15s;
   }
+  /* No hover on a touch screen, so there the grip is always faintly there. */
+  @media (hover: none) { .tile .handle { opacity: .45; } }
+  .tile .handle::before {
+    content: ""; width: 10px; height: 10px;
+    border-right: 2.5px solid #fff; border-bottom: 2.5px solid #fff; border-bottom-right-radius: 3px;
+  }
+  .tile:hover .handle, .tile.selected .handle { opacity: 1; }
+  .tile.selected .handle { background: var(--accent); }
+  .tile.selected .handle::before { border-color: var(--accent-ink); }
 
+  .warn {
+    display: flex; align-items: center; gap: 10px; color: var(--danger);
+    font-size: 14px; padding: 10px 16px; border-radius: 999px;
+    background: rgba(255,138,138,.08); border: 1px solid rgba(255,138,138,.25);
+  }
+  .warn[hidden] { display: none; }
+
+  /* ---------- sidebar ---------- */
   aside {
     display: flex; flex-direction: column; gap: 14px;
     /* Sticky and scrollable, so the settings for the widget being edited
        stay reachable however long the canvas is. */
-    position: sticky; top: 18px; max-height: calc(100vh - 36px);
-    overflow-y: auto;
+    position: sticky; top: 96px; max-height: calc(100vh - 110px);
+    overflow-y: auto; overscroll-behavior: contain;
+    scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.2) transparent;
+    padding-bottom: 4px;
   }
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; }
-  .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 10px; }
-  .palette { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; }
-  .palette button { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 6px; text-align: center; }
-  .palette .g { font-size: 20px; }
-  .palette .n { font-size: 12px; }
-  label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
-  input[type=text], input[type=number], textarea, select {
-    width: 100%; background: #0f1219; border: 1px solid var(--line);
-    border-radius: 9px; padding: 10px; color: var(--text); font: inherit;
+  @media (max-width: 1000px) { aside { position: static; max-height: none; overflow: visible; } }
+  .card {
+    background: var(--glass); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 16px 18px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.25);
   }
-  textarea { min-height: 76px; resize: vertical; }
-  .row { display: flex; align-items: center; gap: 10px; }
-  .row input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--accent); }
   /* Collapsible panels. The header stays put and the body is what folds, so
      a collapsed panel is still a labelled target you can find and reopen. */
   .panelHead {
-    cursor: pointer; user-select: none; display: flex; align-items: center;
-    gap: 8px; margin: 0;
+    cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -.01em;
   }
   .panelHead .chev {
-    display: inline-block; transition: transform .15s ease;
-    font-size: 12px; color: var(--muted);
+    width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--glass); transition: transform .18s ease; color: var(--muted); font-size: 12px;
   }
-  .card.collapsed .panelHead { margin: 0; }
   .card.collapsed .panelHead .chev { transform: rotate(-90deg); }
   .card.collapsed .panelBody { display: none; }
-  .panelBody { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
-  .field { font-size: 12px; color: var(--muted); }
+  .panelBody { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+
+  .themes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .themes button {
+    display: flex; flex-direction: column; gap: 7px; align-items: stretch;
+    padding: 6px 6px 8px; border-radius: 16px; min-height: 0; text-align: center;
+    font-size: 13px; color: var(--muted);
+  }
+  .themes button.on { border-color: var(--accent); color: var(--text); box-shadow: 0 0 0 1px var(--accent); background: rgba(166,200,255,.08); }
+  .swatch {
+    position: relative; aspect-ratio: 16 / 10; border-radius: 11px; overflow: hidden;
+    display: grid; grid-template-columns: 1.3fr 1fr; grid-template-rows: 1fr 1fr;
+    gap: 4px; padding: 6px;
+  }
+  .swatch i { border-radius: 4px; border: 1px solid transparent; }
+  .swatch i:first-child { grid-row: span 2; }
+  .swatch b { position: absolute; right: 8px; bottom: 8px; width: 8px; height: 8px; border-radius: 50%; }
+
+  .palette { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .palette button {
+    display: flex; align-items: center; gap: 10px; text-align: left;
+    padding: 8px 12px 8px 8px; border-radius: 16px; min-height: 52px;
+  }
+  .palette .g {
+    width: 36px; height: 36px; border-radius: 11px; flex: none;
+    display: grid; place-items: center; font-size: 19px;
+    background: rgba(255,255,255,.07);
+  }
+  .palette .n { font-size: 13.5px; font-weight: 550; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; }
+
+  label { display: block; font-size: 13px; font-weight: 550; color: var(--muted); margin: 14px 0 6px; }
+  .field { margin-top: 4px; }
   .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .row #pageLabel { flex: 1; }
-  .help { font-size: 12px; color: var(--muted); margin-top: 4px; }
-  .empty { color: var(--muted); font-size: 14px; }
-  .warn { color: var(--danger); font-size: 13px; margin-top: 8px; }
+  .help { font-size: 12.5px; color: var(--muted); margin: 6px 0 0; line-height: 1.4; }
+  .empty { color: var(--muted); font-size: 14px; margin: 0; }
+  .empty-state {
+    display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;
+    padding: 18px 8px 10px; color: var(--muted); font-size: 14px;
+  }
+  .empty-state .big { font-size: 28px; opacity: .8; }
+  .widgetHead { display: flex; align-items: center; gap: 12px; }
+  .widgetHead .g {
+    width: 44px; height: 44px; border-radius: 14px; flex: none; font-size: 22px;
+    display: grid; place-items: center; background: rgba(166,200,255,.12);
+  }
+  .widgetHead strong { font-size: 17px; }
+  .widgetHead small { display: block; color: var(--muted); font-size: 12.5px; }
+  .divider { border: none; border-top: 1px solid var(--line); margin: 18px 0 2px; }
+  .subcard { border: 1px solid var(--line); border-radius: 16px; padding: 4px 12px 12px; margin-top: 8px; background: rgba(0,0,0,.15); }
 </style>
 </head>
 <body>
-<header>
-  <h1>Kiosk dashboard</h1>
-  <span id="status">Loading…</span>
+<header class="appbar">
+  <div class="titles">
+    <h1>Dashboard</h1>
+    <p id="subtitle">Arrange what the panel shows</p>
+  </div>
+  <span id="status" class="chip">Loading…</span>
   <button id="revert">Revert</button>
-  <button id="save" class="primary">Save</button>
+  <button id="save" class="primary">Save to panel</button>
 </header>
 
 <main>
-  <div id="canvasWrap">
-    <div id="canvas"><div id="gridlines"></div></div>
-    <div id="clashWarning" class="warn" hidden>Two widgets overlap — drag one clear.</div>
-  </div>
+  <section class="stage">
+    <div class="toolbar">
+      <div class="segmented" id="pageTabs" role="tablist" aria-label="Pages"></div>
+      <button id="pageDel" class="danger" title="Delete this page">Delete page</button>
+      <span class="hint">Drag a widget to move it · drag its corner to resize</span>
+    </div>
+    <div id="canvasWrap">
+      <div id="canvas">
+        <div id="bgLayer"></div>
+        <div id="topbarMock"></div>
+        <div id="grid"><div id="cells"></div></div>
+        <div id="floatMock" hidden></div>
+      </div>
+    </div>
+    <div id="clashWarning" class="warn" hidden>⚠︎ Two widgets overlap — drag one clear before saving.</div>
+  </section>
 
   <aside>
     <!-- Every panel collapses to its own header. On a laptop the sidebar is
-         taller than the window once all three are open, and the settings for
-         the widget you are actually editing are the ones at the bottom. -->
-    <section class="card" data-panel="dashboard">
-      <h2 class="panelHead"><span class="chev">▾</span>Dashboard</h2>
+         taller than the window once all of them are open, and the settings
+         for the widget you are actually editing are the ones at the bottom. -->
+    <section class="card" data-panel="settings" id="settingsCard">
+      <h2 class="panelHead">Widget<span class="chev">▾</span></h2>
       <div class="panelBody">
-        <label class="field">Theme</label>
-        <select id="theme" title="Theme"></select>
-
-        <div class="row">
-          <label class="toggle"><input type="checkbox" id="roundedCorners"> Rounded corners</label>
-          <label class="toggle"><input type="checkbox" id="tileShadows"> Shadows</label>
-        </div>
-
-        <label class="field">Pages</label>
-        <div class="row" id="pageBar">
-          <button id="pagePrev" title="Previous page">‹</button>
-          <span id="pageLabel">Page 1 / 1</span>
-          <button id="pageNext" title="Next page">›</button>
-        </div>
-        <div class="row">
-          <button id="pageAdd" title="Add a page">+ Page</button>
-          <button id="pageDel" title="Delete this page" class="danger">− Page</button>
-        </div>
-
-        <div class="row">
-          <label class="toggle" title="0 leaves paging manual">
-            Flip every <input type="number" id="pageSeconds" min="0" max="3600" step="1"> s
-          </label>
-        </div>
-        <div class="row">
-          <label class="toggle"><input type="checkbox" id="tapToFlip"> Tap to flip</label>
-        </div>
-        <div class="row">
-          <label class="toggle" title="The kiosk's own top bar — back, greeting and date, and the pages — so the dashboard matches every other screen. Off gives the widgets the whole panel."><input type="checkbox" id="topBar"> Top bar</label>
-        </div>
+        <div id="settings"></div>
       </div>
     </section>
 
     <section class="card" data-panel="palette">
-      <h2 class="panelHead"><span class="chev">▾</span>Add a widget</h2>
+      <h2 class="panelHead">Add a widget<span class="chev">▾</span></h2>
       <div class="panelBody">
         <div class="palette" id="palette"></div>
       </div>
     </section>
 
-    <section class="card" data-panel="settings" id="settingsCard">
-      <h2 class="panelHead"><span class="chev">▾</span>Widget settings</h2>
+    <section class="card" data-panel="dashboard">
+      <h2 class="panelHead">Look<span class="chev">▾</span></h2>
       <div class="panelBody">
-        <div id="settings"><p class="empty">Select a widget to change its settings.</p></div>
+        <div class="themes" id="theme" role="radiogroup" aria-label="Theme"></div>
+        <div class="settings-list" style="margin-top:6px">
+          <label class="setting">Rounded corners<input type="checkbox" id="roundedCorners"></label>
+          <label class="setting">Shadows<input type="checkbox" id="tileShadows"></label>
+          <label class="setting"><span>Top bar<small>Greeting, date, pages and the app bar, as on every other screen</small></span><input type="checkbox" id="topBar"></label>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" data-panel="paging">
+      <h2 class="panelHead">Pages<span class="chev">▾</span></h2>
+      <div class="panelBody">
+        <div class="settings-list">
+          <label class="setting"><span>Turn the page every<small>Seconds. 0 leaves paging to you.</small></span><input type="number" id="pageSeconds" min="0" max="3600" step="1"></label>
+          <label class="setting"><span>Tap to turn<small>A tap on empty space goes to the next page</small></span><input type="checkbox" id="tapToFlip"></label>
+        </div>
       </div>
     </section>
   </aside>
@@ -248,7 +482,12 @@ const state = {
 };
 
 const canvas = document.getElementById("canvas");
+const grid = document.getElementById("grid");
 const statusEl = document.getElementById("status");
+
+/* The panel's top bar, in its own pixels. The grid gets what is left, and
+   lays out in it exactly as the panel does. */
+const PANEL_W = 1920, PANEL_H = 1200, TOP_BAR_H = 100;
 
 const api = {
   async get(path) {
@@ -267,14 +506,18 @@ const api = {
   },
 };
 
-function setStatus(text, isError) {
+function setStatus(text, tone) {
   statusEl.textContent = text;
-  statusEl.style.color = isError ? "var(--danger)" : "var(--muted)";
+  // true is the older way of saying error, still used by a few callers.
+  statusEl.dataset.tone = tone === true ? "error" : (tone || "");
 }
 
 function markDirty() {
   state.dirty = true;
-  setStatus("Unsaved changes");
+  setStatus("Unsaved changes", "dirty");
+  // An option typed into the form changes how the widget looks without
+  // redrawing the canvas, so its picture is asked for again from here.
+  requestShots();
 }
 
 function typeOf(name) {
@@ -311,11 +554,8 @@ function currentTheme() {
 function applyTheme() {
   const t = currentTheme();
   if (!t) return;
-  const bg = (t.background || []).map(cssColour);
   const s = canvas.style;
-  s.setProperty("--t-bg", bg.length > 1
-    ? "linear-gradient(135deg, " + bg.join(", ") + ")"
-    : (bg[0] || "#0b0d13"));
+  s.setProperty("--t-bg", themeBackground(t, "cqh"));
   s.setProperty("--t-surface", cssColour(t.surface));
   s.setProperty("--t-border", cssColour(t.border));
   s.setProperty("--t-text", cssColour(t.textPrimary));
@@ -336,6 +576,51 @@ function applyTheme() {
   canvas.style.color = cssColour(t.textPrimary);
 }
 
+/* The theme's background as CSS, for the canvas and for the theme swatches.
+
+   Glow mirrors DashboardTheme.backgroundDecoration: a RadialGradient centred
+   at Alignment(-0.85, -1.1) with radius 1.4 — Flutter measures that against
+   the shorter side, which on a landscape panel is the height. [unit] is what
+   the height is measured in: cqh inside the canvas, % in a swatch. */
+function themeBackground(t, unit) {
+  const bg = (t.background || []).map(cssColour);
+  const base = bg[0] || "#0b0d13";
+  if (t.glow) {
+    // A swatch is 16:10, so the same circle is 87.5% of its width.
+    const r = unit === "cqh" ? "circle 140cqh" : "ellipse 87.5% 140%";
+    return "radial-gradient(" + r + " at 7.5% -5%, " +
+      flutterStops(t.glow, t.background[0], 0.7) + ") " + base;
+  }
+  return bg.length > 1
+    ? "linear-gradient(135deg, " + bg.join(", ") + ")"
+    : base;
+}
+
+/* Flutter blends a gradient's colours without premultiplying — the colour
+   and the opacity each travel in a straight line — where CSS premultiplies.
+   From a faint glow to an opaque background the two differ a lot: Flutter's
+   stays bright much further out. So the stops are worked out here, as
+   Flutter would, and handed to CSS already opaque. */
+function flutterStops(from, to, end) {
+  const parse = (v) => {
+    const h = String(v).replace("#", "");
+    const n = h.length === 8 ? h : "ff" + h;
+    // #aarrggbb, the order the app writes.
+    return [0, 2, 4, 6].map(i => parseInt(n.slice(i, i + 2), 16));
+  };
+  const [fa, fr, fg, fb] = parse(from);
+  const [, tr, tg, tb] = parse(to);
+  const stops = [];
+  for (let i = 0; i <= 10; i++) {
+    const t = i / 10;
+    const a = (fa / 255) + (1 - fa / 255) * t;
+    const mix = (x, y) => Math.round((x + (y - x) * t) * a + y * (1 - a));
+    stops.push("rgb(" + mix(fr, tr) + "," + mix(fg, tg) + "," + mix(fb, tb) + ") " +
+      (t * end * 100).toFixed(1) + "%");
+  }
+  return stops.join(", ");
+}
+
 function previewBody(w, t, el) {
   // The real thing where the kiosk could tell us what this widget is
   // showing, its stand-in content where it could not — a feed with no
@@ -350,16 +635,26 @@ function previewBody(w, t, el) {
   const canvasRows = state.schema.grid.rows;
   // The same shrink the panel applies, so a tile dragged small previews as it
   // will actually look. Mirrors DashboardWidgetType.contentScale: the
-  // dimension that shrank most, never above 1, floored at 0.45.
-  const fit = t
+  // dimension that shrank most, never above 1, floored at 0.45 — except for
+  // the widgets that size their own text to the tile, which the panel leaves
+  // alone.
+  const fit = t && !t.fitsItself
     ? Math.max(0.45, Math.min(1,
         Math.min(w.width / (t.defaultWidth || 1),
                  w.height / (t.defaultHeight || 1))))
     : 1;
   const scale = (w.fontScale || 1) * fit;
-  let html = '<div class="body">';
+  // The grid's height in panel pixels, for lines drawn at a fixed size.
+  const gridH = PANEL_H - (state.dashboard.topBar !== false ? TOP_BAR_H : 0);
+  // Fixed-size text is a list, and a list starts at the top of its tile.
+  const list = lines.some(l => l.px);
+  let html = '<div class="body' + (list ? " list" : "") + '">';
   for (const line of lines) {
-    const size = (line.scale * (w.height / canvasRows) * 100 * scale);
+    // Units of the grid's height (cqh), either way: a share of the tile for
+    // text that grows with it, or a fixed size as a share of the grid.
+    const size = line.px
+      ? line.px / gridH * 100 * scale
+      : line.scale * (w.height / canvasRows) * 100 * scale;
     // The asked-for size is kept on the element because fitting shrinks it,
     // and a second fit must start from the original rather than from the
     // already-shrunk value — otherwise repeated renders creep towards zero.
@@ -370,6 +665,184 @@ function previewBody(w, t, el) {
       escapeHtml(substitute(line.text)) + "</div>";
   }
   return html + "</div>";
+}
+
+/* ---------- pictures of the real widgets ----------
+
+   The kiosk draws each tile with the widget itself — at the tile's size in
+   the panel's pixels, in the chosen theme and font — and sends a picture of
+   it. That is the only way a preview can look like the thing: the text
+   stand-ins below cannot draw a dial, a graph or an album cover. They are
+   still used until a picture arrives, and whenever one cannot be had.
+
+   One request at a time, never mid-drag, and only when something that
+   changes the drawing has changed, so the Pi is not asked to redraw a tile
+   for every pixel of a drag. */
+const shots = {};          // widget id -> { key, url, stale, failed }
+let shotTimer = null;
+let shotBusy = false;
+let shotsUnsupported = false;
+
+function tilePx(w) {
+  const { columns, rows } = state.schema.grid;
+  const t = currentTheme();
+  const gap = t && t.gap != null ? t.gap : 14;
+  const gridH = PANEL_H - (state.dashboard.topBar !== false ? TOP_BAR_H : 0);
+  const cellW = (PANEL_W - gap * (columns + 1)) / columns;
+  const cellH = (gridH - gap * (rows + 1)) / rows;
+  return {
+    width: Math.round(w.width * cellW + (w.width - 1) * gap),
+    height: Math.round(w.height * cellH + (w.height - 1) * gap),
+  };
+}
+
+function shotKey(w) {
+  const px = tilePx(w);
+  const d = state.dashboard;
+  return JSON.stringify([w.type, w.options, w.fontFamily || "", w.fontScale || 1,
+    px.width, px.height, d.themeId, d.roundedCorners !== false, d.tileShadows !== false]);
+}
+
+function requestShots(delay) {
+  if (shotsUnsupported) return;
+  clearTimeout(shotTimer);
+  shotTimer = setTimeout(pumpShots, delay == null ? 350 : delay);
+}
+
+async function pumpShots() {
+  if (shotBusy || drag || shotsUnsupported || !state.schema) return;
+  const w = widgetsOnPage().find(w => {
+    const s = shots[w.id];
+    return !s || s.stale || s.key !== shotKey(w);
+  });
+  if (!w) return;
+  shotBusy = true;
+  const key = shotKey(w);
+  const px = tilePx(w);
+  const had = shots[w.id];
+  try {
+    const r = await fetch("/api/render", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        widget: w,
+        themeId: state.dashboard.themeId,
+        roundedCorners: state.dashboard.roundedCorners !== false,
+        tileShadows: state.dashboard.tileShadows !== false,
+        width: px.width, height: px.height,
+      }),
+    });
+    // A kiosk from before this existed: stop asking.
+    if (r.status === 404) { shotsUnsupported = true; return; }
+    if (!r.ok) throw new Error("render " + r.status);
+    const url = URL.createObjectURL(await r.blob());
+    if (had && had.url) URL.revokeObjectURL(had.url);
+    shots[w.id] = { key, url };
+    showShot(w.id);
+  } catch (e) {
+    // Keep whatever picture there was, and do not ask again until something
+    // about the tile changes or the next refresh.
+    shots[w.id] = { key, url: had && had.url, failed: true };
+  } finally {
+    shotBusy = false;
+    if (!shotsUnsupported) requestShots(0);
+  }
+}
+
+/* Puts a tile's picture in place without redrawing the canvas — which would
+   rebuild the settings form under the cursor of someone typing in it. */
+function showShot(id) {
+  const shot = shots[id];
+  const tile = grid.querySelector('.tile[data-id="' + CSS.escape(id) + '"]');
+  if (!tile || !shot || !shot.url) return;
+  let img = tile.querySelector("img.shot");
+  if (!img) {
+    img = document.createElement("img");
+    img.className = "shot";
+    img.alt = "";
+    img.draggable = false;
+    tile.prepend(img);
+  }
+  img.src = shot.url;
+  tile.classList.add("rendered");
+}
+
+/* ---------- the panel's own furniture ---------- */
+
+const ICONS = {
+  photos: '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 16l5-5 4 4 3-3 6 6"/>',
+  dashboard: '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="5" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="11" width="7" height="9" rx="1.5"/>',
+  remote: '<rect x="8" y="9" width="8" height="12" rx="2"/><path d="M9 5.5a4.5 4.5 0 0 1 6 0M6.5 3a8 8 0 0 1 11 0"/>',
+  lock: '<rect x="5" y="10" width="14" height="10" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
+  camera: '<rect x="3" y="7" width="13" height="10" rx="2.5"/><path d="M16 11l5-3v8l-5-3"/>',
+  bell: '<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 20a2 2 0 0 0 4 0"/>',
+  settings: '<circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>',
+  back: '<path d="M19 12H5M11 6l-6 6 6 6"/>',
+};
+function icon(name) {
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+    'stroke-linecap="round" stroke-linejoin="round">' + ICONS[name] + "</svg>";
+}
+
+function pageDots() {
+  const count = pageCount();
+  if (count < 2) return "";
+  let dots = "";
+  for (let i = 0; i < count; i++) {
+    dots += '<span class="dot' + (i === state.page ? " on" : "") + '"></span>';
+  }
+  return '<div class="mockPill pages">' + dots + "</div>";
+}
+
+/* The top bar the panel draws over the dashboard — greeting, date, page dots
+   and the app bar — or, with it off, the back button and dots it floats over
+   the grid instead. Drawn, not interactive: it is here so the space it takes
+   is visibly taken. */
+function renderChrome(topBar) {
+  const bar = document.getElementById("topbarMock");
+  const float = document.getElementById("floatMock");
+  bar.hidden = !topBar;
+  float.hidden = topBar;
+  if (!topBar) {
+    float.innerHTML = '<div class="back">' + icon("back") + "</div>" + pageDots();
+    return;
+  }
+  const h = new Date().getHours();
+  const greeting = h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+  bar.innerHTML =
+    '<div class="greet"><b>' + greeting + "</b><span>" +
+      escapeHtml(substitute("{date}")) + "</span></div>" +
+    pageDots() +
+    '<div class="mockPill">' +
+      icon("photos") + '<span class="sel">' + icon("dashboard") + "</span>" +
+      icon("remote") + '<span class="sep"></span>' + icon("lock") +
+      icon("camera") + icon("bell") + '<span class="sw"></span>' + icon("settings") +
+    "</div>";
+}
+
+/* Faint outlines of every cell, where a widget could go. Rebuilt only when
+   the cells actually move — a drag re-renders on every pointer move. */
+let cellsKey = null;
+function renderCells(columns, rows, place, key) {
+  if (cellsKey === key) return;
+  cellsKey = key;
+  const host = document.getElementById("cells");
+  host.innerHTML = "";
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < columns; x++) {
+      const i = document.createElement("i");
+      place(i, x, y, 1, 1);
+      host.appendChild(i);
+    }
+  }
+}
+
+function renderSubtitle() {
+  const n = state.dashboard.widgets.length;
+  const pages = pageCount();
+  document.getElementById("subtitle").textContent =
+    n + " widget" + (n === 1 ? "" : "s") + " across " + pages + " page" +
+    (pages === 1 ? "" : "s") + " · " + (currentTheme() ? currentTheme().name : "") + " theme";
 }
 
 function substitute(text) {
@@ -389,19 +862,44 @@ function escapeHtml(s) {
   })[c]);
 }
 
-function render() {
+/* [canvasOnly] leaves the settings form alone: rebuilding it on the live
+   refresh threw away whatever was being typed into it every twenty seconds. */
+function render(canvasOnly) {
   const { columns, rows } = state.schema.grid;
   renderPageBar();
   const t = currentTheme();
+  const topBar = state.dashboard.topBar !== false;
+  renderChrome(topBar);
   // Exactly the arithmetic the kiosk lays out with, so what you drag here is
   // where it lands — including the gap between tiles and around the edges.
-  const gapX = (t && t.gap ? t.gap : 14) / 1920 * 100;
-  const gapY = (t && t.gap ? t.gap : 14) / 1200 * 100;
+  // The grid is whatever the top bar leaves, so its height in panel pixels
+  // is what the vertical gap is a fraction of.
+  const gridH = PANEL_H - (topBar ? TOP_BAR_H : 0);
+  grid.style.top = (topBar ? TOP_BAR_H / PANEL_H * 100 : 0) + "%";
+  const gap = t && t.gap != null ? t.gap : 14;
+  const gapX = gap / PANEL_W * 100;
+  const gapY = gap / gridH * 100;
   const cellW = (100 - gapX * (columns + 1)) / columns;
   const cellH = (100 - gapY * (rows + 1)) / rows;
+  const place = (el, x, y, width, height) => {
+    el.style.left = (gapX + x * (cellW + gapX)) + "%";
+    el.style.top = (gapY + y * (cellH + gapY)) + "%";
+    el.style.width = (width * cellW + (width - 1) * gapX) + "%";
+    el.style.height = (height * cellH + (height - 1) * gapY) + "%";
+  };
 
   applyTheme();
-  for (const el of [...canvas.querySelectorAll(".tile")]) el.remove();
+  renderCells(columns, rows, place, gridH + ":" + gap);
+  const cells = document.getElementById("cells").children;
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < columns; x++) {
+      const cell = { x, y, width: 1, height: 1 };
+      cells[y * columns + x].classList.toggle(
+        "used", widgetsOnPage().some(w => overlaps(cell, w)));
+    }
+  }
+  renderSubtitle();
+  for (const el of [...grid.querySelectorAll(".tile")]) el.remove();
   let anyClash = false;
 
   for (const w of widgetsOnPage()) {
@@ -409,17 +907,15 @@ function render() {
     const el = document.createElement("div");
     el.className = "tile" + (w.id === state.selectedId ? " selected" : "") +
       (drag && drag.widget.id === w.id ? " dragging" : "");
-    el.style.left = (gapX + w.x * (cellW + gapX)) + "%";
-    el.style.top = (gapY + w.y * (cellH + gapY)) + "%";
-    el.style.width = (w.width * cellW + (w.width - 1) * gapX) + "%";
-    el.style.height = (w.height * cellH + (w.height - 1) * gapY) + "%";
+    place(el, w.x, w.y, w.width, w.height);
     el.dataset.id = w.id;
 
     const clash = widgetsOnPage().some(o => o.id !== w.id && overlaps(w, o));
     if (clash) { el.classList.add("clash"); anyClash = true; }
 
     el.innerHTML =
-      '<div class="badge">' + (t ? t.glyph : "❓") + "</div>" +
+      '<div class="badge">' + (t ? t.glyph : "❓") + " " +
+        escapeHtml(t ? t.name : w.type) + "</div>" +
       previewBody(w, t, el) +
       '<div class="handle"></div>';
     // The font and size chosen for this widget, so the preview is the thing
@@ -428,15 +924,20 @@ function render() {
       ? ('"' + w.fontFamily + '", system-ui, sans-serif')
       : "system-ui, sans-serif";
 
-    canvas.appendChild(el);
+    grid.appendChild(el);
+    // The last picture of this tile, even if it is out of date: while a tile
+    // is being resized, its old picture stretched is a better guide than the
+    // text stand-in, and the new one follows as soon as the drag ends.
+    showShot(w.id);
   }
+  requestShots();
 
   // Only measurable once the tiles are laid out, so this is a second pass
   // rather than part of building them.
   fitAllPreviews();
 
   document.getElementById("clashWarning").hidden = !anyClash;
-  renderSettings();
+  if (!canvasOnly) renderSettings();
 }
 
 /* Shrink preview text that does not fit its tile.
@@ -493,7 +994,7 @@ function fitPreview(tile) {
 }
 
 function fitAllPreviews() {
-  for (const tile of canvas.querySelectorAll(".tile")) fitPreview(tile);
+  for (const tile of grid.querySelectorAll(".tile")) fitPreview(tile);
 }
 
 /* ---------- dragging and resizing ---------- */
@@ -510,7 +1011,9 @@ canvas.addEventListener("pointerdown", (e) => {
   if (!w) return;
 
   state.selectedId = w.id;
-  const rect = canvas.getBoundingClientRect();
+  // The grid, not the canvas: with the top bar on, a cell is shorter than
+  // an eighth of the canvas.
+  const rect = grid.getBoundingClientRect();
   drag = {
     widget: w,
     mode: e.target.classList.contains("handle") ? "resize" : "move",
@@ -611,16 +1114,21 @@ function renderSettings() {
   const host = document.getElementById("settings");
   const w = state.dashboard.widgets.find(x => x.id === state.selectedId);
   if (!w) {
-    host.innerHTML = '<p class="empty">Select a widget to change its settings.</p>';
+    host.innerHTML =
+      '<div class="empty-state"><span class="big">👆</span>' +
+      "Tap a widget on the panel to change it, or add one below.</div>";
     return;
   }
   const t = typeOf(w.type);
   host.innerHTML = "";
 
-  const title = document.createElement("p");
-  title.style.margin = "0 0 6px";
-  title.innerHTML = "<strong>" + (t ? t.name : w.type) + "</strong>";
-  host.appendChild(title);
+  const head = document.createElement("div");
+  head.className = "widgetHead";
+  head.innerHTML = '<span class="g">' + (t ? t.glyph : "❓") + "</span>" +
+    "<div><strong>" + escapeHtml(t ? t.name : w.type) + "</strong><small>" +
+    "Page " + ((w.page || 0) + 1) + " · " + w.width + " × " + w.height +
+    " cells</small></div>";
+  host.appendChild(head);
 
   if (t && t.description) {
     const d = document.createElement("p");
@@ -643,7 +1151,7 @@ function renderSettings() {
   // Appearance is offered for every widget by the frame that draws it, so a
   // new widget gets these without asking and can't forget to honour them.
   const rule = document.createElement("hr");
-  rule.style.cssText = "border:none;border-top:1px solid var(--line);margin:16px 0 4px";
+  rule.className = "divider";
   host.appendChild(rule);
 
   // Moving a widget between pages. Without this a widget could only ever be
@@ -721,15 +1229,10 @@ function renderSettings() {
   sizeSel.onchange = () => { w.fontScale = Number(sizeSel.value); markDirty(); render(); };
   host.appendChild(sizeSel);
 
-  const size = document.createElement("p");
-  size.className = "help";
-  size.textContent = "Position " + (w.x + 1) + "," + (w.y + 1) + " · " + w.width + "x" + w.height + " cells";
-  host.appendChild(size);
-
   const del = document.createElement("button");
   del.className = "danger";
   del.textContent = "Remove widget";
-  del.style.marginTop = "10px";
+  del.style.cssText = "margin-top:18px;width:100%";
   del.onclick = () => {
     state.dashboard.widgets = state.dashboard.widgets.filter(x => x.id !== w.id);
     state.selectedId = null;
@@ -758,8 +1261,7 @@ function listField(w, o) {
 
   rows.forEach((row, index) => {
     const card = document.createElement("div");
-    card.style.cssText =
-      "border:1px solid var(--line);border-radius:10px;padding:10px;margin-top:8px;position:relative";
+    card.className = "subcard";
 
     for (const f of o.fields || []) {
       const label = document.createElement("label");
@@ -818,16 +1320,15 @@ function field(w, o) {
   const value = w.options[o.key] !== undefined ? w.options[o.key] : o.default;
 
   if (o.kind === "boolean") {
-    const row = document.createElement("div");
-    row.className = "row";
-    row.style.marginTop = "12px";
+    const row = document.createElement("label");
+    row.className = "setting";
     const input = document.createElement("input");
     input.type = "checkbox";
     input.checked = !!value;
     input.onchange = () => { w.options[o.key] = input.checked; markDirty(); };
     const label = document.createElement("span");
     label.textContent = o.label;
-    row.append(input, label);
+    row.append(label, input);
     wrap.appendChild(row);
   } else {
     const label = document.createElement("label");
@@ -935,16 +1436,33 @@ function goToPage(i) {
 
 function renderPageBar() {
   const count = pageCount();
-  document.getElementById("pageLabel").textContent =
-    "Page " + (state.page + 1) + " / " + count;
-  document.getElementById("pagePrev").onclick = () => goToPage(state.page - 1);
-  document.getElementById("pageNext").onclick = () => goToPage(state.page + 1);
-  document.getElementById("pageAdd").onclick = () => {
+  const tabs = document.getElementById("pageTabs");
+  tabs.innerHTML = "";
+  const tab = (label, title, onClick, cls) => {
+    const b = document.createElement("button");
+    b.textContent = label;
+    b.title = title;
+    if (cls) b.className = cls;
+    b.onclick = onClick;
+    tabs.appendChild(b);
+    return b;
+  };
+  tab("‹", "Previous page", () => goToPage(state.page - 1));
+  for (let i = 0; i < count; i++) {
+    const b = tab(String(i + 1), "Page " + (i + 1), () => goToPage(i),
+                  i === state.page ? "on" : "");
+    b.setAttribute("role", "tab");
+    b.setAttribute("aria-selected", String(i === state.page));
+  }
+  tab("›", "Next page", () => goToPage(state.page + 1));
+  tab("+", "Add a page", () => {
     state.pagesShown = count + 1;
     goToPage(count);
-  };
+  }, "add");
+
   const del = document.getElementById("pageDel");
   del.disabled = count <= 1;
+  del.textContent = "Delete page " + (state.page + 1);
   del.onclick = () => {
     const onThis = widgetsOnPage();
     if (onThis.length &&
@@ -1040,22 +1558,35 @@ function renderOverrides() {
   }
 }
 
+/* Each theme as a little picture of itself — its background, three tiles
+   and its accent — rather than a name in a dropdown. */
 function renderThemes() {
-  const sel = document.getElementById("theme");
-  sel.innerHTML = "";
+  const host = document.getElementById("theme");
+  host.innerHTML = "";
   for (const t of state.schema.themes) {
-    const o = document.createElement("option");
-    o.value = t.id; o.textContent = t.name;
-    sel.appendChild(o);
+    const b = document.createElement("button");
+    b.type = "button";
+    b.setAttribute("role", "radio");
+    const on = t.id === (currentTheme() || {}).id;
+    b.setAttribute("aria-checked", String(on));
+    if (on) b.className = "on";
+    const tile = "background:" + cssColour(t.surface) + ";border-color:" +
+      cssColour(t.border) + ";border-radius:" + Math.min(6, (t.cornerRadius || 0) / 4) + "px";
+    b.innerHTML =
+      '<span class="swatch" style="background:' + themeBackground(t, "%") + '">' +
+        '<i style="' + tile + '"></i><i style="' + tile + '"></i><i style="' + tile + '"></i>' +
+        '<b style="background:' + cssColour(t.accent) + '"></b>' +
+      "</span>" + escapeHtml(t.name);
+    b.onclick = () => {
+      state.dashboard.themeId = t.id;
+      markDirty();
+      renderThemes();
+      // Repaint straight away rather than waiting for a save, so picking a
+      // theme shows you the theme.
+      render();
+    };
+    host.appendChild(b);
   }
-  sel.value = state.dashboard.themeId;
-  sel.onchange = () => {
-    state.dashboard.themeId = sel.value;
-    markDirty();
-    // Repaint straight away rather than waiting for a save, so picking a
-    // theme shows you the theme.
-    render();
-  };
 }
 
 document.getElementById("save").onclick = async () => {
@@ -1063,7 +1594,7 @@ document.getElementById("save").onclick = async () => {
     setStatus("Saving…");
     await api.put("/api/dashboard", state.dashboard);
     state.dirty = false;
-    setStatus("Saved");
+    setStatus("Saved", "ok");
   } catch (e) {
     setStatus("Save failed", true);
     console.error(e);
@@ -1103,7 +1634,7 @@ async function load(quiet) {
     renderOverrides();
     renderPaging();
     render();
-    setStatus("Ready");
+    setStatus("Up to date", "ok");
   } catch (e) {
     setStatus("Could not reach the kiosk", true);
     console.error(e);
@@ -1115,11 +1646,19 @@ async function load(quiet) {
 async function refreshLive() {
   try {
     state.live = await api.get("/api/preview");
-    if (state.schema) render();
+    if (state.schema) render(true);
   } catch (e) {
     // A preview that can't be fetched isn't worth interrupting editing for.
   }
 }
+
+/* Redraw the pictures now and then, so a clock or a headline moves on here
+   as it does on the wall. Kept slow: each is real work for the Pi. */
+setInterval(() => {
+  if (document.hidden) return;
+  for (const s of Object.values(shots)) s.stale = true;
+  requestShots(0);
+}, 30000);
 
 load().then(refreshLive);
 setInterval(refreshLive, 20000);
@@ -1137,6 +1676,9 @@ if (window.ResizeObserver) {
 }
 if (document.fonts && document.fonts.ready) {
   document.fonts.ready.then(() => fitAllPreviews());
+  // ready alone is not enough: a face only starts loading once a tile uses
+  // it, which can be after ready has already resolved.
+  document.fonts.addEventListener("loadingdone", () => fitAllPreviews());
 }
 </script>
 </body>

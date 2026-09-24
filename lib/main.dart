@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 
 import 'models/immich_models.dart';
 import 'dashboard/live_preview.dart';
+import 'dashboard/tile_renderer.dart';
 import 'dashboard/widgets/widgets.dart';
 import 'services/audio_levels_service.dart';
 import 'services/kiosk_control_service.dart';
@@ -242,6 +243,8 @@ class ImmichKioskPiApp extends StatelessWidget {
             ?child,
             IncomingShareOverlay(navigatorKey: rootNavigatorKey),
             CameraOverlay(navigatorKey: rootNavigatorKey),
+            // Draws tiles off screen for the dashboard editor's preview.
+            const TileRenderHost(),
           ],
         ),
       ),

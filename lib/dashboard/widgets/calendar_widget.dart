@@ -474,10 +474,10 @@ final calendarWidgetType = DashboardWidgetType(
     ),
   ],
   preview: const [
-    PreviewLine('Dentist', scale: 0.14),
-    PreviewLine('Today 14:30', scale: 0.1, muted: true),
-    PreviewLine('Bin day', scale: 0.14),
-    PreviewLine('Tomorrow · all day', scale: 0.1, muted: true),
+    PreviewLine('Dentist', scale: 0.14, px: 16),
+    PreviewLine('Today 14:30', scale: 0.1, muted: true, px: 13),
+    PreviewLine('Bin day', scale: 0.14, px: 16),
+    PreviewLine('Tomorrow · all day', scale: 0.1, muted: true, px: 13),
   ],
   live: (config, data) {
     final feeds = data.feeds;
@@ -499,8 +499,9 @@ final calendarWidgetType = DashboardWidgetType(
     if (upcoming.isEmpty) return const [];
     return [
       for (final e in upcoming) ...[
-        PreviewLine(e.title, scale: 0.14),
-        PreviewLine(_ScheduleView._when(e), scale: 0.1, muted: true),
+        PreviewLine(e.title, scale: 0.14, px: 16),
+        PreviewLine(_ScheduleView._when(e),
+            scale: 0.1, muted: true, px: 13),
       ],
     ];
   },

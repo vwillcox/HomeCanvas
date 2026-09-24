@@ -307,7 +307,11 @@ class _Grid extends StatelessWidget {
                 top: gap + w.y * (cellHeight + gap),
                 width: w.width * cellWidth + (w.width - 1) * gap,
                 height: w.height * cellHeight + (w.height - 1) * gap,
-                child: _Tile(config: w, theme: theme, settings: settings),
+                child: DashboardTile(
+                  config: w,
+                  theme: theme,
+                  settings: settings,
+                ),
               ),
           ],
         );
@@ -316,16 +320,29 @@ class _Grid extends StatelessWidget {
   }
 }
 
-class _Tile extends StatelessWidget {
-  const _Tile({
+/// One widget in its tile: the theme's frame, the chosen font and size, and
+/// the shrink for a small tile.
+///
+/// Public because the web editor's previews are drawn by this too — see
+/// `TileRenderHost` — so a preview is the panel's own drawing, not a copy.
+class DashboardTile extends StatelessWidget {
+  const DashboardTile({
+    super.key,
     required this.config,
     required this.theme,
     required this.settings,
+    this.framed = true,
   });
 
   final DashboardWidgetConfig config;
   final DashboardTheme theme;
   final DashboardSettings settings;
+
+  /// Whether to draw the tile's own background, border and shadow. Off for
+  /// the editor, which draws the frame itself — a shadow falls outside the
+  /// tile and would be cut off in a picture of it — and lays the picture of
+  /// the contents over it.
+  final bool framed;
 
   @override
   Widget build(BuildContext context) {
@@ -359,12 +376,19 @@ class _Tile extends StatelessWidget {
     // placed at 1x1, where a 17-point heading and 16 pixels of padding on
     // each side simply do not fit.
     final fit = type?.contentScale(config.width, config.height) ?? 1.0;
+    // A widget that fits its own text to the tile gets the user's font size
+    // untouched; shrinking it here as well would undo the fitting.
+    final textFit = (type?.fitsItself ?? false) ? 1.0 : fit;
 
+    final decoration = theme.tileDecorationWith(
+      radius: settings.radiusOver(theme.cornerRadius),
+      withShadow: settings.shadowOver(theme.shadow),
+    );
     final media = MediaQuery.of(context);
     return MediaQuery(
       data: media.copyWith(
         textScaler: TextScaler.linear(
-          media.textScaler.scale(1) * config.fontScale * fit,
+          media.textScaler.scale(1) * config.fontScale * textFit,
         ),
       ),
       child: DefaultTextStyle(
@@ -374,17 +398,21 @@ class _Tile extends StatelessWidget {
               ? theme.fontFamily
               : config.fontFamily,
         ),
-        child: Container(
-          decoration: theme.tileDecorationWith(
-            radius: settings.radiusOver(theme.cornerRadius),
-            withShadow: settings.shadowOver(theme.shadow),
-          ),
-          // Padding shrinks with the text. At 1x1 the old fixed 16 took a
-          // fifth of the tile before anything was drawn in it.
-          padding: EdgeInsets.all(16 * fit),
-          clipBehavior: Clip.antiAlias,
-          child: child,
-        ),
+        child: framed
+            ? Container(
+                decoration: decoration,
+                // Padding shrinks with the text. At 1x1 the old fixed 16 took
+                // a fifth of the tile before anything was drawn in it.
+                padding: EdgeInsets.all(16 * fit),
+                clipBehavior: Clip.antiAlias,
+                child: child,
+              )
+            // Where the framed tile's contents would be: a Container adds its
+            // border's width to the padding, so the same inset is kept here.
+            : Padding(
+                padding: EdgeInsets.all(16 * fit).add(decoration.padding),
+                child: child,
+              ),
       ),
     );
   }
