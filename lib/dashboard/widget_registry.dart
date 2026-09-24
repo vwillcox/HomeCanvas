@@ -104,7 +104,12 @@ class DashboardWidgetContext {
 /// Declared by the widget type rather than drawn by the editor, so a new
 /// widget previews itself without the editor learning anything about it.
 /// [scale] is relative to the tile's height, which is what keeps a preview
-/// honest as the tile is resized.
+/// honest as the tile is resized — for text that grows with its tile.
+///
+/// Text drawn at a fixed size gives [px] instead: its font size on the panel,
+/// before the widget's text size and any shrink. A news headline is 15 points
+/// on a tile of any height, and previewing it as a share of a tall tile drew
+/// it three times too big.
 ///
 /// `{time}` and `{date}` are substituted with the real ones, so a clock
 /// preview shows the actual time rather than a fixed 09:41.
@@ -113,6 +118,7 @@ class PreviewLine {
   final double scale;
   final bool muted;
   final bool accent;
+  final double? px;
 
   /// Centred rather than ranged left, matching how the widget itself lays the
   /// line out.
@@ -124,11 +130,13 @@ class PreviewLine {
     this.muted = false,
     this.accent = false,
     this.centre = false,
+    this.px,
   });
 
   Map<String, dynamic> toJson() => {
         'text': text,
         'scale': scale,
+        if (px != null) 'px': px,
         'muted': muted,
         'accent': accent,
         'centre': centre,
@@ -224,6 +232,8 @@ class DashboardWidgetType {
         'defaultHeight': defaultHeight,
         'minWidth': minWidth,
         'minHeight': minHeight,
+        // So the editor's preview skips the shrink the panel skips.
+        'fitsItself': fitsItself,
         'options': options.map((o) => o.toJson()).toList(),
         'preview': preview.map((p) => p.toJson()).toList(),
       };

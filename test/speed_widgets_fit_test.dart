@@ -23,33 +23,45 @@ DashboardWidgetContext ctx(String type, [Map<String, dynamic>? options]) =>
     DashboardWidgetContext(
       theme: kBuiltInThemes.first,
       config: DashboardWidgetConfig(
-          id: 't', type: type, x: 0, y: 0, width: 5, height: 3,
-          options: options),
+        id: 't',
+        type: type,
+        x: 0,
+        y: 0,
+        width: 5,
+        height: 3,
+        options: options,
+      ),
     );
 
 Future<void> pump(WidgetTester tester, Widget child, Size size) async {
   tester.view.physicalSize = const Size(1920, 1200);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  await tester.pumpWidget(MultiProvider(
-    providers: [
-      ChangeNotifierProvider(create: (_) => SpeedtestService()),
-      ChangeNotifierProvider(create: (_) => LanSpeedtestService()),
-    ],
-    child: MaterialApp(
-      home: Scaffold(
-        body: Align(
-          alignment: Alignment.topLeft,
-          child: SizedBox.fromSize(size: size, child: child),
+  await tester.pumpWidget(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => SpeedtestService()),
+        ChangeNotifierProvider(create: (_) => LanSpeedtestService()),
+      ],
+      child: MaterialApp(
+        home: Scaffold(
+          body: Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox.fromSize(size: size, child: child),
+          ),
         ),
       ),
     ),
-  ));
+  );
 }
 
 Widget internet() => DashboardSpeedtestWidget(w: ctx('speedtest'));
 Widget lan() => DashboardLanSpeedtestWidget(
-    w: ctx('lan_speedtest', {'server': 'http://macmini.local:3000', 'name': 'MacMini'}));
+  w: ctx('lan_speedtest', {
+    'server': 'http://macmini.local:3000',
+    'name': 'MacMini',
+  }),
+);
 
 void main() {
   group('the dial stays inside its box', () {
@@ -63,8 +75,11 @@ void main() {
       ]) {
         final reach = SpeedGauge.reachIn(size);
         final shorter = size.shortestSide;
-        expect(reach, lessThanOrEqualTo(shorter / 2),
-            reason: 'the dial in $size reaches $reach from its centre');
+        expect(
+          reach,
+          lessThanOrEqualTo(shorter / 2),
+          reason: 'the dial in $size reaches $reach from its centre',
+        );
       }
     });
   });
@@ -75,8 +90,16 @@ void main() {
         await pump(tester, build(), tile(5, 3));
         // Before: 13 × 0.75 = 10 px labels.
         expect(tester.getRect(find.text('Down')).height, greaterThan(22));
-        expect(tester.getRect(find.text('0.00')).height, greaterThan(60),
-            reason: "the dial's own figure");
+        // The size asked for, not the size drawn: the reading is scaled down
+        // to fit the ring's hole, and the test font's glyphs are a full em
+        // wide — twice a real digit — so '0.00' is squeezed here as it never
+        // is on the panel.
+        final figure = tester.widget<Text>(find.text('0.00'));
+        expect(
+          figure.style!.fontSize,
+          greaterThan(60),
+          reason: "the dial's own figure",
+        );
         expect(tester.takeException(), isNull);
       });
 
@@ -84,13 +107,21 @@ void main() {
         final t = tile(5, 3);
         await pump(tester, build(), t);
         final dial = tester.getRect(find.byType(SpeedGauge));
-        final paint = tester.getRect(find.descendant(
-            of: find.byType(SpeedGauge), matching: find.byType(CustomPaint)).first);
+        final paint = tester.getRect(
+          find
+              .descendant(
+                of: find.byType(SpeedGauge),
+                matching: find.byType(CustomPaint),
+              )
+              .first,
+        );
         expect(dial.top, greaterThanOrEqualTo(0));
         expect(dial.bottom, lessThanOrEqualTo(t.height + 0.5));
         // The circle drawn from the centre of the paint box stays within it.
-        expect(SpeedGauge.reachIn(paint.size),
-            lessThanOrEqualTo(paint.size.shortestSide / 2));
+        expect(
+          SpeedGauge.reachIn(paint.size),
+          lessThanOrEqualTo(paint.size.shortestSide / 2),
+        );
       });
     }
   });
@@ -108,8 +139,9 @@ void main() {
         }
       });
 
-      testWidgets('$name: text grows with the tile, up to a limit',
-          (tester) async {
+      testWidgets('$name: text grows with the tile, up to a limit', (
+        tester,
+      ) async {
         await pump(tester, build(), tile(3, 2));
         final small = tester.getRect(find.text('Down')).height;
         await pump(tester, build(), tile(8, 5));
@@ -118,6 +150,43 @@ void main() {
         await pump(tester, build(), tile(12, 8));
         expect(tester.getRect(find.text('Down')).height, lessThan(60));
       });
+    }
+  });
+
+  testWidgets('a four-figure reading stays inside the inner ring', (
+    tester,
+  ) async {
+    // 2048 Mbps on the LAN gauge ran over the ring: the reading was only
+    // limited by the width of the whole dial.
+    for (final side in [120.0, 300.0, 420.0]) {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Center(
+            child: SizedBox.square(
+              dimension: side,
+              child: const SpeedGauge(
+                downloadMbps: 2048,
+                uploadMbps: 1930,
+                maxMbps: 2500,
+                colour: Colors.blue,
+                uploadColour: Colors.pink,
+                trackColour: Colors.grey,
+                textColour: Colors.white,
+                mutedColour: Colors.grey,
+              ),
+            ),
+          ),
+        ),
+      );
+      final reading = tester.getSize(find.text('2048'));
+      final shown = tester.getRect(
+        find.ancestor(of: find.text('2048'), matching: find.byType(FittedBox)),
+      );
+      expect(
+        shown.width,
+        lessThanOrEqualTo(side * SpeedGauge.holeWidth + 0.01),
+        reason: 'side $side, text ${reading.width}',
+      );
     }
   });
 

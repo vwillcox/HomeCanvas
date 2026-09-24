@@ -336,10 +336,11 @@ final newsWidgetType = DashboardWidgetType(
     ),
   ],
   preview: const [
-    PreviewLine('Council approves new cycle route', scale: 0.13),
-    PreviewLine('2h ago', scale: 0.09, muted: true),
-    PreviewLine('Storm expected to clear by Thursday', scale: 0.13),
-    PreviewLine('4h ago', scale: 0.09, muted: true),
+    PreviewLine('Council approves new cycle route', scale: 0.13, px: 15),
+    PreviewLine('2h ago', scale: 0.09, muted: true, px: 12),
+    PreviewLine('Storm expected to clear by Thursday',
+        scale: 0.13, px: 15),
+    PreviewLine('4h ago', scale: 0.09, muted: true, px: 12),
   ],
   live: (config, data) {
     if (data.feeds == null) return const [];
@@ -370,10 +371,10 @@ final newsWidgetType = DashboardWidgetType(
     if (items.isEmpty) return const [];
     return [
       for (final item in items) ...[
-        PreviewLine(item.title, scale: 0.13),
+        PreviewLine(item.title, scale: 0.13, px: 15),
         if (config.options['showTime'] != false && item.published != null)
           PreviewLine(DashboardNewsWidget.ago(item.published!),
-              scale: 0.09, muted: true),
+              scale: 0.09, muted: true, px: 12),
       ],
     ];
   },

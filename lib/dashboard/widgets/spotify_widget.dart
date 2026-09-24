@@ -358,8 +358,8 @@ final spotifyWidgetType = DashboardWidgetType(
     ),
   ],
   preview: const [
-    PreviewLine('Fake Plastic Trees', scale: 0.16),
-    PreviewLine('Radiohead', scale: 0.11, muted: true),
+    PreviewLine('Fake Plastic Trees', scale: 0.16, px: 20),
+    PreviewLine('Radiohead', scale: 0.11, muted: true, px: 15),
     PreviewLine('▬▬▬▬▬▭▭▭▭', scale: 0.08, accent: true),
     PreviewLine('⏮   ⏯   ⏭', scale: 0.15, accent: true),
   ],
@@ -370,8 +370,8 @@ final spotifyWidgetType = DashboardWidgetType(
     }
     final now = source.now;
     return [
-      PreviewLine(now.title, scale: 0.16),
-      PreviewLine(now.artist, scale: 0.11, muted: true),
+      PreviewLine(now.title, scale: 0.16, px: 20),
+      PreviewLine(now.artist, scale: 0.11, muted: true, px: 15),
       if (config.options['showControls'] != false)
         const PreviewLine('⏮   ⏯   ⏭', scale: 0.16, accent: true),
     ];

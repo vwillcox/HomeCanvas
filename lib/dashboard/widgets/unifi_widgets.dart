@@ -1034,9 +1034,9 @@ final unifiPresenceWidgetType = DashboardWidgetType(
     ),
   ],
   preview: const [
-    PreviewLine('● Vincent’s phone   for 4h', scale: 0.13),
-    PreviewLine('● Jo’s watch   for 2h', scale: 0.13),
-    PreviewLine('○ Guest phone   away', scale: 0.13, muted: true),
+    PreviewLine('● Vincent’s phone   for 4h', scale: 0.13, px: 16),
+    PreviewLine('● Jo’s watch   for 2h', scale: 0.13, px: 16),
+    PreviewLine('○ Guest phone   away', scale: 0.13, muted: true, px: 16),
   ],
   build: (context, w) => UnifiPresenceWidget(w: w),
 );
@@ -1074,12 +1074,13 @@ final unifiClientsWidgetType = DashboardWidgetType(
   minWidth: 1,
   minHeight: 1,
   preview: const [
-    PreviewLine('Vincents-Mini        Dream Router 7', scale: 0.11),
-    PreviewLine('Hisense Vision       USW Flex 2.5G', scale: 0.11),
+    PreviewLine('Vincents-Mini        Dream Router 7', scale: 0.11, px: 14),
+    PreviewLine('Hisense Vision       USW Flex 2.5G', scale: 0.11, px: 14),
     PreviewLine(
       'KP303                Dream Router 7',
       scale: 0.11,
       muted: true,
+      px: 14,
     ),
   ],
   build: (context, w) => UnifiClientsWidget(w: w),

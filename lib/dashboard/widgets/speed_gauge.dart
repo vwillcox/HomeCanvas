@@ -20,6 +20,10 @@ class SpeedGauge extends StatelessWidget {
   @visibleForTesting
   static double reachIn(Size size) => _GaugePainter.reach(size);
 
+  /// How wide the centre reading may be, as a share of the dial's side: the
+  /// inner ring's hole, less a margin for the figures' corners.
+  static const double holeWidth = 0.40;
+
   const SpeedGauge({
     super.key,
     required this.downloadMbps,
@@ -77,15 +81,21 @@ class SpeedGauge extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      _format(value),
-                      style: TextStyle(
-                        color: textColour,
-                        fontSize: side * 0.22,
-                        fontWeight: FontWeight.w700,
-                        height: 1,
+                  // Kept inside the inner ring's hole rather than the whole
+                  // dial: a four-figure reading at full size ran over the
+                  // ring. Three figures still fit at full size.
+                  SizedBox(
+                    width: side * holeWidth,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        _format(value),
+                        style: TextStyle(
+                          color: textColour,
+                          fontSize: side * 0.22,
+                          fontWeight: FontWeight.w700,
+                          height: 1,
+                        ),
                       ),
                     ),
                   ),
