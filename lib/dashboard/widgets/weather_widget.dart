@@ -5,6 +5,7 @@ import '../../services/weather_service.dart';
 import '../../widgets/weather_overlay.dart' show weatherIcon;
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
+import 'weather_forecast_sheet.dart';
 
 /// Current conditions, and optionally the next few days.
 ///
@@ -98,7 +99,7 @@ class DashboardWeatherWidget extends StatelessWidget {
 
     final hasForecast = days > 0 && daily.isNotEmpty;
 
-    return LayoutBuilder(
+    final tile = LayoutBuilder(
       builder: (context, c) {
         if (!hasForecast) return Center(child: current);
 
@@ -142,6 +143,19 @@ class DashboardWeatherWidget extends StatelessWidget {
           ],
         );
       },
+    );
+
+    if (!w.option('openOnTap', true)) return tile;
+    // The whole tile, not just the reading: a forecast-only tile is mostly
+    // columns of days, and they should open the full picture too.
+    return Semantics(
+      button: true,
+      label: 'Show the full forecast',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => showWeatherForecast(context, t),
+        child: tile,
+      ),
     );
   }
 
@@ -281,6 +295,15 @@ final weatherWidgetType = DashboardWidgetType(
       label: 'Show today’s high and low',
       kind: OptionKind.boolean,
       defaultValue: true,
+    ),
+    WidgetOption(
+      key: 'openOnTap',
+      label: 'Tap for the full forecast',
+      kind: OptionKind.boolean,
+      defaultValue: true,
+      help: 'Now, the next 24 hours and the week, over the whole screen. '
+          'Close it with the ×, a tap outside it or a swipe down; it closes '
+          'itself after two minutes.',
     ),
   ],
   preview: const [

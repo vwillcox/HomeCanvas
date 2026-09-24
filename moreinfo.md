@@ -466,6 +466,51 @@ own **×**, top left, goes to the original page.
 Chromium, the fallback browser, has no reader view that can be opened by
 address, so with Chromium articles always open as the site serves them.
 
+### The full forecast
+
+Tap the weather widget for the whole picture, over the dashboard:
+
+- **Now** — the reading, with feels-like, humidity, wind, chance of rain, the
+  UV index in the Met Office's words, and sunrise and sunset.
+- **The next 24 hours** — the sky and a temperature curve an hour at a time,
+  with the chance of rain wherever it is worth an umbrella (20% or more).
+  "Now" shows the same reading as the headline rather than Open-Meteo's
+  forecast for the top of the hour, which by twenty past can be a couple of
+  degrees out and reads as a mistake beside the big number.
+- **The week** — each day's low-to-high as a bar on one shared scale, so a
+  warm day sits visibly to the right of a cold one, with a dot on today's for
+  the current temperature.
+
+Close it with the **×**, a tap outside it, or a swipe down; it closes itself
+after two minutes so the dashboard is not left behind it. **Tap for the full
+forecast** in the widget's settings turns it off.
+
+The hourly data is one extra field on the request the widget already makes —
+`forecast_hours=25`, so "the next day" still reaches the same hour tomorrow.
+
+### Switching TV inputs
+
+The remote has an **Input** button beside what the television is showing. It
+opens every input the set reports, each with what is plugged into it:
+
+- a **green** dot — something connected and on, named where the television
+  knows it (over HDMI-CEC);
+- **amber** — a device the television remembers but cannot see, usually
+  something switched off at the wall;
+- **grey** — nothing connected.
+
+The one showing now is highlighted. Pick one and the television switches and
+the pop-up closes; left alone, it closes itself after 45 seconds.
+
+It uses the list the television sent when the remote connected, and does
+**not** ask again just because the pop-up opened. Asking makes the set run its
+pairing check, which flashes a code over whatever is being watched. If there
+is no list yet, the pop-up offers to ask once, and says up front that a code
+may flash.
+
+The **Show a row of inputs** setting still exists for a tile with room to
+spare; the button works on any size of tile.
+
 ### Omarchy hotkeys
 
 All 224 shortcuts from [omarchy.org/manual/hotkeys](https://omarchy.org/manual/hotkeys/),
@@ -891,6 +936,7 @@ screenshots or testing a screen in isolation. Inert unless set.
 | `IMMICH_KIOSK_TEST_ABOUT=1` | the About screen |
 | `IMMICH_KIOSK_TEST_NOWPLAYING=1` | the now-playing panel on a blank background |
 | `IMMICH_KIOSK_TEST_DASHBOARD=<page>` | the dashboard, opened at that page |
+| `IMMICH_KIOSK_TEST_POPUP=forecast` or `inputs` | with the above, opens the full forecast or the TV inputs over the dashboard |
 
 ### Screen burn-in
 

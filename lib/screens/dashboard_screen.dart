@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../dashboard/dashboard_model.dart';
 import '../dashboard/dashboard_theme.dart';
+import '../dashboard/widgets/tv_inputs_sheet.dart';
+import '../dashboard/widgets/weather_forecast_sheet.dart';
 import '../dashboard/widget_registry.dart';
 import '../services/config_service.dart';
 import '../services/dashboard_service.dart';
@@ -45,7 +48,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _screenIdle = context.read<ScreenIdleService>()..dashboardShowing = true;
+      _debugPopup();
     });
+  }
+
+  /// Dev aid: IMMICH_KIOSK_TEST_POPUP=forecast|inputs opens that pop-up once
+  /// the dashboard is up. Both open only on a tap otherwise, and the panel is
+  /// not something to send synthetic taps to.
+  void _debugPopup() {
+    final which = Platform.environment['IMMICH_KIOSK_TEST_POPUP'];
+    if (which == null || which.isEmpty) return;
+    final theme = context
+        .read<DashboardService>()
+        .themes
+        .byId(context.read<ConfigService>().config.dashboard.themeId);
+    if (which == 'forecast') unawaited(showWeatherForecast(context, theme));
+    if (which == 'inputs') unawaited(showTvInputs(context, theme));
   }
 
   @override
