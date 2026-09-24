@@ -508,20 +508,25 @@ class _DetailContent extends StatelessWidget {
                               color: Colors.white54, fontSize: 22),
                         ),
                       ],
-                      const SizedBox(height: 26),
-                      _ProgressBar(service: service),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(_fmt(n.position),
-                              style: const TextStyle(
-                                  color: Colors.white60, fontSize: 18)),
-                          Text(_fmt(n.duration),
-                              style: const TextStyle(
-                                  color: Colors.white60, fontSize: 18)),
-                        ],
-                      ),
+                      // Nothing to scrub while Spotify's DJ is talking —
+                      // there is no track, so no length — and "00:00 /
+                      // 00:00" under the DJ's name reads as a fault.
+                      if (n.duration > Duration.zero) ...[
+                        const SizedBox(height: 26),
+                        _ProgressBar(service: service),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(_fmt(n.position),
+                                style: const TextStyle(
+                                    color: Colors.white60, fontSize: 18)),
+                            Text(_fmt(n.duration),
+                                style: const TextStyle(
+                                    color: Colors.white60, fontSize: 18)),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),

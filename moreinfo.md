@@ -330,6 +330,28 @@ quality Connect carries (the default is 160 without it). True lossless isn't
 reachable on any Connect device — Spotify's Lossless tier only streams inside
 its own apps, over a different pipeline entirely.
 
+
+#### Spotify's DJ, and podcasts
+
+While Spotify's DJ, X, is talking between tracks, the Web API says it is
+playing but names no track — `item` is null and the context is the DJ's
+playlist. The kiosk used to read that as "nothing playing", so the full-screen
+player folded itself away every time the DJ spoke. It now shows **DJ X ·
+Talking between tracks** instead, keeps the last track's artwork behind it,
+and hides the scrubber, since there is no track to scrub.
+
+Anything else that is playing but unnamed shows as **Playing on Spotify** and
+keeps the player up the same way. That is the fallback if Spotify ever changes
+the DJ playlist's id: the label goes generic, but the player stays.
+
+Podcasts had the same problem for a different reason: the API leaves episodes
+out unless asked. The poll now asks, so an episode shows its title and show.
+It cannot be liked from the panel, since liking works on tracks.
+
+And the player no longer hides on the first empty reply. Spotify answers with
+nothing for a poll or two at some handovers; the panel now waits twelve seconds
+of genuinely nothing before folding away.
+
 ### The widget dashboard
 
 An alternate screen mode: clock, weather, calendar, RSS news, Spotify and a TV
