@@ -7,12 +7,14 @@ import 'package:provider/provider.dart';
 import 'package:immich_kiosk_pi/dashboard/dashboard_model.dart';
 import 'package:immich_kiosk_pi/dashboard/dashboard_theme.dart';
 import 'package:immich_kiosk_pi/dashboard/widget_registry.dart';
+import 'package:immich_kiosk_pi/dashboard/widgets/servers_widget.dart';
 import 'package:immich_kiosk_pi/dashboard/widgets/widgets.dart';
 import 'package:immich_kiosk_pi/services/air_quality_service.dart';
 import 'package:immich_kiosk_pi/services/bins_service.dart';
 import 'package:immich_kiosk_pi/services/config_service.dart';
 import 'package:immich_kiosk_pi/services/dashboard_service.dart';
 import 'package:immich_kiosk_pi/services/notes_service.dart';
+import 'package:immich_kiosk_pi/services/system_stats.dart';
 import 'package:immich_kiosk_pi/services/timer_service.dart';
 
 /// The panel's grid, with the tile's padding taken off, as the dashboard does.
@@ -232,6 +234,64 @@ void main() {
     await tester.tap(find.text('Done ✓'));
     await tester.pump();
     expect(notes.notes, isEmpty);
+  });
+
+  testWidgets('Servers fits every tile, with disks and their health', (
+    tester,
+  ) async {
+    DiskUse disk(String label, String dev, int tb, double pct, DiskState? h) =>
+        DiskUse(
+          label: label,
+          mount: label == 'System' ? '/' : '/mnt/$label',
+          device: dev,
+          percent: pct,
+          size: tb * 1000000000000,
+          used: (tb * 1000000000000 * pct / 100).round(),
+          health: h == null
+              ? null
+              : DiskHealth(
+                  device: dev,
+                  model: 'ST8000',
+                  state: h,
+                  temperature: 34,
+                  pending: h == DiskState.healthy ? 0 : 8,
+                ),
+        );
+    ServersWidget.debugStats = [
+      MachineStats(
+        name: 'tabletpi',
+        cpu: 23,
+        memory: 61,
+        disk: 38,
+        disks: [disk('System', 'mmcblk0', 1, 38, null)],
+        temperature: 52,
+        uptime: const Duration(days: 11),
+        containers: const [ContainerState('homeassistant', true)],
+      ),
+      MachineStats(
+        name: 'NAS',
+        cpu: 4,
+        memory: 33,
+        disk: 42,
+        disks: [
+          disk('System', 'sdb', 1, 42, DiskState.healthy),
+          disk('sata', 'sda', 8, 82, DiskState.warning),
+          disk('media', 'sdc', 4, 95, DiskState.failing),
+        ],
+        temperature: 39,
+        uptime: const Duration(days: 55),
+        containers: const [
+          ContainerState('blog', true),
+          ContainerState('backup', false),
+        ],
+      ),
+    ];
+    addTearDown(() => ServersWidget.debugStats = null);
+    await sweep(tester, 'servers');
+    await draw(tester, 'servers', tile(4, 3));
+    expect(find.text('Disk failing'), findsOneWidget);
+    expect(find.textContaining('6.6 of 8 TB'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
   });
 
   testWidgets('Servers and Services ask to be set up', (tester) async {

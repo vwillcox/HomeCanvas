@@ -19,6 +19,10 @@ class ServersWidget extends StatefulWidget {
 
   final DashboardWidgetContext w;
 
+  /// Figures to show instead of reading any machine, for tests.
+  @visibleForTesting
+  static List<MachineStats>? debugStats;
+
   @override
   State<ServersWidget> createState() => _ServersWidgetState();
 }
@@ -27,6 +31,17 @@ class _ServersWidgetState extends State<ServersWidget> {
   final LocalStats _local = LocalStats();
   final Map<String, GlancesClient> _clients = {};
   List<MachineStats> _stats = const [];
+
+  /// The last readings, by what was asked for, shared by every Servers tile.
+  /// A tile paged back to — or drawn for the editor's preview — shows these
+  /// at once rather than "Reading…" while it asks again.
+  static final Map<String, List<MachineStats>> _last = {};
+
+  String get _cacheKey => [
+    _showThisPi,
+    widget.w.option('thisPiName', ''),
+    for (final m in _machines) '${m.name}@${m.address}',
+  ].join('|');
   Timer? _timer;
   Timer? _second;
   bool _busy = false;
@@ -48,6 +63,7 @@ class _ServersWidgetState extends State<ServersWidget> {
   @override
   void initState() {
     super.initState();
+    _stats = _last[_cacheKey] ?? const [];
     unawaited(_poll());
     // A second reading soon after the first, so this Pi's CPU — which needs
     // two readings to work out — appears promptly rather than after a full
@@ -65,6 +81,11 @@ class _ServersWidgetState extends State<ServersWidget> {
 
   Future<void> _poll() async {
     if (_busy || !mounted) return;
+    final fixed = ServersWidget.debugStats;
+    if (fixed != null) {
+      setState(() => _stats = fixed);
+      return;
+    }
     _busy = true;
     try {
       final reads = <Future<MachineStats>>[
@@ -80,6 +101,7 @@ class _ServersWidgetState extends State<ServersWidget> {
               .read(m.name),
       ];
       final stats = await Future.wait(reads);
+      _last[_cacheKey] = stats;
       if (mounted) setState(() => _stats = stats);
     } finally {
       _busy = false;
@@ -101,8 +123,18 @@ class _ServersWidgetState extends State<ServersWidget> {
     final status = StatusColours.of(t);
     final down = _stats.where((s) => !s.reachable).length;
     final stopped = _stats.fold<int>(0, (n, s) => n + s.stopped);
+    final failing = _stats
+        .where((s) => s.worstDisk == DiskState.failing)
+        .length;
+    final warning = _stats
+        .where((s) => s.worstDisk == DiskState.warning)
+        .length;
     final chip = down > 0
         ? (text: '$down not answering', colour: status.bad)
+        : failing > 0
+        ? (text: 'Disk failing', colour: status.bad)
+        : warning > 0
+        ? (text: 'Disk warning', colour: status.warn)
         : stopped > 0
         ? (text: '$stopped stopped', colour: status.warn)
         : (text: 'All up', colour: status.good);
@@ -183,8 +215,10 @@ class _Machine extends StatelessWidget {
       if (s.temperature != null) '${s.temperature!.round()}°C',
     ].join(' · ');
 
+    // At most three drives; past that the tile would be all disks.
+    final disks = s.disks.take(3).toList();
     return FitCanvas(
-      designHeight: 150,
+      designHeight: 150 + 30.0 * (disks.length > 1 ? disks.length - 1 : 0),
       maxScale: 3,
       builder: (context, size) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -218,7 +252,13 @@ class _Machine extends StatelessWidget {
               status: status,
             ),
             const Spacer(),
-            _Bar(label: 'Disk', value: s.disk, theme: theme, status: status),
+            if (disks.isEmpty)
+              _Bar(label: 'Disk', value: s.disk, theme: theme, status: status)
+            else
+              for (var i = 0; i < disks.length; i++) ...[
+                if (i > 0) const Spacer(),
+                _disk(disks[i], single: disks.length == 1),
+              ],
             if (s.containers != null && s.containers!.isNotEmpty) ...[
               const Spacer(),
               Text(
@@ -240,18 +280,56 @@ class _Machine extends StatelessWidget {
   }
 }
 
+extension on _Machine {
+  /// A drive's bar: how full, how big, and — where SMART is on — its health
+  /// as a dot, with the temperature or whatever is wrong with it.
+  Widget _disk(DiskUse d, {required bool single}) {
+    final h = d.health;
+    final dot = h == null
+        ? null
+        : switch (h.state) {
+            DiskState.healthy => status.good,
+            DiskState.warning => status.warn,
+            DiskState.failing => status.bad,
+          };
+    final detail = [
+      sizeOf(d.used, d.size),
+      if (h != null && h.state != DiskState.healthy)
+        h.concern
+      else if (h?.temperature != null)
+        '${h!.temperature!.round()}°C',
+    ].join(' · ');
+    return _Bar(
+      label: single && d.mount == '/' ? 'Disk' : d.label,
+      value: d.percent,
+      theme: theme,
+      status: status,
+      detail: detail,
+      dot: dot,
+    );
+  }
+}
+
 class _Bar extends StatelessWidget {
   const _Bar({
     required this.label,
     required this.value,
     required this.theme,
     required this.status,
+    this.detail,
+    this.dot,
   });
 
   final String label;
   final double? value;
   final DashboardTheme theme;
   final StatusColours status;
+
+  /// Said quietly after the label: "6.6 of 8 TB · 34°C".
+  final String? detail;
+
+  /// A drive's SMART health, as a coloured dot before the label.
+  final Color? dot;
 
   @override
   Widget build(BuildContext context) {
@@ -269,11 +347,43 @@ class _Bar extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text(
-              label,
-              style: TextStyle(color: theme.textSecondary, fontSize: 12),
+            if (dot != null) ...[
+              Container(
+                width: 7,
+                height: 7,
+                decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 4),
+            ],
+            // One text for the label and its detail, filling the row, so the
+            // figure always sits at the right edge and the words give way
+            // before it does.
+            Expanded(
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: label,
+                      style: TextStyle(
+                        color: theme.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                    if (detail != null && detail!.isNotEmpty)
+                      TextSpan(
+                        text: '  $detail',
+                        style: TextStyle(
+                          color: theme.textSecondary.withValues(alpha: 0.75),
+                          fontSize: 10,
+                        ),
+                      ),
+                  ],
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-            const Spacer(),
+            const SizedBox(width: 6),
             Text(
               v == null ? '—' : '${v.round()}%',
               style: TextStyle(

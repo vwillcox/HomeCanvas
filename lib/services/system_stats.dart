@@ -12,6 +12,235 @@ class ContainerState {
   final bool running;
 }
 
+/// What SMART says about a drive, boiled down to whether to worry.
+enum DiskState { healthy, warning, failing }
+
+/// A drive's health, from its SMART attributes.
+@immutable
+class DiskHealth {
+  const DiskHealth({
+    required this.device,
+    required this.model,
+    required this.state,
+    this.temperature,
+    this.powerOnHours,
+    this.reallocated = 0,
+    this.pending = 0,
+    this.uncorrectable = 0,
+  });
+
+  /// "sda", matched against the filesystems to put health beside usage.
+  final String device;
+  final String model;
+  final DiskState state;
+  final double? temperature;
+  final int? powerOnHours;
+  final int reallocated;
+  final int pending;
+  final int uncorrectable;
+
+  /// Why it is not healthy, in a few words; empty when it is.
+  String get concern => [
+    if (state == DiskState.failing) 'failing',
+    if (reallocated > 0) '$reallocated reallocated',
+    if (pending > 0) '$pending pending',
+    if (uncorrectable > 0) '$uncorrectable unreadable',
+  ].join(' · ');
+
+  /// Glances' SMART plugin, one entry per drive: `DeviceName` ("sda ST8000…")
+  /// and each attribute under its number, as smartctl reports it.
+  ///
+  /// SMART has no single verdict here, so one is worked out the way the
+  /// disk tools do: failing when an attribute has crossed its threshold or
+  /// has failed before; a warning when sectors have been remapped, are
+  /// waiting to be, or could not be read — the early signs of a dying disk.
+  static List<DiskHealth> fromGlances(Object? smart) {
+    if (smart is! List) return const [];
+    final out = <DiskHealth>[];
+    for (final d in smart.whereType<Map>()) {
+      final name = '${d['DeviceName'] ?? ''}'.trim();
+      if (name.isEmpty) continue;
+      final space = name.indexOf(' ');
+      final device = baseDevice(space < 0 ? name : name.substring(0, space));
+      final model = space < 0 ? '' : name.substring(space + 1).trim();
+      final attrs = d.values.whereType<Map>().toList();
+
+      Map? byName(List<String> names) {
+        for (final a in attrs) {
+          if (names.contains('${a['name']}')) return a;
+        }
+        return null;
+      }
+
+      int? raw(List<String> names) {
+        final a = byName(names);
+        if (a == null) return null;
+        // "34 (Min/Max 20/45)", "12345h+06m" — the first number is the one.
+        final m = RegExp(r'\d+').firstMatch('${a['raw']}');
+        return m == null ? null : int.parse(m[0]!);
+      }
+
+      var failing = false;
+      for (final a in attrs) {
+        final failed = '${a['when_failed'] ?? ''}'.trim();
+        final value = a['value'], threshold = a['threshold'];
+        final v = value is num ? value : num.tryParse('$value');
+        final t = threshold is num ? threshold : num.tryParse('$threshold');
+        if ((failed.isNotEmpty && failed != '-' && failed != 'null') ||
+            (v != null && t != null && t > 0 && v <= t)) {
+          failing = true;
+        }
+      }
+      final reallocated = raw(['Reallocated_Sector_Ct']) ?? 0;
+      final pending = raw(['Current_Pending_Sector']) ?? 0;
+      final uncorrectable = raw(['Offline_Uncorrectable']) ?? 0;
+      out.add(
+        DiskHealth(
+          device: device,
+          model: model,
+          state: failing
+              ? DiskState.failing
+              : (reallocated + pending + uncorrectable > 0
+                    ? DiskState.warning
+                    : DiskState.healthy),
+          temperature: raw([
+            'Temperature_Celsius',
+            'Airflow_Temperature_Cel',
+          ])?.toDouble(),
+          powerOnHours: raw(['Power_On_Hours']),
+          reallocated: reallocated,
+          pending: pending,
+          uncorrectable: uncorrectable,
+        ),
+      );
+    }
+    return out;
+  }
+}
+
+/// One filesystem worth showing: how full, how big, and the drive's health
+/// when SMART is available for it.
+@immutable
+class DiskUse {
+  const DiskUse({
+    required this.label,
+    required this.mount,
+    required this.device,
+    required this.percent,
+    required this.size,
+    required this.used,
+    this.health,
+  });
+
+  /// "System" for the root, otherwise the mount's own name — "sata".
+  final String label;
+  final String mount;
+
+  /// The drive it is on, "sda".
+  final String device;
+  final double percent;
+  final int size;
+  final int used;
+  final DiskHealth? health;
+
+  DiskUse withHealth(DiskHealth? h) => DiskUse(
+    label: label,
+    mount: mount,
+    device: device,
+    percent: percent,
+    size: size,
+    used: used,
+    health: h,
+  );
+
+  static const _skipTypes = {
+    'tmpfs',
+    'devtmpfs',
+    'squashfs',
+    'overlay',
+    'vfat',
+    'efivarfs',
+    'ramfs',
+    'nsfs',
+    'autofs',
+  };
+  static const _skipMounts = [
+    '/boot',
+    '/snap',
+    '/run',
+    '/var/lib/docker',
+    '/dev',
+    '/sys',
+    '/proc',
+  ];
+
+  /// Whether a filesystem is somewhere data lives, rather than the system's
+  /// plumbing — boot partitions, snaps, Docker's layers, memory disks — or
+  /// too small to matter.
+  static bool worthShowing(String type, String mount, int size) =>
+      !_skipTypes.contains(type) &&
+      !_skipMounts.any((m) => mount == m || mount.startsWith('$m/')) &&
+      size >= 2 * 1000 * 1000 * 1000;
+
+  static String labelFor(String mount) {
+    if (mount == '/') return 'System';
+    final parts = mount.split('/').where((p) => p.isNotEmpty);
+    return parts.isEmpty ? mount : parts.last;
+  }
+
+  /// The root first, then the rest largest first; one entry per device, so
+  /// a bind mount is not shown twice.
+  static List<DiskUse> tidy(List<DiskUse> all) {
+    // The same device and size is the same filesystem mounted twice.
+    final byDevice = <String, DiskUse>{};
+    for (final d in all) {
+      final key = '${d.device}:${d.size}';
+      final seen = byDevice[key];
+      if (seen == null || d.mount.length < seen.mount.length) {
+        byDevice[key] = d;
+      }
+    }
+    return byDevice.values.toList()..sort(
+      (a, b) => a.mount == '/'
+          ? -1
+          : b.mount == '/'
+          ? 1
+          : b.size.compareTo(a.size),
+    );
+  }
+}
+
+/// "sda" from "/dev/sda2", "nvme0n1" from "/dev/nvme0n1p2", "mmcblk0" from
+/// "/dev/mmcblk0p2".
+String baseDevice(String path) {
+  final name = path.split('/').last;
+  final nvme = RegExp(r'^(nvme\d+n\d+|mmcblk\d+)(p\d+)?$').firstMatch(name);
+  if (nvme != null) return nvme[1]!;
+  return name.replaceFirst(RegExp(r'\d+$'), '');
+}
+
+/// "8 TB", "512 GB", in the drive makers' thousands.
+String shortSize(int bytes) {
+  const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+  var v = bytes.toDouble();
+  var i = 0;
+  while (v >= 1000 && i < units.length - 1) {
+    v /= 1000;
+    i++;
+  }
+  // One decimal below ten, and none when it is .0: "6.6 TB", "8 TB".
+  final n = v >= 10 ? '${v.round()}' : v.toStringAsFixed(1);
+  return '${n.endsWith('.0') ? n.substring(0, n.length - 2) : n} ${units[i]}';
+}
+
+/// "6.6 of 8 TB" — the unit once when both share it, "420 GB of 1 TB" when
+/// they do not.
+String sizeOf(int used, int size) {
+  final u = shortSize(used), s = shortSize(size);
+  final uUnit = u.split(' ').last, sUnit = s.split(' ').last;
+  return uUnit == sUnit ? '${u.split(' ').first} of $s' : '$u of $s';
+}
+
 /// One machine's vital signs, as the Servers widget shows them.
 @immutable
 class MachineStats {
@@ -20,6 +249,7 @@ class MachineStats {
     this.cpu,
     this.memory,
     this.disk,
+    this.disks = const [],
     this.temperature,
     this.uptime,
     this.containers,
@@ -32,6 +262,9 @@ class MachineStats {
   final double? cpu;
   final double? memory;
   final double? disk;
+
+  /// Every filesystem worth showing, the root first.
+  final List<DiskUse> disks;
 
   /// Degrees Celsius.
   final double? temperature;
@@ -47,6 +280,16 @@ class MachineStats {
   bool get reachable => error == null;
   int get stopped => containers?.where((c) => !c.running).length ?? 0;
   int get running => containers?.where((c) => c.running).length ?? 0;
+
+  /// The worst any drive's SMART says, if any say anything.
+  DiskState? get worstDisk {
+    DiskState? worst;
+    for (final d in disks) {
+      final s = d.health?.state;
+      if (s != null && (worst == null || s.index > worst.index)) worst = s;
+    }
+    return worst;
+  }
 }
 
 /// "11 d", "5 h", "40 min".
@@ -70,11 +313,14 @@ class LocalStats {
   (int, int)? _lastCpu;
 
   Future<MachineStats> read(String name) async {
+    final disks = await _disks();
+    final root = disks.where((d) => d.mount == '/');
     return MachineStats(
       name: name,
       cpu: await _cpu(),
       memory: await _memory(),
-      disk: await _disk(),
+      disk: root.isEmpty ? await _disk() : root.first.percent,
+      disks: disks,
       temperature: await _temperature(),
       uptime: await _uptime(),
       containers: await dockerContainers(),
@@ -157,6 +403,39 @@ class LocalStats {
     } catch (_) {
       return null;
     }
+  }
+
+  Future<List<DiskUse>> _disks() async {
+    try {
+      final r = await Process.run('df', ['-P', '-T', '-B1']);
+      return parseDfAll('${r.stdout}');
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// `df -P -T -B1`: device, type, size, used, available, use%, mount.
+  static List<DiskUse> parseDfAll(String out) {
+    final disks = <DiskUse>[];
+    for (final line in const LineSplitter().convert(out).skip(1)) {
+      final f = line.trim().split(RegExp(r'\s+'));
+      if (f.length < 7) continue;
+      final size = int.tryParse(f[2]) ?? 0;
+      final used = int.tryParse(f[3]) ?? 0;
+      final mount = f.sublist(6).join(' ');
+      if (!DiskUse.worthShowing(f[1], mount, size)) continue;
+      disks.add(
+        DiskUse(
+          label: DiskUse.labelFor(mount),
+          mount: mount,
+          device: baseDevice(f[0]),
+          percent: double.tryParse(f[5].replaceAll('%', '')) ?? 0,
+          size: size,
+          used: used,
+        ),
+      );
+    }
+    return DiskUse.tidy(disks);
   }
 
   static double? parseDf(String out) {
@@ -250,6 +529,16 @@ class GlancesClient {
     }
   }
 
+  /// SMART, when the machine offers it — Glances only loads the plugin
+  /// with pySMART installed and when running as root.
+  Future<Object?> _smart() async {
+    try {
+      return await _get('smart');
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<MachineStats> read(String name) async {
     try {
       final quick = await _get('quicklook');
@@ -258,6 +547,7 @@ class GlancesClient {
         _get('sensors'),
         _get('uptime'),
         _containers(),
+        _smart(),
       ]);
       return fromGlances(
         name,
@@ -266,6 +556,7 @@ class GlancesClient {
         sensors: results[1],
         uptime: results[2],
         containers: results[3],
+        smart: results[4],
       );
     } catch (e) {
       return MachineStats(name: name, error: 'Not answering');
@@ -280,6 +571,7 @@ class GlancesClient {
     Object? sensors,
     Object? uptime,
     Object? containers,
+    Object? smart,
   }) {
     final q = quicklook is Map ? quicklook : const {};
     double? pct(Object? v) => v is num ? v.toDouble() : null;
@@ -301,6 +593,29 @@ class GlancesClient {
                   ));
       disk = pick == null ? null : pct(pick['percent']);
     }
+
+    final health = DiskHealth.fromGlances(smart);
+    final disks =
+        DiskUse.tidy([
+          if (fs is List)
+            for (final e in fs.whereType<Map>())
+              if (DiskUse.worthShowing(
+                '${e['fs_type'] ?? ''}',
+                '${e['mnt_point'] ?? ''}',
+                (e['size'] as num?)?.toInt() ?? 0,
+              ))
+                DiskUse(
+                  label: DiskUse.labelFor('${e['mnt_point']}'),
+                  mount: '${e['mnt_point']}',
+                  device: baseDevice('${e['device_name'] ?? ''}'),
+                  percent: pct(e['percent']) ?? 0,
+                  size: (e['size'] as num?)?.toInt() ?? 0,
+                  used: (e['used'] as num?)?.toInt() ?? 0,
+                ),
+        ]).map((d) {
+          final h = health.where((h) => h.device == d.device);
+          return d.withHealth(h.isEmpty ? null : h.first);
+        }).toList();
 
     double? temperature;
     if (sensors is List) {
@@ -331,6 +646,7 @@ class GlancesClient {
       cpu: pct(q['cpu']),
       memory: pct(q['mem']),
       disk: disk,
+      disks: disks,
       temperature: temperature,
       uptime: uptime is String ? parseGlancesUptime(uptime) : null,
       containers: list,

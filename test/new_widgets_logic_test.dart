@@ -417,6 +417,136 @@ void main() {
       expect(m.running, 2);
     });
 
+    test('shows the data disks, with SMART health beside them', () {
+      final m = GlancesClient.fromGlances(
+        'NAS',
+        quicklook: {'cpu': 4.4, 'mem': 32.9},
+        fs: [
+          {
+            'device_name': '/dev/sdb2',
+            'fs_type': 'ext4',
+            'mnt_point': '/',
+            'size': 29654900736,
+            'used': 12063862784,
+            'percent': 42.5,
+          },
+          {
+            'device_name': '/dev/sdb1',
+            'fs_type': 'vfat',
+            'mnt_point': '/boot/firmware',
+            'size': 535805952,
+            'used': 1,
+            'percent': 12,
+          },
+          {
+            'device_name': '/dev/sda2',
+            'fs_type': 'fuseblk',
+            'mnt_point': '/mnt/sata',
+            'size': 8001545039872,
+            'used': 6594209906688,
+            'percent': 82.4,
+          },
+          {
+            'device_name': 'overlay',
+            'fs_type': 'overlay',
+            'mnt_point': '/var/lib/docker/overlay2/x/merged',
+            'size': 29654900736,
+            'used': 1,
+            'percent': 42.5,
+          },
+        ],
+        smart: [
+          {
+            'DeviceName': 'sda ST8000DM004-2U9188',
+            '5': {
+              'name': 'Reallocated_Sector_Ct',
+              'raw': '0',
+              'value': 100,
+              'threshold': 10,
+              'when_failed': '-',
+            },
+            '9': {
+              'name': 'Power_On_Hours',
+              'raw': '12011',
+              'value': 87,
+              'threshold': 0,
+              'when_failed': '-',
+            },
+            '194': {
+              'name': 'Temperature_Celsius',
+              'raw': '34 (0 18 0 0 0)',
+              'value': 34,
+              'threshold': 0,
+              'when_failed': '-',
+            },
+            '197': {
+              'name': 'Current_Pending_Sector',
+              'raw': '8',
+              'value': 100,
+              'threshold': 0,
+              'when_failed': '-',
+            },
+          },
+          {
+            'DeviceName': 'sdb Samsung SSD',
+            '5': {
+              'name': 'Reallocated_Sector_Ct',
+              'raw': '0',
+              'value': 100,
+              'threshold': 10,
+              'when_failed': '',
+            },
+          },
+        ],
+      );
+      expect([for (final d in m.disks) d.label], ['System', 'sata']);
+      final sata = m.disks[1];
+      expect(sata.device, 'sda');
+      expect(shortSize(sata.size), '8 TB');
+      expect(shortSize(sata.used), '6.6 TB');
+      expect(sata.health!.state, DiskState.warning);
+      expect(sata.health!.temperature, 34);
+      expect(sata.health!.powerOnHours, 12011);
+      expect(sata.health!.concern, '8 pending');
+      expect(m.disks[0].health!.state, DiskState.healthy);
+      expect(m.worstDisk, DiskState.warning);
+    });
+
+    test('a drive past its SMART threshold is failing', () {
+      final h = DiskHealth.fromGlances([
+        {
+          'DeviceName': 'sda Old disk',
+          '5': {
+            'name': 'Reallocated_Sector_Ct',
+            'raw': '2000',
+            'value': 5,
+            'threshold': 10,
+            'when_failed': 'FAILING_NOW',
+          },
+        },
+      ]);
+      expect(h.single.state, DiskState.failing);
+      expect(h.single.concern, 'failing · 2000 reallocated');
+    });
+
+    test('names drives the way the kernel does', () {
+      expect(baseDevice('/dev/sda2'), 'sda');
+      expect(baseDevice('/dev/nvme0n1p2'), 'nvme0n1');
+      expect(baseDevice('/dev/mmcblk0p2'), 'mmcblk0');
+      expect(baseDevice('sdb'), 'sdb');
+      final local = LocalStats.parseDfAll(
+        'Filesystem Type 1B-blocks Used Available Use% Mounted on\n'
+        '/dev/mmcblk0p2 ext4 62000000000 20000000000 40000000000 33% /\n'
+        '/dev/mmcblk0p1 vfat 536000000 60000000 476000000 12% /boot/firmware\n'
+        'tmpfs tmpfs 800000000 0 800000000 0% /run\n'
+        '/dev/sda1 ext4 1000000000000 250000000000 750000000000 25% /mnt/backup drive\n',
+      );
+      expect(
+        [for (final d in local) (d.label, d.percent)],
+        [('System', 33), ('backup drive', 25)],
+      );
+    });
+
     test('services say how they are checked', () {
       final web = ServiceTarget.fromRow({
         'name': 'Immich',
