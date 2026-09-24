@@ -99,7 +99,8 @@ Work in progress on `pullMessages`, not yet merged to `main`.
 **Browser**
 - Firefox's built-in cookie-banner blocking is patchy; banners on sites it has
   no rule for still appear on a first visit. `sudo apt install
-  webext-ublock-origin-firefox` catches far more.
+  webext-ublock-origin-firefox` catches far more. News articles sidestep it
+  entirely by opening in reader view.
 - Firefox's real `--kiosk` flag is deliberately **not** used: it takes the whole
   screen and ignores any geometry asked of it, which would bury the kiosk's own
   close button. The chrome is hidden with `userChrome.css` instead.
@@ -347,7 +348,8 @@ placeholders, so what you lay out is what appears on the panel.
 - **Weather** — current conditions on their own, a 5/7/14-day forecast, or both.
 - **Calendar** — month or schedule view, several ICS URLs, a colour per source.
 - **News** — several feeds blended by a recency-and-fairness score so one busy
-  feed can't crowd out the rest; tap an item to read it.
+  feed can't crowd out the rest; tap an item to read it, in reader view —
+  see below.
 - **Spotify** — artwork that repositions with the tile's shape, a fade like the
   full player's, and transport controls sized for a quick tap.
 - **Speed test** — see below.
@@ -414,6 +416,55 @@ speed.
 Set **Run automatically every (hours)** to have it test on its own; 0 leaves it
 manual. Each run moves a few hundred megabytes, so keep it well spaced on a
 metered connection.
+
+### Reading the news
+
+Tapping a headline shows the feed's own summary first; **Read the page** opens
+the article in Firefox's **reader view** — the text and pictures only, with no
+adverts, no cookie banner and no autoplaying video. On a panel with nobody in
+front of it most of the time, that last part matters: a consent dialog nobody
+answers leaves the page unusable.
+
+It is asked for by address, `about:reader?url=…`, on Firefox's command line.
+That was checked on the panel's own Firefox 153 rather than assumed, because
+Firefox refuses most `about:` pages from outside and this one could as easily
+have been on that list.
+
+**The text is sized to fill the screen.** Firefox measures the reader's column
+in *ems* — its width slider runs from 20em to 60em — so the same setting is a
+narrow strip at small text and wider than the window at large text. The kiosk
+works it out from the window instead: at whatever size you pick, it chooses
+the widest column that fits beside the reader's toolbar. On this panel's
+1872px article window:
+
+| Reader text size | Font | Column |
+|---|---|---|
+| Medium | 32px | 50em — 1600px |
+| Large (default) | 40px | 40em — 1600px |
+| Very large | 56px | 30em — 1680px |
+
+The mapping from Firefox's settings to pixels was read out of Firefox 153's own
+`AboutReader.sys.mjs`, not guessed: steps 1–9 are `10 + 2n` px, and 10–15 jump
+through 32, 40, 56, 72, 96 and 128. If a future Firefox changes that, the
+column will be the wrong width until `KioskBrowser.readerFontPx` is updated to
+match.
+
+The size, width and colours are rewritten into the viewer's profile on every
+launch, so changing them on the panel with the reader's own **Aa** lasts until
+the article is closed. The widget's settings are the ones that stick: **Open
+articles in reader view**, **Reader text size** and **Reader colours**.
+
+**Video and live pages open normally.** Reader view has nothing to extract from
+them, and what it shows instead is "Failed to load article from page" — with no
+link back to the original. So links whose path says `/videos/`, `/live/`,
+`/av/`, `/watch` and the like, and anything on YouTube, skip it. The check is
+the address alone, deliberately: fetching every page first to ask would add a
+second or so to every tap. It will occasionally be wrong in the other
+direction — an article with nothing Firefox can extract — and then the reader's
+own **×**, top left, goes to the original page.
+
+Chromium, the fallback browser, has no reader view that can be opened by
+address, so with Chromium articles always open as the site serves them.
 
 ### Omarchy hotkeys
 

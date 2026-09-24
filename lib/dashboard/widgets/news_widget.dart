@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../screens/link_viewer_screen.dart';
+import '../../services/kiosk_browser.dart' show ReaderStyle;
 import '../../services/feed_service.dart';
 import '../widget_registry.dart';
 
@@ -163,8 +164,23 @@ class DashboardNewsWidget extends StatelessWidget {
 
   void _openPage(BuildContext context, FeedItem item) {
     Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => LinkViewerScreen(url: item.link!, title: item.title),
+      builder: (_) => LinkViewerScreen(
+        url: item.link!,
+        title: item.title,
+        reader: readerStyle(w),
+      ),
     ));
+  }
+
+  /// How articles should open, from this widget's settings — or null for the
+  /// page as the site serves it.
+  static ReaderStyle? readerStyle(DashboardWidgetContext w) {
+    if (!w.option('readerView', true)) return null;
+    const steps = {'medium': 10, 'large': 11, 'huge': 12};
+    return ReaderStyle(
+      fontStep: steps[w.option('readerTextSize', 'large')] ?? 11,
+      colourScheme: w.option('readerTheme', 'dark'),
+    );
   }
 
   /// Also used to build the editor's live preview.
@@ -265,6 +281,40 @@ final newsWidgetType = DashboardWidgetType(
       defaultValue: true,
       help: 'Shows the feed’s own summary, with the full page a tap further. '
           'Turn off for a panel nobody should be browsing from.',
+    ),
+    WidgetOption(
+      key: 'readerView',
+      label: 'Open articles in reader view',
+      kind: OptionKind.boolean,
+      defaultValue: true,
+      help: 'Just the text and pictures — no adverts, cookie banners or '
+          'autoplaying video — sized to fill the screen. Video and live pages '
+          'open normally, since there is no article in them to show.',
+    ),
+    WidgetOption(
+      key: 'readerTextSize',
+      label: 'Reader text size',
+      kind: OptionKind.choice,
+      defaultValue: 'large',
+      choices: {
+        'medium': 'Medium — 32px',
+        'large': 'Large — 40px',
+        'huge': 'Very large — 56px, readable across a room',
+      },
+      help: 'The column widens or narrows to fill the screen at whichever '
+          'size you pick.',
+    ),
+    WidgetOption(
+      key: 'readerTheme',
+      label: 'Reader colours',
+      kind: OptionKind.choice,
+      defaultValue: 'dark',
+      choices: {
+        'dark': 'Dark',
+        'light': 'Light',
+        'sepia': 'Sepia',
+        'contrast': 'High contrast',
+      },
     ),
   ],
   preview: const [
