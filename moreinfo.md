@@ -490,6 +490,48 @@ has a switch in the editor; off, the widgets get the whole panel and a floating
 glass back button returns. A theme can carry a `glow` colour of its own in its
 JSON to get the same effect.
 
+### The control bar, from the TV remote too
+
+The pill at the top right of the photos and the dashboard — Photos, Dashboard,
+TV remote, then Locked Folder, camera, the notifications switch, Refresh and
+Settings — is one widget, `ModuleBar`, with the screen you are on lit.
+
+The TV remote app carries the same bar. It is a separate program, so its
+buttons cannot reach into the kiosk directly; the kiosk listens for them on a
+small control endpoint instead, **on the loopback address only**:
+
+| Request | Does |
+|---|---|
+| `GET /state` | which buttons would work: dashboard on, Locked Folder available, camera set up, notifications muted |
+| `POST /open/photos`, `/open/dashboard`, `/open/settings`, `/open/locked-folder` | opens that place, as the kiosk's own button would |
+| `POST /camera` | shows or hides the camera |
+| `POST /dnd?muted=true` | sets the notifications switch |
+
+on `127.0.0.1:8766`, one up from `screen_control.py`'s 8765. Nothing on the
+network can reach it — a request to the Pi's own LAN address is refused — and
+it only opens what the kiosk's buttons open; the Locked Folder still asks for
+its PIN. The remote asks for `/state` every few seconds and shows only what
+the kiosk says would work; while the kiosk is not running it shows only its
+own buttons. After a command it brings the kiosk's window forward.
+
+### Settings, in tabs
+
+Fifteen sections in one scroll meant hunting for the one you wanted, so they
+are grouped by what you come to change, in a glass pill of tabs at the top
+right:
+
+| Tab | Sections |
+|---|---|
+| **Photos** | Connection, Locked Folder, Slideshow, Storage |
+| **Music** | Now playing, Spotify |
+| **Home** | Weather, Home Assistant, Television, Camera |
+| **Display** | Screen, Dashboard |
+| **Sharing** | Share Inbox |
+| **System** | Device, About |
+
+Each tab opens at the top, and Settings reopens on the tab last used for as
+long as the kiosk is running.
+
 ### Reading the news
 
 Tapping a headline shows the feed's own summary first; **Read the page** opens

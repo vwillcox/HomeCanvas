@@ -33,6 +33,202 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  /// The tabs, in order: what each is called, its icon, and what is in it.
+  ///
+  /// Grouped by what a person comes to change rather than by which part of
+  /// the code owns it — fifteen sections in one scroll meant hunting for the
+  /// one you wanted every time.
+  static const List<(String, IconData)> tabs = [
+    ('Photos', Icons.photo_library_outlined),
+    ('Music', Icons.music_note_outlined),
+    ('Home', Icons.home_outlined),
+    ('Display', Icons.tv_outlined),
+    ('Sharing', Icons.ios_share),
+    ('System', Icons.settings_suggest_outlined),
+  ];
+
+  /// Remembered while the kiosk runs, so Settings opens where it was left.
+  static int _lastTab = 0;
+  int _tab = _lastTab;
+
+  List<Widget> _sectionsFor(
+    int tab,
+    ConfigService config,
+    LockedFolderService locked,
+    String maskedKey,
+  ) {
+    switch (tab) {
+      case 0: // Photos
+        return [
+          GlassSection(
+            title: 'Connection',
+            children: [
+              ListTile(
+                leading: const Icon(Icons.dns),
+                title: const Text('Immich server'),
+                subtitle: Text(
+                  config.immichUrl.isEmpty ? 'Not set' : config.immichUrl,
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: _editConnection,
+              ),
+              ListTile(
+                leading: const Icon(Icons.key),
+                title: const Text('API key'),
+                subtitle: Text(maskedKey),
+                onTap: _editConnection,
+              ),
+            ],
+          ),
+          GlassSection(
+            title: 'Locked Folder',
+            children: [
+              ListTile(
+                leading: Icon(
+                  locked.canUse ? Icons.lock : Icons.lock_open,
+                  color: locked.canUse ? null : const Color(0xFFFFC46B),
+                ),
+                title: const Text('Immich account login'),
+                subtitle: Text(
+                  locked.canUse
+                      ? 'Signed in as ${config.immichEmail} — open the Locked Folder '
+                            'tile on the home screen and enter your PIN.'
+                      : 'Not configured. Run set-immich-login.sh on the Pi to store '
+                            'your Immich email + password (required to open the '
+                            'server-side Locked Folder).',
+                ),
+                isThreeLine: true,
+              ),
+            ],
+          ),
+          GlassSection(
+            title: 'Slideshow',
+            children: [const _SlideshowSettingsTile()],
+          ),
+          GlassSection(title: 'Storage', children: [const _CacheTile()]),
+        ];
+      case 1: // Music
+        return [
+          GlassSection(
+            title: 'Now playing',
+            children: [const _NowPlayingSettingsTile()],
+          ),
+          GlassSection(
+            title: 'Spotify',
+            children: [const _SpotifySettingsTile()],
+          ),
+        ];
+      case 2: // Home
+        return [
+          GlassSection(
+            title: 'Weather',
+            children: [const _WeatherSettingsTile()],
+          ),
+          GlassSection(
+            title: 'Home Assistant',
+            children: [const _HomeAssistantSettingsTile()],
+          ),
+          GlassSection(
+            title: 'Television',
+            children: [const _TvSettingsTile()],
+          ),
+          GlassSection(
+            title: 'Camera',
+            children: [const _CameraSettingsTile()],
+          ),
+        ];
+      case 3: // Display
+        return [
+          GlassSection(
+            title: 'Screen',
+            children: [const _ScreenSettingsTile()],
+          ),
+          GlassSection(
+            title: 'Dashboard',
+            children: [const _DashboardSettingsTile()],
+          ),
+        ];
+      case 4: // Sharing
+        return [
+          GlassSection(
+            title: 'Share Inbox',
+            children: [const _ShareInboxSettingsTile()],
+          ),
+        ];
+      case 5: // System
+        return [
+          GlassSection(
+            title: 'Device',
+            children: [
+              ListTile(
+                leading: const Icon(Icons.restart_alt),
+                title: const Text('Restart'),
+                onTap: () => _confirmPower(
+                  title: 'Restart',
+                  action: 'reboot',
+                  verb: 'Restart',
+                ),
+              ),
+              ListTile(
+                leading: const Icon(
+                  Icons.power_settings_new,
+                  color: Color(0xFFFF6B6B),
+                ),
+                title: const Text(
+                  'Power off',
+                  style: TextStyle(color: Color(0xFFFF8A8A)),
+                ),
+                onTap: () => _confirmPower(
+                  title: 'Power off',
+                  action: 'poweroff',
+                  verb: 'Power off',
+                ),
+              ),
+            ],
+          ),
+          GlassSection(
+            title: 'About',
+            children: [
+              ListTile(
+                leading: const Icon(Icons.info_outline),
+                title: const Text('About ImmichKioskPi'),
+                subtitle: const Text(
+                  'Version, open-source libraries, licences and credits',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(
+                  context,
+                ).push(MaterialPageRoute(builder: (_) => const AboutScreen())),
+              ),
+            ],
+          ),
+        ];
+      default:
+        return const [];
+    }
+  }
+
+  Widget _tabBar() {
+    return Glass(
+      padding: const EdgeInsets.all(5),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < tabs.length; i++)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: _TabButton(
+                label: tabs[i].$1,
+                icon: tabs[i].$2,
+                selected: i == _tab,
+                onTap: () => setState(() => _tab = _lastTab = i),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _editConnection() async {
     await Navigator.of(
       context,
@@ -95,6 +291,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return ModernScaffold(
       header: ScreenHeader(
         onBack: () => Navigator.of(context).maybePop(),
+        trailing: _tabBar(),
         title: 'Settings',
         subtitle: config.immichUrl.isEmpty
             ? 'Not connected to Immich yet'
@@ -123,135 +320,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             child: ListView(
+              // A new list per tab, so each opens at the top rather than
+              // wherever the last one was scrolled to.
+              key: ValueKey(_tab),
               padding: const EdgeInsets.fromLTRB(32, 12, 32, 48),
               children: [
-                GlassSection(
-                  title: 'Connection',
-                  children: [
-                    ListTile(
-                      leading: const Icon(Icons.dns),
-                      title: const Text('Immich server'),
-                      subtitle: Text(
-                        config.immichUrl.isEmpty ? 'Not set' : config.immichUrl,
-                      ),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: _editConnection,
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.key),
-                      title: const Text('API key'),
-                      subtitle: Text(maskedKey),
-                      onTap: _editConnection,
-                    ),
-                  ],
-                ),
-                GlassSection(
-                  title: 'Locked Folder',
-                  children: [
-                    ListTile(
-                      leading: Icon(
-                        locked.canUse ? Icons.lock : Icons.lock_open,
-                        color: locked.canUse ? null : const Color(0xFFFFC46B),
-                      ),
-                      title: const Text('Immich account login'),
-                      subtitle: Text(
-                        locked.canUse
-                            ? 'Signed in as ${config.immichEmail} — open the Locked Folder '
-                                  'tile on the home screen and enter your PIN.'
-                            : 'Not configured. Run set-immich-login.sh on the Pi to store '
-                                  'your Immich email + password (required to open the '
-                                  'server-side Locked Folder).',
-                      ),
-                      isThreeLine: true,
-                    ),
-                  ],
-                ),
-                GlassSection(
-                  title: 'Weather',
-                  children: [const _WeatherSettingsTile()],
-                ),
-                GlassSection(
-                  title: 'Home Assistant',
-                  children: [const _HomeAssistantSettingsTile()],
-                ),
-                GlassSection(
-                  title: 'Now playing',
-                  children: [const _NowPlayingSettingsTile()],
-                ),
-                GlassSection(
-                  title: 'Spotify',
-                  children: [const _SpotifySettingsTile()],
-                ),
-                GlassSection(
-                  title: 'Screen',
-                  children: [const _ScreenSettingsTile()],
-                ),
-                GlassSection(
-                  title: 'Television',
-                  children: [const _TvSettingsTile()],
-                ),
-                GlassSection(
-                  title: 'Dashboard',
-                  children: [const _DashboardSettingsTile()],
-                ),
-                GlassSection(
-                  title: 'Camera',
-                  children: [const _CameraSettingsTile()],
-                ),
-                GlassSection(
-                  title: 'Share Inbox',
-                  children: [const _ShareInboxSettingsTile()],
-                ),
-                GlassSection(
-                  title: 'Slideshow',
-                  children: [const _SlideshowSettingsTile()],
-                ),
-                GlassSection(title: 'Storage', children: [const _CacheTile()]),
-                GlassSection(
-                  title: 'Device',
-                  children: [
-                    ListTile(
-                      leading: const Icon(Icons.restart_alt),
-                      title: const Text('Restart'),
-                      onTap: () => _confirmPower(
-                        title: 'Restart',
-                        action: 'reboot',
-                        verb: 'Restart',
-                      ),
-                    ),
-                    ListTile(
-                      leading: const Icon(
-                        Icons.power_settings_new,
-                        color: Color(0xFFFF6B6B),
-                      ),
-                      title: const Text(
-                        'Power off',
-                        style: TextStyle(color: Color(0xFFFF8A8A)),
-                      ),
-                      onTap: () => _confirmPower(
-                        title: 'Power off',
-                        action: 'poweroff',
-                        verb: 'Power off',
-                      ),
-                    ),
-                  ],
-                ),
-                GlassSection(
-                  title: 'About',
-                  children: [
-                    ListTile(
-                      leading: const Icon(Icons.info_outline),
-                      title: const Text('About ImmichKioskPi'),
-                      subtitle: const Text(
-                        'Version, open-source libraries, licences and credits',
-                      ),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const AboutScreen()),
-                      ),
-                    ),
-                  ],
-                ),
+                ..._sectionsFor(_tab, config, locked, maskedKey),
                 const SizedBox(height: 8),
                 Center(
                   child: Text(
@@ -1833,6 +1907,56 @@ class _TvSettingsTile extends StatelessWidget {
             onTap: () => _edit(context),
           ),
       ],
+    );
+  }
+}
+
+/// One tab: an icon and its name, white when chosen — the kiosk's pill style.
+class _TabButton extends StatelessWidget {
+  const _TabButton({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = selected ? const Color(0xFF0B0C10) : Colors.white;
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: Material(
+        color: selected ? Colors.white : Colors.transparent,
+        shape: const StadiumBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 24, color: fg),
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: fg,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
