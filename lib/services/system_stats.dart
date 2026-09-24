@@ -236,6 +236,20 @@ class GlancesClient {
     return null;
   }
 
+  /// Glances 4 calls them containers; Glances 3 — what apt installs on
+  /// Debian and Ubuntu — calls the plugin docker and wraps the list.
+  Future<Object?> _containers() async {
+    try {
+      if (_version == 3) {
+        final d = await _get('docker');
+        return d is Map ? d['containers'] : d;
+      }
+      return await _get('containers');
+    } catch (_) {
+      return null; // Glances not allowed to see Docker, or no Docker there.
+    }
+  }
+
   Future<MachineStats> read(String name) async {
     try {
       final quick = await _get('quicklook');
@@ -243,7 +257,7 @@ class GlancesClient {
         _get('fs'),
         _get('sensors'),
         _get('uptime'),
-        _get('containers').catchError((_) => null),
+        _containers(),
       ]);
       return fromGlances(
         name,

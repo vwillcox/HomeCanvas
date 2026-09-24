@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -378,6 +379,42 @@ void main() {
       expect(m.running, 1);
       expect(m.stopped, 1);
       expect(shortUptime(m.uptime!), '99 d');
+    });
+
+    test('reads a Glances 3 machine, as apt installs it', () async {
+      // Answers only on /api/3, and lists containers under "docker".
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => server.close(force: true));
+      final routes = <String, Object>{
+        '/api/3/quicklook': {'cpu': 12.5, 'mem': 40.0},
+        '/api/3/fs': [
+          {'mnt_point': '/', 'percent': 55.0},
+        ],
+        '/api/3/sensors': [
+          {'label': 'Package id 0', 'type': 'temperature_core', 'value': 47},
+        ],
+        '/api/3/uptime': '4 days, 1:02:03',
+        '/api/3/docker': {
+          'containers': [
+            {'name': 'blog', 'Status': 'running'},
+            {'name': 'audiobookshelf', 'Status': 'running'},
+          ],
+        },
+      };
+      server.listen((req) {
+        final body = routes[req.uri.path];
+        req.response.statusCode = body == null ? 404 : 200;
+        req.response.headers.contentType = ContentType.json;
+        if (body != null) req.response.write(jsonEncode(body));
+        req.response.close();
+      });
+      final m = await GlancesClient('127.0.0.1:${server.port}').read('casaos');
+      expect(m.reachable, isTrue);
+      expect(m.cpu, 12.5);
+      expect(m.disk, 55);
+      expect(m.temperature, 47);
+      expect(m.uptime!.inDays, 4);
+      expect(m.running, 2);
     });
 
     test('services say how they are checked', () {
