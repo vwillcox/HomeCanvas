@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../look.dart';
 import 'package:provider/provider.dart';
 
 import '../models/immich_models.dart';
@@ -73,10 +74,10 @@ class _LockedFolderScreenState extends State<LockedFolderScreen> {
           onBack: () => Navigator.of(context).maybePop(),
           title: 'Locked Folder',
           subtitle: 'Locks again when you leave',
-          actions: const [
+          actions: [
             Padding(
               padding: EdgeInsets.all(15),
-              child: Icon(Icons.lock_outline, color: Colors.white, size: 30),
+              child: Icon(Icons.lock_outline, color: context.look.textPrimary, size: 30),
             ),
           ],
         ),
@@ -93,7 +94,7 @@ class _LockedFolderScreenState extends State<LockedFolderScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.white54),
+              Icon(Icons.error_outline, size: 48, color: context.look.textSecondary),
               const SizedBox(height: 12),
               Text(_error!, textAlign: TextAlign.center),
               const SizedBox(height: 16),
@@ -112,10 +113,10 @@ class _LockedFolderScreenState extends State<LockedFolderScreen> {
       return const Center(child: CircularProgressIndicator());
     }
     if (assets.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
           'The Locked Folder is empty',
-          style: TextStyle(fontSize: 20, color: Colors.white60),
+          style: TextStyle(fontSize: 20, color: context.look.textSecondary),
         ),
       );
     }
@@ -142,13 +143,13 @@ class _LockedFolderScreenState extends State<LockedFolderScreen> {
                   headers: source.authHeaders,
                 ),
                 if (a.isVideo)
-                  const Align(
+                  Align(
                     alignment: Alignment.bottomRight,
                     child: Padding(
                       padding: EdgeInsets.all(6),
                       child: Icon(
                         Icons.play_circle_fill,
-                        color: Colors.white,
+                        color: context.look.textPrimary,
                         size: 22,
                       ),
                     ),

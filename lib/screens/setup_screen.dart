@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../look.dart';
 import 'package:provider/provider.dart';
 
 import '../services/config_service.dart';
@@ -80,9 +81,9 @@ class _SetupScreenState extends State<SetupScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
+                Text(
                   'Immich server URL',
-                  style: TextStyle(fontSize: 16, color: Colors.white70),
+                  style: TextStyle(fontSize: 16, color: context.look.textSecondary),
                 ),
                 const SizedBox(height: 8),
                 TextField(
@@ -97,9 +98,9 @@ class _SetupScreenState extends State<SetupScreen> {
                   onChanged: (_) => setState(() {}),
                 ),
                 const SizedBox(height: 20),
-                const Text(
+                Text(
                   'API key',
-                  style: TextStyle(fontSize: 16, color: Colors.white70),
+                  style: TextStyle(fontSize: 16, color: context.look.textSecondary),
                 ),
                 const SizedBox(height: 8),
                 TextField(
@@ -140,7 +141,7 @@ class _SetupScreenState extends State<SetupScreen> {
                       fontSize: 16,
                       color: _ok
                           ? const Color(0xFF6BE39A)
-                          : (_busy ? Colors.white70 : const Color(0xFFFF6B6B)),
+                          : (_busy ? context.look.textSecondary : const Color(0xFFFF6B6B)),
                     ),
                   ),
               ],

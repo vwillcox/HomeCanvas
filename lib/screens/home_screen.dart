@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../look.dart';
 import 'package:provider/provider.dart';
 
 import '../models/immich_models.dart';
@@ -210,7 +211,7 @@ class _HomeScreenState extends State<HomeScreen> {
         onPressed: _slideshowFromSelection,
         icon: const Icon(Icons.play_arrow_rounded, size: 30),
         label: const Text('Slideshow'),
-        style: whitePillButton(),
+        style: whitePillButton(context),
       ),
     );
   }
@@ -223,10 +224,10 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
+              Icon(
                 Icons.cloud_off_rounded,
                 size: 64,
-                color: Colors.white38,
+                color: context.look.wash(0.38),
               ),
               const SizedBox(height: 16),
               const Text(
@@ -237,14 +238,14 @@ class _HomeScreenState extends State<HomeScreen> {
               Text(
                 _error!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white54, fontSize: 17),
+                style: TextStyle(color: context.look.textSecondary, fontSize: 17),
               ),
               const SizedBox(height: 24),
               FilledButton.icon(
                 onPressed: () => _load(force: true),
                 icon: const Icon(Icons.refresh),
                 label: const Text('Try again'),
-                style: whitePillButton(),
+                style: whitePillButton(context),
               ),
             ],
           ),
@@ -257,20 +258,20 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     if (albums.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
           'No albums yet',
-          style: TextStyle(fontSize: 24, color: Colors.white60),
+          style: TextStyle(fontSize: 24, color: context.look.textSecondary),
         ),
       );
     }
 
     final shown = visibleAlbums(albums);
     if (shown.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
           'No albums with anything in them yet',
-          style: TextStyle(fontSize: 24, color: Colors.white60),
+          style: TextStyle(fontSize: 24, color: context.look.textSecondary),
         ),
       );
     }
@@ -456,19 +457,19 @@ class _MiniPlayer extends StatelessWidget {
                       width: 104,
                       height: 104,
                       child: art == null
-                          ? const ColoredBox(
-                              color: Color(0xFF1A1C23),
+                          ? ColoredBox(
+                              color: context.look.solidSurface,
                               child: Icon(
                                 Icons.music_note_rounded,
                                 size: 44,
-                                color: Colors.white30,
+                                color: context.look.wash(0.30),
                               ),
                             )
                           : CachedNetworkImage(
                               imageUrl: art,
                               fit: BoxFit.cover,
                               errorWidget: (_, _, _) =>
-                                  const ColoredBox(color: Color(0xFF1A1C23)),
+                                  ColoredBox(color: context.look.solidSurface),
                             ),
                     ),
                   ),
@@ -483,7 +484,7 @@ class _MiniPlayer extends StatelessWidget {
                             Icon(
                               source.sourceIcon,
                               size: 20,
-                              color: Colors.white54,
+                              color: context.look.textSecondary,
                             ),
                             const SizedBox(width: 8),
                             Expanded(
@@ -493,8 +494,8 @@ class _MiniPlayer extends StatelessWidget {
                                     : n.deviceName,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white54,
+                                style: TextStyle(
+                                  color: context.look.textSecondary,
                                   fontSize: 16,
                                 ),
                               ),
@@ -516,9 +517,9 @@ class _MiniPlayer extends StatelessWidget {
                           n.artist,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 19,
-                            color: Colors.white70,
+                            color: context.look.textSecondary,
                           ),
                         ),
                         // No bar while Spotify's DJ is talking: there is no
@@ -530,7 +531,7 @@ class _MiniPlayer extends StatelessWidget {
                             child: LinearProgressIndicator(
                               value: n.progress,
                               minHeight: 4,
-                              backgroundColor: Colors.white12,
+                              backgroundColor: context.look.wash(0.12),
                               valueColor: AlwaysStoppedAnimation(accent),
                             ),
                           ),
@@ -600,7 +601,7 @@ class _LikeButton extends StatelessWidget {
       child: Material(
         color: liked
             ? _pink.withValues(alpha: 0.16)
-            : Colors.white.withValues(alpha: 0.08),
+            : context.look.wash(0.08),
         shape: const CircleBorder(),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -617,7 +618,7 @@ class _LikeButton extends StatelessWidget {
                 liked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
                 key: ValueKey(liked),
                 size: size * 0.5,
-                color: liked ? _pink : Colors.white,
+                color: liked ? _pink : context.look.textPrimary,
               ),
             ),
           ),
@@ -647,7 +648,7 @@ class _TransportButton extends StatelessWidget {
       button: true,
       label: label,
       child: Material(
-        color: primary ? Colors.white : Colors.white.withValues(alpha: 0.08),
+        color: primary ? context.look.textPrimary : context.look.wash(0.08),
         shape: const CircleBorder(),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -658,7 +659,7 @@ class _TransportButton extends StatelessWidget {
             child: Icon(
               icon,
               size: size * 0.55,
-              color: primary ? const Color(0xFF0B0C10) : Colors.white,
+              color: primary ? context.look.background.first : context.look.textPrimary,
             ),
           ),
         ),
@@ -712,12 +713,12 @@ class _AlbumTile extends StatelessWidget {
                         fallbackUrl: immich.previewUrl(album.thumbnailAssetId!),
                         headers: immich.authHeaders,
                       )
-                    : const ColoredBox(
-                        color: Color(0xFF1A1C23),
+                    : ColoredBox(
+                        color: context.look.solidSurface,
                         child: Icon(
                           Icons.photo_album_outlined,
                           size: 56,
-                          color: Colors.white24,
+                          color: context.look.wash(0.24),
                         ),
                       ),
                 // A scrim under the words only, so the photo stays the photo.
@@ -753,7 +754,7 @@ class _AlbumTile extends StatelessWidget {
                         album.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: Colors.white,
                           fontSize: 21,
                           fontWeight: FontWeight.w700,
@@ -763,7 +764,7 @@ class _AlbumTile extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         plural(album.assetCount, 'item'),
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: Colors.white70,
                           fontSize: 16,
                         ),

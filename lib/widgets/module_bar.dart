@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import '../look.dart';
 import 'package:provider/provider.dart';
 
 import '../screens/dashboard_screen.dart';
@@ -28,7 +29,7 @@ class ModuleBar extends StatefulWidget {
     super.key,
     required this.current,
     this.onRefresh,
-    this.colour = Colors.white,
+    this.colour,
     this.accent,
   });
 
@@ -40,7 +41,8 @@ class ModuleBar extends StatefulWidget {
 
   /// Icon colour. White on the kiosk's own screens; the dashboard passes its
   /// theme's, so the bar reads under a light theme too.
-  final Color colour;
+  /// The theme's text colour unless given.
+  final Color? colour;
 
   /// The lit button's colour. The app's accent unless given.
   final Color? accent;
@@ -108,7 +110,7 @@ class _ModuleBarState extends State<ModuleBar> {
   @override
   Widget build(BuildContext context) {
     final accent = widget.accent ?? Theme.of(context).colorScheme.primary;
-    final c = widget.colour;
+    final c = widget.colour ?? context.look.textPrimary;
     final dashboardOn = context.watch<ConfigService>().config.dashboard.enabled;
     final camera = context.watch<CameraService>();
 
@@ -241,9 +243,10 @@ Future<void> openLockedFolder(BuildContext context) async {
 /// since that's specifically what was asked for, kept in the top bar so it's
 /// reachable in one tap rather than buried in Settings.
 class DndSwitch extends StatelessWidget {
-  const DndSwitch({super.key, this.colour = Colors.white, this.accent});
+  const DndSwitch({super.key, this.colour, this.accent});
 
-  final Color colour;
+  /// The theme's text colour unless given.
+  final Color? colour;
 
   /// The switch's "on" colour — the dashboard theme's accent, so it does not
   /// stay the app's blue beside a theme's own. Null for the app's.
@@ -268,6 +271,7 @@ class DndSwitch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = colour ?? context.look.textPrimary;
     final config = context.watch<ConfigService>();
     final muted = config.config.shareInbox.dndMuted;
     return Padding(
@@ -279,7 +283,7 @@ class DndSwitch extends StatelessWidget {
             muted
                 ? Icons.notifications_off_outlined
                 : Icons.notifications_outlined,
-            color: muted ? colour.withValues(alpha: 0.54) : colour,
+            color: muted ? c.withValues(alpha: 0.54) : c,
             size: 26,
           ),
           Theme(

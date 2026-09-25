@@ -186,6 +186,24 @@ the accent to 3, so a theme cannot look good and read badly. The toolbar's
 notifications switch takes the theme's accent, with a deeper shade of it for
 the knob.
 
+### One theme for the whole kiosk
+
+The theme chosen for the dashboard dresses every screen. `KioskLook`
+(`lib/look.dart`), above the app, carries it to every screen and overlay as
+`context.look`; `buildTheme(look)` makes Material's own parts — dialogs, menus,
+switches, sliders, cards — from it; and the shared parts in `glass.dart`
+(`Glass`, `ScreenHeader`, `GlassSection`, `ChoicePill`, `ModernScaffold`) draw
+their fills, edges, text and background from it. On Glass all of that comes
+out as the kiosk always looked.
+
+Colours are chosen by role, not value: `textPrimary`, `textSecondary`, `wash(a)`
+(a faint layer of the text colour, for hairlines and tracks — white on a dark
+theme, near-black on a light one), `onAccent` (whichever of black and white
+reads on the accent) and `legible(c)`, which deepens a colour chosen for dark
+screens — a weather icon's pale yellow — until it reads on a light one, hue
+kept. Photos and video stay on black, and words laid over a photo stay white
+over their own shadow, whatever the theme.
+
 ### Emoji
 
 Flutter on the Pi does not fall back to the system's emoji font by itself, so
@@ -912,7 +930,7 @@ screenshots or testing a screen in isolation. Inert unless set.
 | `IMMICH_KIOSK_TEST_DASHBOARD=<page>` | the dashboard, opened at that page |
 | `IMMICH_KIOSK_TEST_POPUP=forecast` or `inputs` | with the above, opens the full forecast or the TV inputs over the dashboard |
 | `IMMICH_KIOSK_TEST_PLAYER=small` or `full` | the home screen with the player shrunk to the mini player, or the full player opened as soon as music is playing |
-| `IMMICH_KIOSK_TEST_THEME=<id>` | with the dashboard, shows that theme without saving it |
+| `IMMICH_KIOSK_TEST_THEME=<id>` | the whole kiosk in that theme, without saving it |
 | `IMMICH_KIOSK_TEST_WEATHER=expanded` | with the slideshow, the weather panel opened |
 
 They are read at start-up, so with the service running they are set with

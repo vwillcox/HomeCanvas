@@ -16,6 +16,7 @@ Built with Flutter as a native Linux app, so it stays smooth on a Pi.
 | | |
 |---|---|
 | **[INSTALL.md](INSTALL.md)** | Setting it up: the hardware, the install, and every optional feature — Spotify, Bluetooth, the camera, the share inbox, the dashboard's widgets, turning the screen off with Alexa. Troubleshooting too. |
+| **[THEMES.md](THEMES.md)** | The sixteen themes, each shown on the real panel, and how to make your own. |
 | **[TECHNICAL.md](TECHNICAL.md)** | How it works: the dashboard's widget registry and editor, the encryption, the visualiser, the APIs it talks to, the project layout, debug hooks and the libraries it is built on. |
 
 ---
@@ -72,19 +73,6 @@ six till nine, a night page after ten.
 | ![Grid carbon, on this day in history, train departures and chores](docs/screenshots/dashboard-around-the-house.jpg) | ![A month calendar beside a photo](docs/screenshots/dashboard-calendar.jpg) |
 | How clean the electricity is, the next trains, a chores chart with stars, and something from history. | Your calendars and a photo from Immich. |
 
-![The dashboard in the Aurora theme](docs/screenshots/dashboard-aurora.jpg)
-
-The **Aurora** theme: Glass after dark, lit violet and teal from opposite
-corners, with light catching the top of each tile.
-
-![Eight more themes](docs/screenshots/themes.jpg)
-
-More themes, dark and light, glassy, glossy and flat: **Abyss** (deep-sea
-glass), **Obsidian** (black lacquer and gold), **Synthwave** (neon on purple),
-**Espresso** (flat browns and a serif), **Terminal** (green phosphor,
-monospaced — and **Terminal Night**, the same turned down for a dark room), **Frost** (frosted panes in daylight), **Sorbet** (glossy pastels)
-and **Swiss** (flat white blocks and signal red).
-
 | The full forecast | Switching TV inputs |
 |---|---|
 | ![The full forecast](docs/screenshots/forecast.jpg) | ![The TV inputs](docs/screenshots/tv-inputs.jpg) |
@@ -93,6 +81,14 @@ and **Swiss** (flat white blocks and signal red).
 ![The Omarchy hotkeys cheat sheet](docs/screenshots/dashboard-omarchy.jpg)
 
 A page of its own for the Omarchy keyboard shortcuts.
+
+### Themes
+
+[![Sixteen themes](docs/screenshots/themes/all.jpg)](THEMES.md)
+
+Sixteen themes, dark and light, glassy, glossy and flat, and each one dresses
+the whole kiosk: the photo browser, the music player and Settings as well as
+the dashboard. **[THEMES.md](THEMES.md)** shows each one full size.
 
 ### Arranged from a browser
 
@@ -149,7 +145,7 @@ queue.
 | Network | UniFi health, Who's home, UniFi devices, Network clients, WAN throughput, ISP speed test, Speed test, LAN speed test |
 | Home lab | Servers (with SMART disk health), Services, Certificates, Updates |
 
-Sixteen themes — dark and light, glassy, glossy and flat — plus a JSON template for your own, twenty fonts, per-widget sizing,
+Sixteen [themes](THEMES.md) — dark and light, glassy, glossy and flat, dressing the whole kiosk — plus a JSON template for your own, twenty fonts, per-widget sizing,
 pages and widgets that show only at certain hours, and an optional background
 of your own photos behind the tiles.
 

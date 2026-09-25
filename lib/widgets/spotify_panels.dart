@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../look.dart';
 
 import '../services/spotify_service.dart';
 
@@ -11,7 +12,7 @@ import '../services/spotify_service.dart';
 /// [SpotifyService] about how tightly these endpoints are rate-limited
 /// compared to the player one.
 
-const _panelBg = Color(0xFF1B1E27);
+
 
 Widget _panelShell({
   required BuildContext context,
@@ -20,7 +21,7 @@ Widget _panelShell({
   double maxHeight = 620,
 }) {
   return Dialog(
-    backgroundColor: _panelBg,
+    backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     child: ConstrainedBox(
       constraints: BoxConstraints(maxWidth: 620, maxHeight: maxHeight),
@@ -35,8 +36,8 @@ Widget _panelShell({
                 Expanded(
                   child: Text(
                     title,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: context.look.textPrimary,
                       fontSize: 22,
                       fontWeight: FontWeight.w600,
                     ),
@@ -44,7 +45,7 @@ Widget _panelShell({
                 ),
                 IconButton(
                   iconSize: 28,
-                  icon: const Icon(Icons.close, color: Colors.white54),
+                  icon: Icon(Icons.close, color: context.look.textSecondary),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
@@ -57,14 +58,14 @@ Widget _panelShell({
   );
 }
 
-Widget _emptyNote(String text) => Padding(
+Widget _emptyNote(String text) => Builder(builder: (context) => Padding(
       padding: const EdgeInsets.symmetric(vertical: 48),
       child: Center(
         child: Text(text,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white54, fontSize: 16)),
+            style: TextStyle(color: context.look.textSecondary, fontSize: 16)),
       ),
-    );
+    ));
 
 Widget _loading() => const Padding(
       padding: EdgeInsets.symmetric(vertical: 48),
@@ -91,19 +92,19 @@ class _RowArt extends StatelessWidget {
         width: size,
         height: size,
         child: url == null
-            ? const ColoredBox(
-                color: Color(0xFF2A2F3E),
-                child: Icon(Icons.music_note, color: Colors.white38),
+            ? ColoredBox(
+                color: context.look.wash(0.1),
+                child: Icon(Icons.music_note, color: context.look.wash(0.38)),
               )
             : CachedNetworkImage(
                 imageUrl: url!,
                 fit: BoxFit.cover,
-                placeholder: (context, _) => const ColoredBox(
-                  color: Color(0xFF2A2F3E),
+                placeholder: (context, _) => ColoredBox(
+                  color: context.look.wash(0.1),
                 ),
-                errorWidget: (context, url, error) => const ColoredBox(
-                  color: Color(0xFF2A2F3E),
-                  child: Icon(Icons.music_note, color: Colors.white38),
+                errorWidget: (context, url, error) => ColoredBox(
+                  color: context.look.wash(0.1),
+                  child: Icon(Icons.music_note, color: context.look.wash(0.38)),
                 ),
               ),
       ),
@@ -157,18 +158,18 @@ class _SpotifyDevicesDialogState extends State<SpotifyDevicesDialog> {
             shrinkWrap: true,
             itemCount: devices.length,
             separatorBuilder: (context, _) =>
-                const Divider(color: Colors.white12, height: 1),
+                Divider(color: context.look.wash(0.12), height: 1),
             itemBuilder: (context, i) {
               final d = devices[i];
               return ListTile(
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 leading: Icon(_iconFor(d.type),
-                    size: 30, color: d.isActive ? accent : Colors.white70),
+                    size: 30, color: d.isActive ? accent : context.look.textSecondary),
                 title: Text(
                   d.name,
                   style: TextStyle(
-                    color: d.isActive ? accent : Colors.white,
+                    color: d.isActive ? accent : context.look.textPrimary,
                     fontSize: 19,
                     fontWeight: d.isActive ? FontWeight.w600 : FontWeight.w400,
                   ),
@@ -179,7 +180,7 @@ class _SpotifyDevicesDialogState extends State<SpotifyDevicesDialog> {
                     : null,
                 trailing: d.isActive
                     ? Icon(Icons.graphic_eq, color: accent)
-                    : const Icon(Icons.chevron_right, color: Colors.white38),
+                    : Icon(Icons.chevron_right, color: context.look.wash(0.38)),
                 onTap: d.isActive
                     ? null
                     : () {
@@ -226,7 +227,7 @@ class _SpotifyQueueDialogState extends State<SpotifyQueueDialog> {
             shrinkWrap: true,
             itemCount: items.length,
             separatorBuilder: (context, _) =>
-                const Divider(color: Colors.white12, height: 1),
+                Divider(color: context.look.wash(0.12), height: 1),
             itemBuilder: (context, i) {
               final item = items[i];
               return ListTile(
@@ -236,12 +237,12 @@ class _SpotifyQueueDialogState extends State<SpotifyQueueDialog> {
                 title: Text(item.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.white, fontSize: 18)),
+                    style: TextStyle(color: context.look.textPrimary, fontSize: 18)),
                 subtitle: Text(item.subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style:
-                        const TextStyle(color: Colors.white54, fontSize: 15)),
+                        TextStyle(color: context.look.textSecondary, fontSize: 15)),
               );
             },
           );
@@ -270,9 +271,9 @@ class SpotifyBrowseDialog extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const TabBar(
-              labelColor: Colors.white,
-              unselectedLabelColor: Colors.white54,
+            TabBar(
+              labelColor: context.look.textPrimary,
+              unselectedLabelColor: context.look.textSecondary,
               tabs: [
                 Tab(text: 'Playlists'),
                 Tab(text: 'Recent'),
@@ -346,7 +347,7 @@ class _ItemListState extends State<_ItemList>
         return ListView.separated(
           itemCount: items.length,
           separatorBuilder: (context, _) =>
-              const Divider(color: Colors.white12, height: 1),
+              Divider(color: context.look.wash(0.12), height: 1),
           itemBuilder: (context, i) {
             final item = items[i];
             return ListTile(
@@ -356,14 +357,14 @@ class _ItemListState extends State<_ItemList>
               title: Text(item.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white, fontSize: 18)),
+                  style: TextStyle(color: context.look.textPrimary, fontSize: 18)),
               subtitle: item.subtitle.isEmpty
                   ? null
                   : Text(item.subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style:
-                          const TextStyle(color: Colors.white54, fontSize: 15)),
+                          TextStyle(color: context.look.textSecondary, fontSize: 15)),
               // Playing replaces what's on; queueing is the gentler option, so
               // it stays a separate explicit tap rather than the row default.
               trailing: item.isContext
@@ -371,8 +372,8 @@ class _ItemListState extends State<_ItemList>
                   : IconButton(
                       iconSize: 28,
                       tooltip: 'Add to queue',
-                      icon: const Icon(Icons.queue_music,
-                          color: Colors.white54),
+                      icon: Icon(Icons.queue_music,
+                          color: context.look.textSecondary),
                       onPressed: () {
                         widget.service.queue(item);
                         ScaffoldMessenger.of(context).showSnackBar(

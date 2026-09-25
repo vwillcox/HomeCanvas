@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import '../look.dart';
 import 'package:provider/provider.dart';
 
 import 'dart:math';
@@ -304,19 +305,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1180),
           child: ListTileTheme(
-            data: const ListTileThemeData(
+            data: ListTileThemeData(
               contentPadding: EdgeInsets.symmetric(horizontal: 24, vertical: 4),
               minVerticalPadding: 12,
-              iconColor: Colors.white70,
+              iconColor: context.look.textSecondary,
               titleTextStyle: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
-                color: Colors.white,
+                color: context.look.textPrimary,
               ),
               subtitleTextStyle: TextStyle(
                 fontSize: 16,
                 height: 1.35,
-                color: Colors.white60,
+                color: context.look.textSecondary,
               ),
             ),
             child: ListView(
@@ -331,7 +332,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: Text(
                     'Immich Kiosk - Pi • Immich viewer',
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.3),
+                      color: context.look.wash(0.3),
                     ),
                   ),
                 ),
@@ -359,9 +360,9 @@ class _WeatherSettingsTile extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'UK postcode (e.g. CO1 1ZY) or a place name (e.g. Colchester).',
-              style: TextStyle(color: Colors.white70, fontSize: 14),
+              style: TextStyle(color: context.look.textSecondary, fontSize: 14),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -512,7 +513,7 @@ class _CornerPicker extends StatelessWidget {
           child: Material(
             color: selected
                 ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.30)
-                : const Color(0xFF20232E),
+                : context.look.wash(0.08),
             borderRadius: BorderRadius.circular(10),
             child: InkWell(
               borderRadius: BorderRadius.circular(10),
@@ -526,7 +527,7 @@ class _CornerPicker extends StatelessWidget {
                   border: Border.all(
                     color: selected
                         ? Theme.of(context).colorScheme.primary
-                        : Colors.white12,
+                        : context.look.wash(0.12),
                     width: selected ? 2 : 1,
                   ),
                 ),
@@ -536,7 +537,7 @@ class _CornerPicker extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: selected
                         ? Theme.of(context).colorScheme.primary
-                        : Colors.white24,
+                        : context.look.wash(0.24),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -730,7 +731,7 @@ class _NowPlayingSettingsTile extends StatelessWidget {
         SwitchListTile(
           secondary: Icon(
             s.enabled ? Icons.music_note : Icons.music_off,
-            color: s.enabled ? null : Colors.white38,
+            color: s.enabled ? null : context.look.wash(0.38),
           ),
           title: const Text('Show what my phone is playing'),
           subtitle: Text(
@@ -867,11 +868,11 @@ class _HomeAssistantSettingsTile extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'The indoor reading comes from Home Assistant. Create a token '
                   'under your Home Assistant profile → Security → Long-lived '
                   'access tokens.',
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
+                  style: TextStyle(color: context.look.textSecondary, fontSize: 14),
                 ),
                 const SizedBox(height: 14),
                 // A switch rather than clearing the fields: turning the
@@ -884,10 +885,10 @@ class _HomeAssistantSettingsTile extends StatelessWidget {
                       'Read the indoor sensor',
                       style: TextStyle(fontSize: 18),
                     ),
-                    subtitle: const Text(
+                    subtitle: Text(
                       'Off stops polling Home Assistant and hides the indoor '
                       'reading, keeping these settings for later.',
-                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                      style: TextStyle(color: context.look.textSecondary, fontSize: 13),
                     ),
                     value: enabled,
                     onChanged: (v) => setLocal(() => enabled = v),
@@ -1050,17 +1051,17 @@ class _SpotifyDialogState extends State<_SpotifyDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Create a free app at developer.spotify.com/dashboard, then '
                 'paste its Client ID below. Register this exact Redirect URI '
                 'on that app:',
-                style: TextStyle(color: Colors.white70, fontSize: 14),
+                style: TextStyle(color: context.look.textSecondary, fontSize: 14),
               ),
               const SizedBox(height: 8),
               SelectableText(
                 SpotifyService.redirectUri,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: context.look.textPrimary,
                   fontSize: 15,
                   fontFamily: 'monospace',
                 ),
@@ -1081,7 +1082,7 @@ class _SpotifyDialogState extends State<_SpotifyDialog> {
               ],
               if (_connecting) ...[
                 const SizedBox(height: 14),
-                const Row(
+                Row(
                   children: [
                     SizedBox(
                       width: 20,
@@ -1094,7 +1095,7 @@ class _SpotifyDialogState extends State<_SpotifyDialog> {
                         'A browser window opened for you to log into '
                         'Spotify. Come back here once you have approved '
                         'access.',
-                        style: TextStyle(color: Colors.white70),
+                        style: TextStyle(color: context.look.textSecondary),
                       ),
                     ),
                   ],
@@ -1252,11 +1253,11 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'People with the companion app can share a photo, GIF, video, '
                 'link or note to this kiosk. Add a name below, hand that '
                 'person the generated token to enter in their app.',
-                style: TextStyle(color: Colors.white70, fontSize: 14),
+                style: TextStyle(color: context.look.textSecondary, fontSize: 14),
               ),
               const SizedBox(height: 14),
               TextField(
@@ -1271,20 +1272,20 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
               const SizedBox(height: 18),
               Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.notifications,
-                    color: Colors.white70,
+                    color: context.look.textSecondary,
                     size: 20,
                   ),
                   const SizedBox(width: 10),
-                  const Text(
+                  Text(
                     'Notification volume',
-                    style: TextStyle(color: Colors.white),
+                    style: TextStyle(color: context.look.textPrimary),
                   ),
                   const Spacer(),
                   Text(
                     '${_volume.round()}%',
-                    style: const TextStyle(color: Colors.white54),
+                    style: TextStyle(color: context.look.textSecondary),
                   ),
                 ],
               ),
@@ -1294,23 +1295,23 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
                 divisions: 20,
                 onChanged: (v) => setState(() => _volume = v),
               ),
-              const Text(
+              Text(
                 "Separate from the music/video volume — turning this down "
                 "won't affect what's playing.",
-                style: TextStyle(color: Colors.white54, fontSize: 13),
+                style: TextStyle(color: context.look.textSecondary, fontSize: 13),
               ),
               const SizedBox(height: 18),
 
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text(
+                title: Text(
                   'Read notes aloud',
-                  style: TextStyle(color: Colors.white),
+                  style: TextStyle(color: context.look.textPrimary),
                 ),
-                subtitle: const Text(
+                subtitle: Text(
                   'Text notes only. Photos have nothing to read, and a link '
                   'read out is a stream of letters nobody can follow.',
-                  style: TextStyle(color: Colors.white54, fontSize: 13),
+                  style: TextStyle(color: context.look.textSecondary, fontSize: 13),
                 ),
                 value: _speak,
                 onChanged: (v) => setState(() => _speak = v),
@@ -1318,29 +1319,29 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
               if (_speak) ...[
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text(
+                  title: Text(
                     'Say who it is from first',
-                    style: TextStyle(color: Colors.white),
+                    style: TextStyle(color: context.look.textPrimary),
                   ),
                   value: _speakSender,
                   onChanged: (v) => setState(() => _speakSender = v),
                 ),
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.record_voice_over,
-                      color: Colors.white70,
+                      color: context.look.textSecondary,
                       size: 20,
                     ),
                     const SizedBox(width: 10),
-                    const Text(
+                    Text(
                       'Speech volume',
-                      style: TextStyle(color: Colors.white),
+                      style: TextStyle(color: context.look.textPrimary),
                     ),
                     const Spacer(),
                     Text(
                       '${_speechVolume.round()}%',
-                      style: const TextStyle(color: Colors.white54),
+                      style: TextStyle(color: context.look.textSecondary),
                     ),
                   ],
                 ),
@@ -1350,28 +1351,28 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
                   divisions: 20,
                   onChanged: (v) => setState(() => _speechVolume = v),
                 ),
-                const Text(
+                Text(
                   'Kept below the music by default. A voice at the same level '
                   'is startling in a quiet room — it arrives unannounced '
                   'rather than being something you chose to play.',
-                  style: TextStyle(color: Colors.white54, fontSize: 13),
+                  style: TextStyle(color: context.look.textSecondary, fontSize: 13),
                 ),
               ],
               const SizedBox(height: 18),
-              const Text(
+              Text(
                 'Senders',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: context.look.textPrimary,
                   fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: 8),
               if (_tokens.isEmpty)
-                const Padding(
+                Padding(
                   padding: EdgeInsets.symmetric(vertical: 8),
                   child: Text(
                     'No one added yet',
-                    style: TextStyle(color: Colors.white54),
+                    style: TextStyle(color: context.look.textSecondary),
                   ),
                 ),
               for (final t in _tokens)
@@ -1383,7 +1384,7 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
                         flex: 2,
                         child: Text(
                           t.name,
-                          style: const TextStyle(color: Colors.white),
+                          style: TextStyle(color: context.look.textPrimary),
                         ),
                       ),
                       Expanded(
@@ -1392,8 +1393,8 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
                           t.token,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Colors.white54,
+                          style: TextStyle(
+                            color: context.look.textSecondary,
                             fontFamily: 'monospace',
                             fontSize: 13,
                           ),
@@ -1568,11 +1569,11 @@ class _CameraSettingsTile extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'A phone running android-ip-camera, on the same network. '
                   'Take the address and credentials from the app on the phone; '
                   'turn its HTTPS off, since it uses a self-signed certificate.',
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
+                  style: TextStyle(color: context.look.textSecondary, fontSize: 14),
                 ),
                 const SizedBox(height: 14),
                 field('Address', address, hint: '192.168.1.52:4444'),
@@ -1699,11 +1700,11 @@ class _DashboardSettingsTile extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'The port the dashboard editor is served on. Separate from '
                 'the Share Inbox, so one can be exposed beyond your network '
                 'without the other.',
-                style: TextStyle(color: Colors.white70, fontSize: 14),
+                style: TextStyle(color: context.look.textSecondary, fontSize: 14),
               ),
               const SizedBox(height: 14),
               TextField(
@@ -1771,10 +1772,8 @@ class _DashboardSettingsTile extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.palette_outlined),
             title: const Text('Theme'),
-            subtitle: Text(
-              '${theme.name} · '
-              '${s.widgets.length} widget${s.widgets.length == 1 ? '' : 's'}',
-            ),
+            // It dresses every screen now, not just the dashboard.
+            subtitle: Text('${theme.name} · the whole kiosk\'s look'),
             trailing: DropdownButton<String>(
               value: dashboard.themes.all.any((t) => t.id == s.themeId)
                   ? s.themeId
@@ -1818,12 +1817,12 @@ class _TvSettingsTile extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'The set must be on the same network. Only one controller may '
                 'hold a session at a time — the connection identity comes from '
                 'this UUID, so two controllers sharing one will displace each '
                 'other. Changing the UUID means pairing again.',
-                style: TextStyle(color: Colors.white70, fontSize: 14),
+                style: TextStyle(color: context.look.textSecondary, fontSize: 14),
               ),
               const SizedBox(height: 14),
               TextField(
@@ -1927,12 +1926,12 @@ class _TabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fg = selected ? const Color(0xFF0B0C10) : Colors.white;
+    final fg = selected ? context.look.background.first : context.look.textPrimary;
     return Semantics(
       button: true,
       selected: selected,
       child: Material(
-        color: selected ? Colors.white : Colors.transparent,
+        color: selected ? context.look.textPrimary : Colors.transparent,
         shape: const StadiumBorder(),
         clipBehavior: Clip.antiAlias,
         child: InkWell(

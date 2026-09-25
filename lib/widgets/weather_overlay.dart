@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import '../look.dart';
 import 'package:provider/provider.dart';
 
 import 'burn_in_drift.dart';
@@ -52,7 +53,8 @@ Color weatherColor(int code, bool isDay) {
     case 99:
       return const Color(0xFFB388FF);
     default:
-      return Colors.white;
+      // Grey reads on light and dark themes alike.
+      return const Color(0xFFB0BEC5);
   }
 }
 
@@ -273,9 +275,9 @@ class _Panel extends StatelessWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.62 + 0.24 * expansion),
+        color: context.look.background.first.withValues(alpha: 0.62 + 0.24 * expansion),
         borderRadius: BorderRadius.circular(26 + 6 * expansion),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+        border: Border.all(color: context.look.wash(0.10)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.45),
@@ -327,7 +329,7 @@ class _CollapsedContent extends StatelessWidget {
         children: [
           Icon(icon,
               size: compact ? 52 : 72,
-              color: weatherColor(weather.weatherCode, weather.isDay)),
+              color: context.look.legible(weatherColor(weather.weatherCode, weather.isDay))),
           SizedBox(width: compact ? 15 : 21),
           Expanded(
             child: Column(
@@ -338,7 +340,7 @@ class _CollapsedContent extends StatelessWidget {
                 Text(
                   '${weather.temperature.round()}${weather.unit}',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: context.look.textPrimary,
                     fontSize: compact ? 40 : 54,
                     fontWeight: FontWeight.w600,
                     height: 1.1,
@@ -349,7 +351,7 @@ class _CollapsedContent extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: Colors.white70,
+                    color: context.look.textSecondary,
                     fontSize: compact ? 20 : 25,
                   ),
                 ),
@@ -359,19 +361,19 @@ class _CollapsedContent extends StatelessWidget {
                     '${weather.tempMax.round()}° / ${weather.tempMin.round()}°',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.white60, fontSize: 21),
+                    style: TextStyle(color: context.look.textSecondary, fontSize: 21),
                   ),
                 if (!compact && (indoor?.available ?? false))
                   Row(
                     children: [
-                      const Icon(Icons.home_outlined,
-                          size: 19, color: Color(0xFFFF8A65)),
+                      Icon(Icons.home_outlined,
+                          size: 19, color: context.look.legible(Color(0xFFFF8A65))),
                       const SizedBox(width: 6),
                       Text(
                         '${_indoorTemp(indoor!, weather.unit)}  ·  '
                         '${indoor!.humidity!.round()}%',
-                        style: const TextStyle(
-                            color: Color(0xFFFFB59B), fontSize: 20),
+                        style: TextStyle(
+                            color: context.look.legible(Color(0xFFFFB59B)), fontSize: 20),
                       ),
                     ],
                   ),
@@ -404,16 +406,16 @@ class _DetailContent extends StatelessWidget {
               Expanded(
                 child: Text(
                   weather.label,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: context.look.textPrimary,
                     fontSize: 38,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
-              const Icon(
+              Icon(
                 Icons.close_fullscreen,
-                color: Colors.white54,
+                color: context.look.textSecondary,
                 size: 30,
               ),
             ],
@@ -427,7 +429,7 @@ class _DetailContent extends StatelessWidget {
               Icon(
                 weatherIcon(weather.weatherCode, weather.isDay),
                 size: 104,
-                color: weatherColor(weather.weatherCode, weather.isDay),
+                color: context.look.legible(weatherColor(weather.weatherCode, weather.isDay)),
               ),
               const SizedBox(width: 26),
               Column(
@@ -436,8 +438,8 @@ class _DetailContent extends StatelessWidget {
                 children: [
                   Text(
                     '${weather.temperature.round()}${weather.unit}',
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: context.look.textPrimary,
                       fontSize: 86,
                       fontWeight: FontWeight.w300,
                       height: 1.0,
@@ -445,7 +447,7 @@ class _DetailContent extends StatelessWidget {
                   ),
                   Text(
                     weather.description,
-                    style: const TextStyle(color: Colors.white70, fontSize: 29),
+                    style: TextStyle(color: context.look.textSecondary, fontSize: 29),
                   ),
                 ],
               ),
@@ -456,33 +458,33 @@ class _DetailContent extends StatelessWidget {
                 children: [
                   _Stat(
                     icon: Icons.thermostat,
-                    color: const Color(0xFFFF8A65),
+                    color: context.look.legible(const Color(0xFFFF8A65)),
                     label: 'Feels like',
                     value: '${weather.feelsLike.round()}${weather.unit}',
                   ),
                   _Stat(
                     icon: Icons.water_drop_outlined,
-                    color: const Color(0xFF4FC3F7),
+                    color: context.look.legible(const Color(0xFF4FC3F7)),
                     label: 'Humidity',
                     value: '${weather.humidity}%',
                   ),
                   _Stat(
                     icon: Icons.air,
-                    color: const Color(0xFF9FE7C7),
+                    color: context.look.legible(const Color(0xFF9FE7C7)),
                     label: 'Wind',
                     value: '${weather.windSpeed.round()} ${weather.windUnit}',
                   ),
                   if (today != null)
                     _Stat(
                       icon: Icons.umbrella_outlined,
-                      color: const Color(0xFF7FB6FF),
+                      color: context.look.accent,
                       label: 'Rain',
                       value: '${today.precipitationChance}%',
                     ),
                   if (today != null)
                     _Stat(
                       icon: Icons.wb_twilight,
-                      color: const Color(0xFFFFC542),
+                      color: context.look.legible(const Color(0xFFFFC542)),
                       label: 'Sun',
                       value: '${today.sunrise} – ${today.sunset}',
                     ),
@@ -492,19 +494,19 @@ class _DetailContent extends StatelessWidget {
           ),
 
           const SizedBox(height: 22),
-          const Divider(color: Colors.white24, height: 1),
+          Divider(color: context.look.wash(0.24), height: 1),
           const SizedBox(height: 14),
 
           if (indoor?.available ?? false) ...[
             Row(
               children: [
-                const Icon(Icons.home_outlined,
-                    size: 22, color: Color(0xFFFF8A65)),
+                Icon(Icons.home_outlined,
+                    size: 22, color: context.look.legible(Color(0xFFFF8A65))),
                 const SizedBox(width: 8),
-                const Text(
+                Text(
                   'INDOORS',
                   style: TextStyle(
-                    color: Colors.white54,
+                    color: context.look.textSecondary,
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 1.4,
@@ -513,28 +515,28 @@ class _DetailContent extends StatelessWidget {
                 const SizedBox(width: 16),
                 Text(
                   _indoorTemp(indoor!, weather.unit),
-                  style: const TextStyle(
-                      color: Color(0xFFFF8A65),
+                  style: TextStyle(
+                      color: context.look.legible(Color(0xFFFF8A65)),
                       fontSize: 26,
                       fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(width: 14),
                 Text(
                   '${indoor!.humidity!.round()}% humidity',
-                  style: const TextStyle(
-                      color: Color(0xFF4FC3F7), fontSize: 22),
+                  style: TextStyle(
+                      color: context.look.legible(Color(0xFF4FC3F7)), fontSize: 22),
                 ),
                 const Spacer(),
                 if ((indoor!.battery ?? 100) <= 20)
                   Row(
                     children: [
-                      const Icon(Icons.battery_alert,
-                          size: 20, color: Color(0xFFFFC46B)),
+                      Icon(Icons.battery_alert,
+                          size: 20, color: context.look.legible(Color(0xFFFFC46B))),
                       const SizedBox(width: 6),
                       Text(
                         'sensor battery ${indoor!.battery}%',
-                        style: const TextStyle(
-                            color: Color(0xFFFFC46B), fontSize: 17),
+                        style: TextStyle(
+                            color: context.look.legible(Color(0xFFFFC46B)), fontSize: 17),
                       ),
                     ],
                   ),
@@ -549,14 +551,14 @@ class _DetailContent extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 14),
-            const Divider(color: Colors.white24, height: 1),
+            Divider(color: context.look.wash(0.24), height: 1),
             const SizedBox(height: 14),
           ],
 
-          const Text(
+          Text(
             '7-DAY FORECAST',
             style: TextStyle(
-              color: Colors.white54,
+              color: context.look.textSecondary,
               fontSize: 17,
               fontWeight: FontWeight.w700,
               letterSpacing: 1.6,
@@ -588,16 +590,18 @@ class _Stat extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
-  final Color color;
+  /// The theme's secondary text unless given.
+  final Color? color;
   const _Stat({
     required this.icon,
     required this.label,
     required this.value,
-    this.color = Colors.white54,
+    this.color,
   });
 
   @override
   Widget build(BuildContext context) {
+    final color = this.color ?? context.look.textSecondary;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -609,15 +613,15 @@ class _Stat extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               label,
-              style: const TextStyle(color: Colors.white60, fontSize: 18),
+              style: TextStyle(color: context.look.textSecondary, fontSize: 18),
             ),
           ],
         ),
         const SizedBox(height: 4),
         Text(
           value,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: context.look.textPrimary,
             fontSize: 27,
             fontWeight: FontWeight.w500,
           ),
@@ -644,8 +648,8 @@ class _DayColumn extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 14),
       decoration: BoxDecoration(
         color: isToday
-            ? Colors.white.withValues(alpha: 0.10)
-            : Colors.white.withValues(alpha: 0.04),
+            ? context.look.wash(0.10)
+            : context.look.wash(0.04),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -654,7 +658,7 @@ class _DayColumn extends StatelessWidget {
           Text(
             day.dayLabel(isToday),
             style: TextStyle(
-              color: Colors.white,
+              color: context.look.textPrimary,
               fontSize: 23,
               fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
             ),
@@ -662,7 +666,7 @@ class _DayColumn extends StatelessWidget {
           Icon(
             weatherIcon(day.weatherCode, true),
             size: 54,
-            color: weatherColor(day.weatherCode, true),
+            color: context.look.legible(weatherColor(day.weatherCode, true)),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -671,33 +675,33 @@ class _DayColumn extends StatelessWidget {
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white70, fontSize: 18),
+              style: TextStyle(color: context.look.textSecondary, fontSize: 18),
             ),
           ),
           Text(
             '${day.tempMax.round()}°',
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: context.look.textPrimary,
               fontSize: 29,
               fontWeight: FontWeight.w600,
             ),
           ),
           Text(
             '${day.tempMin.round()}°',
-            style: const TextStyle(color: Colors.white60, fontSize: 22),
+            style: TextStyle(color: context.look.textSecondary, fontSize: 22),
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
+              Icon(
                 Icons.umbrella_outlined,
                 size: 15,
-                color: Color(0xFF7FB6FF),
+                color: context.look.accent,
               ),
               const SizedBox(width: 4),
               Text(
                 '${day.precipitationChance}%',
-                style: const TextStyle(color: Color(0xFF7FB6FF), fontSize: 18),
+                style: TextStyle(color: context.look.accent, fontSize: 18),
               ),
             ],
           ),

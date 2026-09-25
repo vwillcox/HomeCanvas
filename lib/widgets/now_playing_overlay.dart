@@ -4,6 +4,7 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../look.dart';
 import 'package:provider/provider.dart';
 
 import 'audio_visualiser.dart';
@@ -65,13 +66,11 @@ class NowPlayingOpener extends InheritedWidget {
   final NowPlayingOverlayController controller;
 
   /// Null where there is no player to open, as in the editor's previews.
-  static NowPlayingOverlayController? maybeOf(BuildContext context) => context
-      .getInheritedWidgetOfExactType<NowPlayingOpener>()
-      ?.controller;
+  static NowPlayingOverlayController? maybeOf(BuildContext context) =>
+      context.getInheritedWidgetOfExactType<NowPlayingOpener>()?.controller;
 
   @override
-  bool updateShouldNotify(NowPlayingOpener old) =>
-      controller != old.controller;
+  bool updateShouldNotify(NowPlayingOpener old) => controller != old.controller;
 }
 
 class NowPlayingOverlay extends StatefulWidget {
@@ -136,8 +135,7 @@ class _NowPlayingOverlayState extends State<NowPlayingOverlay>
 
   GlobalKey? get _anchor => widget.anchor ?? widget.controller?.anchor;
 
-  void _reportOpen() =>
-      widget.controller?.isOpen.value = _controller.value > 0;
+  void _reportOpen() => widget.controller?.isOpen.value = _controller.value > 0;
 
   /// Whether the full player has been shrunk by hand, for the life of the
   /// app.
@@ -261,8 +259,7 @@ class _NowPlayingOverlayState extends State<NowPlayingOverlay>
               // Measured each frame of the animation rather than once, so the
               // player lands on the mini player wherever it has scrolled to.
               final collapsed = _anchored
-                  ? (_anchorRect() ??
-                      _collapsedRect(screen, settings.corner))
+                  ? (_anchorRect() ?? _collapsedRect(screen, settings.corner))
                   : applyDrift(_collapsedRect(screen, settings.corner), screen);
               final rect = Rect.lerp(collapsed, expanded, v)!;
               return Stack(
@@ -278,8 +275,15 @@ class _NowPlayingOverlayState extends State<NowPlayingOverlay>
                             // seeing through it, so go fully opaque and hide
                             // the album grid outright; over the slideshow,
                             // dim rather than blot out the photo entirely.
-                            color: Colors.black
-                                .withValues(alpha: (_fullScreen ? 1.0 : 0.6) * v),
+                            // Full screen, the theme's own background;
+                            // over a photo, a dim of it.
+                            color:
+                                (_fullScreen
+                                        ? context.look.background.first
+                                        : Colors.black)
+                                    .withValues(
+                                      alpha: (_fullScreen ? 1.0 : 0.6) * v,
+                                    ),
                           ),
                         ),
                       ),
@@ -288,10 +292,7 @@ class _NowPlayingOverlayState extends State<NowPlayingOverlay>
                     rect: rect,
                     child: GestureDetector(
                       onTap: _toggle,
-                      child: _Panel(
-                        service: service,
-                        expansion: v,
-                      ),
+                      child: _Panel(service: service, expansion: v),
                     ),
                   ),
                 ],
@@ -326,8 +327,12 @@ class _NowPlayingOverlayState extends State<NowPlayingOverlay>
     final maxHeight = _fullScreen ? 1400.0 : 620.0;
     final width = (screen.width - inset * 2).clamp(0.0, maxWidth);
     final height = (screen.height - inset * 2).clamp(0.0, maxHeight);
-    return Rect.fromLTWH((screen.width - width) / 2,
-        (screen.height - height) / 2, width, height);
+    return Rect.fromLTWH(
+      (screen.width - width) / 2,
+      (screen.height - height) / 2,
+      width,
+      height,
+    );
   }
 }
 
@@ -343,9 +348,13 @@ class _Panel extends StatelessWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.66 + 0.22 * expansion),
+        // The theme's background, nearly solid — a card over a photo when
+        // small, the whole player when large.
+        color: context.look.background.first.withValues(
+          alpha: 0.66 + 0.22 * expansion,
+        ),
         borderRadius: BorderRadius.circular(26 + 6 * expansion),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+        border: Border.all(color: context.look.wash(0.10)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.45),
@@ -383,8 +392,8 @@ class _Panel extends StatelessWidget {
 
 /// The current track's art, blown up behind the expanded player and blurred
 /// so it stays a backdrop rather than competing with the sharp square
-/// artwork already shown in the content on top. Fades to solid black by
-/// halfway down so the title/controls always sit on a plain, readable
+/// artwork already shown in the content on top. Fades to the theme's
+/// background by halfway down so the title/controls always sit on a plain, readable
 /// background rather than on top of the image itself.
 class _ArtworkBackdrop extends StatelessWidget {
   final String? url;
@@ -410,8 +419,13 @@ class _ArtworkBackdrop extends StatelessWidget {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                Colors.black.withValues(alpha: 0.1),
-                Colors.black,
+                // On a light theme, dark text sits on this, so the art is
+                // washed out more at the top — enough to read the device
+                // name over any cover.
+                context.look.background.first.withValues(
+                  alpha: context.look.isLight ? 0.6 : 0.1,
+                ),
+                context.look.background.first,
               ],
               stops: const [0.0, 0.9],
             ),
@@ -437,22 +451,32 @@ class _Artwork extends StatelessWidget {
         width: size,
         height: size,
         child: url == null
-            ? const ColoredBox(
-                color: Color(0xFF232734),
-                child: Icon(Icons.music_note, color: Colors.white38, size: 40),
+            ? ColoredBox(
+                color: context.look.solidSurface,
+                child: Icon(
+                  Icons.music_note,
+                  color: context.look.wash(0.38),
+                  size: 40,
+                ),
               )
             : CachedNetworkImage(
                 imageUrl: url!,
                 fit: BoxFit.cover,
-                placeholder: (_, __) => const ColoredBox(
-                  color: Color(0xFF232734),
-                  child: Icon(Icons.music_note,
-                      color: Colors.white38, size: 40),
+                placeholder: (_, __) => ColoredBox(
+                  color: context.look.solidSurface,
+                  child: Icon(
+                    Icons.music_note,
+                    color: context.look.wash(0.38),
+                    size: 40,
+                  ),
                 ),
-                errorWidget: (_, __, ___) => const ColoredBox(
-                  color: Color(0xFF232734),
-                  child: Icon(Icons.music_note,
-                      color: Colors.white38, size: 40),
+                errorWidget: (_, __, ___) => ColoredBox(
+                  color: context.look.solidSurface,
+                  child: Icon(
+                    Icons.music_note,
+                    color: context.look.wash(0.38),
+                    size: 40,
+                  ),
                 ),
               ),
       ),
@@ -483,7 +507,7 @@ class _CollapsedContent extends StatelessWidget {
                     Icon(
                       n.isPlaying ? Icons.play_arrow : Icons.pause,
                       size: 20,
-                      color: const Color(0xFF7FE3A1),
+                      color: context.look.accent,
                     ),
                     const SizedBox(width: 6),
                     Expanded(
@@ -491,8 +515,8 @@ class _CollapsedContent extends StatelessWidget {
                         n.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: context.look.textPrimary,
                           fontSize: 24,
                           fontWeight: FontWeight.w600,
                         ),
@@ -505,7 +529,10 @@ class _CollapsedContent extends StatelessWidget {
                   n.artist,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white70, fontSize: 19),
+                  style: TextStyle(
+                    color: context.look.textSecondary,
+                    fontSize: 19,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 ClipRRect(
@@ -513,15 +540,17 @@ class _CollapsedContent extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: n.progress,
                     minHeight: 5,
-                    backgroundColor: Colors.white24,
-                    valueColor:
-                        const AlwaysStoppedAnimation(Color(0xFF7FB6FF)),
+                    backgroundColor: context.look.wash(0.24),
+                    valueColor: AlwaysStoppedAnimation(context.look.accent),
                   ),
                 ),
                 const SizedBox(height: 5),
                 Text(
                   '${_fmt(n.position)} / ${_fmt(n.duration)}',
-                  style: const TextStyle(color: Colors.white54, fontSize: 15),
+                  style: TextStyle(
+                    color: context.look.textSecondary,
+                    fontSize: 15,
+                  ),
                 ),
               ],
             ),
@@ -539,8 +568,11 @@ class _DetailContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final n = service.now;
-    final visualiser =
-        context.watch<ConfigService>().config.nowPlaying.visualiser;
+    final visualiser = context
+        .watch<ConfigService>()
+        .config
+        .nowPlaying
+        .visualiser;
     return Padding(
       padding: const EdgeInsets.fromLTRB(40, 30, 40, 30),
       child: Column(
@@ -548,12 +580,15 @@ class _DetailContent extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(service.sourceIcon, color: const Color(0xFF7FB6FF), size: 26),
+              Icon(service.sourceIcon, color: context.look.accent, size: 26),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   n.deviceName.isEmpty ? 'Now playing' : n.deviceName,
-                  style: const TextStyle(color: Colors.white70, fontSize: 22),
+                  style: TextStyle(
+                    color: context.look.textSecondary,
+                    fontSize: 22,
+                  ),
                 ),
               ),
               // Spotify-only: the AVRCP source has no notion of other
@@ -566,8 +601,9 @@ class _DetailContent extends StatelessWidget {
                   tooltip: 'Play on…',
                   onTap: () => showDialog(
                     context: context,
-                    builder: (_) =>
-                        SpotifyDevicesDialog(service: service as SpotifyService),
+                    builder: (_) => SpotifyDevicesDialog(
+                      service: service as SpotifyService,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -592,8 +628,11 @@ class _DetailContent extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
               ],
-              const Icon(Icons.close_fullscreen,
-                  color: Colors.white54, size: 28),
+              Icon(
+                Icons.close_fullscreen,
+                color: context.look.textSecondary,
+                size: 28,
+              ),
             ],
           ),
           const SizedBox(height: 18),
@@ -612,8 +651,8 @@ class _DetailContent extends StatelessWidget {
                         n.title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: context.look.textPrimary,
                           fontSize: 44,
                           fontWeight: FontWeight.w600,
                           height: 1.15,
@@ -624,8 +663,10 @@ class _DetailContent extends StatelessWidget {
                         n.artist,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            color: Colors.white70, fontSize: 28),
+                        style: TextStyle(
+                          color: context.look.textSecondary,
+                          fontSize: 28,
+                        ),
                       ),
                       if (n.album.isNotEmpty) ...[
                         const SizedBox(height: 4),
@@ -633,8 +674,10 @@ class _DetailContent extends StatelessWidget {
                           n.album,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              color: Colors.white54, fontSize: 22),
+                          style: TextStyle(
+                            color: context.look.textSecondary,
+                            fontSize: 22,
+                          ),
                         ),
                       ],
                       // Nothing to scrub while Spotify's DJ is talking —
@@ -647,12 +690,20 @@ class _DetailContent extends StatelessWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(_fmt(n.position),
-                                style: const TextStyle(
-                                    color: Colors.white60, fontSize: 18)),
-                            Text(_fmt(n.duration),
-                                style: const TextStyle(
-                                    color: Colors.white60, fontSize: 18)),
+                            Text(
+                              _fmt(n.position),
+                              style: TextStyle(
+                                color: context.look.textSecondary,
+                                fontSize: 18,
+                              ),
+                            ),
+                            Text(
+                              _fmt(n.duration),
+                              style: TextStyle(
+                                color: context.look.textSecondary,
+                                fontSize: 18,
+                              ),
+                            ),
                           ],
                         ),
                       ],
@@ -723,8 +774,8 @@ class _ProgressBarState extends State<_ProgressBar> {
         child: LinearProgressIndicator(
           value: n.progress,
           minHeight: 8,
-          backgroundColor: Colors.white24,
-          valueColor: const AlwaysStoppedAnimation(Color(0xFF7FB6FF)),
+          backgroundColor: context.look.wash(0.24),
+          valueColor: AlwaysStoppedAnimation(context.look.accent),
         ),
       );
     }
@@ -732,9 +783,9 @@ class _ProgressBarState extends State<_ProgressBar> {
     return SliderTheme(
       data: SliderTheme.of(context).copyWith(
         trackHeight: 10,
-        activeTrackColor: const Color(0xFF7FB6FF),
-        inactiveTrackColor: Colors.white24,
-        thumbColor: const Color(0xFF7FB6FF),
+        activeTrackColor: context.look.accent,
+        inactiveTrackColor: context.look.wash(0.24),
+        thumbColor: context.look.accent,
         thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 16),
         overlayShape: const RoundSliderOverlayShape(overlayRadius: 30),
       ),
@@ -848,12 +899,13 @@ class _PlaylistPickerDialog extends StatefulWidget {
 }
 
 class _PlaylistPickerDialogState extends State<_PlaylistPickerDialog> {
-  late final Future<List<PlaylistInfo>> _future = widget.service.loadPlaylists();
+  late final Future<List<PlaylistInfo>> _future = widget.service
+      .loadPlaylists();
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: const Color(0xFF1B1E27),
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 480, maxHeight: 560),
@@ -865,18 +917,18 @@ class _PlaylistPickerDialogState extends State<_PlaylistPickerDialog> {
             children: [
               Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Add to playlist',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: context.look.textPrimary,
                         fontSize: 22,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white54),
+                    icon: Icon(Icons.close, color: context.look.textSecondary),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -899,12 +951,16 @@ class _PlaylistPickerDialogState extends State<_PlaylistPickerDialog> {
                     }
                     final playlists = snapshot.data ?? const [];
                     if (playlists.isEmpty) {
-                      return const Padding(
+                      return Padding(
                         padding: EdgeInsets.symmetric(vertical: 48),
                         child: Center(
-                          child: Text('No playlists found',
-                              style: TextStyle(
-                                  color: Colors.white54, fontSize: 16)),
+                          child: Text(
+                            'No playlists found',
+                            style: TextStyle(
+                              color: context.look.textSecondary,
+                              fontSize: 16,
+                            ),
+                          ),
                         ),
                       );
                     }
@@ -912,14 +968,16 @@ class _PlaylistPickerDialogState extends State<_PlaylistPickerDialog> {
                       shrinkWrap: true,
                       itemCount: playlists.length,
                       separatorBuilder: (_, __) =>
-                          const Divider(color: Colors.white12, height: 1),
+                          Divider(color: context.look.wash(0.12), height: 1),
                       itemBuilder: (context, i) {
                         final p = playlists[i];
                         return ListTile(
                           title: Text(
                             p.name,
-                            style:
-                                const TextStyle(color: Colors.white, fontSize: 18),
+                            style: TextStyle(
+                              color: context.look.textPrimary,
+                              fontSize: 18,
+                            ),
                           ),
                           onTap: () {
                             widget.service.addToPlaylist(p.id);
@@ -956,7 +1014,7 @@ class _HeaderButton extends StatelessWidget {
     return Tooltip(
       message: tooltip,
       child: Material(
-        color: Colors.white.withValues(alpha: 0.10),
+        color: context.look.wash(0.10),
         shape: const CircleBorder(),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -964,7 +1022,7 @@ class _HeaderButton extends StatelessWidget {
           child: SizedBox(
             width: 56,
             height: 56,
-            child: Icon(icon, color: Colors.white70, size: 26),
+            child: Icon(icon, color: context.look.textSecondary, size: 26),
           ),
         ),
       ),
@@ -994,9 +1052,15 @@ class _RoundButton extends StatelessWidget {
     final bg = filled
         ? Theme.of(context).colorScheme.primary
         : (active
-            ? (activeColor ?? Colors.white).withValues(alpha: 0.22)
-            : Colors.white.withValues(alpha: 0.10));
-    final fg = active && !filled ? (activeColor ?? Colors.white) : Colors.white;
+              ? (activeColor ?? context.look.textPrimary).withValues(
+                  alpha: 0.22,
+                )
+              : context.look.wash(0.10));
+    final fg = filled
+        ? context.look.onAccent
+        : (active
+              ? (activeColor ?? context.look.textPrimary)
+              : context.look.textPrimary);
     return Material(
       color: bg,
       shape: const CircleBorder(),
@@ -1049,17 +1113,14 @@ class _VolumeRow extends StatelessWidget {
           child: SliderTheme(
             data: SliderTheme.of(context).copyWith(
               trackHeight: 10,
-              activeTrackColor: muted ? Colors.white24 : accent,
-              inactiveTrackColor: Colors.white24,
-              thumbColor: muted ? Colors.white54 : accent,
+              activeTrackColor: muted ? context.look.wash(0.24) : accent,
+              inactiveTrackColor: context.look.wash(0.24),
+              thumbColor: muted ? context.look.textSecondary : accent,
               // Big thumb and overlay: this is driven by fingers.
               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 18),
               overlayShape: const RoundSliderOverlayShape(overlayRadius: 32),
             ),
-            child: Slider(
-              value: v,
-              onChanged: service.setVolume,
-            ),
+            child: Slider(value: v, onChanged: service.setVolume),
           ),
         ),
         const SizedBox(width: 12),
@@ -1068,7 +1129,7 @@ class _VolumeRow extends StatelessWidget {
           child: Text(
             '${(v * 100).round()}%',
             textAlign: TextAlign.right,
-            style: const TextStyle(color: Colors.white70, fontSize: 22),
+            style: TextStyle(color: context.look.textSecondary, fontSize: 22),
           ),
         ),
       ],

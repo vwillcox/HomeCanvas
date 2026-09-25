@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../look.dart';
 
 import '../config/credits.dart';
 import '../widgets/glass.dart';
@@ -26,34 +27,34 @@ class AboutScreen extends StatelessWidget {
           const _Header(),
 
           _SectionTitle('Dart packages', accent),
-          const Text(
+          Text(
             'Open-source packages this app depends on directly.',
-            style: TextStyle(color: Colors.white54, fontSize: 16),
+            style: TextStyle(color: context.look.textSecondary, fontSize: 16),
           ),
           const SizedBox(height: 8),
           ...kDartPackages.map((c) => _CreditTile(credit: c)),
 
           _SectionTitle('System libraries', accent),
-          const Text(
+          Text(
             'Provided by the operating system.',
-            style: TextStyle(color: Colors.white54, fontSize: 16),
+            style: TextStyle(color: context.look.textSecondary, fontSize: 16),
           ),
           const SizedBox(height: 8),
           ...kSystemLibraries.map((c) => _CreditTile(credit: c)),
 
           _SectionTitle('Services', accent),
-          const Text(
+          Text(
             'Network services this app talks to.',
-            style: TextStyle(color: Colors.white54, fontSize: 16),
+            style: TextStyle(color: context.look.textSecondary, fontSize: 16),
           ),
           const SizedBox(height: 8),
           ...kServices.map((c) => _CreditTile(credit: c)),
 
           _SectionTitle('Credits and sources', accent),
-          const Text(
+          Text(
             'Almost all of the code here was written for this project. These '
             'parts came from, or were adapted from, elsewhere.',
-            style: TextStyle(color: Colors.white54, fontSize: 16),
+            style: TextStyle(color: context.look.textSecondary, fontSize: 16),
           ),
           const SizedBox(height: 8),
           ...kSourceCredits.map((s) => _SourceTile(source: s)),
@@ -94,22 +95,22 @@ class _Header extends StatelessWidget {
                   ),
                   Text(
                     'Version $kAppVersion',
-                    style: const TextStyle(color: Colors.white54, fontSize: 17),
+                    style: TextStyle(color: context.look.textSecondary, fontSize: 17),
                   ),
                 ],
               ),
             ],
           ),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'A touchscreen photo frame and media browser for a self-hosted '
             'Immich server, built for a Raspberry Pi with a DSI touch display.',
-            style: TextStyle(fontSize: 17, color: Colors.white70, height: 1.35),
+            style: TextStyle(fontSize: 17, color: context.look.textSecondary, height: 1.35),
           ),
           const SizedBox(height: 10),
-          const SelectableText(
+          SelectableText(
             'https://github.com/vwillcox/ImmichKioskPi',
-            style: TextStyle(fontSize: 16, color: Color(0xFF7FB6FF)),
+            style: TextStyle(fontSize: 16, color: context.look.accent),
           ),
         ],
       ),
@@ -156,7 +157,7 @@ class _CreditTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       decoration: BoxDecoration(
-        color: const Color(0xFF1B1E27),
+        color: context.look.solidSurface,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -180,12 +181,12 @@ class _CreditTile extends StatelessWidget {
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.08),
+                  color: context.look.wash(0.08),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   credit.licence,
-                  style: const TextStyle(fontSize: 14, color: Colors.white70),
+                  style: TextStyle(fontSize: 14, color: context.look.textSecondary),
                 ),
               ),
             ],
@@ -193,12 +194,12 @@ class _CreditTile extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             credit.purpose,
-            style: const TextStyle(fontSize: 16, color: Colors.white70),
+            style: TextStyle(fontSize: 16, color: context.look.textSecondary),
           ),
           const SizedBox(height: 6),
           SelectableText(
             credit.url,
-            style: const TextStyle(fontSize: 15, color: Color(0xFF7FB6FF)),
+            style: TextStyle(fontSize: 15, color: context.look.accent),
           ),
         ],
       ),
@@ -216,7 +217,7 @@ class _SourceTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       decoration: BoxDecoration(
-        color: const Color(0xFF1B1E27),
+        color: context.look.solidSurface,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -229,9 +230,9 @@ class _SourceTile extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             source.detail,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
-              color: Colors.white70,
+              color: context.look.textSecondary,
               height: 1.35,
             ),
           ),
@@ -239,7 +240,7 @@ class _SourceTile extends StatelessWidget {
             const SizedBox(height: 6),
             SelectableText(
               source.url!,
-              style: const TextStyle(fontSize: 15, color: Color(0xFF7FB6FF)),
+              style: TextStyle(fontSize: 15, color: context.look.accent),
             ),
           ],
         ],
@@ -256,11 +257,11 @@ class _Licence extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF15171E),
+        color: context.look.solidSurface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: context.look.wash(0.08)),
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
@@ -272,7 +273,7 @@ class _Licence extends StatelessWidget {
             'ImmichKioskPi is released under the MIT Licence. It talks only to '
             'your own Immich server and to Open-Meteo for the weather — there '
             'is no analytics and no third-party tracking.',
-            style: TextStyle(fontSize: 16, color: Colors.white70, height: 1.35),
+            style: TextStyle(fontSize: 16, color: context.look.textSecondary, height: 1.35),
           ),
         ],
       ),
