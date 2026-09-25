@@ -4,6 +4,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:xml/xml.dart';
 
+import 'plain_text.dart';
+
 import 'retry_schedule.dart';
 
 /// One entry from an RSS or Atom feed.
@@ -484,35 +486,11 @@ class FeedService extends ChangeNotifier {
   /// for an apostrophe and `&#8211;` for a dash, and a headline reading
   /// "Simpsons: Hit &#038; Run" on the wall is the sort of thing you notice
   /// every time you walk past it.
-  static String _unescape(String v) {
-    final named = v
-        .replaceAll('&lt;', '<')
-        .replaceAll('&gt;', '>')
-        .replaceAll('&quot;', '"')
-        .replaceAll('&apos;', "'")
-        .replaceAll('&nbsp;', ' ')
-        // Ampersand last of the named ones: doing it first would turn
-        // "&amp;lt;" into a working "<" that was never meant to be one.
-        .replaceAll('&amp;', '&');
-
-    return named.replaceAllMapped(
-      RegExp(r'&#(x?)([0-9a-fA-F]+);'),
-      (m) {
-        final hex = m[1]!.isNotEmpty;
-        final code = int.tryParse(m[2]!, radix: hex ? 16 : 10);
-        // Anything outside Unicode, or a control character, is left as it was
-        // rather than turned into something unprintable.
-        if (code == null || code < 0x20 || code > 0x10FFFF) return m[0]!;
-        return String.fromCharCode(code);
-      },
-    );
-  }
+  static String _unescape(String v) => decodeEntities(v);
 
   static String? _stripHtml(String? v) {
     if (v == null || v.isEmpty) return null;
-    final text = _unescape(v.replaceAll(RegExp(r'<[^>]*>'), ' '))
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
+    final text = plainText(v);
     return text.isEmpty ? null : text;
   }
 

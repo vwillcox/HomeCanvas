@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:media_kit/media_kit.dart';
 
 import 'article_text.dart';
+import 'plain_text.dart';
 import 'tts_service.dart';
 
 /// Where the reader's words become sound. An interface so the reading —
@@ -143,7 +144,7 @@ class ArticleReader extends ChangeNotifier {
     final taking = _started;
     final run = ++_run;
     if (taking) await output.stop();
-    _title = title;
+    _title = plainText(title);
     _link = link;
     _summaryOnly = false;
     _chunks = const [];
@@ -164,7 +165,7 @@ class ArticleReader extends ChangeNotifier {
     }
     if (run != _run) return;
 
-    final parts = <String>['$title.'];
+    final parts = <String>['$_title.'];
     if (article != null) {
       if (source != null && source.isNotEmpty) parts.add('From $source.');
       parts.addAll(article.paragraphs);
@@ -175,7 +176,11 @@ class ArticleReader extends ChangeNotifier {
     } else {
       parts.add("Sorry, there's nothing here that can be read out.");
     }
-    _chunks = speakableChunks(parts);
+    // Whatever the source — the page, its embedded text, the feed's summary,
+    // the headline — nothing encoded reaches the voice.
+    _chunks = speakableChunks(
+      parts.map(speakable).where((p) => p.isNotEmpty).toList(),
+    );
     _set(ReaderStatus.reading);
     await _readFrom(run);
   }
