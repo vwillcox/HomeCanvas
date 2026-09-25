@@ -32,5 +32,14 @@
   "fontFamily": null,
 
   "//shadow": "Soft shadow under each tile. Turn off for flat and light themes.",
-  "shadow": true
+  "shadow": true,
+
+  "//glow": "Optional. A soft glow of colour from the top left, as on the kiosk's home screen. Use a colour with low opacity, like #29A6C8FF.",
+  "glow": null,
+
+  "//glowEnd": "Optional. A second glow, from the bottom right. Needs glow as well.",
+  "glowEnd": null,
+
+  "//sheen": "Light along the top of each tile, like a pane of glass catching it: 0 for none, around 0.05 to 0.1 for glass.",
+  "sheen": 0
 }

@@ -36,6 +36,46 @@ void main() {
     });
   });
 
+  group('the Aurora dashboard theme', () {
+    final aurora = kBuiltInThemes.firstWhere((t) => t.id == 'aurora');
+
+    test('is glass: see-through tiles, tight gaps, the first glow', () {
+      final glass = kBuiltInThemes.firstWhere((t) => t.id == 'glass');
+      expect(aurora.surface.a, lessThan(0.15));
+      expect(aurora.gap, glass.gap);
+      expect(aurora.backgroundDecoration.gradient, isA<RadialGradient>());
+    });
+
+    test('adds a second glow from the bottom right, fading to nothing', () {
+      final g = aurora.glowEndDecoration!.gradient! as RadialGradient;
+      final c = g.center as Alignment;
+      expect(c.x, greaterThan(0));
+      expect(c.y, greaterThan(0));
+      expect(g.colors.last.a, 0);
+    });
+
+    test('lights the top of each tile, and only the top', () {
+      final g = aurora.tileDecoration.gradient! as LinearGradient;
+      expect(g.colors.first, isNot(g.colors.last));
+      expect(g.colors.last, aurora.surface);
+      expect(aurora.tileDecoration.color, isNull);
+    });
+
+    test('survives being written out and read back, sheen and all', () {
+      final back = DashboardTheme.fromJson(aurora.toJson());
+      expect(back.glowEnd, aurora.glowEnd);
+      expect(back.sheen, aurora.sheen);
+    });
+
+    test('a theme without them is unchanged: one glow, flat tiles', () {
+      final glass = kBuiltInThemes.firstWhere((t) => t.id == 'glass');
+      expect(glass.glowEndDecoration, isNull);
+      expect(glass.tileDecoration.gradient, isNull);
+      expect(glass.tileDecoration.color, glass.surface);
+      expect(glass.toJson().containsKey('sheen'), isFalse);
+    });
+  });
+
   group('the dashboard top bar', () {
     test('is on for a dashboard saved before it existed', () {
       expect(DashboardSettings.fromJson({}).topBar, isTrue);

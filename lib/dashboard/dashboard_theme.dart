@@ -46,6 +46,14 @@ class DashboardTheme {
   /// the kiosk's own home screen. Null for a plain background.
   final Color? glow;
 
+  /// A second glow, from the bottom right. Null for none.
+  final Color? glowEnd;
+
+  /// Light along the top of each tile, as on a pane of glass catching it:
+  /// how much white it starts with, 0 for none. Around 0.05 to 0.1 reads as
+  /// glass; much more reads as a gradient.
+  final double sheen;
+
   const DashboardTheme({
     required this.id,
     required this.name,
@@ -60,6 +68,8 @@ class DashboardTheme {
     this.fontFamily,
     this.shadow = true,
     this.glow,
+    this.glowEnd,
+    this.sheen = 0,
   });
 
   static Color _colour(Object? v, Color fallback) {
@@ -88,6 +98,10 @@ class DashboardTheme {
       fontFamily: j['fontFamily'] as String?,
       shadow: j['shadow'] as bool? ?? true,
       glow: j['glow'] == null ? null : _colour(j['glow'], Colors.transparent),
+      glowEnd: j['glowEnd'] == null
+          ? null
+          : _colour(j['glowEnd'], Colors.transparent),
+      sheen: ((j['sheen'] as num?)?.toDouble() ?? 0).clamp(0.0, 0.5),
     );
   }
 
@@ -110,6 +124,8 @@ class DashboardTheme {
     'fontFamily': fontFamily,
     'shadow': shadow,
     if (glow != null) 'glow': _hex(glow!),
+    if (glowEnd != null) 'glowEnd': _hex(glowEnd!),
+    if (sheen > 0) 'sheen': sheen,
   };
 
   static String _hex(Color c) =>
@@ -137,13 +153,43 @@ class DashboardTheme {
           color: background.length == 1 ? background.first : null,
         );
 
+  /// The second glow, as a layer over [backgroundDecoration]: a
+  /// decoration has room for one gradient. Fades to its own colour at no
+  /// opacity rather than to the background, so the first glow shows through.
+  BoxDecoration? get glowEndDecoration => glowEnd == null
+      ? null
+      : BoxDecoration(
+          gradient: RadialGradient(
+            center: const Alignment(0.95, 1.15),
+            radius: 1.3,
+            colors: [glowEnd!, glowEnd!.withValues(alpha: 0)],
+            stops: const [0.0, 0.7],
+          ),
+        );
+
   BoxDecoration get tileDecoration => tileDecorationWith();
 
   /// The tile's look, with the dashboard's own overrides applied over the
   /// theme's preferences.
   BoxDecoration tileDecorationWith({double? radius, bool? withShadow}) =>
       BoxDecoration(
-        color: surface,
+        color: sheen > 0 ? null : surface,
+        // The sheen: the top of the tile a little lighter, gone by the
+        // middle, over the same surface.
+        gradient: sheen > 0
+            ? LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color.alphaBlend(
+                    Colors.white.withValues(alpha: sheen),
+                    surface,
+                  ),
+                  surface,
+                ],
+                stops: const [0, 0.45],
+              )
+            : null,
         borderRadius: BorderRadius.circular(radius ?? cornerRadius),
         border: Border.all(color: border),
         boxShadow: (withShadow ?? shadow)
@@ -177,6 +223,25 @@ const List<DashboardTheme> kBuiltInThemes = [
     cornerRadius: 24,
     // Tight, like the photo wall: the tiles read as one panel of glass
     // rather than islands with a channel of background between each.
+    gap: 10,
+  ),
+  // Glass after dark: the same frosted tiles, tight gaps and big corners,
+  // over an inkier black lit from two corners at once — violet from the top
+  // left, teal from the bottom right — with light catching the top of each
+  // pane. The mint accent sits between the two glows.
+  DashboardTheme(
+    id: 'aurora',
+    name: 'Aurora',
+    background: [Color(0xFF07080E)],
+    glow: Color(0x338E7BFF),
+    glowEnd: Color(0x3833D6C0),
+    surface: Color(0x14DDE3FF),
+    border: Color(0x22E6EAFF),
+    sheen: 0.07,
+    textPrimary: Color(0xFFF6F7FF),
+    textSecondary: Color(0x9EF6F7FF),
+    accent: Color(0xFF8FF0DC),
+    cornerRadius: 26,
     gap: 10,
   ),
   DashboardTheme(

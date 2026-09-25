@@ -72,6 +72,11 @@ six till nine, a night page after ten.
 | ![Grid carbon, on this day in history, train departures and chores](docs/screenshots/dashboard-around-the-house.jpg) | ![A month calendar beside a photo](docs/screenshots/dashboard-calendar.jpg) |
 | How clean the electricity is, the next trains, a chores chart with stars, and something from history. | Your calendars and a photo from Immich. |
 
+![The dashboard in the Aurora theme](docs/screenshots/dashboard-aurora.jpg)
+
+The **Aurora** theme: Glass after dark, lit violet and teal from opposite
+corners, with light catching the top of each tile.
+
 | The full forecast | Switching TV inputs |
 |---|---|
 | ![The full forecast](docs/screenshots/forecast.jpg) | ![The TV inputs](docs/screenshots/tv-inputs.jpg) |
@@ -136,7 +141,7 @@ queue.
 | Network | UniFi health, Who's home, UniFi devices, Network clients, WAN throughput, ISP speed test, Speed test, LAN speed test |
 | Home lab | Servers (with SMART disk health), Services, Certificates, Updates |
 
-Six themes plus a JSON template for your own, twenty fonts, per-widget sizing,
+Seven themes plus a JSON template for your own, twenty fonts, per-widget sizing,
 pages and widgets that show only at certain hours, and an optional background
 of your own photos behind the tiles.
 

@@ -231,7 +231,11 @@ class _DashboardScreenState extends State<DashboardScreen>
   Widget build(BuildContext context) {
     final dashboard = context.watch<DashboardService>();
     final settings = context.watch<ConfigService>().config.dashboard;
-    final theme = dashboard.themes.byId(settings.themeId);
+    // IMMICH_KIOSK_TEST_THEME=<id>: show a theme without saving it, for a
+    // screenshot.
+    final theme = dashboard.themes.byId(
+      Platform.environment['IMMICH_KIOSK_TEST_THEME'] ?? settings.themeId,
+    );
 
     final visible = visiblePages(
       settings.pageCount,
@@ -324,6 +328,8 @@ class _DashboardScreenState extends State<DashboardScreen>
         child: Stack(
           fit: StackFit.expand,
           children: [
+            if (theme.glowEndDecoration != null)
+              DecoratedBox(decoration: theme.glowEndDecoration!),
             if (settings.photoBackground)
               PhotoBackdrop(
                 albumId: settings.photoAlbum,
