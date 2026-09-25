@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
-import 'package:immich_kiosk_pi/dashboard/dashboard_theme.dart';
-import 'package:immich_kiosk_pi/dashboard/widgets/weather_forecast_sheet.dart';
-import 'package:immich_kiosk_pi/services/config_service.dart';
-import 'package:immich_kiosk_pi/services/weather_service.dart';
+import 'package:home_canvas/dashboard/dashboard_theme.dart';
+import 'package:home_canvas/dashboard/widgets/weather_forecast_sheet.dart';
+import 'package:home_canvas/services/config_service.dart';
+import 'package:home_canvas/services/weather_service.dart';
 
 /// A weather service that has already fetched [fixed], and fetches nothing.
 class FakeWeather extends WeatherService {

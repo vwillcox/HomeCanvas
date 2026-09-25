@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
-import 'package:immich_kiosk_pi/config/app_config.dart';
-import 'package:immich_kiosk_pi/services/audio_levels_service.dart';
-import 'package:immich_kiosk_pi/widgets/audio_visualiser.dart';
+import 'package:home_canvas/config/app_config.dart';
+import 'package:home_canvas/services/audio_levels_service.dart';
+import 'package:home_canvas/widgets/audio_visualiser.dart';
 
 /// A service that opens cleanly and then says nothing, so the widget renders
 /// as it would on the panel without a capture process anywhere near it.

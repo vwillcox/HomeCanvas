@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:immich_kiosk_pi/services/feed_service.dart';
+import 'package:home_canvas/services/feed_service.dart';
 
 FeedItem item(String title, {String? link, List<String> categories = const []}) =>
     FeedItem(title: title, link: link, categories: categories);

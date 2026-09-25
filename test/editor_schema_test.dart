@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:immich_kiosk_pi/dashboard/widget_registry.dart';
-import 'package:immich_kiosk_pi/dashboard/widgets/widgets.dart';
+import 'package:home_canvas/dashboard/widget_registry.dart';
+import 'package:home_canvas/dashboard/widgets/widgets.dart';
 
 /// What the browser editor reads to draw its preview. It is the only
 /// consumer, and it is JavaScript, so nothing else would notice a field

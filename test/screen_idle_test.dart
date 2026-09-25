@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:immich_kiosk_pi/config/app_config.dart';
-import 'package:immich_kiosk_pi/services/screen_idle_service.dart';
+import 'package:home_canvas/config/app_config.dart';
+import 'package:home_canvas/services/screen_idle_service.dart';
 
 /// The service's decision to switch off is the part worth testing; the HTTP
 /// call it makes to do so is `screen_control.py`'s business, and unreachable

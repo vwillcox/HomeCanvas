@@ -4,17 +4,17 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:immich_kiosk_pi/dashboard/dashboard_model.dart';
-import 'package:immich_kiosk_pi/services/air_quality_service.dart';
-import 'package:immich_kiosk_pi/services/bin_schedule.dart';
-import 'package:immich_kiosk_pi/services/bins_service.dart';
-import 'package:immich_kiosk_pi/services/config_service.dart';
-import 'package:immich_kiosk_pi/services/dashboard_service.dart';
-import 'package:immich_kiosk_pi/services/notes_service.dart';
-import 'package:immich_kiosk_pi/services/service_checks.dart';
-import 'package:immich_kiosk_pi/services/sun_moon.dart';
-import 'package:immich_kiosk_pi/services/system_stats.dart';
-import 'package:immich_kiosk_pi/services/timer_service.dart';
+import 'package:home_canvas/dashboard/dashboard_model.dart';
+import 'package:home_canvas/services/air_quality_service.dart';
+import 'package:home_canvas/services/bin_schedule.dart';
+import 'package:home_canvas/services/bins_service.dart';
+import 'package:home_canvas/services/config_service.dart';
+import 'package:home_canvas/services/dashboard_service.dart';
+import 'package:home_canvas/services/notes_service.dart';
+import 'package:home_canvas/services/service_checks.dart';
+import 'package:home_canvas/services/sun_moon.dart';
+import 'package:home_canvas/services/system_stats.dart';
+import 'package:home_canvas/services/timer_service.dart';
 
 void main() {
   group('sun', () {

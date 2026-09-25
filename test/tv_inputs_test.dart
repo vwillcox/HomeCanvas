@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
-import 'package:immich_kiosk_pi/dashboard/dashboard_theme.dart';
-import 'package:immich_kiosk_pi/dashboard/widgets/tv_inputs_sheet.dart';
-import 'package:immich_kiosk_pi/services/config_service.dart';
-import 'package:immich_kiosk_pi/services/tv_service.dart';
-import 'package:immich_kiosk_pi/services/vidaa_client.dart';
+import 'package:home_canvas/dashboard/dashboard_theme.dart';
+import 'package:home_canvas/dashboard/widgets/tv_inputs_sheet.dart';
+import 'package:home_canvas/services/config_service.dart';
+import 'package:home_canvas/services/tv_service.dart';
+import 'package:home_canvas/services/vidaa_client.dart';
 
 /// A television that remembers what it was asked to switch to.
 class FakeTv extends TvService {

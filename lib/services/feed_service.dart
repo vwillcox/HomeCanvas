@@ -138,7 +138,7 @@ class FeedService extends ChangeNotifier {
     connectTimeout: const Duration(seconds: 8),
     receiveTimeout: const Duration(seconds: 12),
     responseType: ResponseType.plain,
-    headers: const {'User-Agent': 'ImmichKioskPi/1.0'},
+    headers: const {'User-Agent': 'HomeCanvas/1.0'},
   ));
 
   final Map<String, _Cached<FeedItem>> _feeds = {};

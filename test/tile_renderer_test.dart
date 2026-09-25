@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
-import 'package:immich_kiosk_pi/dashboard/dashboard_model.dart';
-import 'package:immich_kiosk_pi/dashboard/dashboard_theme.dart';
-import 'package:immich_kiosk_pi/dashboard/tile_renderer.dart';
-import 'package:immich_kiosk_pi/screens/dashboard_screen.dart';
-import 'package:immich_kiosk_pi/services/config_service.dart';
-import 'package:immich_kiosk_pi/services/dashboard_service.dart';
+import 'package:home_canvas/dashboard/dashboard_model.dart';
+import 'package:home_canvas/dashboard/dashboard_theme.dart';
+import 'package:home_canvas/dashboard/tile_renderer.dart';
+import 'package:home_canvas/screens/dashboard_screen.dart';
+import 'package:home_canvas/services/config_service.dart';
+import 'package:home_canvas/services/dashboard_service.dart';
 
 /// The editor's previews are pictures the kiosk draws of its own tiles.
 void main() {

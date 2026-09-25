@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import '../config/app_config.dart';
 
-/// Loads/saves [AppConfig] to ~/.config/immich_kiosk_pi/config.json and notifies
+/// Loads/saves [AppConfig] to ~/.config/homecanvas/config.json and notifies
 /// listeners on change. A single instance is shared app-wide.
 class ConfigService extends ChangeNotifier {
   AppConfig _config = AppConfig();
@@ -21,7 +21,7 @@ class ConfigService extends ChangeNotifier {
 
   static String get _home => Platform.environment['HOME'] ?? '.';
 
-  File get _file => File('$_home/.config/immich_kiosk_pi/config.json');
+  File get _file => File('$_home/.config/homecanvas/config.json');
 
   /// Location used before the project was renamed from TabletPi.
   File get _legacyFile => File('$_home/.config/tabletpi/config.json');

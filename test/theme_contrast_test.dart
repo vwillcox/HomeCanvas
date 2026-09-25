@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:immich_kiosk_pi/dashboard/dashboard_theme.dart';
+import 'package:home_canvas/dashboard/dashboard_theme.dart';
 
 /// WCAG contrast ratio between two opaque colours.
 double contrast(Color a, Color b) {

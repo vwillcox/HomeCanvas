@@ -4,8 +4,8 @@ import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:immich_kiosk_pi/services/sealed_share.dart';
-import 'package:immich_kiosk_pi/services/sealed_stream.dart';
+import 'package:home_canvas/services/sealed_share.dart';
+import 'package:home_canvas/services/sealed_stream.dart';
 
 Stream<List<int>> one(List<int> bytes) => Stream.value(bytes);
 

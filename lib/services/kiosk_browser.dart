@@ -107,7 +107,7 @@ class KioskBrowser {
     final home = Platform.environment['HOME'];
     final dir = home == null
         ? null
-        : '$home/.cache/immich_kiosk_pi/$browser-$profile';
+        : '$home/.cache/homecanvas/$browser-$profile';
 
     final window = windowFor(screen, bottomGutter);
 
@@ -320,7 +320,7 @@ user_pref("reader.toolbar.vertical", true);
   static const String prefs = _prefs;
 
   static const String _prefs = '''
-// Written by ImmichKioskPi. Edits here are overwritten on the next launch.
+// Written by HomeCanvas. Edits here are overwritten on the next launch.
 
 // --- Touch ---------------------------------------------------------------
 // Set explicitly rather than left at Firefox's "auto", which decides from
@@ -388,7 +388,7 @@ user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
   static const String userChrome = _userChrome;
 
   static const String _userChrome = '''
-/* Written by ImmichKioskPi. Edits here are overwritten on the next launch. */
+/* Written by HomeCanvas. Edits here are overwritten on the next launch. */
 #TabsToolbar { visibility: collapse !important; }
 #nav-bar { visibility: collapse !important; }
 #sidebar-box, #sidebar-splitter { display: none !important; }

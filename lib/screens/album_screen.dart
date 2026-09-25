@@ -75,7 +75,7 @@ class _AlbumScreenState extends State<AlbumScreen> {
         CachedNetworkImageProvider(
           _immich.thumbUrl(a.id),
           headers: _immich.authHeaders,
-          cacheManager: ImmichKioskPiCache.manager,
+          cacheManager: HomeCanvasCache.manager,
         ),
         context,
       );
@@ -86,7 +86,7 @@ class _AlbumScreenState extends State<AlbumScreen> {
   Future<void> _warmPreviews(List<Asset> assets) async {
     for (final a in assets) {
       try {
-        await ImmichKioskPiCache.manager.downloadFile(
+        await HomeCanvasCache.manager.downloadFile(
           _immich.previewUrl(a.id),
           authHeaders: _immich.authHeaders,
         );

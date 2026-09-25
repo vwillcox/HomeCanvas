@@ -2,19 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
-import 'package:immich_kiosk_pi/dashboard/dashboard_model.dart';
-import 'package:immich_kiosk_pi/dashboard/dashboard_theme.dart';
-import 'package:immich_kiosk_pi/dashboard/widget_registry.dart';
-import 'package:immich_kiosk_pi/dashboard/widgets/countdowns_widget.dart';
-import 'package:immich_kiosk_pi/dashboard/widgets/history_widget.dart';
-import 'package:immich_kiosk_pi/dashboard/widgets/immich_library_widget.dart';
-import 'package:immich_kiosk_pi/dashboard/widgets/meals_widget.dart';
-import 'package:immich_kiosk_pi/dashboard/widgets/widgets.dart';
-import 'package:immich_kiosk_pi/models/immich_models.dart';
-import 'package:immich_kiosk_pi/services/config_service.dart';
-import 'package:immich_kiosk_pi/services/home_assistant_service.dart';
-import 'package:immich_kiosk_pi/services/immich_service.dart';
-import 'package:immich_kiosk_pi/services/rain_service.dart';
+import 'package:home_canvas/dashboard/dashboard_model.dart';
+import 'package:home_canvas/dashboard/dashboard_theme.dart';
+import 'package:home_canvas/dashboard/widget_registry.dart';
+import 'package:home_canvas/dashboard/widgets/countdowns_widget.dart';
+import 'package:home_canvas/dashboard/widgets/history_widget.dart';
+import 'package:home_canvas/dashboard/widgets/immich_library_widget.dart';
+import 'package:home_canvas/dashboard/widgets/meals_widget.dart';
+import 'package:home_canvas/dashboard/widgets/widgets.dart';
+import 'package:home_canvas/models/immich_models.dart';
+import 'package:home_canvas/services/config_service.dart';
+import 'package:home_canvas/services/home_assistant_service.dart';
+import 'package:home_canvas/services/immich_service.dart';
+import 'package:home_canvas/services/rain_service.dart';
 
 Size tile(int w, int h) {
   const gap = 10.0;

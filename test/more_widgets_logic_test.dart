@@ -4,11 +4,11 @@ import 'dart:io';
 import 'package:flutter/painting.dart' show Color;
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:immich_kiosk_pi/dashboard/widgets/countdowns_widget.dart';
-import 'package:immich_kiosk_pi/services/carbon_service.dart';
-import 'package:immich_kiosk_pi/services/govee_service.dart';
-import 'package:immich_kiosk_pi/services/shopping_service.dart';
-import 'package:immich_kiosk_pi/services/trains_service.dart';
+import 'package:home_canvas/dashboard/widgets/countdowns_widget.dart';
+import 'package:home_canvas/services/carbon_service.dart';
+import 'package:home_canvas/services/govee_service.dart';
+import 'package:home_canvas/services/shopping_service.dart';
+import 'package:home_canvas/services/trains_service.dart';
 
 void main() {
   group('countdowns', () {

@@ -58,6 +58,7 @@ import 'widgets/camera_overlay.dart';
 import 'widgets/incoming_share_overlay.dart';
 import 'widgets/reading_bar.dart';
 import 'widgets/now_playing_overlay.dart';
+import 'app_paths.dart';
 import 'theme.dart';
 import 'dashboard/dashboard_theme.dart';
 import 'look.dart';
@@ -65,9 +66,12 @@ import 'look.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
+  // Before anything reads its settings: the project was ImmichKioskPi, and
+  // its folders move to their new names on the first start after that.
+  await AppPaths.migrate();
   // Big in-memory image budget — the Pi has 8 GB and revisited photos should
   // redisplay with no decode cost.
-  ImmichKioskPiCache.configureImageCache();
+  HomeCanvasCache.configureImageCache();
 
   final config = ConfigService();
   await config.load();
@@ -253,7 +257,7 @@ void main() async {
         // devices on the home network.
         ChangeNotifierProvider(create: (_) => GoveeService()),
       ],
-      child: const ImmichKioskPiApp(),
+      child: const HomeCanvasApp(),
     ),
   );
 
@@ -306,22 +310,22 @@ void runKioskCommand(KioskCommand command, ConfigService config) {
   }
 }
 
-/// The overlay added in [ImmichKioskPiApp]'s `builder` sits as a *sibling* of
+/// The overlay added in [HomeCanvasApp]'s `builder` sits as a *sibling* of
 /// this Navigator (both are children of the same Stack), not a descendant of
 /// it, so `Navigator.of(context)` from inside the overlay can't find it by
 /// walking up the tree. A global key to the same Navigator sidesteps that.
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
-class ImmichKioskPiApp extends StatelessWidget {
-  const ImmichKioskPiApp({super.key});
+class HomeCanvasApp extends StatelessWidget {
+  const HomeCanvasApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     // The theme chosen for the dashboard dresses the whole kiosk.
-    // IMMICH_KIOSK_TEST_THEME=<id> shows another without saving it, for
+    // HOMECANVAS_TEST_THEME=<id> shows another without saving it, for
     // screenshots.
     final themeId =
-        Platform.environment['IMMICH_KIOSK_TEST_THEME'] ??
+        Platform.environment['HOMECANVAS_TEST_THEME'] ??
         context.select<ConfigService, String>(
           (c) => c.config.dashboard.themeId,
         );
@@ -337,7 +341,7 @@ class ImmichKioskPiApp extends StatelessWidget {
   Widget _app(BuildContext context, DashboardTheme look) {
     return MaterialApp(
       navigatorKey: rootNavigatorKey,
-      title: 'ImmichKioskPi',
+      title: 'HomeCanvas',
       debugShowCheckedModeBanner: false,
       theme: buildTheme(look),
       // The DSI touchscreen is delivered as mouse/unknown pointer events on
@@ -392,20 +396,20 @@ class _RootGate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Dev aids for headless verification (only active when the env var is set):
-    //   IMMICH_KIOSK_TEST_VIDEO=<assetId>       boot into the video player
-    //   IMMICH_KIOSK_TEST_SLIDESHOW=<albumId>   boot into the slideshow
-    //   IMMICH_KIOSK_TEST_GALLERY=<albumId>     boot into the photo gallery
-    //   IMMICH_KIOSK_TEST_WEATHER=expanded      open the weather detail card
-    //   IMMICH_KIOSK_TEST_DASHBOARD=<page>      open the dashboard at a page
+    //   HOMECANVAS_TEST_VIDEO=<assetId>       boot into the video player
+    //   HOMECANVAS_TEST_SLIDESHOW=<albumId>   boot into the slideshow
+    //   HOMECANVAS_TEST_GALLERY=<albumId>     boot into the photo gallery
+    //   HOMECANVAS_TEST_WEATHER=expanded      open the weather detail card
+    //   HOMECANVAS_TEST_DASHBOARD=<page>      open the dashboard at a page
     final immich = context.read<ImmichService>();
-    final testVideo = Platform.environment['IMMICH_KIOSK_TEST_VIDEO'];
+    final testVideo = Platform.environment['HOMECANVAS_TEST_VIDEO'];
     if (testVideo != null && testVideo.isNotEmpty) {
       return VideoPlayerScreen(
         asset: Asset(id: testVideo, type: AssetType.video),
         source: immich,
       );
     }
-    final testSlideshow = Platform.environment['IMMICH_KIOSK_TEST_SLIDESHOW'];
+    final testSlideshow = Platform.environment['HOMECANVAS_TEST_SLIDESHOW'];
     if (testSlideshow != null && testSlideshow.isNotEmpty) {
       return _DebugAlbumLoader(
         albumId: testSlideshow,
@@ -417,7 +421,7 @@ class _RootGate extends StatelessWidget {
         ),
       );
     }
-    final testGallery = Platform.environment['IMMICH_KIOSK_TEST_GALLERY'];
+    final testGallery = Platform.environment['HOMECANVAS_TEST_GALLERY'];
     if (testGallery != null && testGallery.isNotEmpty) {
       return _DebugAlbumLoader(
         albumId: testGallery,
@@ -425,44 +429,44 @@ class _RootGate extends StatelessWidget {
         builder: (imgs) => GalleryScreen(
           assets: imgs,
           initialIndex: int.tryParse(
-                  Platform.environment['IMMICH_KIOSK_TEST_GALLERY_INDEX'] ?? '') ??
+                  Platform.environment['HOMECANVAS_TEST_GALLERY_INDEX'] ?? '') ??
               0,
           source: immich,
         ),
       );
     }
 
-    final testAlbumGrid = Platform.environment['IMMICH_KIOSK_TEST_ALBUMGRID'];
+    final testAlbumGrid = Platform.environment['HOMECANVAS_TEST_ALBUMGRID'];
     if (testAlbumGrid != null && testAlbumGrid.isNotEmpty) {
       return AlbumScreen(
         album: Album(
           id: testAlbumGrid,
-          name: Platform.environment['IMMICH_KIOSK_TEST_ALBUMNAME'] ?? 'Album',
+          name: Platform.environment['HOMECANVAS_TEST_ALBUMNAME'] ?? 'Album',
           assetCount: 0,
         ),
       );
     }
-    if ((Platform.environment['IMMICH_KIOSK_TEST_ABOUT'] ?? '').isNotEmpty) {
+    if ((Platform.environment['HOMECANVAS_TEST_ABOUT'] ?? '').isNotEmpty) {
       return const AboutScreen();
     }
-    if ((Platform.environment['IMMICH_KIOSK_TEST_SETTINGS'] ?? '').isNotEmpty) {
+    if ((Platform.environment['HOMECANVAS_TEST_SETTINGS'] ?? '').isNotEmpty) {
       return const SettingsScreen();
     }
-    final testDashboard = Platform.environment['IMMICH_KIOSK_TEST_DASHBOARD'];
+    final testDashboard = Platform.environment['HOMECANVAS_TEST_DASHBOARD'];
     if (testDashboard != null && testDashboard.isNotEmpty) {
       return DashboardScreen(initialPage: int.tryParse(testDashboard) ?? 0);
     }
-    if ((Platform.environment['IMMICH_KIOSK_TEST_NOWPLAYING'] ?? '').isNotEmpty) {
+    if ((Platform.environment['HOMECANVAS_TEST_NOWPLAYING'] ?? '').isNotEmpty) {
       return const Scaffold(
         backgroundColor: Color(0xFF101828),
         body: Stack(children: [NowPlayingOverlay()]),
       );
     }
-    final testLocked = Platform.environment['IMMICH_KIOSK_TEST_LOCKED'];
+    final testLocked = Platform.environment['HOMECANVAS_TEST_LOCKED'];
     if (testLocked != null && testLocked.isNotEmpty) {
       return _DebugLockedLoader(pin: testLocked);
     }
-    final testLockedVideo = Platform.environment['IMMICH_KIOSK_TEST_LOCKED_VIDEO'];
+    final testLockedVideo = Platform.environment['HOMECANVAS_TEST_LOCKED_VIDEO'];
     if (testLockedVideo != null && testLockedVideo.isNotEmpty) {
       return _DebugLockedVideoLoader(pin: testLockedVideo);
     }

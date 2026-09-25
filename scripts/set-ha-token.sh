@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# Store a Home Assistant long-lived access token in the ImmichKioskPi config,
+# Store a Home Assistant long-lived access token in the HomeCanvas config,
 # so the kiosk can read the indoor temperature from Home Assistant.
 #
 # Create the token in Home Assistant: click your user name (bottom left) ->
 # Security -> Long-lived access tokens -> Create token.
 #
-# Run on the Pi:  bash ~/immich_kiosk_pi/scripts/set-ha-token.sh
+# Run on the Pi:  bash ~/homecanvas/scripts/set-ha-token.sh
 set -e
-CONFIG="$HOME/.config/immich_kiosk_pi/config.json"
+CONFIG="$HOME/.config/homecanvas/config.json"
 [ -f "$CONFIG" ] || { echo "Config not found at $CONFIG"; exit 1; }
 
 # Read silently: the token is a credential and shouldn't land in scrollback.
@@ -62,4 +62,4 @@ print("Token saved.")
 PY
 
 chmod 600 "$CONFIG"
-systemctl --user restart immich_kiosk_pi.service 2>/dev/null && echo "Kiosk restarted."
+systemctl --user restart homecanvas.service 2>/dev/null && echo "Kiosk restarted."

@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
-import 'package:immich_kiosk_pi/dashboard/dashboard_model.dart';
-import 'package:immich_kiosk_pi/dashboard/dashboard_theme.dart';
-import 'package:immich_kiosk_pi/dashboard/widget_registry.dart';
-import 'package:immich_kiosk_pi/dashboard/widgets/fit_canvas.dart';
-import 'package:immich_kiosk_pi/dashboard/widgets/unifi_widgets.dart';
-import 'package:immich_kiosk_pi/services/config_service.dart';
-import 'package:immich_kiosk_pi/services/unifi_models.dart';
-import 'package:immich_kiosk_pi/services/unifi_service.dart';
+import 'package:home_canvas/dashboard/dashboard_model.dart';
+import 'package:home_canvas/dashboard/dashboard_theme.dart';
+import 'package:home_canvas/dashboard/widget_registry.dart';
+import 'package:home_canvas/dashboard/widgets/fit_canvas.dart';
+import 'package:home_canvas/dashboard/widgets/unifi_widgets.dart';
+import 'package:home_canvas/services/config_service.dart';
+import 'package:home_canvas/services/unifi_models.dart';
+import 'package:home_canvas/services/unifi_service.dart';
 
 /// A console that has already answered: two devices, like the panel's.
 class FakeUnifi extends UnifiService {

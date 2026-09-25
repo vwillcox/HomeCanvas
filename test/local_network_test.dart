@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:immich_kiosk_pi/services/dashboard_service.dart';
+import 'package:home_canvas/services/dashboard_service.dart';
 
 void main() {
   group('the senders page is refused off the local network', () {

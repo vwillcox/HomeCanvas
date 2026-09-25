@@ -61,7 +61,7 @@ class ShoppingService extends ChangeNotifier {
 
   static String defaultFile() {
     final home = Platform.environment['HOME'] ?? '.';
-    return p.join(home, '.config', 'immich_kiosk_pi', 'shopping.json');
+    return p.join(home, '.config', 'homecanvas', 'shopping.json');
   }
 
   /// A ticked item stays, faded, for this long — long enough to untick a

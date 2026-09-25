@@ -1,5 +1,5 @@
 [Unit]
-Description=ImmichKioskPi display control (HTTP, for Home Assistant)
+Description=HomeCanvas display control (HTTP, for Home Assistant)
 PartOf=graphical-session.target
 After=graphical-session.target
 
@@ -9,7 +9,7 @@ Type=simple
 # %U = this user's UID, so the unit works for any username.
 Environment=XDG_RUNTIME_DIR=/run/user/%U
 Environment=WAYLAND_DISPLAY=wayland-0
-ExecStart=/usr/bin/python3 %h/immich_kiosk_pi/deploy/screen_control.py
+ExecStart=/usr/bin/python3 %h/homecanvas/deploy/screen_control.py
 Restart=on-failure
 RestartSec=2
 

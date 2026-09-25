@@ -53,6 +53,9 @@ class SealedShare {
   static const int chunkSize = 64 * 1024;
 
   static const int _tagBytes = 16;
+  // The project's old name, kept on purpose: this label is part of the key
+  // derivation both ends share, so changing it would stop every phone
+  // already running the companion app from sharing to the panel.
   static const String _info = 'immich-kiosk-pi/share/v1';
 
   static final _x25519 = X25519();
@@ -208,7 +211,7 @@ class ShareKeys {
   ShareKeys({String? directory, this.rotateEvery = const Duration(days: 7)})
       : _directory = directory ??
             p.join(Platform.environment['HOME'] ?? '.', '.config',
-                'immich_kiosk_pi');
+                'homecanvas');
 
   final String _directory;
 

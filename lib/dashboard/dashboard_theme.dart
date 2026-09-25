@@ -7,7 +7,7 @@ import 'package:path/path.dart' as p;
 /// How a dashboard looks.
 ///
 /// A theme is data, not code, so a new one is a JSON file rather than a
-/// change to this app — drop it in `~/.config/immich_kiosk_pi/themes/` and it
+/// change to this app — drop it in `~/.config/homecanvas/themes/` and it
 /// appears in the picker. The built-ins below are the same shape and double
 /// as worked examples; `deploy/theme-template.json` is a commented copy to
 /// start from.
@@ -499,7 +499,7 @@ class ThemeRepository {
 
   static String defaultDirectory() {
     final home = Platform.environment['HOME'] ?? '.';
-    return p.join(home, '.config', 'immich_kiosk_pi', 'themes');
+    return p.join(home, '.config', 'homecanvas', 'themes');
   }
 
   List<DashboardTheme> get all {

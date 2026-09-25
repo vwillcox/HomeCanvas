@@ -44,7 +44,7 @@ class LinkViewerScreen extends StatefulWidget {
 }
 
 class _LinkViewerScreenState extends State<LinkViewerScreen> {
-  static const String _kioskAppId = 'info.talktech.immichkioskpi';
+  static const String _kioskAppId = 'info.talktech.homecanvas';
 
   Process? _browser;
   Timer? _timer;

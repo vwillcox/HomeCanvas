@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:immich_kiosk_pi/dashboard/dashboard_model.dart';
-import 'package:immich_kiosk_pi/dashboard/dashboard_theme.dart';
-import 'package:immich_kiosk_pi/dashboard/widget_registry.dart';
-import 'package:immich_kiosk_pi/dashboard/widgets/news_widget.dart';
-import 'package:immich_kiosk_pi/services/kiosk_browser.dart';
+import 'package:home_canvas/dashboard/dashboard_model.dart';
+import 'package:home_canvas/dashboard/dashboard_theme.dart';
+import 'package:home_canvas/dashboard/widget_registry.dart';
+import 'package:home_canvas/dashboard/widgets/news_widget.dart';
+import 'package:home_canvas/services/kiosk_browser.dart';
 
 /// The article window on the panel: 1920 less a 24px margin each side.
 const double panelWindow = 1872;

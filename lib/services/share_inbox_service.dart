@@ -300,7 +300,7 @@ class ShareInboxService extends ChangeNotifier {
       await request.response.close();
       return;
     }
-    final dir = Directory(p.join(ImmichKioskPiCache.root, 'shared'));
+    final dir = Directory(p.join(HomeCanvasCache.root, 'shared'));
     await dir.create(recursive: true);
     final path = p.join(
         dir.path, '${DateTime.now().microsecondsSinceEpoch}${_extForMime(mime)}');
@@ -383,7 +383,7 @@ class ShareInboxService extends ChangeNotifier {
   Future<void> _extractChimeAsset() async {
     try {
       final bytes = await rootBundle.load('assets/sounds/incoming.wav');
-      final path = p.join(ImmichKioskPiCache.root, 'incoming.wav');
+      final path = p.join(HomeCanvasCache.root, 'incoming.wav');
       await File(path).writeAsBytes(bytes.buffer.asUint8List(), flush: true);
       _chimePath = path;
     } catch (e) {

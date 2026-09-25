@@ -90,7 +90,7 @@ class _Header extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Text(
-                    'ImmichKioskPi',
+                    'HomeCanvas',
                     style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
                   ),
                   Text(
@@ -109,7 +109,7 @@ class _Header extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           SelectableText(
-            'https://github.com/vwillcox/ImmichKioskPi',
+            'https://github.com/vwillcox/HomeCanvas',
             style: TextStyle(fontSize: 16, color: context.look.accent),
           ),
         ],
@@ -270,7 +270,7 @@ class _Licence extends StatelessWidget {
           ),
           SizedBox(height: 6),
           Text(
-            'ImmichKioskPi is released under the MIT Licence. It talks only to '
+            'HomeCanvas is released under the MIT Licence. It talks only to '
             'your own Immich server and to Open-Meteo for the weather — there '
             'is no analytics and no third-party tracking.',
             style: TextStyle(fontSize: 16, color: context.look.textSecondary, height: 1.35),

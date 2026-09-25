@@ -130,7 +130,7 @@ class ChoresService extends ChangeNotifier {
 
   static String defaultFile() {
     final home = Platform.environment['HOME'] ?? '.';
-    return p.join(home, '.config', 'immich_kiosk_pi', 'chores.json');
+    return p.join(home, '.config', 'homecanvas', 'chores.json');
   }
 
   /// Weeks of history kept; older ones are dropped.

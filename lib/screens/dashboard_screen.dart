@@ -110,11 +110,11 @@ class _DashboardScreenState extends State<DashboardScreen>
     });
   }
 
-  /// Dev aid: IMMICH_KIOSK_TEST_POPUP=forecast|inputs opens that pop-up once
+  /// Dev aid: HOMECANVAS_TEST_POPUP=forecast|inputs opens that pop-up once
   /// the dashboard is up. Both open only on a tap otherwise, and the panel is
   /// not something to send synthetic taps to.
   void _debugPopup() {
-    final which = Platform.environment['IMMICH_KIOSK_TEST_POPUP'];
+    final which = Platform.environment['HOMECANVAS_TEST_POPUP'];
     if (which == null || which.isEmpty) return;
     final theme = context.read<DashboardService>().themes.byId(
       context.read<ConfigService>().config.dashboard.themeId,
@@ -233,7 +233,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     final dashboard = context.watch<DashboardService>();
     final settings = context.watch<ConfigService>().config.dashboard;
     // The kiosk's theme, which the dashboard's choice sets — including the
-    // IMMICH_KIOSK_TEST_THEME override, applied where it is chosen.
+    // HOMECANVAS_TEST_THEME override, applied where it is chosen.
     final theme = context.look;
 
     final visible = visiblePages(

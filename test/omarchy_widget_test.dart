@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:immich_kiosk_pi/dashboard/dashboard_model.dart';
-import 'package:immich_kiosk_pi/dashboard/dashboard_theme.dart';
-import 'package:immich_kiosk_pi/dashboard/widget_registry.dart';
-import 'package:immich_kiosk_pi/dashboard/widgets/omarchy_hotkeys.dart';
-import 'package:immich_kiosk_pi/dashboard/widgets/omarchy_widget.dart';
+import 'package:home_canvas/dashboard/dashboard_model.dart';
+import 'package:home_canvas/dashboard/dashboard_theme.dart';
+import 'package:home_canvas/dashboard/widget_registry.dart';
+import 'package:home_canvas/dashboard/widgets/omarchy_hotkeys.dart';
+import 'package:home_canvas/dashboard/widgets/omarchy_widget.dart';
 
 /// The panel's own dashboard area, near enough: 1920x1200 less the chrome.
 const Size panel = Size(1900, 1050);

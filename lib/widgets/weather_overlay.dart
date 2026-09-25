@@ -139,9 +139,9 @@ class _WeatherOverlayState extends State<WeatherOverlay>
   void initState() {
     super.initState();
     startDrift();
-    // Dev aid: IMMICH_KIOSK_TEST_WEATHER=expanded opens the detail card on
+    // Dev aid: HOMECANVAS_TEST_WEATHER=expanded opens the detail card on
     // launch, so it can be checked without a touch.
-    if (Platform.environment['IMMICH_KIOSK_TEST_WEATHER'] == 'expanded') {
+    if (Platform.environment['HOMECANVAS_TEST_WEATHER'] == 'expanded') {
       _controller.value = 1;
     }
   }

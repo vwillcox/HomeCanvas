@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
-import 'package:immich_kiosk_pi/dashboard/dashboard_model.dart';
-import 'package:immich_kiosk_pi/dashboard/dashboard_theme.dart';
-import 'package:immich_kiosk_pi/dashboard/widget_registry.dart';
-import 'package:immich_kiosk_pi/dashboard/widgets/lan_speedtest_widget.dart';
-import 'package:immich_kiosk_pi/dashboard/widgets/speed_gauge.dart';
-import 'package:immich_kiosk_pi/dashboard/widgets/speedtest_widget.dart';
-import 'package:immich_kiosk_pi/services/lan_speedtest_service.dart';
-import 'package:immich_kiosk_pi/services/speedtest_service.dart';
+import 'package:home_canvas/dashboard/dashboard_model.dart';
+import 'package:home_canvas/dashboard/dashboard_theme.dart';
+import 'package:home_canvas/dashboard/widget_registry.dart';
+import 'package:home_canvas/dashboard/widgets/lan_speedtest_widget.dart';
+import 'package:home_canvas/dashboard/widgets/speed_gauge.dart';
+import 'package:home_canvas/dashboard/widgets/speedtest_widget.dart';
+import 'package:home_canvas/services/lan_speedtest_service.dart';
+import 'package:home_canvas/services/speedtest_service.dart';
 
 /// The panel's grid, with the tile's padding taken off, as the dashboard does.
 Size tile(int w, int h) {

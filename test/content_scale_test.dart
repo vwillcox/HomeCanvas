@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:immich_kiosk_pi/dashboard/widget_registry.dart';
+import 'package:home_canvas/dashboard/widget_registry.dart';
 
 DashboardWidgetType typeOf({int w = 4, int h = 3}) => DashboardWidgetType(
       type: 't',

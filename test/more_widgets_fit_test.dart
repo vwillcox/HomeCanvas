@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
-import 'package:immich_kiosk_pi/dashboard/dashboard_model.dart';
-import 'package:immich_kiosk_pi/dashboard/dashboard_theme.dart';
-import 'package:immich_kiosk_pi/dashboard/widget_registry.dart';
-import 'package:immich_kiosk_pi/dashboard/widgets/trains_widget.dart';
-import 'package:immich_kiosk_pi/dashboard/widgets/widgets.dart';
-import 'package:immich_kiosk_pi/services/carbon_service.dart';
-import 'package:immich_kiosk_pi/services/config_service.dart';
-import 'package:immich_kiosk_pi/services/dashboard_service.dart';
-import 'package:immich_kiosk_pi/services/govee_service.dart';
-import 'package:immich_kiosk_pi/services/shopping_service.dart';
-import 'package:immich_kiosk_pi/services/trains_service.dart';
+import 'package:home_canvas/dashboard/dashboard_model.dart';
+import 'package:home_canvas/dashboard/dashboard_theme.dart';
+import 'package:home_canvas/dashboard/widget_registry.dart';
+import 'package:home_canvas/dashboard/widgets/trains_widget.dart';
+import 'package:home_canvas/dashboard/widgets/widgets.dart';
+import 'package:home_canvas/services/carbon_service.dart';
+import 'package:home_canvas/services/config_service.dart';
+import 'package:home_canvas/services/dashboard_service.dart';
+import 'package:home_canvas/services/govee_service.dart';
+import 'package:home_canvas/services/shopping_service.dart';
+import 'package:home_canvas/services/trains_service.dart';
 
 Size tile(int w, int h) {
   const gap = 10.0;

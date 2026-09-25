@@ -74,7 +74,7 @@ class _RemoteImageState extends State<RemoteImage> {
       key: ValueKey('$_activeUrl#$_attempt'),
       imageUrl: _activeUrl,
       httpHeaders: widget.headers,
-      cacheManager: ImmichKioskPiCache.manager,
+      cacheManager: HomeCanvasCache.manager,
       fit: widget.fit,
       fadeInDuration: const Duration(milliseconds: 200),
       placeholder: (_, __) => const _Placeholder(loading: true),

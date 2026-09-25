@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:immich_kiosk_pi/services/retry_schedule.dart';
+import 'package:home_canvas/services/retry_schedule.dart';
 
 void main() {
   RetrySchedule fresh() => RetrySchedule(

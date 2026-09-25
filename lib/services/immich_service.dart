@@ -340,7 +340,7 @@ class ImmichService with ImmichUrls implements MediaSource {
       final id = a.thumbnailAssetId;
       if (id == null) continue;
       try {
-        await ImmichKioskPiCache.manager.downloadFile(
+        await HomeCanvasCache.manager.downloadFile(
           thumbUrl(id),
           authHeaders: authHeaders,
         );

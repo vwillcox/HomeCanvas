@@ -192,7 +192,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               ListTile(
                 leading: const Icon(Icons.info_outline),
-                title: const Text('About ImmichKioskPi'),
+                title: const Text('About HomeCanvas'),
                 subtitle: const Text(
                   'Version, open-source libraries, licences and credits',
                 ),
@@ -330,7 +330,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 8),
                 Center(
                   child: Text(
-                    'Immich Kiosk - Pi • Immich viewer',
+                    'HomeCanvas',
                     style: TextStyle(
                       color: context.look.wash(0.3),
                     ),
@@ -669,7 +669,7 @@ class _CacheTileState extends State<_CacheTile> {
   }
 
   Future<void> _measure() async {
-    final b = await ImmichKioskPiCache.diskUsageBytes();
+    final b = await HomeCanvasCache.diskUsageBytes();
     if (mounted) setState(() => _bytes = b);
   }
 
@@ -684,7 +684,7 @@ class _CacheTileState extends State<_CacheTile> {
 
   Future<void> _clear() async {
     setState(() => _busy = true);
-    await ImmichKioskPiCache.clear();
+    await HomeCanvasCache.clear();
     await _measure();
     if (mounted) {
       setState(() => _busy = false);
@@ -702,7 +702,7 @@ class _CacheTileState extends State<_CacheTile> {
       subtitle: Text(
         _bytes == null
             ? 'Measuring…'
-            : '${_human(_bytes!)} on disk  •  ~/.cache/immich_kiosk_pi',
+            : '${_human(_bytes!)} on disk  •  ~/.cache/homecanvas',
       ),
       trailing: _busy
           ? const SizedBox(

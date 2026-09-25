@@ -12,13 +12,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 [ -f "$SCRIPT_DIR/local.env" ] && . "$SCRIPT_DIR/local.env"
 
 PI="${PI_HOST:-pi@raspberrypi.local}"
-PI_DIR="${PI_DIR:-/home/pi/immich_kiosk_pi}"
+PI_DIR="${PI_DIR:-/home/pi/homecanvas}"
 HERE="$SCRIPT_DIR"
 
 "$HERE/sync.sh"
 
 # Environment so GUI apps target the Pi's Wayland session on seat0.
-# NOTE: kill by exact process name (-x immich_kiosk_pi); `pkill -f .../immich_kiosk_pi` also
+# NOTE: kill by exact process name (-x homecanvas); `pkill -f .../homecanvas` also
 # matches this launcher's own command line and would kill the shell mid-launch.
 WENV='export PATH="$HOME/flutter/bin:$PATH"; export XDG_RUNTIME_DIR=/run/user/1000; export WAYLAND_DISPLAY=wayland-0; export GDK_BACKEND=wayland;'
 
@@ -27,6 +27,6 @@ if [ "$MODE" = "debug" ]; then
 else
   ssh "$PI" "$WENV cd '$PI_DIR' && flutter build linux --release"
   # Restart via the systemd user service (returns immediately, survives ssh exit).
-  ssh "$PI" "export XDG_RUNTIME_DIR=/run/user/1000; systemctl --user restart immich_kiosk_pi.service && echo restarted"
-  echo "Restarted the kiosk on the Pi display. Logs: journalctl --user -u immich_kiosk_pi -f"
+  ssh "$PI" "export XDG_RUNTIME_DIR=/run/user/1000; systemctl --user restart homecanvas.service && echo restarted"
+  echo "Restarted the kiosk on the Pi display. Logs: journalctl --user -u homecanvas -f"
 fi

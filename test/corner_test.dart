@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:immich_kiosk_pi/config/app_config.dart';
+import 'package:home_canvas/config/app_config.dart';
 
 void main() {
   test('assigning an occupied corner swaps the two panels', () {
