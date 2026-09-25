@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:html/dom.dart';
 import 'package:html/parser.dart' as html;
 
+import 'plain_text.dart';
+
 /// An article's words, ready to be read out: its title and its paragraphs.
 @immutable
 class Article {
@@ -96,10 +98,13 @@ class ArticleText {
       final types = type is List ? type.map((t) => '$t') : ['$type'];
       final body = node['articleBody'];
       if (types.any(_articleTypes.contains) && body is String && body.isNotEmpty) {
-        // Some sites put HTML in it.
-        return body.contains('<')
-            ? html.parseFragment(body).text ?? body
-            : body;
+        // Some sites put HTML in it: its paragraph ends become the line
+        // breaks the body is split on, and [clean] takes the rest of the
+        // markup and the entities out of each line.
+        return body.replaceAll(
+          RegExp(r'<(br|/p|/div|/li|/h[1-6])\b[^<>]*>', caseSensitive: false),
+          '\n',
+        );
       }
       if (node['@graph'] != null) return _findBody(node['@graph']);
     }
@@ -199,12 +204,12 @@ class ArticleText {
     caseSensitive: false,
   );
 
-  /// One run of text: entities decoded (the parser does that), whitespace
-  /// collapsed, and stray space before punctuation removed.
-  static String clean(String s) => s
-      .replaceAll(RegExp(r'\s+'), ' ')
-      .replaceAll(RegExp(r' ([,.;:!?])'), r'$1')
-      .trim();
+  /// One run of text as it should be read: any markup gone, every HTML
+  /// entity decoded — the embedded article body and page titles are often
+  /// still encoded — invisible characters dropped, whitespace collapsed, and
+  /// stray space before punctuation removed.
+  static String clean(String s) =>
+      plainText(s).replaceAll(RegExp(r' ([,.;:!?])'), r'$1');
 }
 
 /// Splits paragraphs into pieces a voice can be given one at a time: whole
