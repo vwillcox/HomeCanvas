@@ -13,6 +13,8 @@ import 'services/air_quality_service.dart';
 import 'services/bins_service.dart';
 import 'services/carbon_service.dart';
 import 'services/govee_service.dart';
+import 'services/home_assistant_service.dart';
+import 'services/rain_service.dart';
 import 'services/notes_service.dart';
 import 'services/shopping_service.dart';
 import 'services/timer_service.dart';
@@ -162,6 +164,12 @@ void main() async {
   // dashboard is showing.
   final bins = BinsService(config, speak: speech.speak)..start();
 
+  // Home Assistant entities for the dashboard, over the connection set up
+  // for the indoor sensor. Idle until a widget asks; the editor's entity
+  // picker asks it for the list.
+  final homeAssistant = HomeAssistantService(config);
+  dashboard.haEntities = homeAssistant.choices;
+
   runApp(
     MultiProvider(
       providers: [
@@ -194,6 +202,8 @@ void main() async {
         // Made when an Air & pollen widget first asks, and not before.
         ChangeNotifierProvider(create: (_) => AirQualityService(config)),
         ChangeNotifierProvider(create: (_) => CarbonService(config)),
+        ChangeNotifierProvider(create: (_) => RainService(config)),
+        ChangeNotifierProvider.value(value: homeAssistant),
         // Made when a Lights widget first asks; it then listens for Govee
         // devices on the home network.
         ChangeNotifierProvider(create: (_) => GoveeService()),

@@ -32,14 +32,31 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class _DashboardScreenState extends State<DashboardScreen>
+    with SingleTickerProviderStateMixin {
   ScreenIdleService? _screenIdle;
 
   late final PageController _pages = PageController(
     initialPage: widget.initialPage,
   );
-  Timer? _flip;
   late int _page = widget.initialPage;
+
+  /// The automatic page turn, as an animation rather than a timer: it runs
+  /// from 0 to 1 over the page's time and turns the page when it gets there.
+  /// That same value fills the current page's dot, so a turn is never a
+  /// surprise, and pausing is simply stopping it.
+  late final AnimationController _turn = AnimationController(vsync: this)
+    ..addStatusListener((status) {
+      if (status == AnimationStatus.completed && mounted) {
+        _goTo(_page + 1, _pageCount);
+      }
+    });
+
+  /// Paused from the page dots. Holds until tapped again or the dashboard
+  /// is left; coming back starts turning again.
+  bool _paused = false;
+  bool _turning = false;
+  int _pageCount = 1;
 
   @override
   void initState() {
@@ -73,25 +90,54 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // Releasing it here rather than on the way in to the next screen means
     // the timer restarts from now, not from whenever the dashboard opened.
     _screenIdle?.dashboardShowing = false;
-    _flip?.cancel();
+    _turn.dispose();
     _pages.dispose();
     super.dispose();
   }
 
-  /// Starts, restarts or stops the automatic page turn to match the settings
-  /// and how many pages there actually are.
-  void _syncFlipTimer(DashboardSettings settings) {
+  /// Starts, retimes or stops the automatic page turn to match the settings
+  /// and how many pages there actually are. Called from build, so the change
+  /// itself waits for the frame to finish: starting an animation mid-build
+  /// would redraw the dots in the middle of drawing them.
+  void _syncTurn(DashboardSettings settings) {
+    _pageCount = settings.pageCount;
     final wanted = settings.pageSeconds > 0 && settings.pageCount > 1;
-    if (!wanted) {
-      _flip?.cancel();
-      _flip = null;
-      return;
-    }
-    if (_flip != null && _flip!.isActive) return;
-    _flip = Timer.periodic(Duration(seconds: settings.pageSeconds), (_) {
+    final length = Duration(seconds: settings.pageSeconds);
+    if (wanted == _turning && (!wanted || _turn.duration == length)) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _goTo(_page + 1, settings.pageCount);
+      final changed = _turn.duration != length;
+      if (wanted) _turn.duration = length;
+      setState(() => _turning = wanted);
+      if (!wanted) {
+        _turn
+          ..stop()
+          ..value = 0;
+      } else if (!_paused && (changed || !_turn.isAnimating)) {
+        _turn.forward(from: changed ? 0 : _turn.value);
+      }
     });
+  }
+
+  /// The page's time starts again — on arriving at a page, and whenever it
+  /// is touched, so a page being read or scrolled is not taken away from
+  /// under the finger.
+  void _restartTurn() {
+    if (!_turning) return;
+    if (_paused) {
+      _turn.value = 0;
+    } else {
+      _turn.forward(from: 0);
+    }
+  }
+
+  void _togglePause() {
+    setState(() => _paused = !_paused);
+    if (_paused) {
+      _turn.stop();
+    } else if (_turning) {
+      _turn.forward();
+    }
   }
 
   void _goTo(int index, int pageCount) {
@@ -111,14 +157,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   /// the page underneath them.
   void _tapped(DashboardSettings settings) {
     if (!settings.tapToFlip) return;
+    // Arriving at the page restarts its time (see onPageChanged), so a page
+    // you just chose is not whipped away half a second later.
     _goTo(_page + 1, settings.pageCount);
-    // Manual turns restart the clock, so a page you just chose is not
-    // whipped away half a second later.
-    if (settings.pageSeconds > 0) {
-      _flip?.cancel();
-      _flip = null;
-      _syncFlipTimer(settings);
-    }
   }
 
   @override
@@ -130,7 +171,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final pageCount = settings.pageCount;
     // Kept in step with the config on every build, so editing the interval in
     // the browser takes effect without leaving and re-entering the dashboard.
-    _syncFlipTimer(settings);
+    _syncTurn(settings);
+    final dotsTurn = _turning ? _turn : null;
+    final onPause = _turning ? _togglePause : null;
 
     final grid = Stack(
       children: [
@@ -140,17 +183,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
           // Behind the widgets, not over them: a translucent layer on
           // top would swallow every tap meant for a widget. This only
           // sees taps that fell on empty grid.
-          GestureDetector(
+          // Any touch on a page gives it its full time again. A Listener
+          // sees the touch without taking it, so the widget underneath
+          // still gets its tap or its scroll.
+          Listener(
             behavior: HitTestBehavior.translucent,
-            onTap: () => _tapped(settings),
-            child: PageView.builder(
-              controller: _pages,
-              itemCount: pageCount,
-              // Swiping works whatever the settings say — it is
-              // unambiguous in a way that tapping is not.
-              onPageChanged: (i) => setState(() => _page = i),
-              itemBuilder: (context, page) =>
-                  _Grid(settings: settings, theme: theme, page: page),
+            onPointerDown: (_) => _restartTurn(),
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: () => _tapped(settings),
+              child: PageView.builder(
+                controller: _pages,
+                itemCount: pageCount,
+                // Swiping works whatever the settings say — it is
+                // unambiguous in a way that tapping is not.
+                onPageChanged: (i) {
+                  setState(() => _page = i);
+                  _restartTurn();
+                },
+                itemBuilder: (context, page) =>
+                    _Grid(settings: settings, theme: theme, page: page),
+              ),
             ),
           ),
         // With the top bar off: the panel has no keyboard and no
@@ -169,6 +222,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   current: _page,
                   theme: theme,
                   onTap: (i) => _goTo(i, pageCount),
+                  turn: dotsTurn,
+                  paused: _paused,
+                  onTogglePause: onPause,
                 ),
               ),
             ),
@@ -194,6 +250,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       pageCount: pageCount,
                       page: _page,
                       onPage: (i) => _goTo(i, pageCount),
+                      turn: dotsTurn,
+                      paused: _paused,
+                      onTogglePause: onPause,
                     ),
                     Expanded(child: grid),
                   ],
@@ -215,12 +274,18 @@ class _TopBar extends StatelessWidget {
     required this.pageCount,
     required this.page,
     required this.onPage,
+    this.turn,
+    this.paused = false,
+    this.onTogglePause,
   });
 
   final DashboardTheme theme;
   final int pageCount;
   final int page;
   final void Function(int) onPage;
+  final Animation<double>? turn;
+  final bool paused;
+  final VoidCallback? onTogglePause;
 
   @override
   Widget build(BuildContext context) {
@@ -243,6 +308,9 @@ class _TopBar extends StatelessWidget {
                 current: page,
                 theme: theme,
                 onTap: onPage,
+                turn: turn,
+                paused: paused,
+                onTogglePause: onTogglePause,
               ),
               const SizedBox(width: 12),
             ],
@@ -464,7 +532,9 @@ class _Empty extends StatelessWidget {
   }
 }
 
-/// Which page you are on, and a way to jump straight to another.
+/// Which page you are on, and a way to jump straight to another — and,
+/// with the pages turning themselves, how long until the next turn and a
+/// way to hold it.
 ///
 /// Sized for a finger rather than as decoration: on a wall panel these are
 /// the only visible sign that there is more than one page at all.
@@ -474,6 +544,9 @@ class _PageDots extends StatelessWidget {
     required this.current,
     required this.theme,
     required this.onTap,
+    this.turn,
+    this.paused = false,
+    this.onTogglePause,
   });
 
   final int count;
@@ -481,8 +554,15 @@ class _PageDots extends StatelessWidget {
   final DashboardTheme theme;
   final void Function(int) onTap;
 
+  /// How far through its time the current page is, when pages turn
+  /// themselves. Fills the current dot.
+  final Animation<double>? turn;
+  final bool paused;
+  final VoidCallback? onTogglePause;
+
   @override
   Widget build(BuildContext context) {
+    final dim = theme.textSecondary.withValues(alpha: 0.4);
     // In a glass pill, like every other control on the kiosk's screens.
     return Glass(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -491,7 +571,11 @@ class _PageDots extends StatelessWidget {
         children: [
           for (var i = 0; i < count; i++)
             GestureDetector(
-              onTap: () => onTap(i),
+              // The current dot is the clock: tapping it holds or carries on,
+              // the same as the button beside it. The others go to their page.
+              onTap: () => i == current && onTogglePause != null
+                  ? onTogglePause!()
+                  : onTap(i),
               behavior: HitTestBehavior.opaque,
               child: Padding(
                 // The padding is the touch target; the dot itself stays small
@@ -502,18 +586,126 @@ class _PageDots extends StatelessWidget {
                 ),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOutCubic,
                   width: i == current ? 30 : 12,
                   height: 12,
                   decoration: BoxDecoration(
                     color: i == current
-                        ? theme.accent
-                        : theme.textSecondary.withValues(alpha: 0.4),
+                        ? (turn == null
+                              ? theme.accent
+                              : theme.accent.withValues(alpha: 0.3))
+                        : dim,
                     borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: i == current && turn != null
+                      ? _Fill(turn: turn!, paused: paused, colour: theme.accent)
+                      : null,
+                ),
+              ),
+            ),
+          if (onTogglePause != null) ...[
+            Container(
+              width: 1,
+              height: 18,
+              margin: const EdgeInsets.symmetric(horizontal: 2),
+              color: dim,
+            ),
+            Semantics(
+              button: true,
+              label: paused ? 'Carry on turning pages' : 'Hold this page',
+              child: GestureDetector(
+                onTap: onTogglePause,
+                behavior: HitTestBehavior.opaque,
+                child: SizedBox(
+                  width: 44,
+                  height: 36,
+                  child: Center(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      transitionBuilder: (child, a) => ScaleTransition(
+                        scale: a,
+                        child: FadeTransition(opacity: a, child: child),
+                      ),
+                      child: Icon(
+                        paused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                        key: ValueKey(paused),
+                        size: 22,
+                        color: paused ? theme.accent : theme.textSecondary,
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+/// The current dot filling up as its page's time runs out. Paused, the fill
+/// stays where it stopped and breathes, so a held page reads as held rather
+/// than stuck.
+class _Fill extends StatefulWidget {
+  const _Fill({required this.turn, required this.paused, required this.colour});
+
+  final Animation<double> turn;
+  final bool paused;
+  final Color colour;
+
+  @override
+  State<_Fill> createState() => _FillState();
+}
+
+class _FillState extends State<_Fill> with SingleTickerProviderStateMixin {
+  late final AnimationController _breath = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1400),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.paused) _breath.repeat(reverse: true);
+  }
+
+  @override
+  void didUpdateWidget(covariant _Fill old) {
+    super.didUpdateWidget(old);
+    if (widget.paused && !_breath.isAnimating) {
+      _breath.repeat(reverse: true);
+    } else if (!widget.paused && _breath.isAnimating) {
+      _breath
+        ..stop()
+        ..value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _breath.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([widget.turn, _breath]),
+      builder: (context, _) => Align(
+        alignment: Alignment.centerLeft,
+        child: FractionallySizedBox(
+          widthFactor: widget.turn.value.clamp(0.0, 1.0),
+          heightFactor: 1,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: widget.colour.withValues(
+                alpha: widget.paused ? 0.55 + 0.35 * _breath.value : 1,
+              ),
+              borderRadius: BorderRadius.circular(6),
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -5,12 +5,17 @@ import 'carbon_widget.dart';
 import 'calendar_widget.dart';
 import 'clock_widget.dart';
 import 'countdowns_widget.dart';
+import 'history_widget.dart';
+import 'home_assistant_widget.dart';
 import 'news_widget.dart';
 import 'omarchy_widget.dart';
+import 'rain_widget.dart';
 import 'spotify_widget.dart';
+import 'immich_library_widget.dart';
 import 'immich_widget.dart';
 import 'lan_speedtest_widget.dart';
 import 'lights_widget.dart';
+import 'meals_widget.dart';
 import 'memories_widget.dart';
 import 'notes_widget.dart';
 import 'servers_widget.dart';
@@ -61,5 +66,10 @@ void registerBuiltInWidgets() {
     carbonWidgetType,
     trainsWidgetType,
     lightsWidgetType,
+    rainWidgetType,
+    homeAssistantWidgetType,
+    immichLibraryWidgetType,
+    historyWidgetType,
+    mealsWidgetType,
   ]);
 }

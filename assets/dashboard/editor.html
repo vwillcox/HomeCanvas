@@ -1350,13 +1350,32 @@ function listField(w, o) {
       label.style.marginTop = "6px";
       card.appendChild(label);
 
+      if (f.kind === "choice") {
+        // A dropdown in a row — Home Assistant's entities, say. A value that
+        // is no longer offered is kept and shown, rather than silently
+        // replaced with the first choice.
+        const select = document.createElement("select");
+        const dynamic = f.choicesFrom ? (state.schema.lists || {})[f.choicesFrom] : null;
+        const entries = { "": "Choose…", ...(dynamic && Object.keys(dynamic).length ? dynamic : (f.choices || {})) };
+        const current = row[f.key] != null ? String(row[f.key]) : "";
+        if (current && !(current in entries)) entries[current] = current + " (not found)";
+        for (const [k, name] of Object.entries(entries)) {
+          const opt = document.createElement("option");
+          opt.value = k; opt.textContent = name;
+          select.appendChild(opt);
+        }
+        select.value = current;
+        select.onchange = () => { row[f.key] = select.value; markDirty(); render(true); };
+        card.appendChild(select);
+        continue;
+      }
       const input = document.createElement("input");
       if (f.kind === "colour") {
         input.type = "color";
         input.style.height = "40px";
         input.value = normaliseColour(row[f.key] != null ? row[f.key] : f.default);
       } else {
-        input.type = f.kind === "number" ? "number" : "text";
+        input.type = f.kind === "number" ? "number" : f.kind === "secret" ? "password" : "text";
         input.value = row[f.key] != null ? String(row[f.key]) : "";
       }
       // The canvas only: redrawing the form as well replaced this very box

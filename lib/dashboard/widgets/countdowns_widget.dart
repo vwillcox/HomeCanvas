@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 import '../../services/bin_schedule.dart' show Bin, dateOnly, daysBetween;
@@ -41,14 +42,76 @@ class Countdown {
     return d.month == month ? d : DateTime(year, month + 1, 0);
   }
 
-  /// The ones still to come, soonest first. Today's stays until tomorrow.
-  static List<Countdown> upcoming(List<Object?> rows, DateTime now) {
+  /// The ones still to come, soonest first — the rows, plus any [extra]
+  /// such as bank holidays. Today's stays until tomorrow.
+  static List<Countdown> upcoming(
+    List<Object?> rows,
+    DateTime now, {
+    List<Countdown> extra = const [],
+  }) {
     final today = dateOnly(now);
     return [
         for (final r in rows)
           if (r is Map) ?Countdown.fromRow(r.cast<String, dynamic>(), today),
+        ...extra,
       ].where((c) => !c.day.isBefore(today)).toList()
       ..sort((a, b) => a.day.compareTo(b.day));
+  }
+}
+
+/// The UK's bank holidays, from gov.uk's own list: England and Wales,
+/// Scotland and Northern Ireland each have their own.
+class BankHolidays {
+  BankHolidays._();
+
+  static final Dio _dio = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 15),
+    ),
+  );
+  static Map<String, List<Countdown>>? _all;
+  static DateTime? _fetched;
+  static Future<void>? _loading;
+
+  /// Those for [region] ("england-and-wales" and so on); empty until loaded.
+  static List<Countdown> of(String region) => _all?[region] ?? const [];
+
+  /// Fetches the list if there is none from today. Shared by every tile.
+  static Future<void> load() {
+    final f = _fetched;
+    if (f != null && DateTime.now().difference(f) < const Duration(hours: 24)) {
+      return Future.value();
+    }
+    return _loading ??= () async {
+      try {
+        final r = await _dio.get('https://www.gov.uk/bank-holidays.json');
+        _all = parse((r.data as Map).cast<String, dynamic>());
+        _fetched = DateTime.now();
+      } catch (_) {
+        // Countdowns carry on without them; tried again next time.
+      } finally {
+        _loading = null;
+      }
+    }();
+  }
+
+  @visibleForTesting
+  static Map<String, List<Countdown>> parse(Map<String, dynamic> json) => {
+    for (final MapEntry(:key, :value) in json.entries)
+      if (value is Map)
+        key: [
+          for (final e
+              in (value['events'] as List? ?? const []).whereType<Map>())
+            if (DateTime.tryParse('${e['date']}') case final DateTime d)
+              Countdown('${e['title']}', d),
+        ],
+  };
+
+  @visibleForTesting
+  static void debugSet(Map<String, List<Countdown>> all) {
+    _all = all;
+    _fetched = DateTime.now();
   }
 }
 
@@ -65,9 +128,24 @@ class CountdownsWidget extends StatefulWidget {
 class _CountdownsWidgetState extends State<CountdownsWidget> {
   Timer? _timer;
 
+  String get _region => '${widget.w.config.options['bankHolidays'] ?? ''}';
+
+  Future<void> _loadHolidays() async {
+    if (_region.isEmpty) return;
+    await BankHolidays.load();
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void didUpdateWidget(covariant CountdownsWidget old) {
+    super.didUpdateWidget(old);
+    unawaited(_loadHolidays());
+  }
+
   @override
   void initState() {
     super.initState();
+    unawaited(_loadHolidays());
     // Days only change at midnight, but a minute is cheap and needs no
     // arithmetic about when midnight is.
     _timer = Timer.periodic(const Duration(minutes: 1), (_) {
@@ -90,6 +168,7 @@ class _CountdownsWidgetState extends State<CountdownsWidget> {
     final items = Countdown.upcoming(
       widget.w.config.options['events'] as List? ?? const [],
       now,
+      extra: _region.isEmpty ? const [] : BankHolidays.of(_region),
     ).take(max).toList();
     if (items.isEmpty) {
       return TileMessage(
@@ -230,6 +309,19 @@ final countdownsWidgetType = DashboardWidgetType(
         WidgetOption(key: 'name', label: 'What', defaultValue: ''),
         WidgetOption(key: 'date', label: 'When', defaultValue: ''),
       ],
+    ),
+    WidgetOption(
+      key: 'bankHolidays',
+      label: 'Bank holidays',
+      kind: OptionKind.choice,
+      defaultValue: '',
+      choices: {
+        '': 'None',
+        'england-and-wales': 'England and Wales',
+        'scotland': 'Scotland',
+        'northern-ireland': 'Northern Ireland',
+      },
+      help: 'Adds them to the list, from gov.uk.',
     ),
     WidgetOption(
       key: 'show',

@@ -206,6 +206,56 @@ class ImmichService with ImmichUrls implements MediaSource {
     return out;
   }
 
+  /// The library's size, and what has arrived lately.
+  ///
+  /// The whole server's figures when the key belongs to an administrator,
+  /// otherwise this account's. Disk space is left out on purpose: behind a
+  /// network or cloud mount, Immich reports the mount's size, which can be
+  /// petabytes and means nothing on a wall.
+  Future<LibraryStats> libraryStats({int recentDays = 30}) async {
+    final dio = _dio();
+    int photos, videos;
+    int? bytes;
+    try {
+      final r = await dio.get('/api/server/statistics');
+      final d = r.data as Map;
+      photos = (d['photos'] as num).toInt();
+      videos = (d['videos'] as num).toInt();
+      bytes = (d['usage'] as num?)?.toInt();
+    } catch (_) {
+      final r = await dio.get('/api/assets/statistics');
+      final d = r.data as Map;
+      photos = (d['images'] as num).toInt();
+      videos = (d['videos'] as num).toInt();
+    }
+    final since = DateTime.now().toUtc().subtract(Duration(days: recentDays));
+    final recent = await dio.post(
+      '/api/search/metadata',
+      data: {'createdAfter': since.toIso8601String(), 'size': 1000},
+    );
+    final recentAssets = (recent.data as Map?)?['assets'] as Map?;
+    final added = (recentAssets?['items'] as List? ?? const []).length;
+    final latest = await dio.post(
+      '/api/search/metadata',
+      data: {'size': 8, 'type': 'IMAGE', 'order': 'desc'},
+    );
+    final latestItems =
+        ((latest.data as Map?)?['assets'] as Map?)?['items'] as List? ??
+        const [];
+    return LibraryStats(
+      photos: photos,
+      videos: videos,
+      bytes: bytes,
+      addedRecently: added,
+      addedCapped: added >= 1000,
+      recentDays: recentDays,
+      latest: [
+        for (final a in latestItems.whereType<Map<String, dynamic>>())
+          Asset.fromJson(a),
+      ],
+    );
+  }
+
   final Map<String, String?> _places = {};
 
   /// Where a photo was taken — "Whitstable" — from its
@@ -261,4 +311,31 @@ class ImmichService with ImmichUrls implements MediaSource {
       }
     }
   }
+}
+
+/// The library in numbers, for the Immich library widget.
+class LibraryStats {
+  const LibraryStats({
+    required this.photos,
+    required this.videos,
+    required this.addedRecently,
+    required this.recentDays,
+    this.bytes,
+    this.addedCapped = false,
+    this.latest = const [],
+  });
+
+  final int photos;
+  final int videos;
+
+  /// How much space the library itself takes, when the server says.
+  final int? bytes;
+  final int addedRecently;
+
+  /// At least this many — the count stops at a thousand.
+  final bool addedCapped;
+  final int recentDays;
+
+  /// The newest photos, newest first.
+  final List<Asset> latest;
 }

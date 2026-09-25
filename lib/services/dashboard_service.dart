@@ -178,7 +178,10 @@ class DashboardService extends ChangeNotifier {
           'fontScales': kFontScales,
           // Choice lists the widgets cannot declare for themselves, keyed by
           // the name an option asks for with `choicesFrom`.
-          'lists': {'albums': await _albumChoices()},
+          'lists': {
+            'albums': await _albumChoices(),
+            'haEntities': await _haChoices(),
+          },
         });
       }
       if (path == '/api/preview' && request.method == 'GET') {
@@ -586,6 +589,22 @@ class DashboardService extends ChangeNotifier {
   /// A failure here must not take the whole schema down with it: without the
   /// list the album picker falls back to its declared choices, but without a
   /// schema the editor cannot draw itself at all.
+  /// Home Assistant's entities for the widget's picker. Set once the
+  /// service exists; empty when Home Assistant is not set up or not
+  /// answering — the editor then offers a text box's worth of nothing, and
+  /// says so in the widget itself.
+  Future<Map<String, String>> Function()? haEntities;
+
+  Future<Map<String, String>> _haChoices() async {
+    final fetch = haEntities;
+    if (fetch == null) return const {};
+    try {
+      return await fetch().timeout(const Duration(seconds: 6));
+    } catch (_) {
+      return const {};
+    }
+  }
+
   Future<Map<String, String>> _albumChoices() async {
     final fetch = _albums;
     if (fetch == null) return const {};
