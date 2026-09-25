@@ -16,6 +16,7 @@ import '../dashboard/widget_registry.dart';
 import '../services/config_service.dart';
 import '../services/dashboard_service.dart';
 import '../services/screen_idle_service.dart';
+import '../theme.dart' show fontFallback;
 import '../widgets/glass.dart';
 import '../widgets/module_bar.dart';
 
@@ -524,6 +525,8 @@ class DashboardTile extends StatelessWidget {
           fontFamily: config.fontFamily.isEmpty
               ? theme.fontFamily
               : config.fontFamily,
+          // A fresh style, not a merge, so the app's fallback is named again.
+          fontFamilyFallback: fontFallback,
         ),
         child: framed
             ? Container(
