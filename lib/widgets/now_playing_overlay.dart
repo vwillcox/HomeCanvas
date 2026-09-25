@@ -31,7 +31,46 @@ String _fmt(Duration d) {
 /// Lets something outside the overlay open the full player — the home
 /// screen's mini player, which is part of the page rather than the overlay.
 class NowPlayingOverlayController extends ChangeNotifier {
-  void expand() => notifyListeners();
+  /// Where the player grows from and shrinks back into, when that is
+  /// whatever was tapped rather than one fixed place — a dashboard can have
+  /// a now-playing tile on any page, or more than one.
+  GlobalKey? anchor;
+
+  /// Whether the full player is showing, or on its way in or out — so a
+  /// dashboard can hold its page turns while it is.
+  final ValueNotifier<bool> isOpen = ValueNotifier(false);
+
+  void expand({GlobalKey? from}) {
+    if (from != null) anchor = from;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    isOpen.dispose();
+    super.dispose();
+  }
+}
+
+/// Hands a [NowPlayingOverlayController] down to what can open the player —
+/// a dashboard's Now playing tiles.
+class NowPlayingOpener extends InheritedWidget {
+  const NowPlayingOpener({
+    super.key,
+    required this.controller,
+    required super.child,
+  });
+
+  final NowPlayingOverlayController controller;
+
+  /// Null where there is no player to open, as in the editor's previews.
+  static NowPlayingOverlayController? maybeOf(BuildContext context) => context
+      .getInheritedWidgetOfExactType<NowPlayingOpener>()
+      ?.controller;
+
+  @override
+  bool updateShouldNotify(NowPlayingOpener old) =>
+      controller != old.controller;
 }
 
 class NowPlayingOverlay extends StatefulWidget {
@@ -55,10 +94,16 @@ class NowPlayingOverlay extends StatefulWidget {
   /// stays small, however often the overlay is rebuilt.
   final bool startExpanded;
 
+  /// The full player fills the screen over solid black, rather than a card
+  /// over a dimmed slideshow. What the home screen and the dashboard want;
+  /// by default, whatever [startExpanded] says.
+  final bool? fullScreen;
+
   const NowPlayingOverlay({
     super.key,
     this.margin = const EdgeInsets.all(28),
     this.startExpanded = false,
+    this.fullScreen,
     this.anchor,
     this.controller,
   });
@@ -82,6 +127,17 @@ class _NowPlayingOverlayState extends State<NowPlayingOverlay>
 
   bool get _expanded => _controller.value > 0.5;
 
+  bool get _fullScreen => widget.fullScreen ?? widget.startExpanded;
+
+  /// Small, the player is something in the page — the mini player, a
+  /// dashboard tile — and the overlay draws nothing of its own.
+  bool get _anchored => widget.anchor != null || widget.controller != null;
+
+  GlobalKey? get _anchor => widget.anchor ?? widget.controller?.anchor;
+
+  void _reportOpen() =>
+      widget.controller?.isOpen.value = _controller.value > 0;
+
   /// Whether the full player has been shrunk by hand, for the life of the
   /// app.
   ///
@@ -101,6 +157,7 @@ class _NowPlayingOverlayState extends State<NowPlayingOverlay>
   void initState() {
     super.initState();
     if (widget.startExpanded && !_shrunkByUser) _controller.value = 1;
+    _controller.addListener(_reportOpen);
     widget.controller?.addListener(_expandFromOutside);
     startDrift();
   }
@@ -119,7 +176,7 @@ class _NowPlayingOverlayState extends State<NowPlayingOverlay>
   /// The anchor's rectangle in this overlay's coordinates, or null when it is
   /// not laid out — scrolled out of the list, or not built at all.
   Rect? _anchorRect() {
-    final box = widget.anchor?.currentContext?.findRenderObject();
+    final box = _anchor?.currentContext?.findRenderObject();
     final me = context.findRenderObject();
     if (box is! RenderBox || me is! RenderBox) return null;
     if (!box.attached || !box.hasSize || !me.attached) return null;
@@ -154,9 +211,11 @@ class _NowPlayingOverlayState extends State<NowPlayingOverlay>
     // volume, high-res artwork) — the AVRCP source is the fallback for
     // whatever else the phone might be playing (a podcast app, YouTube Music)
     // that Spotify's API knows nothing about.
-    final spotify = context.watch<SpotifyService>();
-    final avrcp = context.watch<NowPlayingService>();
-    final service = spotify.available ? spotify : avrcp;
+    final spotify = context.watch<SpotifyService?>();
+    final avrcp = context.watch<NowPlayingService?>();
+    // Nothing to play from, where the screen is drawn without them.
+    if (spotify == null || avrcp == null) return const SizedBox.shrink();
+    final PlaybackSource service = spotify.available ? spotify : avrcp;
     if (!settings.enabled ||
         !service.available ||
         !service.now.hasTrack ||
@@ -178,12 +237,12 @@ class _NowPlayingOverlayState extends State<NowPlayingOverlay>
               final v = _t.value;
               // Anchored and small: the page's own mini player is showing, so
               // there is nothing for the overlay to draw.
-              if (widget.anchor != null && v == 0) {
+              if (_anchored && v == 0) {
                 return const SizedBox.shrink();
               }
               // Measured each frame of the animation rather than once, so the
               // player lands on the mini player wherever it has scrolled to.
-              final collapsed = widget.anchor != null
+              final collapsed = _anchored
                   ? (_anchorRect() ??
                       _collapsedRect(screen, settings.corner))
                   : applyDrift(_collapsedRect(screen, settings.corner), screen);
@@ -202,7 +261,7 @@ class _NowPlayingOverlayState extends State<NowPlayingOverlay>
                             // the album grid outright; over the slideshow,
                             // dim rather than blot out the photo entirely.
                             color: Colors.black
-                                .withValues(alpha: (widget.startExpanded ? 1.0 : 0.6) * v),
+                                .withValues(alpha: (_fullScreen ? 1.0 : 0.6) * v),
                           ),
                         ),
                       ),
@@ -245,8 +304,8 @@ class _NowPlayingOverlayState extends State<NowPlayingOverlay>
     // panel and blotting out more of the photo than it needs to. On the home
     // screen there's a solid black backdrop behind it instead of a photo, so
     // it's free to grow to fill almost the whole screen.
-    final maxWidth = widget.startExpanded ? 2400.0 : 1400.0;
-    final maxHeight = widget.startExpanded ? 1400.0 : 620.0;
+    final maxWidth = _fullScreen ? 2400.0 : 1400.0;
+    final maxHeight = _fullScreen ? 1400.0 : 620.0;
     final width = (screen.width - inset * 2).clamp(0.0, maxWidth);
     final height = (screen.height - inset * 2).clamp(0.0, maxHeight);
     return Rect.fromLTWH((screen.width - width) / 2,

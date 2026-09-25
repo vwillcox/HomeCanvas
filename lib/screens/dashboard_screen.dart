@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -16,9 +17,12 @@ import '../dashboard/widget_registry.dart';
 import '../services/config_service.dart';
 import '../services/dashboard_service.dart';
 import '../services/screen_idle_service.dart';
+import '../services/playback_source.dart';
 import '../theme.dart' show fontFallback;
 import '../widgets/glass.dart';
 import '../widgets/module_bar.dart';
+import '../widgets/now_playing_overlay.dart';
+import 'home_screen.dart' show showablePlayback;
 
 /// The dashboard: widgets laid out on a grid, drawn in the chosen theme.
 ///
@@ -71,9 +75,26 @@ class _DashboardScreenState extends State<DashboardScreen>
   /// Looks again every half minute at which pages and widgets are due.
   Timer? _clock;
 
+  /// The full now-playing player, opened from a Now playing tile or the
+  /// top bar's controls — the home screen's player, growing out of whatever
+  /// was tapped.
+  final NowPlayingOverlayController _player = NowPlayingOverlayController();
+
+  /// The page is not turned out from under the full player: it would take
+  /// the tile the player shrinks back into with it.
+  void _playerOpened() {
+    if (!_turning) return;
+    if (_player.isOpen.value) {
+      _turn.stop();
+    } else {
+      _restartTurn();
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+    _player.isOpen.addListener(_playerOpened);
     _clock = Timer.periodic(const Duration(seconds: 30), (_) {
       if (mounted) setState(() {});
     });
@@ -107,6 +128,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     // the timer restarts from now, not from whenever the dashboard opened.
     _screenIdle?.dashboardShowing = false;
     _clock?.cancel();
+    _player.isOpen.removeListener(_playerOpened);
+    _player.dispose();
     _turn.dispose();
     _pages.dispose();
     super.dispose();
@@ -130,7 +153,9 @@ class _DashboardScreenState extends State<DashboardScreen>
         _turn
           ..stop()
           ..value = 0;
-      } else if (!_paused && (changed || !_turn.isAnimating)) {
+      } else if (!_paused &&
+          !_player.isOpen.value &&
+          (changed || !_turn.isAnimating)) {
         _turn.forward(from: changed ? 0 : _turn.value);
       }
     });
@@ -164,7 +189,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   /// under the finger.
   void _restartTurn() {
     if (!_turning) return;
-    if (_paused) {
+    if (_paused || _player.isOpen.value) {
       _turn.value = 0;
     } else {
       _turn.forward(from: 0);
@@ -175,7 +200,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     setState(() => _paused = !_paused);
     if (_paused) {
       _turn.stop();
-    } else if (_turning) {
+    } else if (_turning && !_player.isOpen.value) {
       _turn.forward();
     }
   }
@@ -278,6 +303,21 @@ class _DashboardScreenState extends State<DashboardScreen>
       ],
     );
 
+    // The tiles find the player through this: a Now playing tile opens it.
+    return NowPlayingOpener(
+      controller: _player,
+      child: _scaffold(settings, theme, grid, pageCount, dotsTurn, onPause),
+    );
+  }
+
+  Widget _scaffold(
+    DashboardSettings settings,
+    DashboardTheme theme,
+    Widget grid,
+    int pageCount,
+    Animation<double>? dotsTurn,
+    VoidCallback? onPause,
+  ) {
     return Scaffold(
       body: Container(
         decoration: theme.backgroundDecoration,
@@ -309,11 +349,15 @@ class _DashboardScreenState extends State<DashboardScreen>
                           turn: dotsTurn,
                           paused: _paused,
                           onTogglePause: onPause,
+                          player: _player,
                         ),
                         Expanded(child: grid),
                       ],
                     ),
             ),
+            // Over everything, top bar included, as it is on the home
+            // screen. Draws nothing until something opens it.
+            NowPlayingOverlay(fullScreen: true, controller: _player),
           ],
         ),
       ),
@@ -335,6 +379,7 @@ class _TopBar extends StatelessWidget {
     this.turn,
     this.paused = false,
     this.onTogglePause,
+    this.player,
   });
 
   final DashboardTheme theme;
@@ -344,9 +389,11 @@ class _TopBar extends StatelessWidget {
   final Animation<double>? turn;
   final bool paused;
   final VoidCallback? onTogglePause;
+  final NowPlayingOverlayController? player;
 
   @override
   Widget build(BuildContext context) {
+    final playing = showablePlayback(context);
     return DefaultTextStyle.merge(
       style: TextStyle(color: theme.textPrimary),
       child: ScreenHeader(
@@ -360,6 +407,10 @@ class _TopBar extends StatelessWidget {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (playing != null) ...[
+              _MediaControls(source: playing, theme: theme, player: player),
+              const SizedBox(width: 12),
+            ],
             if (pageCount > 1) ...[
               _PageDots(
                 count: pageCount,
@@ -587,6 +638,94 @@ class _Empty extends StatelessWidget {
               fontSize: 24,
               fontWeight: FontWeight.w500,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Play and pause from any page, whenever something is playing: the
+/// artwork, which opens the full player out of itself, and back, play and
+/// next — in a glass pill the size of the module bar's, beside it.
+class _MediaControls extends StatefulWidget {
+  const _MediaControls({required this.source, required this.theme, this.player});
+
+  final PlaybackSource source;
+  final DashboardTheme theme;
+  final NowPlayingOverlayController? player;
+
+  @override
+  State<_MediaControls> createState() => _MediaControlsState();
+}
+
+class _MediaControlsState extends State<_MediaControls> {
+  final _art = GlobalKey();
+
+  @override
+  Widget build(BuildContext context) {
+    final source = widget.source;
+    final t = widget.theme;
+    final playing = source.now.isPlaying;
+    final art = source.artUrl;
+    return Glass(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Semantics(
+            button: true,
+            label: 'Now playing: ${source.now.title}. Open the player.',
+            child: GestureDetector(
+              onTap: () => widget.player?.expand(from: _art),
+              behavior: HitTestBehavior.opaque,
+              child: SizedBox(
+                width: 60,
+                height: 60,
+                child: Center(
+                  child: ClipRRect(
+                    key: _art,
+                    borderRadius: BorderRadius.circular(10),
+                    child: SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: art == null
+                          ? ColoredBox(
+                              color: t.textSecondary.withValues(alpha: 0.15),
+                              child: Icon(
+                                Icons.music_note_rounded,
+                                size: 24,
+                                color: t.textSecondary,
+                              ),
+                            )
+                          : CachedNetworkImage(
+                              imageUrl: art,
+                              fit: BoxFit.cover,
+                              errorWidget: (_, _, _) => const SizedBox(),
+                            ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          PillIconButton(
+            icon: Icons.skip_previous_rounded,
+            tooltip: 'Previous',
+            colour: t.textPrimary,
+            onPressed: source.previous,
+          ),
+          PillIconButton(
+            icon: playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+            tooltip: playing ? 'Pause' : 'Play',
+            colour: t.accent,
+            onPressed: source.playPause,
+          ),
+          PillIconButton(
+            icon: Icons.skip_next_rounded,
+            tooltip: 'Next',
+            colour: t.textPrimary,
+            onPressed: source.next,
           ),
         ],
       ),

@@ -401,10 +401,14 @@ List<Album> visibleAlbums(List<Album> albums) => [
 /// Whatever is playing, when the now-playing player is switched on and has
 /// something to show — by the same rules as the pop-up player itself, so the
 /// two can never disagree about whether there is music.
+///
+/// Nothing, where the music services are not there to ask — a screen drawn
+/// on its own, as in tests.
 PlaybackSource? showablePlayback(BuildContext context) {
   final settings = context.watch<ConfigService>().config.nowPlaying;
-  final spotify = context.watch<SpotifyService>();
-  final avrcp = context.watch<NowPlayingService>();
+  final spotify = context.watch<SpotifyService?>();
+  final avrcp = context.watch<NowPlayingService?>();
+  if (spotify == null || avrcp == null) return null;
   final PlaybackSource source = spotify.available ? spotify : avrcp;
   if (!settings.enabled ||
       !source.available ||

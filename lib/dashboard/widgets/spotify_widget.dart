@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -7,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../services/now_playing_service.dart';
 import '../../services/playback_source.dart';
 import '../../services/spotify_service.dart';
+import '../../widgets/now_playing_overlay.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'scrolling_text.dart';
@@ -16,13 +18,38 @@ import 'scrolling_text.dart';
 /// Watches both sources the app knows about and shows whichever has
 /// something, exactly as the corner overlay does: Spotify when it is active,
 /// the phone over Bluetooth otherwise.
-class DashboardSpotifyWidget extends StatelessWidget {
+///
+/// A tap anywhere but its buttons opens the full player — the home screen's,
+/// growing out of the tile and shrinking back into it.
+class DashboardSpotifyWidget extends StatefulWidget {
   const DashboardSpotifyWidget({super.key, required this.w});
 
   final DashboardWidgetContext w;
 
   @override
+  State<DashboardSpotifyWidget> createState() => _DashboardSpotifyWidgetState();
+}
+
+class _DashboardSpotifyWidgetState extends State<DashboardSpotifyWidget> {
+  final _tile = GlobalKey();
+
+  @override
   Widget build(BuildContext context) {
+    final content = _content(context);
+    // Only on the dashboard itself: the editor's preview of this tile is
+    // drawn off-screen, with no player to open.
+    final player = NowPlayingOpener.maybeOf(context);
+    if (player == null) return content;
+    return GestureDetector(
+      key: _tile,
+      behavior: HitTestBehavior.opaque,
+      onTap: () => player.expand(from: _tile),
+      child: content,
+    );
+  }
+
+  Widget _content(BuildContext context) {
+    final w = widget.w;
     final t = w.theme;
     final spotify = context.watch<SpotifyService>();
     final avrcp = context.watch<NowPlayingService>();
@@ -40,6 +67,7 @@ class DashboardSpotifyWidget extends StatelessWidget {
     final art = source.artUrl;
     final showArt = w.option('showArtwork', true);
     final showControls = w.option('showControls', true);
+    final showLike = w.option('showLike', true) && source.canLike;
     final backdrop = w.option('artworkBackdrop', true);
 
     return LayoutBuilder(
@@ -49,64 +77,72 @@ class DashboardSpotifyWidget extends StatelessWidget {
         // tile's proportions rather than its cell count, so it still holds on
         // a panel of a different shape.
         final ratio = c.maxWidth / c.maxHeight;
-        final layout = !showArt || art == null
-            ? _Layout.textOnly
-            : ratio > 2.0
-                ? _Layout.beside
-                : ratio > 1.15
-                    ? _Layout.besideLarge
-                    : _Layout.above;
 
         // Sized from the tile so a big panel gets big controls, with a floor
         // that keeps them thumb-sized on the smallest tile this widget allows.
         final controlSize = (c.maxHeight * 0.30).clamp(80.0, 160.0);
 
+        // Beside the text only if the text and its controls still fit next
+        // to it: on a squarish tile a big cover beside them crowded the
+        // controls off the edge.
+        final needed = showControls
+            ? controlSize * ((showLike ? 3 : 2) + 1.3)
+            : 220.0;
+        final room = c.maxWidth - 16 - needed;
+        final wantSide = c.maxHeight * (ratio > 2.0 ? 0.78 : 0.9);
+        final side = math.min(wantSide, room);
+        final layout = !showArt || art == null
+            ? _Layout.textOnly
+            : ratio > 1.15 && side >= c.maxHeight * 0.5
+            ? _Layout.beside
+            : _Layout.above;
+
         final content = switch (layout) {
           _Layout.textOnly => _Details(
-              w: w,
-              source: source,
-              showControls: showControls,
-              controlSize: controlSize,
-              centred: true),
-          _Layout.beside || _Layout.besideLarge => Row(
-              children: [
-                _Art(
-                  url: art!,
-                  side: c.maxHeight *
-                      (layout == _Layout.besideLarge ? 0.9 : 0.78),
-                  radius: t.cornerRadius * 0.5,
+            w: w,
+            source: source,
+            showControls: showControls,
+            showLike: showLike,
+            controlSize: controlSize,
+            centred: true,
+          ),
+          _Layout.beside => Row(
+            children: [
+              _Art(url: art!, side: side, radius: t.cornerRadius * 0.5),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _Details(
+                  w: w,
+                  source: source,
+                  showControls: showControls,
+                  showLike: showLike,
+                  controlSize: controlSize,
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _Details(
-                    w: w,
-                    source: source,
-                    showControls: showControls,
-                    controlSize: controlSize,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
+          ),
           _Layout.above => Column(
-              children: [
-                Expanded(
-                  child: Center(
-                    child: _Art(
-                      url: art!,
-                      side: c.maxWidth * 0.66,
-                      radius: t.cornerRadius * 0.5,
-                    ),
+            children: [
+              Expanded(
+                child: Center(
+                  child: _Art(
+                    url: art!,
+                    side: c.maxWidth * 0.66,
+                    radius: t.cornerRadius * 0.5,
                   ),
                 ),
-                const SizedBox(height: 10),
-                _Details(
-                    w: w,
-                    source: source,
-                    showControls: showControls,
-                    controlSize: controlSize,
-                    centred: true),
-              ],
-            ),
+              ),
+              const SizedBox(height: 10),
+              _Details(
+                w: w,
+                source: source,
+                showControls: showControls,
+                showLike: showLike,
+                controlSize: controlSize,
+                centred: true,
+              ),
+            ],
+          ),
         };
 
         if (!backdrop || art == null) return content;
@@ -126,7 +162,7 @@ class DashboardSpotifyWidget extends StatelessWidget {
   }
 }
 
-enum _Layout { beside, besideLarge, above, textOnly }
+enum _Layout { beside, above, textOnly }
 
 class _Art extends StatelessWidget {
   const _Art({required this.url, required this.side, required this.radius});
@@ -162,31 +198,78 @@ class _Backdrop extends StatelessWidget {
     // keeps the text readable either way rather than only against black.
     final darkText = theme.textPrimary.computeLuminance() < 0.5;
     final veil = darkText ? Colors.white : Colors.black;
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        ImageFiltered(
-          imageFilter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-          child: CachedNetworkImage(
-            imageUrl: url,
-            fit: BoxFit.cover,
-            errorWidget: (_, _, _) => const SizedBox.shrink(),
-          ),
-        ),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                veil.withValues(alpha: 0.35),
-                veil.withValues(alpha: 0.92),
-              ],
-              stops: const [0.0, 0.9],
+    // Faded out towards every edge, so the colour melts into the tile's own
+    // glass rather than sitting in it as a sharp-cornered rectangle — and
+    // the blur's dark rim at the edges goes with it.
+    return _EdgeFade(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Clipped: a blur spreads past its own box, and that spill is what
+          // drew a hard-edged rectangle with a glow round it.
+          ClipRect(
+            child: ImageFiltered(
+              imageFilter: ImageFilter.blur(
+                sigmaX: 16,
+                sigmaY: 16,
+                tileMode: TileMode.clamp,
+              ),
+              child: CachedNetworkImage(
+                imageUrl: url,
+                fit: BoxFit.cover,
+                errorWidget: (_, _, _) => const SizedBox.shrink(),
+              ),
             ),
           ),
-        ),
-      ],
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  veil.withValues(alpha: 0.35),
+                  veil.withValues(alpha: 0.92),
+                ],
+                stops: const [0.0, 0.9],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Fades its child to nothing at every edge.
+class _EdgeFade extends StatelessWidget {
+  const _EdgeFade({required this.child});
+
+  final Widget child;
+
+  static Shader _fade(Rect r, Alignment from, Alignment to) => LinearGradient(
+    begin: from,
+    end: to,
+    colors: const [
+      Colors.transparent,
+      Colors.white,
+      Colors.white,
+      Colors.transparent,
+    ],
+    stops: const [0, 0.18, 0.82, 1],
+  ).createShader(r);
+
+  @override
+  Widget build(BuildContext context) {
+    return ShaderMask(
+      blendMode: BlendMode.dstIn,
+      shaderCallback: (r) =>
+          _fade(r, Alignment.centerLeft, Alignment.centerRight),
+      child: ShaderMask(
+        blendMode: BlendMode.dstIn,
+        shaderCallback: (r) =>
+            _fade(r, Alignment.topCenter, Alignment.bottomCenter),
+        child: child,
+      ),
     );
   }
 }
@@ -197,12 +280,16 @@ class _Details extends StatelessWidget {
     required this.source,
     required this.showControls,
     required this.controlSize,
+    this.showLike = false,
     this.centred = false,
   });
 
   final DashboardWidgetContext w;
   final PlaybackSource source;
   final bool showControls;
+
+  /// The heart, as on the home screen's mini player and the full player.
+  final bool showLike;
 
   /// Tap-target size for the skip buttons, from the tile.
   final double controlSize;
@@ -215,8 +302,9 @@ class _Details extends StatelessWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       mainAxisSize: centred ? MainAxisSize.min : MainAxisSize.max,
-      crossAxisAlignment:
-          centred ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+      crossAxisAlignment: centred
+          ? CrossAxisAlignment.center
+          : CrossAxisAlignment.start,
       children: [
         // Track names are frequently longer than the tile — anything with a
         // "- From ... Soundtrack Version" on the end — and truncating them
@@ -254,31 +342,46 @@ class _Details extends StatelessWidget {
         ],
         if (showControls) ...[
           const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment:
-                centred ? MainAxisAlignment.center : MainAxisAlignment.start,
-            children: [
-              _Button(
-                icon: Icons.skip_previous,
-                colour: t.textPrimary,
-                target: controlSize,
-                onPressed: source.previous,
-              ),
-              _Button(
-                icon: now.status == 'playing'
-                    ? Icons.pause_circle_filled
-                    : Icons.play_circle_filled,
-                colour: t.accent,
-                target: controlSize * 1.3,
-                onPressed: source.playPause,
-              ),
-              _Button(
-                icon: Icons.skip_next,
-                colour: t.textPrimary,
-                target: controlSize,
-                onPressed: source.next,
-              ),
-            ],
+          // Shrinks rather than runs off the edge on a tile too small for
+          // the buttons at full size.
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: centred ? Alignment.center : Alignment.centerLeft,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: centred
+                  ? MainAxisAlignment.center
+                  : MainAxisAlignment.start,
+              children: [
+                if (showLike)
+                  _Like(
+                    liked: source.isLiked,
+                    colour: t.textPrimary,
+                    target: controlSize,
+                    onPressed: source.toggleLike,
+                  ),
+                _Button(
+                  icon: Icons.skip_previous,
+                  colour: t.textPrimary,
+                  target: controlSize,
+                  onPressed: source.previous,
+                ),
+                _Button(
+                  icon: now.status == 'playing'
+                      ? Icons.pause_circle_filled
+                      : Icons.play_circle_filled,
+                  colour: t.accent,
+                  target: controlSize * 1.3,
+                  onPressed: source.playPause,
+                ),
+                _Button(
+                  icon: Icons.skip_next,
+                  colour: t.textPrimary,
+                  target: controlSize,
+                  onPressed: source.next,
+                ),
+              ],
+            ),
           ),
         ],
       ],
@@ -323,6 +426,58 @@ class _Button extends StatelessWidget {
   }
 }
 
+/// Pink and filled when the track is in your Liked Songs, with a pop when
+/// that changes so a tap visibly took — the home screen's heart, in the
+/// tile's colours.
+class _Like extends StatelessWidget {
+  const _Like({
+    required this.liked,
+    required this.colour,
+    required this.onPressed,
+    required this.target,
+  });
+
+  final bool liked;
+  final Color colour;
+  final VoidCallback onPressed;
+  final double target;
+
+  static const _pink = Color(0xFFFF6B81);
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      toggled: liked,
+      label: liked ? 'Remove from Liked Songs' : 'Add to Liked Songs',
+      child: Material(
+        color: Colors.transparent,
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onPressed,
+          child: SizedBox(
+            width: target,
+            height: target,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 260),
+              switchInCurve: Curves.easeOutBack,
+              transitionBuilder: (child, animation) =>
+                  ScaleTransition(scale: animation, child: child),
+              child: Icon(
+                liked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                key: ValueKey(liked),
+                size: target * 0.48,
+                color: liked ? _pink : colour,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 final spotifyWidgetType = DashboardWidgetType(
   type: 'spotify',
   category: WidgetCategory.photosAndMedia,
@@ -357,6 +512,13 @@ final spotifyWidgetType = DashboardWidgetType(
       defaultValue: true,
       help: 'Turn off for a display-only panel nobody can skip tracks on.',
     ),
+    WidgetOption(
+      key: 'showLike',
+      label: 'Show the like button',
+      kind: OptionKind.boolean,
+      defaultValue: true,
+      help: 'With the controls, for Spotify. Bluetooth audio has no likes.',
+    ),
   ],
   preview: const [
     PreviewLine('Fake Plastic Trees', scale: 0.16, px: 20),
@@ -367,7 +529,9 @@ final spotifyWidgetType = DashboardWidgetType(
   live: (config, data) {
     final source = data.playback;
     if (source == null || !source.available || !source.now.hasTrack) {
-      return const [PreviewLine('Nothing playing', scale: 0.13, muted: true, centre: true)];
+      return const [
+        PreviewLine('Nothing playing', scale: 0.13, muted: true, centre: true),
+      ];
     }
     final now = source.now;
     return [
