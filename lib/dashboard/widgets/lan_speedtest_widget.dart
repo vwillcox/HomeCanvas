@@ -246,6 +246,7 @@ Widget _readoutLine(
 
 final lanSpeedtestWidgetType = DashboardWidgetType(
   type: 'lan_speedtest',
+  category: WidgetCategory.network,
   name: 'LAN speed test',
   description:
       'Speed between this panel and another machine on your network, using a '

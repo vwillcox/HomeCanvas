@@ -1,5 +1,22 @@
 import 'package:flutter/material.dart';
 
+/// Fonts to draw what the chosen font has no glyph for — emoji, mainly.
+///
+/// Flutter on the Pi does not reach for the system's emoji font by itself,
+/// so it is named. Naming any fallback also replaces Flutter's own list of
+/// Linux defaults — without them, text with no font of its own draws no
+/// letters at all — so those are named too, in Flutter's order, with the
+/// emoji font straight after the one the panel uses. A name that is not
+/// installed costs nothing.
+const fontFallback = [
+  'Ubuntu',
+  'Cantarell',
+  'Noto Color Emoji',
+  'DejaVu Sans',
+  'Liberation Sans',
+  'Arial',
+];
+
 /// Dark, touch-first theme with generous hit targets for a 10" DSI panel.
 ThemeData buildTheme() {
   const seed = Color(0xFF4F9DFF);
@@ -11,6 +28,7 @@ ThemeData buildTheme() {
   return ThemeData(
     useMaterial3: true,
     colorScheme: scheme,
+    fontFamilyFallback: fontFallback,
     scaffoldBackgroundColor: const Color(0xFF0E0F13),
     visualDensity: VisualDensity.comfortable,
     appBarTheme: const AppBarTheme(

@@ -1,10 +1,15 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../dashboard/dashboard_model.dart';
+import '../dashboard/photo_backdrop.dart';
+import '../dashboard/schedule.dart';
 import '../dashboard/dashboard_theme.dart';
 import '../dashboard/widgets/tv_inputs_sheet.dart';
 import '../dashboard/widgets/weather_forecast_sheet.dart';
@@ -12,8 +17,12 @@ import '../dashboard/widget_registry.dart';
 import '../services/config_service.dart';
 import '../services/dashboard_service.dart';
 import '../services/screen_idle_service.dart';
+import '../services/playback_source.dart';
+import '../theme.dart' show fontFallback;
 import '../widgets/glass.dart';
 import '../widgets/module_bar.dart';
+import '../widgets/now_playing_overlay.dart';
+import 'home_screen.dart' show showablePlayback;
 
 /// The dashboard: widgets laid out on a grid, drawn in the chosen theme.
 ///
@@ -32,18 +41,63 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class _DashboardScreenState extends State<DashboardScreen>
+    with SingleTickerProviderStateMixin {
   ScreenIdleService? _screenIdle;
 
   late final PageController _pages = PageController(
     initialPage: widget.initialPage,
   );
-  Timer? _flip;
   late int _page = widget.initialPage;
+
+  /// The automatic page turn, as an animation rather than a timer: it runs
+  /// from 0 to 1 over the page's time and turns the page when it gets there.
+  /// That same value fills the current page's dot, so a turn is never a
+  /// surprise, and pausing is simply stopping it.
+  late final AnimationController _turn = AnimationController(vsync: this)
+    ..addStatusListener((status) {
+      if (status == AnimationStatus.completed && mounted) {
+        _goTo(_page + 1, _pageCount);
+      }
+    });
+
+  /// Paused from the page dots. Holds until tapped again or the dashboard
+  /// is left; coming back starts turning again.
+  bool _paused = false;
+  bool _turning = false;
+  int _pageCount = 1;
+
+  /// The pages showing now, by page number — those whose hours are on. The
+  /// page view runs over these, so a page out of its hours is simply not
+  /// there to swipe to.
+  List<int> _visible = const [];
+
+  /// Looks again every half minute at which pages and widgets are due.
+  Timer? _clock;
+
+  /// The full now-playing player, opened from a Now playing tile or the
+  /// top bar's controls — the home screen's player, growing out of whatever
+  /// was tapped.
+  final NowPlayingOverlayController _player = NowPlayingOverlayController();
+
+  /// The page is not turned out from under the full player: it would take
+  /// the tile the player shrinks back into with it.
+  void _playerOpened() {
+    if (!_turning) return;
+    if (_player.isOpen.value) {
+      _turn.stop();
+    } else {
+      _restartTurn();
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+    _player.isOpen.addListener(_playerOpened);
+    _clock = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() {});
+    });
     // A dashboard is a thing you glance at from across the room without
     // touching it, so the idle timer would switch the panel off precisely
     // when it is doing its job. Held awake for as long as it is on screen;
@@ -73,25 +127,82 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // Releasing it here rather than on the way in to the next screen means
     // the timer restarts from now, not from whenever the dashboard opened.
     _screenIdle?.dashboardShowing = false;
-    _flip?.cancel();
+    _clock?.cancel();
+    _player.isOpen.removeListener(_playerOpened);
+    _player.dispose();
+    _turn.dispose();
     _pages.dispose();
     super.dispose();
   }
 
-  /// Starts, restarts or stops the automatic page turn to match the settings
-  /// and how many pages there actually are.
-  void _syncFlipTimer(DashboardSettings settings) {
-    final wanted = settings.pageSeconds > 0 && settings.pageCount > 1;
-    if (!wanted) {
-      _flip?.cancel();
-      _flip = null;
-      return;
-    }
-    if (_flip != null && _flip!.isActive) return;
-    _flip = Timer.periodic(Duration(seconds: settings.pageSeconds), (_) {
+  /// Starts, retimes or stops the automatic page turn to match the settings
+  /// and how many pages there actually are. Called from build, so the change
+  /// itself waits for the frame to finish: starting an animation mid-build
+  /// would redraw the dots in the middle of drawing them.
+  void _syncTurn(DashboardSettings settings, int pageCount) {
+    _pageCount = pageCount;
+    final wanted = settings.pageSeconds > 0 && pageCount > 1;
+    final length = Duration(seconds: settings.pageSeconds);
+    if (wanted == _turning && (!wanted || _turn.duration == length)) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _goTo(_page + 1, settings.pageCount);
+      final changed = _turn.duration != length;
+      if (wanted) _turn.duration = length;
+      setState(() => _turning = wanted);
+      if (!wanted) {
+        _turn
+          ..stop()
+          ..value = 0;
+      } else if (!_paused &&
+          !_player.isOpen.value &&
+          (changed || !_turn.isAnimating)) {
+        _turn.forward(from: changed ? 0 : _turn.value);
+      }
     });
+  }
+
+  /// Keeps the page view in step as pages come and go with their hours.
+  ///
+  /// A page whose hours have just begun is gone to straight away — the
+  /// morning page arriving at six is the point of giving it hours. Otherwise
+  /// the page being looked at stays, wherever it now sits in the list.
+  void _followVisible(List<int> visible) {
+    final was = _visible;
+    if (listEquals(was, visible)) return;
+    _visible = visible;
+    if (was.isEmpty) return; // first build: the page view starts where it is
+    final arrived = visible.where((p) => !was.contains(p)).toList();
+    final current = _page < was.length ? was[_page] : 0;
+    final target = arrived.isNotEmpty
+        ? visible.indexOf(arrived.first)
+        : math.max(0, visible.indexOf(current));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_pages.hasClients) return;
+      _pages.jumpToPage(target);
+      setState(() => _page = target);
+      _restartTurn();
+    });
+  }
+
+  /// The page's time starts again — on arriving at a page, and whenever it
+  /// is touched, so a page being read or scrolled is not taken away from
+  /// under the finger.
+  void _restartTurn() {
+    if (!_turning) return;
+    if (_paused || _player.isOpen.value) {
+      _turn.value = 0;
+    } else {
+      _turn.forward(from: 0);
+    }
+  }
+
+  void _togglePause() {
+    setState(() => _paused = !_paused);
+    if (_paused) {
+      _turn.stop();
+    } else if (_turning && !_player.isOpen.value) {
+      _turn.forward();
+    }
   }
 
   void _goTo(int index, int pageCount) {
@@ -111,14 +222,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   /// the page underneath them.
   void _tapped(DashboardSettings settings) {
     if (!settings.tapToFlip) return;
+    // Arriving at the page restarts its time (see onPageChanged), so a page
+    // you just chose is not whipped away half a second later.
     _goTo(_page + 1, settings.pageCount);
-    // Manual turns restart the clock, so a page you just chose is not
-    // whipped away half a second later.
-    if (settings.pageSeconds > 0) {
-      _flip?.cancel();
-      _flip = null;
-      _syncFlipTimer(settings);
-    }
   }
 
   @override
@@ -127,10 +233,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final settings = context.watch<ConfigService>().config.dashboard;
     final theme = dashboard.themes.byId(settings.themeId);
 
-    final pageCount = settings.pageCount;
+    final visible = visiblePages(
+      settings.pageCount,
+      settings.pages,
+      DateTime.now(),
+    );
+    _followVisible(visible);
+    final pageCount = visible.length;
     // Kept in step with the config on every build, so editing the interval in
     // the browser takes effect without leaving and re-entering the dashboard.
-    _syncFlipTimer(settings);
+    _syncTurn(settings, pageCount);
+    final dotsTurn = _turning ? _turn : null;
+    final onPause = _turning ? _togglePause : null;
 
     final grid = Stack(
       children: [
@@ -140,17 +254,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
           // Behind the widgets, not over them: a translucent layer on
           // top would swallow every tap meant for a widget. This only
           // sees taps that fell on empty grid.
-          GestureDetector(
+          // Any touch on a page gives it its full time again. A Listener
+          // sees the touch without taking it, so the widget underneath
+          // still gets its tap or its scroll.
+          Listener(
             behavior: HitTestBehavior.translucent,
-            onTap: () => _tapped(settings),
-            child: PageView.builder(
-              controller: _pages,
-              itemCount: pageCount,
-              // Swiping works whatever the settings say — it is
-              // unambiguous in a way that tapping is not.
-              onPageChanged: (i) => setState(() => _page = i),
-              itemBuilder: (context, page) =>
-                  _Grid(settings: settings, theme: theme, page: page),
+            onPointerDown: (_) => _restartTurn(),
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: () => _tapped(settings),
+              child: PageView.builder(
+                controller: _pages,
+                itemCount: pageCount,
+                // Swiping works whatever the settings say — it is
+                // unambiguous in a way that tapping is not.
+                onPageChanged: (i) {
+                  setState(() => _page = i);
+                  _restartTurn();
+                },
+                itemBuilder: (context, i) =>
+                    _Grid(settings: settings, theme: theme, page: visible[i]),
+              ),
             ),
           ),
         // With the top bar off: the panel has no keyboard and no
@@ -169,6 +293,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   current: _page,
                   theme: theme,
                   onTap: (i) => _goTo(i, pageCount),
+                  turn: dotsTurn,
+                  paused: _paused,
+                  onTogglePause: onPause,
                 ),
               ),
             ),
@@ -176,28 +303,62 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ],
     );
 
+    // The tiles find the player through this: a Now playing tile opens it.
+    return NowPlayingOpener(
+      controller: _player,
+      child: _scaffold(settings, theme, grid, pageCount, dotsTurn, onPause),
+    );
+  }
+
+  Widget _scaffold(
+    DashboardSettings settings,
+    DashboardTheme theme,
+    Widget grid,
+    int pageCount,
+    Animation<double>? dotsTurn,
+    VoidCallback? onPause,
+  ) {
     return Scaffold(
       body: Container(
         decoration: theme.backgroundDecoration,
-        child: SafeArea(
-          child: !settings.topBar
-              ? grid
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // The same bar as every other screen, in the theme's
-                    // colours: back on the left, the greeting and date, and
-                    // the pages on the right where the dots used to float
-                    // over the widgets.
-                    _TopBar(
-                      theme: theme,
-                      pageCount: pageCount,
-                      page: _page,
-                      onPage: (i) => _goTo(i, pageCount),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (settings.photoBackground)
+              PhotoBackdrop(
+                albumId: settings.photoAlbum,
+                dim: settings.photoDim,
+                every: Duration(seconds: settings.photoSeconds),
+                base: theme.background.first,
+              ),
+            SafeArea(
+              child: !settings.topBar
+                  ? grid
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // The same bar as every other screen, in the theme's
+                        // colours: back on the left, the greeting and date, and
+                        // the pages on the right where the dots used to float
+                        // over the widgets.
+                        _TopBar(
+                          theme: theme,
+                          pageCount: pageCount,
+                          page: _page,
+                          onPage: (i) => _goTo(i, pageCount),
+                          turn: dotsTurn,
+                          paused: _paused,
+                          onTogglePause: onPause,
+                          player: _player,
+                        ),
+                        Expanded(child: grid),
+                      ],
                     ),
-                    Expanded(child: grid),
-                  ],
-                ),
+            ),
+            // Over everything, top bar included, as it is on the home
+            // screen. Draws nothing until something opens it.
+            NowPlayingOverlay(fullScreen: true, controller: _player),
+          ],
         ),
       ),
     );
@@ -215,15 +376,24 @@ class _TopBar extends StatelessWidget {
     required this.pageCount,
     required this.page,
     required this.onPage,
+    this.turn,
+    this.paused = false,
+    this.onTogglePause,
+    this.player,
   });
 
   final DashboardTheme theme;
   final int pageCount;
   final int page;
   final void Function(int) onPage;
+  final Animation<double>? turn;
+  final bool paused;
+  final VoidCallback? onTogglePause;
+  final NowPlayingOverlayController? player;
 
   @override
   Widget build(BuildContext context) {
+    final playing = showablePlayback(context);
     return DefaultTextStyle.merge(
       style: TextStyle(color: theme.textPrimary),
       child: ScreenHeader(
@@ -237,12 +407,19 @@ class _TopBar extends StatelessWidget {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (playing != null) ...[
+              _MediaControls(source: playing, theme: theme, player: player),
+              const SizedBox(width: 12),
+            ],
             if (pageCount > 1) ...[
               _PageDots(
                 count: pageCount,
                 current: page,
                 theme: theme,
                 onTap: onPage,
+                turn: turn,
+                paused: paused,
+                onTogglePause: onTogglePause,
               ),
               const SizedBox(width: 12),
             ],
@@ -290,6 +467,7 @@ class _Grid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, c) {
         final gap = theme.gap;
+        final now = DateTime.now();
         // Cells are whatever is left once the gaps are taken out, so the
         // outermost widgets sit the same distance from the edge as they do
         // from each other.
@@ -302,17 +480,18 @@ class _Grid extends StatelessWidget {
         return Stack(
           children: [
             for (final w in settings.widgetsOn(page))
-              Positioned(
-                left: gap + w.x * (cellWidth + gap),
-                top: gap + w.y * (cellHeight + gap),
-                width: w.width * cellWidth + (w.width - 1) * gap,
-                height: w.height * cellHeight + (w.height - 1) * gap,
-                child: DashboardTile(
-                  config: w,
-                  theme: theme,
-                  settings: settings,
+              if (w.schedule.isAlways || w.schedule.activeAt(now))
+                Positioned(
+                  left: gap + w.x * (cellWidth + gap),
+                  top: gap + w.y * (cellHeight + gap),
+                  width: w.width * cellWidth + (w.width - 1) * gap,
+                  height: w.height * cellHeight + (w.height - 1) * gap,
+                  child: DashboardTile(
+                    config: w,
+                    theme: theme,
+                    settings: settings,
+                  ),
                 ),
-              ),
           ],
         );
       },
@@ -397,6 +576,8 @@ class DashboardTile extends StatelessWidget {
           fontFamily: config.fontFamily.isEmpty
               ? theme.fontFamily
               : config.fontFamily,
+          // A fresh style, not a merge, so the app's fallback is named again.
+          fontFamilyFallback: fontFallback,
         ),
         child: framed
             ? Container(
@@ -464,7 +645,97 @@ class _Empty extends StatelessWidget {
   }
 }
 
-/// Which page you are on, and a way to jump straight to another.
+/// Play and pause from any page, whenever something is playing: the
+/// artwork, which opens the full player out of itself, and back, play and
+/// next — in a glass pill the size of the module bar's, beside it.
+class _MediaControls extends StatefulWidget {
+  const _MediaControls({required this.source, required this.theme, this.player});
+
+  final PlaybackSource source;
+  final DashboardTheme theme;
+  final NowPlayingOverlayController? player;
+
+  @override
+  State<_MediaControls> createState() => _MediaControlsState();
+}
+
+class _MediaControlsState extends State<_MediaControls> {
+  final _art = GlobalKey();
+
+  @override
+  Widget build(BuildContext context) {
+    final source = widget.source;
+    final t = widget.theme;
+    final playing = source.now.isPlaying;
+    final art = source.artUrl;
+    return Glass(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Semantics(
+            button: true,
+            label: 'Now playing: ${source.now.title}. Open the player.',
+            child: GestureDetector(
+              onTap: () => widget.player?.expand(from: _art),
+              behavior: HitTestBehavior.opaque,
+              child: SizedBox(
+                width: 60,
+                height: 60,
+                child: Center(
+                  child: ClipRRect(
+                    key: _art,
+                    borderRadius: BorderRadius.circular(10),
+                    child: SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: art == null
+                          ? ColoredBox(
+                              color: t.textSecondary.withValues(alpha: 0.15),
+                              child: Icon(
+                                Icons.music_note_rounded,
+                                size: 24,
+                                color: t.textSecondary,
+                              ),
+                            )
+                          : CachedNetworkImage(
+                              imageUrl: art,
+                              fit: BoxFit.cover,
+                              errorWidget: (_, _, _) => const SizedBox(),
+                            ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          PillIconButton(
+            icon: Icons.skip_previous_rounded,
+            tooltip: 'Previous',
+            colour: t.textPrimary,
+            onPressed: source.previous,
+          ),
+          PillIconButton(
+            icon: playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+            tooltip: playing ? 'Pause' : 'Play',
+            colour: t.accent,
+            onPressed: source.playPause,
+          ),
+          PillIconButton(
+            icon: Icons.skip_next_rounded,
+            tooltip: 'Next',
+            colour: t.textPrimary,
+            onPressed: source.next,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Which page you are on, and a way to jump straight to another — and,
+/// with the pages turning themselves, how long until the next turn and a
+/// way to hold it.
 ///
 /// Sized for a finger rather than as decoration: on a wall panel these are
 /// the only visible sign that there is more than one page at all.
@@ -474,6 +745,9 @@ class _PageDots extends StatelessWidget {
     required this.current,
     required this.theme,
     required this.onTap,
+    this.turn,
+    this.paused = false,
+    this.onTogglePause,
   });
 
   final int count;
@@ -481,39 +755,159 @@ class _PageDots extends StatelessWidget {
   final DashboardTheme theme;
   final void Function(int) onTap;
 
+  /// How far through its time the current page is, when pages turn
+  /// themselves. Fills the current dot.
+  final Animation<double>? turn;
+  final bool paused;
+  final VoidCallback? onTogglePause;
+
   @override
   Widget build(BuildContext context) {
-    // In a glass pill, like every other control on the kiosk's screens.
+    final dim = theme.textSecondary.withValues(alpha: 0.4);
+    // In a glass pill, like every other control on the kiosk's screens, and
+    // the same height as the module bar beside it: 60-point targets, as the
+    // bar's buttons are, so the two pills line up and read as one toolbar.
     return Glass(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           for (var i = 0; i < count; i++)
             GestureDetector(
-              onTap: () => onTap(i),
+              // The current dot is the clock: tapping it holds or carries on,
+              // the same as the button beside it. The others go to their page.
+              onTap: () => i == current && onTogglePause != null
+                  ? onTogglePause!()
+                  : onTap(i),
               behavior: HitTestBehavior.opaque,
-              child: Padding(
-                // The padding is the touch target; the dot itself stays small
+              child: Container(
+                // The box is the touch target; the dot itself stays smaller
                 // so it does not compete with the widgets for attention.
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 12,
-                ),
+                constraints: const BoxConstraints(minWidth: 52, minHeight: 60),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                alignment: Alignment.center,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 220),
-                  width: i == current ? 30 : 12,
-                  height: 12,
+                  curve: Curves.easeOutCubic,
+                  width: i == current ? 44 : 16,
+                  height: 16,
                   decoration: BoxDecoration(
                     color: i == current
-                        ? theme.accent
-                        : theme.textSecondary.withValues(alpha: 0.4),
-                    borderRadius: BorderRadius.circular(6),
+                        ? (turn == null
+                              ? theme.accent
+                              : theme.accent.withValues(alpha: 0.3))
+                        : dim,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: i == current && turn != null
+                      ? _Fill(turn: turn!, paused: paused, colour: theme.accent)
+                      : null,
+                ),
+              ),
+            ),
+          if (onTogglePause != null) ...[
+            Container(
+              width: 1,
+              height: 34,
+              margin: const EdgeInsets.symmetric(horizontal: 6),
+              color: dim,
+            ),
+            Semantics(
+              button: true,
+              label: paused ? 'Carry on turning pages' : 'Hold this page',
+              child: GestureDetector(
+                onTap: onTogglePause,
+                behavior: HitTestBehavior.opaque,
+                child: SizedBox(
+                  width: 60,
+                  height: 60,
+                  child: Center(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      transitionBuilder: (child, a) => ScaleTransition(
+                        scale: a,
+                        child: FadeTransition(opacity: a, child: child),
+                      ),
+                      child: Icon(
+                        paused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                        key: ValueKey(paused),
+                        size: 30,
+                        color: paused ? theme.accent : theme.textSecondary,
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+/// The current dot filling up as its page's time runs out. Paused, the fill
+/// stays where it stopped and breathes, so a held page reads as held rather
+/// than stuck.
+class _Fill extends StatefulWidget {
+  const _Fill({required this.turn, required this.paused, required this.colour});
+
+  final Animation<double> turn;
+  final bool paused;
+  final Color colour;
+
+  @override
+  State<_Fill> createState() => _FillState();
+}
+
+class _FillState extends State<_Fill> with SingleTickerProviderStateMixin {
+  late final AnimationController _breath = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1400),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.paused) _breath.repeat(reverse: true);
+  }
+
+  @override
+  void didUpdateWidget(covariant _Fill old) {
+    super.didUpdateWidget(old);
+    if (widget.paused && !_breath.isAnimating) {
+      _breath.repeat(reverse: true);
+    } else if (!widget.paused && _breath.isAnimating) {
+      _breath
+        ..stop()
+        ..value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _breath.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([widget.turn, _breath]),
+      builder: (context, _) => Align(
+        alignment: Alignment.centerLeft,
+        child: FractionallySizedBox(
+          widthFactor: widget.turn.value.clamp(0.0, 1.0),
+          heightFactor: 1,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: widget.colour.withValues(
+                alpha: widget.paused ? 0.55 + 0.35 * _breath.value : 1,
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
       ),
     );
   }

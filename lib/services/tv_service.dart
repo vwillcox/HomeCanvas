@@ -21,7 +21,7 @@ import 'vidaa_client.dart';
 /// device UUID, so a second connection using the same UUID displaces the
 /// first and the two then fight over it. Two remotes therefore need two
 /// UUIDs, which is what the standalone app and this widget now have — see the
-/// TV Remote section of moreinfo.md.
+/// TV Remote section of INSTALL.md.
 
 enum ConnState { disconnected, connecting, connected, needsPairing, error }
 
@@ -102,7 +102,7 @@ class TvService extends ChangeNotifier {
   /// These are the manufacturer's own credentials — the set accepts no other —
   /// so they cannot be generated or rotated. They are still kept out of the
   /// repository (`assets/certs/*.key` is git-ignored); supply a copy at that
-  /// path, as the TV Remote section of moreinfo.md describes.
+  /// path, as the TV Remote section of INSTALL.md describes.
   ///
   /// Without it this throws [TvCredentialsMissing], which the caller turns
   /// into a clear message rather than the mbedTLS handshake error an empty key

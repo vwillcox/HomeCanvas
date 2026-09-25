@@ -8,7 +8,18 @@ import 'package:provider/provider.dart';
 
 import 'models/immich_models.dart';
 import 'dashboard/live_preview.dart';
+import 'dashboard/photo_backdrop.dart';
 import 'dashboard/tile_renderer.dart';
+import 'services/air_quality_service.dart';
+import 'services/bins_service.dart';
+import 'services/carbon_service.dart';
+import 'services/chores_service.dart';
+import 'services/govee_service.dart';
+import 'services/home_assistant_service.dart';
+import 'services/rain_service.dart';
+import 'services/notes_service.dart';
+import 'services/shopping_service.dart';
+import 'services/timer_service.dart';
 import 'dashboard/widgets/widgets.dart';
 import 'services/audio_levels_service.dart';
 import 'services/kiosk_control_service.dart';
@@ -128,6 +139,51 @@ void main() async {
   // on, which the screen service checks for itself.
   shareInbox.onItemArrived = screenIdle.wakeForNotification;
 
+  // The household notes board. Text shared from the phone app goes on it as
+  // well as popping up; the editor server has a page for posting to it.
+  final notes = NotesService();
+  unawaited(notes.load());
+  shareInbox.onShared = (item) {
+    if (item.type == ShareType.text && (item.content ?? '').trim().isNotEmpty) {
+      notes.add(item.content!, from: item.sender);
+    }
+  };
+  dashboard.notes = notes;
+
+  // The shopping list, added to from phones and ticked off on the panel.
+  final shopping = ShoppingService();
+  unawaited(shopping.load());
+  dashboard.shopping = shopping;
+
+  // Chores ticked off, and the week's stars, kept across restarts.
+  final chores = ChoresService();
+  unawaited(chores.load());
+
+  // Kitchen timers, owned up here so they keep running — and still speak —
+  // after the panel has left the dashboard.
+  final timers = TimerService(
+    speak: speech.speak,
+    onFinished: screenIdle.wakeForNotification,
+  );
+
+  // Bin-day reminders, spoken the evening before whether or not the
+  // dashboard is showing.
+  final bins = BinsService(config, speak: speech.speak)..start();
+
+  // Home Assistant entities for the dashboard, over the connection set up
+  // for the indoor sensor. Idle until a widget asks; the editor's entity
+  // picker asks it for the list.
+  // For the editor's preview of the photo background: the photo showing
+  // now, or any photo if the dashboard is not up.
+  dashboard.backgroundImage = () async {
+    final id = PhotoBackdrop.current ??
+        (await immich.getRandomAssets(count: 1)).firstOrNull?.id;
+    return id == null ? null : immich.previewBytes(id);
+  };
+
+  final homeAssistant = HomeAssistantService(config);
+  dashboard.haEntities = homeAssistant.choices;
+
   runApp(
     MultiProvider(
       providers: [
@@ -153,6 +209,19 @@ void main() async {
         // Idle until the visualiser asks it for something: creating it costs
         // nothing, and it starts no capture until a widget attaches.
         ChangeNotifierProvider(create: (_) => AudioLevelsService()),
+        ChangeNotifierProvider.value(value: notes),
+        ChangeNotifierProvider.value(value: shopping),
+        ChangeNotifierProvider.value(value: chores),
+        ChangeNotifierProvider.value(value: timers),
+        ChangeNotifierProvider.value(value: bins),
+        // Made when an Air & pollen widget first asks, and not before.
+        ChangeNotifierProvider(create: (_) => AirQualityService(config)),
+        ChangeNotifierProvider(create: (_) => CarbonService(config)),
+        ChangeNotifierProvider(create: (_) => RainService(config)),
+        ChangeNotifierProvider.value(value: homeAssistant),
+        // Made when a Lights widget first asks; it then listens for Govee
+        // devices on the home network.
+        ChangeNotifierProvider(create: (_) => GoveeService()),
       ],
       child: const ImmichKioskPiApp(),
     ),

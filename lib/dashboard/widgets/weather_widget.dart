@@ -250,6 +250,7 @@ class _Forecast extends StatelessWidget {
 
 final weatherWidgetType = DashboardWidgetType(
   type: 'weather',
+  category: WidgetCategory.weather,
   name: 'Weather',
   description:
       'Current conditions and a short forecast. Uses the location set in '

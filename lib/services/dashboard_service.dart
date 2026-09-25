@@ -15,6 +15,8 @@ import '../dashboard/tile_renderer.dart';
 import '../config/app_config.dart' show SenderToken;
 import '../dashboard/widget_registry.dart';
 import 'config_service.dart';
+import 'notes_service.dart';
+import 'shopping_service.dart';
 
 /// Hosts the dashboard's web editor and the small API behind it.
 ///
@@ -54,6 +56,16 @@ class DashboardService extends ChangeNotifier {
   /// once it is in the widget tree; null before then, or in tests, where the
   /// editor falls back to its text preview.
   Future<List<int>?> Function(TileRenderRequest)? renderTile;
+
+  /// The household notes board, for its page and API. Null in tests.
+  NotesService? notes;
+
+  /// The shopping list, for its page and API. Null in tests.
+  ShoppingService? shopping;
+
+  /// The photo behind the dashboard now, as JPEG bytes, for the editor to
+  /// preview the photo background with. Null in tests.
+  Future<List<int>?> Function()? backgroundImage;
 
   DashboardSettings get settings => _config.config.dashboard;
 
@@ -144,7 +156,7 @@ class DashboardService extends ChangeNotifier {
 
       if (request.method == 'OPTIONS') {
         request.response.headers
-          ..set('Access-Control-Allow-Methods', 'GET, PUT, POST, OPTIONS')
+          ..set('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE, OPTIONS')
           ..set('Access-Control-Allow-Headers', 'Content-Type');
         request.response.statusCode = HttpStatus.noContent;
         await request.response.close();
@@ -161,6 +173,8 @@ class DashboardService extends ChangeNotifier {
             'rows': DashboardGrid.rows,
           },
           'widgetTypes': WidgetRegistry.all.map((t) => t.toJson()).toList(),
+          // The palette's groups, in the order to show them.
+          'categories': WidgetCategory.order,
           'themes': themes.all
               .map((t) => {'id': t.id, 'name': t.name, ...t.toJson()})
               .toList(),
@@ -168,11 +182,26 @@ class DashboardService extends ChangeNotifier {
           'fontScales': kFontScales,
           // Choice lists the widgets cannot declare for themselves, keyed by
           // the name an option asks for with `choicesFrom`.
-          'lists': {'albums': await _albumChoices()},
+          'lists': {
+            'albums': await _albumChoices(),
+            'haEntities': await _haChoices(),
+          },
         });
       }
       if (path == '/api/preview' && request.method == 'GET') {
         return await _json(request, _previewLines());
+      }
+      if (path == '/api/background.jpg' && request.method == 'GET') {
+        final bytes = await backgroundImage?.call().catchError((_) => null);
+        if (bytes == null || bytes.isEmpty) {
+          request.response.statusCode = HttpStatus.noContent;
+          await request.response.close();
+          return;
+        }
+        request.response.headers.contentType = ContentType('image', 'jpeg');
+        request.response.add(bytes);
+        await request.response.close();
+        return;
       }
       if (path == '/api/render' && request.method == 'POST') {
         return await _render(request);
@@ -182,6 +211,43 @@ class DashboardService extends ChangeNotifier {
       }
       if (path == '/api/dashboard' && request.method == 'PUT') {
         return await _save(request);
+      }
+
+      // The notes board: a page for posting from any phone in the house,
+      // and its API. Local network only, like the senders page — a note
+      // goes straight onto the wall.
+      if (path == '/notes' || path == '/notes/') {
+        if (!_requireLocal(request)) return;
+        return await _serveAsset(
+            request, 'assets/dashboard/notes.html', ContentType.html);
+      }
+      if (path == '/list' || path == '/list/') {
+        if (!_requireLocal(request)) return;
+        return await _serveAsset(
+            request, 'assets/dashboard/list.html', ContentType.html);
+      }
+      if (path == '/api/list') {
+        if (!_requireLocal(request)) return;
+        if (!sameOrigin(request.headers.value('origin'),
+            request.headers.value(HttpHeaders.hostHeader))) {
+          request.response.statusCode = HttpStatus.forbidden;
+          await request.response.close();
+          return;
+        }
+        return await _listApi(request);
+      }
+      if (path == '/api/notes') {
+        if (!_requireLocal(request)) return;
+        // Only from the notes page itself. The server answers every origin
+        // for the editor's sake, which would otherwise let any web page open
+        // on a phone in the house post onto the wall.
+        if (!sameOrigin(request.headers.value('origin'),
+            request.headers.value(HttpHeaders.hostHeader))) {
+          request.response.statusCode = HttpStatus.forbidden;
+          await request.response.close();
+          return;
+        }
+        return await _notesApi(request);
       }
 
       // Managing who may share to the panel. Held to the local network
@@ -375,6 +441,85 @@ class DashboardService extends ChangeNotifier {
     await request.response.close();
   }
 
+  /// Whether a request's Origin, if it sent one, is this server. No Origin
+  /// means it did not come from a web page at all — curl, or a same-origin
+  /// GET — and is let through.
+  @visibleForTesting
+  static bool sameOrigin(String? origin, String? host) {
+    if (origin == null || origin.isEmpty) return true;
+    final o = Uri.tryParse(origin);
+    if (o == null || host == null) return false;
+    return o.hasAuthority &&
+        '${o.host}${o.hasPort ? ':${o.port}' : ''}' == host;
+  }
+
+  /// GET the list; POST {"text": "Milk"} to add, {"toggle": id} to tick or
+  /// untick; DELETE ?id= to take something off.
+  Future<void> _listApi(HttpRequest request) async {
+    final list = shopping;
+    if (list == null) {
+      request.response.statusCode = HttpStatus.serviceUnavailable;
+      await request.response.close();
+      return;
+    }
+    switch (request.method) {
+      case 'POST':
+        final body = await utf8.decoder.bind(request).join();
+        final data = body.isEmpty ? null : jsonDecode(body);
+        if (data is Map && data['toggle'] != null) {
+          list.toggle('${data['toggle']}');
+        } else if (data is! Map || list.add('${data['text'] ?? ''}') == null) {
+          request.response.statusCode = HttpStatus.badRequest;
+          await request.response.close();
+          return;
+        }
+      case 'DELETE':
+        list.remove(request.uri.queryParameters['id'] ?? '');
+      case 'GET':
+        break;
+      default:
+        request.response.statusCode = HttpStatus.methodNotAllowed;
+        await request.response.close();
+        return;
+    }
+    await _json(request, {
+      'items': [for (final i in list.items) i.toJson()],
+    });
+  }
+
+  Future<void> _notesApi(HttpRequest request) async {
+    final board = notes;
+    if (board == null) {
+      request.response.statusCode = HttpStatus.serviceUnavailable;
+      await request.response.close();
+      return;
+    }
+    switch (request.method) {
+      case 'POST':
+        final body = await utf8.decoder.bind(request).join();
+        final data = body.isEmpty ? null : jsonDecode(body);
+        final text = data is Map ? '${data['text'] ?? ''}' : '';
+        final from = data is Map ? '${data['from'] ?? ''}' : '';
+        if (board.add(text, from: from.length > 40 ? from.substring(0, 40) : from) ==
+            null) {
+          request.response.statusCode = HttpStatus.badRequest;
+          await request.response.close();
+          return;
+        }
+      case 'DELETE':
+        board.remove(request.uri.queryParameters['id'] ?? '');
+      case 'GET':
+        break;
+      default:
+        request.response.statusCode = HttpStatus.methodNotAllowed;
+        await request.response.close();
+        return;
+    }
+    await _json(request, {
+      'notes': [for (final n in board.notes) n.toJson()],
+    });
+  }
+
   /// A picture of one tile, drawn by the real widget.
   ///
   /// Posted rather than fetched because what is drawn is the editor's copy —
@@ -448,6 +593,11 @@ class DashboardService extends ChangeNotifier {
     current.pageSeconds = incoming.pageSeconds;
     current.tapToFlip = incoming.tapToFlip;
     current.topBar = incoming.topBar;
+    current.pages = incoming.pages;
+    current.photoBackground = incoming.photoBackground;
+    current.photoAlbum = incoming.photoAlbum;
+    current.photoDim = incoming.photoDim;
+    current.photoSeconds = incoming.photoSeconds;
     current.widgets = incoming.widgets;
     await _config.save();
     notifyListeners();
@@ -460,6 +610,22 @@ class DashboardService extends ChangeNotifier {
   /// A failure here must not take the whole schema down with it: without the
   /// list the album picker falls back to its declared choices, but without a
   /// schema the editor cannot draw itself at all.
+  /// Home Assistant's entities for the widget's picker. Set once the
+  /// service exists; empty when Home Assistant is not set up or not
+  /// answering — the editor then offers a text box's worth of nothing, and
+  /// says so in the widget itself.
+  Future<Map<String, String>> Function()? haEntities;
+
+  Future<Map<String, String>> _haChoices() async {
+    final fetch = haEntities;
+    if (fetch == null) return const {};
+    try {
+      return await fetch().timeout(const Duration(seconds: 6));
+    } catch (_) {
+      return const {};
+    }
+  }
+
   Future<Map<String, String>> _albumChoices() async {
     final fetch = _albums;
     if (fetch == null) return const {};

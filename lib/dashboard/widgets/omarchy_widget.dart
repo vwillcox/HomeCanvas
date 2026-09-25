@@ -621,6 +621,7 @@ List<List<String>> omarchyCaps(String keys) => [
 
 final omarchyWidgetType = DashboardWidgetType(
   type: 'omarchy',
+  category: WidgetCategory.reference,
   name: 'Omarchy hotkeys',
   description:
       'The Omarchy keyboard shortcuts as a cheat sheet, one section at a '

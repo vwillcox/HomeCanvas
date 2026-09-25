@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0c10">
+<title>Shopping</title>
+<style>
+  /* The kiosk's glass look, as on the notes page. */
+  :root {
+    --bg: #0b0c10; --glass: rgba(255,255,255,.055); --line: rgba(255,255,255,.10);
+    --text: #fff; --muted: rgba(255,255,255,.62); --faint: rgba(255,255,255,.38);
+    --accent: #a6c8ff; --danger: #ff8a8a;
+    --ui: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; color: var(--text); font: 17px/1.45 var(--ui);
+    background: radial-gradient(900px 600px at 8% -12%, rgba(166,200,255,.16), transparent 70%), var(--bg);
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 560px; margin: 0 auto; padding: 28px 16px 48px; display: grid; gap: 16px; }
+  h1 { margin: 0; font-size: 30px; letter-spacing: -.02em; }
+  .sub { margin: 2px 0 0; color: var(--muted); font-size: 16px; }
+  form { display: flex; gap: 10px; padding: 10px; border-radius: 22px; background: var(--glass); border: 1px solid var(--line); }
+  input {
+    flex: 1; min-width: 0; font: inherit; color: var(--text); background: rgba(0,0,0,.28);
+    border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px;
+  }
+  input:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button {
+    font: inherit; font-weight: 650; border: none; border-radius: 999px; padding: 0 22px;
+    background: #fff; color: #0b0c10; cursor: pointer; min-height: 48px;
+  }
+  #status { min-height: 1.3em; color: var(--muted); font-size: 14px; margin: -6px 4px 0; }
+  #status.error { color: var(--danger); }
+  ul { list-style: none; margin: 0; padding: 0; border-radius: 22px; overflow: hidden;
+       background: var(--glass); border: 1px solid var(--line); }
+  li { display: flex; align-items: center; gap: 14px; padding: 0 8px 0 16px; min-height: 58px;
+       border-top: 1px solid rgba(255,255,255,.06); }
+  li:first-child { border-top: none; }
+  .tick {
+    width: 28px; height: 28px; flex: none; border-radius: 50%; padding: 0; min-height: 0;
+    background: transparent; border: 2.5px solid var(--faint); display: grid; place-items: center;
+  }
+  li.done .tick { background: var(--accent); border-color: var(--accent); }
+  li.done .tick::after { content: ""; width: 7px; height: 13px; border: solid #0b1a33; border-width: 0 3px 3px 0; transform: translateY(-2px) rotate(45deg); }
+  .text { flex: 1; min-width: 0; overflow-wrap: anywhere; padding: 12px 0; }
+  li.done .text { color: var(--faint); text-decoration: line-through; }
+  .del { background: transparent; color: var(--faint); padding: 0 12px; min-height: 44px; font-size: 22px; font-weight: 400; }
+  .del:hover { color: var(--danger); }
+  .empty { color: var(--muted); text-align: center; padding: 22px; display: block; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Shopping</h1>
+    <p class="sub">Add it here; it's on the panel straight away.</p>
+  </header>
+  <form id="form" autocomplete="off">
+    <input id="text" maxlength="80" placeholder="Milk" aria-label="Something to get" required>
+    <button type="submit">Add</button>
+  </form>
+  <div id="status" role="status"></div>
+  <ul id="items"></ul>
+</main>
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+
+function show(items) {
+  const list = $("items");
+  list.innerHTML = "";
+  if (!items.length) {
+    list.innerHTML = '<li class="empty">Nothing to get.</li>';
+    return;
+  }
+  for (const i of items) {
+    const li = document.createElement("li");
+    if (i.doneAt) li.className = "done";
+    const tick = document.createElement("button");
+    tick.className = "tick";
+    tick.type = "button";
+    tick.setAttribute("aria-label", (i.doneAt ? "Untick " : "Tick off ") + i.text);
+    tick.onclick = () => call("POST", { toggle: i.id });
+    const text = document.createElement("span");
+    text.className = "text";
+    text.textContent = i.text;
+    text.onclick = tick.onclick;
+    const del = document.createElement("button");
+    del.className = "del";
+    del.type = "button";
+    del.textContent = "×";
+    del.setAttribute("aria-label", "Remove " + i.text);
+    del.onclick = () => call("DELETE", null, "?id=" + encodeURIComponent(i.id));
+    li.append(tick, text, del);
+    list.appendChild(li);
+  }
+}
+
+async function call(method, body, query) {
+  const status = $("status");
+  try {
+    const r = await fetch("/api/list" + (query || ""), {
+      method,
+      headers: body ? { "Content-Type": "application/json" } : {},
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!r.ok) throw new Error("The panel answered " + r.status);
+    show((await r.json()).items || []);
+    status.className = "";
+    status.textContent = "";
+    return true;
+  } catch (e) {
+    status.className = "error";
+    status.textContent = "Couldn't reach the panel. Check you're on the home Wi-Fi and try again.";
+    return false;
+  }
+}
+
+$("form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const text = $("text").value.trim();
+  if (!text) return;
+  if (await call("POST", { text })) $("text").value = "";
+  $("text").focus();
+});
+
+call("GET");
+setInterval(() => { if (!document.hidden) call("GET"); }, 20000);
+</script>
+</body>
+</html>

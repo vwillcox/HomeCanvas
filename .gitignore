@@ -55,5 +55,5 @@ config.json
 scripts/local.env
 
 # Private keys are never committed. The TV client key was published here
-# once; supply your own locally instead (see moreinfo.md).
+# once; supply your own locally instead (see INSTALL.md, TV Remote).
 assets/certs/*.key

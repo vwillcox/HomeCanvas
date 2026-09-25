@@ -175,6 +175,145 @@ class ImmichService with ImmichUrls implements MediaSource {
         .toList();
   }
 
+  /// Today's "on this day" photos: Immich's own memories, newest year first.
+  ///
+  /// Each comes with the year it is a memory of, from the memory itself
+  /// rather than the photo's date, which can be wrong on a scanned print.
+  Future<List<({Asset asset, int year})>> getMemories(DateTime day) async {
+    // The date alone: Immich 3 answers a full timestamp with a 400.
+    final r = await _dio().get('/api/memories', queryParameters: {
+      'for': '${day.year.toString().padLeft(4, '0')}-'
+          '${day.month.toString().padLeft(2, '0')}-'
+          '${day.day.toString().padLeft(2, '0')}',
+    });
+    final data = r.data;
+    if (data is! List) return const [];
+    final out = <({Asset asset, int year})>[];
+    for (final m in data.whereType<Map<String, dynamic>>()) {
+      if (m['type'] != 'on_this_day') continue;
+      final year = (m['data'] as Map?)?['year'];
+      for (final a in (m['assets'] as List? ?? const [])
+          .whereType<Map<String, dynamic>>()) {
+        final asset = Asset.fromJson(a);
+        if (!asset.isImage) continue;
+        out.add((
+          asset: asset,
+          year: year is num ? year.toInt() : (asset.taken?.year ?? day.year),
+        ));
+      }
+    }
+    out.sort((a, b) => b.year.compareTo(a.year));
+    return out;
+  }
+
+  /// The library's size, and what has arrived lately.
+  ///
+  /// The whole server's figures when the key belongs to an administrator,
+  /// otherwise this account's. Disk space is left out on purpose: behind a
+  /// network or cloud mount, Immich reports the mount's size, which can be
+  /// petabytes and means nothing on a wall.
+  Future<LibraryStats> libraryStats({int recentDays = 30}) async {
+    final dio = _dio();
+    int photos, videos;
+    int? bytes;
+    try {
+      final r = await dio.get('/api/server/statistics');
+      final d = r.data as Map;
+      photos = (d['photos'] as num).toInt();
+      videos = (d['videos'] as num).toInt();
+      bytes = (d['usage'] as num?)?.toInt();
+    } catch (_) {
+      final r = await dio.get('/api/assets/statistics');
+      final d = r.data as Map;
+      photos = (d['images'] as num).toInt();
+      videos = (d['videos'] as num).toInt();
+    }
+    final since = DateTime.now().toUtc().subtract(Duration(days: recentDays));
+    final recent = await dio.post(
+      '/api/search/metadata',
+      data: {'createdAfter': since.toIso8601String(), 'size': 1000},
+    );
+    final recentAssets = (recent.data as Map?)?['assets'] as Map?;
+    final added = (recentAssets?['items'] as List? ?? const []).length;
+    final latest = await dio.post(
+      '/api/search/metadata',
+      data: {'size': 8, 'type': 'IMAGE', 'order': 'desc'},
+    );
+    final latestItems =
+        ((latest.data as Map?)?['assets'] as Map?)?['items'] as List? ??
+        const [];
+    return LibraryStats(
+      photos: photos,
+      videos: videos,
+      bytes: bytes,
+      addedRecently: added,
+      addedCapped: added >= 1000,
+      recentDays: recentDays,
+      latest: [
+        for (final a in latestItems.whereType<Map<String, dynamic>>())
+          Asset.fromJson(a),
+      ],
+    );
+  }
+
+  /// The server's version, as "3.2.2".
+  Future<String> serverVersion() async {
+    final r = await _dio().get('/api/server/version');
+    final d = r.data as Map;
+    return '${d['major']}.${d['minor']}.${d['patch']}';
+  }
+
+  /// The people Immich knows by name, for the birthdays widget.
+  Future<List<Person>> people() async {
+    final r = await _dio().get('/api/people',
+        queryParameters: {'withHidden': false, 'size': 1000});
+    final d = r.data;
+    final list = d is Map ? d['people'] : d;
+    return [
+      for (final p in (list as List? ?? const []).whereType<Map>())
+        if ('${p['name'] ?? ''}'.trim().isNotEmpty)
+          Person(
+            id: '${p['id']}',
+            name: '${p['name']}'.trim(),
+            birthDate: DateTime.tryParse('${p['birthDate'] ?? ''}'),
+          ),
+    ];
+  }
+
+  /// A photo's preview-sized image, as bytes — for the dashboard editor,
+  /// which cannot fetch from Immich itself.
+  Future<List<int>> previewBytes(String id) async {
+    final r = await _dio().get<List<int>>(
+      '/api/assets/$id/thumbnail',
+      queryParameters: {'size': 'preview'},
+      options: Options(responseType: ResponseType.bytes),
+    );
+    return r.data ?? const [];
+  }
+
+  /// A person's face, as Immich crops it.
+  String personThumbUrl(String id) => '$baseUrl/api/people/$id/thumbnail';
+
+  final Map<String, String?> _places = {};
+
+  /// Where a photo was taken — "Whitstable" — from its
+  /// location data, or null when it has none. Remembered, as it never changes.
+  Future<String?> placeOf(String assetId) async {
+    if (_places.containsKey(assetId)) return _places[assetId];
+    try {
+      final r = await _dio().get('/api/assets/$assetId');
+      final exif = (r.data as Map?)?['exifInfo'] as Map?;
+      final city = '${exif?['city'] ?? ''}'.trim();
+      final country = '${exif?['country'] ?? ''}'.trim();
+      // The town alone reads best on a caption; the country only when there
+      // is no town to give.
+      final place = city.isNotEmpty ? city : (country.isEmpty ? null : country);
+      return _places[assetId] = place;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Disk-cached album contents, for an instant paint before the refresh lands.
   Future<List<Asset>?> getCachedAlbumAssets(
     String albumId, {
@@ -210,4 +349,42 @@ class ImmichService with ImmichUrls implements MediaSource {
       }
     }
   }
+}
+
+/// The library in numbers, for the Immich library widget.
+class LibraryStats {
+  const LibraryStats({
+    required this.photos,
+    required this.videos,
+    required this.addedRecently,
+    required this.recentDays,
+    this.bytes,
+    this.addedCapped = false,
+    this.latest = const [],
+  });
+
+  final int photos;
+  final int videos;
+
+  /// How much space the library itself takes, when the server says.
+  final int? bytes;
+  final int addedRecently;
+
+  /// At least this many — the count stops at a thousand.
+  final bool addedCapped;
+  final int recentDays;
+
+  /// The newest photos, newest first.
+  final List<Asset> latest;
+}
+
+/// Someone Immich recognises in photos.
+class Person {
+  const Person({required this.id, required this.name, this.birthDate});
+
+  final String id;
+  final String name;
+
+  /// Set on the person in Immich, when it has been.
+  final DateTime? birthDate;
 }

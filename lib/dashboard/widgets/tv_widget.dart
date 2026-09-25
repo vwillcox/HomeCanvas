@@ -465,6 +465,7 @@ class _Message extends StatelessWidget {
 
 final tvWidgetType = DashboardWidgetType(
   type: 'tv',
+  category: WidgetCategory.photosAndMedia,
   name: 'TV remote',
   description:
       'Controls a Hisense VIDAA television: power, volume, channel and a '

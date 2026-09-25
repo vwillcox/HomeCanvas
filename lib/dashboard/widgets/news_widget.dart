@@ -222,6 +222,7 @@ class DashboardNewsWidget extends StatelessWidget {
 
 final newsWidgetType = DashboardWidgetType(
   type: 'news',
+  category: WidgetCategory.reference,
   name: 'News feed',
   description: 'Headlines from any RSS or Atom feed.',
   glyph: '📰',

@@ -7,190 +7,181 @@ display.
 It boots straight into a fullscreen kiosk — no desktop, no mouse, no keyboard.
 Browse your albums, pinch to zoom photos, play videos, run a slideshow, and see
 the local weather. It doubles as a speaker (Bluetooth or Spotify Connect), takes
-photos and notes shared from a phone, and can switch to a widget dashboard of
-clock, weather, calendar, news and music that you arrange from a browser.
+photos and notes shared from a phone, and switches to a dashboard of nearly
+forty widgets — clock, weather, calendar, news, trains, bins, chores, your
+network and your servers — that you arrange from a browser.
 
 Built with Flutter as a native Linux app, so it stays smooth on a Pi.
 
-**📖 [moreinfo.md](moreinfo.md) has the full setup guide, every optional
-feature, the troubleshooting notes and the technical detail.** This page is the
-short version.
+| | |
+|---|---|
+| **[INSTALL.md](INSTALL.md)** | Setting it up: the hardware, the install, and every optional feature — Spotify, Bluetooth, the camera, the share inbox, the dashboard's widgets, turning the screen off with Alexa. Troubleshooting too. |
+| **[TECHNICAL.md](TECHNICAL.md)** | How it works: the dashboard's widget registry and editor, the encryption, the visualiser, the APIs it talks to, the project layout, debug hooks and the libraries it is built on. |
 
 ---
 
 ## Screenshots
 
-| Albums | Album contents |
+### Photos
+
+| The home screen | An album |
 |---|---|
-| ![Albums grid](docs/screenshots/01-home-albums.jpg) | ![Album contents](docs/screenshots/02-album-view.jpg) |
-| The home grid. Long-press albums to pick several for one slideshow. | An album's photos, with the Slideshow button in the bar. |
+| ![The home screen: a greeting, a mini player and the albums](docs/screenshots/home.jpg) | ![An album's photo wall](docs/screenshots/album.jpg) |
+| A greeting and the library in numbers, a mini player while music plays, and the albums. | A photo wall with headings that follow the photos rather than the calendar. |
 
-| Photo viewer | Slideshow with weather |
+| Photo viewer | Slideshow |
 |---|---|
-| ![Photo viewer](docs/screenshots/03-photo-viewer.jpg) | ![Slideshow with weather overlay](docs/screenshots/04-slideshow-weather.jpg) |
-| Pinch, double-tap or the +/− buttons to zoom. | Photo-frame mode: the whole image fits, edges filled with a blur, weather in the corner. |
+| ![The photo viewer](docs/screenshots/photo-viewer.jpg) | ![The slideshow with the weather and now playing](docs/screenshots/slideshow.jpg) |
+| Pinch, double-tap or the +/− buttons to zoom; swipe for the next. | Photo-frame mode: the weather and what's playing in the corners, drifting slowly so nothing burns in. |
 
-### The widget dashboard
+![The weather panel expanded over the slideshow](docs/screenshots/weather.jpg)
 
-Clock, weather, news, calendar and music on one screen — laid out on a 12×8
-grid from a browser on your own network, no keyboard at the panel:
-
-![Widget dashboard](docs/screenshots/08-dashboard.jpg)
-
-### Now playing
-
-When music is playing and no slideshow is running, the player takes over
-full-screen with a blurred album-art backdrop and large, quick-to-tap controls:
-
-| Full-screen player | Controls close-up |
-|---|---|
-| ![Now-playing player, full screen](docs/screenshots/06-nowplaying-player.jpg) | ![Now-playing controls close-up](docs/screenshots/07-nowplaying-controls.jpg) |
-| Tap to shrink to a corner card and pick an album — it pops back up on its own if nothing came of it. | Transport, repeat, shuffle, like and add-to-playlist, all sized for a quick tap. |
-
-### Shared links open in Firefox
-
-A link shared from a phone opens with the browser's own furniture hidden, and a
-close button the kiosk draws itself — because neither browser gives one you can
-reliably hit with a thumb:
-
-![A shared link open in Firefox](docs/screenshots/10-firefox-article.jpg)
-
-### Slideshow in motion
-
-Ken Burns pan with a cross-fade between slides:
+Tap the weather in the corner for a fortnight's forecast.
 
 ![Slideshow animation](docs/screenshots/05-slideshow-animation.gif)
 
-*(Also available as [MP4](docs/screenshots/05-slideshow-animation.mp4) at higher quality.)*
+Ken Burns pan with a cross-fade between slides *(also as
+[MP4](docs/screenshots/05-slideshow-animation.mp4))*.
 
-> Screenshots use albums without people in them, and every thumbnail on the
-> albums grid is deliberately pixelated. Album artwork shown is © its
-> respective rights holder, fetched live to demonstrate the UI; this project
-> claims no ownership of it.
+### Now playing
+
+![The full-screen player](docs/screenshots/now-playing.jpg)
+
+When music is playing the player takes over the screen, with the album art
+blurred behind, a visualiser of what is actually coming out of the speaker, and
+controls sized for a thumb — like, shuffle, repeat and add-to-playlist included.
+Shrink it and it tucks into the mini player on the home screen, or into the Now
+playing tile on the dashboard.
+
+### The dashboard
+
+![The dashboard: clock, weather, TV remote, now playing and the news](docs/screenshots/dashboard.jpg)
+
+A 12×8 grid of widgets in pages that turn themselves — or hold, with the pause
+beside the page dots. Play and pause are in the top bar on every page whenever
+something is playing. Pages can have hours of their own: a morning page from
+six till nine, a night page after ten.
+
+| Home lab | Network |
+|---|---|
+| ![Servers, services, notes, sun and moon, certificates, updates and a memory](docs/screenshots/dashboard-homelab.jpg) | ![UniFi network health, clients, devices, throughput and speed tests](docs/screenshots/dashboard-network.jpg) |
+| This Pi and the NAS with disk health from SMART, services, certificates, updates, notes and a memory from this day. | UniFi health, who's on the network, the router and switches, and two speed tests: to the internet, and across your own wiring. |
+
+| Around the house | Calendar and photos |
+|---|---|
+| ![Grid carbon, on this day in history, train departures and chores](docs/screenshots/dashboard-around-the-house.jpg) | ![A month calendar beside a photo](docs/screenshots/dashboard-calendar.jpg) |
+| How clean the electricity is, the next trains, a chores chart with stars, and something from history. | Your calendars and a photo from Immich. |
+
+| The full forecast | Switching TV inputs |
+|---|---|
+| ![The full forecast](docs/screenshots/forecast.jpg) | ![The TV inputs](docs/screenshots/tv-inputs.jpg) |
+| Tap the weather: now, the next 24 hours as a curve, and the week on one scale. | The TV remote's Input button: every input, and what is plugged into each. |
+
+![The Omarchy hotkeys cheat sheet](docs/screenshots/dashboard-omarchy.jpg)
+
+A page of its own for the Omarchy keyboard shortcuts.
+
+### Arranged from a browser
+
+![The dashboard editor in a browser](docs/screenshots/editor.jpg)
+
+The editor runs on the panel and opens in any browser on your network. The
+previews are the panel's own drawing of each widget, so what you lay out is
+what you get. Widgets come in folding groups; drag to place and resize,
+reorder pages by dragging their tabs.
+
+### Settings and more
+
+| Settings | About |
+|---|---|
+| ![Settings, in tabs](docs/screenshots/settings.jpg) | ![The About screen](docs/screenshots/about.jpg) |
+| In six tabs: Photos, Music, Home, Display, Sharing and System. | Every library the app is built on, with its licence. |
+
+![A shared link open in Firefox](docs/screenshots/10-firefox-article.jpg)
+
+A link shared from a phone opens in Firefox with the browser's furniture hidden
+and a close button the kiosk draws itself.
+
+> Personal details in these screenshots — the server's address, device names,
+> the household's notes and the album covers on the home screen — are blurred or
+> pixelated. Album artwork shown is © its respective rights holder, fetched live
+> to demonstrate the UI; this project claims no ownership of it.
 
 ---
 
 ## Features
 
-**Photos & video** — browse every Immich album; full-screen viewer with
-pinch-zoom, double-tap zoom and swipe; video via libmpv with a playback-speed
-selector, scrub, zoom and volume; portrait and landscape without cropping.
+**Photos & video** — every Immich album, sortable and with empty ones hidden;
+a full-screen viewer with pinch-zoom, double-tap zoom and swipe; video via
+libmpv with speed, scrub, zoom and volume; portrait and landscape uncropped.
 
-**Slideshow** — fade, slide, Ken Burns or page-turn transitions, configurable
-interval, shuffle, a blurred backdrop behind letterboxed shots, and multi-select
-albums played as one.
+**Slideshow** — fade, slide, Ken Burns or page-turn transitions, shuffle, a
+blurred backdrop behind letterboxed shots, and several albums played as one.
 
-**Widget dashboard** — clock, weather, calendar, RSS news, Spotify and a TV
-remote on a 12×8 grid, arranged from a browser with a live preview. Five themes
-plus a JSON template for your own, twenty fonts, per-widget sizing.
+**Music** — pair a phone over Bluetooth and the Pi becomes its speaker, or play
+Spotify on it directly as a Connect device named "Kiosk". With Premium the panel
+controls the account: seek, like, add to a playlist, pick the device, see the
+queue.
 
-**Weather** — corner panel, tap to expand into a 7-day forecast. Uses
-[Open-Meteo](https://open-meteo.com), no API key.
+**The dashboard** — nearly forty widgets in groups, arranged from a browser:
 
-**Indoor sensor** — reads a Govee H510x Bluetooth thermometer via Home
-Assistant, with a 24-hour chart in the expanded panel.
+| Group | Widgets |
+|---|---|
+| Time & day | Clock, Calendar, Timers, Sun & moon, Countdowns (with bank holidays) |
+| Weather & air | Weather with a full forecast, Air & pollen, Rain soon |
+| Photos, music & TV | Now playing, TV remote, Photo, On this day, Immich library, Birthdays |
+| Around the house | Bin day, Notes, Shopping list, Grid carbon, Lights (Govee), Home Assistant, Meal plan, Chores & rewards |
+| Getting out | Train departures |
+| News & reference | News feeds (with adverts filtered out), On this day in history, Omarchy hotkeys |
+| Network | UniFi health, Who's home, UniFi devices, Network clients, WAN throughput, ISP speed test, Speed test, LAN speed test |
+| Home lab | Servers (with SMART disk health), Services, Certificates, Updates |
 
-**Music** — pair a phone over Bluetooth and the Pi becomes its speaker with a
-now-playing panel, or use Spotify directly: the Pi appears as a Connect device
-named "Kiosk", and with Premium the panel controls the account over the Web API
-(seek, like, add to playlist).
+Six themes plus a JSON template for your own, twenty fonts, per-widget sizing,
+pages and widgets that show only at certain hours, and an optional background
+of your own photos behind the tiles.
 
 **Share Inbox** — a companion Android app (in this repo) shares photos, GIFs,
-videos, links and notes to the kiosk from any app's share sheet, from anywhere.
-Per-person tokens, a chime, and a Do Not Disturb switch. Everything is
-**end-to-end encrypted** with a fresh key per message.
+videos, links and notes to the kiosk from any app's share sheet, from anywhere,
+**end-to-end encrypted** with a fresh key per message. Notes can be read aloud
+by a voice that runs on the Pi.
 
-**A phone as a wireless camera** — an old Android phone running IP Webcam
-becomes a camera in a corner window; tap to expand, pinch to drive the phone's
-own sensor zoom.
+**A phone as a camera** — an old Android phone running IP Webcam becomes a
+camera in a corner window; pinch to drive the phone's own zoom.
 
-**Private content** — opens Immich's server-side Locked Folder with your PIN,
-and re-locks when you leave.
+**Private content** — opens Immich's Locked Folder with your PIN, and re-locks
+when you leave.
 
-**Built for a kiosk** — panels drift slowly to guard against burn-in; the screen
-turns itself off when idle and wakes on touch; starts on boot and restarts if it
-crashes; aggressive on-disk caching; an About screen listing every library and
-licence.
+**Built for a wall** — panels drift slowly against burn-in; the screen turns
+itself off when idle and wakes on touch (or by voice, through Alexa); starts on
+boot and restarts if it crashes; caches aggressively on disk.
 
 ---
 
-## What you need
+## Getting started
 
-- **Raspberry Pi 5** (or Pi 4) with a DSI touch display — developed against a
-  10" 1200×1920 panel used in landscape
-- **Raspberry Pi OS (Debian 13 "trixie")** or similar, running the **labwc**
-  Wayland session
-- An **Immich server** (v3.x) reachable on your network
-- A computer to build from, or build directly on the Pi
-
----
-
-## Quick start
-
-**1. Install the toolchain on the Pi**
+You need a **Raspberry Pi 5** (or 4) with a DSI touch display, **Raspberry Pi
+OS (trixie)** running labwc, and an **Immich server**. Then, in short:
 
 ```bash
-bash scripts/pi-setup.sh
+bash scripts/pi-setup.sh                         # on the Pi: Flutter and friends
+cp scripts/local.env.example scripts/local.env  # point the scripts at your Pi
+scripts/run.sh                                   # build on the Pi and start it
 ```
 
-Installs Flutter, the Linux build dependencies and libmpv. Needs `sudo` and
-downloads a few hundred MB.
-
-**2. Set up the touchscreen** — merge [`deploy/labwc-rc.xml`](deploy/labwc-rc.xml)
-into `~/.config/labwc/rc.xml`, changing `deviceName` to yours (find it with
-`libinput list-devices`) and `mapToOutput` to your panel. `mouseEmulation="no"`
-is the important part — it delivers real touch events rather than synthetic
-mouse ones.
-
-**3. Point the helper scripts at your Pi**
-
-```bash
-cp scripts/local.env.example scripts/local.env
-```
-
-Edit it with your Pi's SSH details. It's git-ignored, so your hostname stays out
-of the repo.
-
-**4. Add your Immich details** — create `~/.config/immich_kiosk_pi/config.json`
-on the Pi (see [`config.example.json`](config.example.json)) with your server URL
-and an API key from **Account Settings → API Keys**, then `chmod 600` it.
-
-**5. Build and run**
-
-```bash
-scripts/run.sh
-```
-
-Syncs the source to the Pi, builds a release binary there, and launches it.
-
-**6. Start it on boot**
-
-```bash
-mkdir -p ~/.config/systemd/user ~/.config/labwc
-cp deploy/immich_kiosk_pi.service ~/.config/systemd/user/
-cp deploy/labwc-autostart ~/.config/labwc/autostart
-chmod +x ~/.config/labwc/autostart
-systemctl --user daemon-reload
-systemctl --user enable --now immich_kiosk_pi
-```
-
-> Start units from labwc's `autostart`, not from `graphical-session.target` —
-> labwc never activates it, so anything bound to it silently never runs. This
-> caused three separate "worked until I rebooted" faults.
-
-**Everything else** — Bluetooth, Spotify, the camera, the dashboard, the share
-inbox, voice control, the Locked Folder — is in
-**[moreinfo.md](moreinfo.md)**.
+**[INSTALL.md](INSTALL.md)** has the full walk-through, including the
+touchscreen setup and starting it on boot.
 
 ---
 
 ## Privacy
 
-ImmichKioskPi talks only to your own Immich server and to Open-Meteo for the
-weather. There's no analytics and no third-party service. Your credentials live
-in `~/.config/immich_kiosk_pi/config.json` on the device and are never committed
-— that file is git-ignored. Shares from the companion app are end-to-end
-encrypted, so even a reverse proxy in the path cannot read them.
+ImmichKioskPi talks to your own Immich server, and to a public service only when
+you add a widget that needs one — Open-Meteo for the weather, National Grid ESO
+for grid carbon, Realtime Trains for departures — sending no more than that
+widget needs: a place, a postcode district, a station. No analytics, no
+accounts of ours. Your credentials live in `~/.config/immich_kiosk_pi/config.json` on
+the device and are never committed. Shares from the companion app are
+end-to-end encrypted, so even a reverse proxy in the path cannot read them.
 
 ---
 
@@ -198,6 +189,6 @@ encrypted, so even a reverse proxy in the path cannot read them.
 
 [MIT](LICENSE) — do what you like with it, no warranty.
 
-Third-party libraries, their licences and credits for adapted code are listed in
-[moreinfo.md](moreinfo.md#third-party-libraries) and on the device under
-**Settings → About**, so attribution travels with the app.
+Third-party libraries, their licences and credits for adapted code are in
+[TECHNICAL.md](TECHNICAL.md#third-party-libraries) and on the device under
+**Settings → System → About**, so attribution travels with the app.

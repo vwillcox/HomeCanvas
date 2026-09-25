@@ -291,11 +291,12 @@ Widget _readoutLine(
 
 final speedtestWidgetType = DashboardWidgetType(
   type: 'speedtest',
+  category: WidgetCategory.network,
   name: 'Speed test',
   description:
       'Runs Ookla speedtest and shows download and upload on one dial as it '
       'goes, with ping, jitter and packet loss. Tap to start. Needs the '
-      'speedtest CLI installed — see moreinfo.md.',
+      'speedtest CLI installed — see INSTALL.md.',
   glyph: '📶',
   defaultWidth: 4,
   defaultHeight: 4,
