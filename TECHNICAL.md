@@ -174,8 +174,17 @@ give the glass look:
 - **`sheen`** — the top of each tile a little lighter, gone by the middle:
   light catching a pane of glass.
 
-Aurora uses all three. The toolbar's notifications switch takes the theme's
-accent too, with a deeper shade of it for the knob.
+Aurora and Abyss use all three. Glossy themes (Obsidian, Sorbet) use solid
+or near-solid tiles with a strong sheen and no glow; flat ones (Espresso,
+Swiss, Terminal) have no sheen, no shadow and often no edge. Some set a font:
+Synthwave's Chakra Petch, Terminal's Share Tech Mono, Espresso's Lora.
+
+A test (`test/theme_contrast_test.dart`) works out each theme's real tile
+colour — the surface over the background, over each glow and under the
+sheen — and holds body text to a WCAG contrast of 7, secondary text to 3.5 and
+the accent to 3, so a theme cannot look good and read badly. The toolbar's
+notifications switch takes the theme's accent, with a deeper shade of it for
+the knob.
 
 ### Emoji
 

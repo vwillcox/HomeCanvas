@@ -326,32 +326,37 @@ class _FitStat extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, c) {
         final share = c.maxHeight * 0.86 / (labelSize + valueSize);
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _Fit(
-              Text(
-                label,
-                style: TextStyle(
-                  color: theme.textSecondary,
-                  fontSize: share * labelSize / 1.17,
-                  height: 1.17,
+        // A gutter on the right: each figure may fill its column, and two
+        // long ones side by side ran together — "386 kb/s131 kb/s".
+        return Padding(
+          padding: EdgeInsets.only(right: c.maxWidth * 0.08),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _Fit(
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: theme.textSecondary,
+                    fontSize: share * labelSize / 1.17,
+                    height: 1.17,
+                  ),
                 ),
               ),
-            ),
-            _Fit(
-              Text(
-                value,
-                style: TextStyle(
-                  color: colour ?? theme.textPrimary,
-                  fontSize: share * valueSize / 1.1,
-                  fontWeight: FontWeight.w700,
-                  height: 1.1,
+              _Fit(
+                Text(
+                  value,
+                  style: TextStyle(
+                    color: colour ?? theme.textPrimary,
+                    fontSize: share * valueSize / 1.1,
+                    fontWeight: FontWeight.w700,
+                    height: 1.1,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         );
       },
     );
