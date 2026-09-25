@@ -625,9 +625,11 @@ class _PageDots extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dim = theme.textSecondary.withValues(alpha: 0.4);
-    // In a glass pill, like every other control on the kiosk's screens.
+    // In a glass pill, like every other control on the kiosk's screens, and
+    // the same height as the module bar beside it: 60-point targets, as the
+    // bar's buttons are, so the two pills line up and read as one toolbar.
     return Glass(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -639,25 +641,24 @@ class _PageDots extends StatelessWidget {
                   ? onTogglePause!()
                   : onTap(i),
               behavior: HitTestBehavior.opaque,
-              child: Padding(
-                // The padding is the touch target; the dot itself stays small
+              child: Container(
+                // The box is the touch target; the dot itself stays smaller
                 // so it does not compete with the widgets for attention.
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 12,
-                ),
+                constraints: const BoxConstraints(minWidth: 52, minHeight: 60),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                alignment: Alignment.center,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 220),
                   curve: Curves.easeOutCubic,
-                  width: i == current ? 30 : 12,
-                  height: 12,
+                  width: i == current ? 44 : 16,
+                  height: 16,
                   decoration: BoxDecoration(
                     color: i == current
                         ? (turn == null
                               ? theme.accent
                               : theme.accent.withValues(alpha: 0.3))
                         : dim,
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: i == current && turn != null
                       ? _Fill(turn: turn!, paused: paused, colour: theme.accent)
@@ -668,8 +669,8 @@ class _PageDots extends StatelessWidget {
           if (onTogglePause != null) ...[
             Container(
               width: 1,
-              height: 18,
-              margin: const EdgeInsets.symmetric(horizontal: 2),
+              height: 34,
+              margin: const EdgeInsets.symmetric(horizontal: 6),
               color: dim,
             ),
             Semantics(
@@ -679,8 +680,8 @@ class _PageDots extends StatelessWidget {
                 onTap: onTogglePause,
                 behavior: HitTestBehavior.opaque,
                 child: SizedBox(
-                  width: 44,
-                  height: 36,
+                  width: 60,
+                  height: 60,
                   child: Center(
                     child: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 220),
@@ -691,7 +692,7 @@ class _PageDots extends StatelessWidget {
                       child: Icon(
                         paused ? Icons.play_arrow_rounded : Icons.pause_rounded,
                         key: ValueKey(paused),
-                        size: 22,
+                        size: 30,
                         color: paused ? theme.accent : theme.textSecondary,
                       ),
                     ),
@@ -764,7 +765,7 @@ class _FillState extends State<_Fill> with SingleTickerProviderStateMixin {
               color: widget.colour.withValues(
                 alpha: widget.paused ? 0.55 + 0.35 * _breath.value : 1,
               ),
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(8),
             ),
           ),
         ),
