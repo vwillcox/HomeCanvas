@@ -177,7 +177,7 @@ give the glass look:
 Aurora and Abyss use all three. Glossy themes (Obsidian, Sorbet) use solid
 or near-solid tiles with a strong sheen and no glow; flat ones (Espresso,
 Swiss, Terminal) have no sheen, no shadow and often no edge. Some set a font:
-Synthwave's Chakra Petch, Terminal's Share Tech Mono, Espresso's Lora.
+Synthwave's Chakra Petch, Share Tech Mono for both Terminals, Espresso's Lora.
 
 A test (`test/theme_contrast_test.dart`) works out each theme's real tile
 colour — the surface over the background, over each glow and under the

@@ -355,6 +355,23 @@ const List<DashboardTheme> kBuiltInThemes = [
     fontFamily: 'ShareTechMono',
     shadow: false,
   ),
+  // Terminal with the lights off: true black, no glow, boxes you only just
+  // see, and a softer green that is easy on the eyes in a dark room — the
+  // phosphor turned down rather than a different screen.
+  DashboardTheme(
+    id: 'terminal-night',
+    name: 'Terminal Night',
+    background: [Color(0xFF000000)],
+    surface: Color(0x0529D66F),
+    border: Color(0x2629D66F),
+    textPrimary: Color(0xFF7FD69A),
+    textSecondary: Color(0x8C7FD69A),
+    accent: Color(0xFF29C765),
+    cornerRadius: 2,
+    gap: 12,
+    fontFamily: 'ShareTechMono',
+    shadow: false,
+  ),
   // Deliberately plain and very high contrast: readable across a room, and
   // the safest choice on an always-on panel because so little of it is lit.
   DashboardTheme(

@@ -82,7 +82,7 @@ corners, with light catching the top of each tile.
 More themes, dark and light, glassy, glossy and flat: **Abyss** (deep-sea
 glass), **Obsidian** (black lacquer and gold), **Synthwave** (neon on purple),
 **Espresso** (flat browns and a serif), **Terminal** (green phosphor,
-monospaced), **Frost** (frosted panes in daylight), **Sorbet** (glossy pastels)
+monospaced — and **Terminal Night**, the same turned down for a dark room), **Frost** (frosted panes in daylight), **Sorbet** (glossy pastels)
 and **Swiss** (flat white blocks and signal red).
 
 | The full forecast | Switching TV inputs |
@@ -149,7 +149,7 @@ queue.
 | Network | UniFi health, Who's home, UniFi devices, Network clients, WAN throughput, ISP speed test, Speed test, LAN speed test |
 | Home lab | Servers (with SMART disk health), Services, Certificates, Updates |
 
-Fifteen themes — dark and light, glassy, glossy and flat — plus a JSON template for your own, twenty fonts, per-widget sizing,
+Sixteen themes — dark and light, glassy, glossy and flat — plus a JSON template for your own, twenty fonts, per-widget sizing,
 pages and widgets that show only at certain hours, and an optional background
 of your own photos behind the tiles.
 
