@@ -1457,7 +1457,13 @@ function field(w, o) {
       input.oninput = () => { w.options[o.key] = input.value; markDirty(); };
     } else {
       input = document.createElement("input");
-      input.type = o.kind === "number" ? "number" : "text";
+      input.type = o.kind === "number" ? "number" : o.kind === "secret" ? "password" : "text";
+      if (o.kind === "secret") {
+        // Not the browser's saved passwords: this is a key for a service,
+        // not a login to this page.
+        input.autocomplete = "off";
+        input.spellcheck = false;
+      }
       input.value = value != null ? String(value) : "";
       input.oninput = () => {
         w.options[o.key] = o.kind === "number"

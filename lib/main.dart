@@ -11,7 +11,10 @@ import 'dashboard/live_preview.dart';
 import 'dashboard/tile_renderer.dart';
 import 'services/air_quality_service.dart';
 import 'services/bins_service.dart';
+import 'services/carbon_service.dart';
+import 'services/govee_service.dart';
 import 'services/notes_service.dart';
+import 'services/shopping_service.dart';
 import 'services/timer_service.dart';
 import 'dashboard/widgets/widgets.dart';
 import 'services/audio_levels_service.dart';
@@ -143,6 +146,11 @@ void main() async {
   };
   dashboard.notes = notes;
 
+  // The shopping list, added to from phones and ticked off on the panel.
+  final shopping = ShoppingService();
+  unawaited(shopping.load());
+  dashboard.shopping = shopping;
+
   // Kitchen timers, owned up here so they keep running — and still speak —
   // after the panel has left the dashboard.
   final timers = TimerService(
@@ -180,10 +188,15 @@ void main() async {
         // nothing, and it starts no capture until a widget attaches.
         ChangeNotifierProvider(create: (_) => AudioLevelsService()),
         ChangeNotifierProvider.value(value: notes),
+        ChangeNotifierProvider.value(value: shopping),
         ChangeNotifierProvider.value(value: timers),
         ChangeNotifierProvider.value(value: bins),
         // Made when an Air & pollen widget first asks, and not before.
         ChangeNotifierProvider(create: (_) => AirQualityService(config)),
+        ChangeNotifierProvider(create: (_) => CarbonService(config)),
+        // Made when a Lights widget first asks; it then listens for Govee
+        // devices on the home network.
+        ChangeNotifierProvider(create: (_) => GoveeService()),
       ],
       child: const ImmichKioskPiApp(),
     ),

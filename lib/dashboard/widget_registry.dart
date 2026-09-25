@@ -11,7 +11,11 @@ import 'dashboard_theme.dart';
 /// to add a row and a cross to remove one. Generic rather than specific to
 /// the calendar's several feeds, so the next widget that needs a repeating
 /// setting gets one for free.
-enum OptionKind { text, number, boolean, choice, multiline, colour, list }
+///
+/// [secret] is text the editor shows as dots — an API key or token — so it is
+/// not on show to whoever is looking at the screen while the dashboard is set
+/// up. It is stored like any other option.
+enum OptionKind { text, number, boolean, choice, multiline, colour, list, secret }
 
 /// One setting a widget type accepts.
 ///

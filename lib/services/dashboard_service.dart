@@ -16,6 +16,7 @@ import '../config/app_config.dart' show SenderToken;
 import '../dashboard/widget_registry.dart';
 import 'config_service.dart';
 import 'notes_service.dart';
+import 'shopping_service.dart';
 
 /// Hosts the dashboard's web editor and the small API behind it.
 ///
@@ -58,6 +59,9 @@ class DashboardService extends ChangeNotifier {
 
   /// The household notes board, for its page and API. Null in tests.
   NotesService? notes;
+
+  /// The shopping list, for its page and API. Null in tests.
+  ShoppingService? shopping;
 
   DashboardSettings get settings => _config.config.dashboard;
 
@@ -197,6 +201,21 @@ class DashboardService extends ChangeNotifier {
         if (!_requireLocal(request)) return;
         return await _serveAsset(
             request, 'assets/dashboard/notes.html', ContentType.html);
+      }
+      if (path == '/list' || path == '/list/') {
+        if (!_requireLocal(request)) return;
+        return await _serveAsset(
+            request, 'assets/dashboard/list.html', ContentType.html);
+      }
+      if (path == '/api/list') {
+        if (!_requireLocal(request)) return;
+        if (!sameOrigin(request.headers.value('origin'),
+            request.headers.value(HttpHeaders.hostHeader))) {
+          request.response.statusCode = HttpStatus.forbidden;
+          await request.response.close();
+          return;
+        }
+        return await _listApi(request);
       }
       if (path == '/api/notes') {
         if (!_requireLocal(request)) return;
@@ -413,6 +432,40 @@ class DashboardService extends ChangeNotifier {
     if (o == null || host == null) return false;
     return o.hasAuthority &&
         '${o.host}${o.hasPort ? ':${o.port}' : ''}' == host;
+  }
+
+  /// GET the list; POST {"text": "Milk"} to add, {"toggle": id} to tick or
+  /// untick; DELETE ?id= to take something off.
+  Future<void> _listApi(HttpRequest request) async {
+    final list = shopping;
+    if (list == null) {
+      request.response.statusCode = HttpStatus.serviceUnavailable;
+      await request.response.close();
+      return;
+    }
+    switch (request.method) {
+      case 'POST':
+        final body = await utf8.decoder.bind(request).join();
+        final data = body.isEmpty ? null : jsonDecode(body);
+        if (data is Map && data['toggle'] != null) {
+          list.toggle('${data['toggle']}');
+        } else if (data is! Map || list.add('${data['text'] ?? ''}') == null) {
+          request.response.statusCode = HttpStatus.badRequest;
+          await request.response.close();
+          return;
+        }
+      case 'DELETE':
+        list.remove(request.uri.queryParameters['id'] ?? '');
+      case 'GET':
+        break;
+      default:
+        request.response.statusCode = HttpStatus.methodNotAllowed;
+        await request.response.close();
+        return;
+    }
+    await _json(request, {
+      'items': [for (final i in list.items) i.toJson()],
+    });
   }
 
   Future<void> _notesApi(HttpRequest request) async {
