@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../screens/link_viewer_screen.dart';
+import '../../services/article_reader.dart';
 import '../../services/kiosk_browser.dart' show ReaderStyle;
 import '../../services/feed_service.dart';
 import '../widget_registry.dart';
@@ -15,6 +16,8 @@ class DashboardNewsWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = w.theme;
+    // Absent in the editor's off-screen previews, which read nothing out.
+    final reader = context.watch<ArticleReader?>();
     final urls = feedUrls(w);
     if (urls.isEmpty) {
       return Center(
@@ -73,22 +76,45 @@ class DashboardNewsWidget extends StatelessWidget {
         final item = shown[i];
         final tappable = w.option('openOnTap', true) &&
             (item.link != null || item.summary != null);
+        // The headline being read aloud, marked so you can see which.
+        final beingRead = reader != null &&
+            reader.active &&
+            item.link != null &&
+            reader.link == item.link;
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: tappable ? () => _open(context, item) : null,
           child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              item.title,
-              maxLines: showSummary ? 2 : 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: t.textPrimary,
-                fontSize: 15,
-                height: 1.25,
-                fontWeight: FontWeight.w500,
-              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (beingRead) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(top: 1),
+                    child: Icon(
+                      Icons.volume_up_rounded,
+                      size: 17,
+                      color: t.accent,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                ],
+                Expanded(
+                  child: Text(
+                    item.title,
+                    maxLines: showSummary ? 2 : 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: beingRead ? t.accent : t.textPrimary,
+                      fontSize: 15,
+                      height: 1.25,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
             ),
             if (showSummary && item.summary != null)
               Padding(
@@ -125,7 +151,11 @@ class DashboardNewsWidget extends StatelessWidget {
   /// all anyone wants — so that comes first and costs nothing, with the full
   /// article a deliberate second tap rather than the only option.
   void _open(BuildContext context, FeedItem item) {
-    if (item.summary == null || item.summary!.isEmpty) {
+    final reader = context.read<ArticleReader?>();
+    final summary = item.summary ?? '';
+    // Straight to the page only when there is nothing else to offer — no
+    // summary to show, and no voice to read it out.
+    if (summary.isEmpty && reader == null) {
       if (item.link != null) _openPage(context, item);
       return;
     }
@@ -137,13 +167,33 @@ class DashboardNewsWidget extends StatelessWidget {
           width: 720,
           child: SingleChildScrollView(
             child: Text(
-              item.summary!,
+              summary.isEmpty ? 'The feed gives no summary of this one.' : summary,
               style: const TextStyle(fontSize: 18, height: 1.4),
             ),
           ),
         ),
         actionsPadding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         actions: [
+          // The whole article read out, a paragraph at a time, while you
+          // get on with something else. Controls stay along the bottom of
+          // the screen.
+          if (reader != null)
+            OutlinedButton.icon(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                reader.read(
+                  title: item.title,
+                  link: item.link,
+                  summary: item.summary,
+                );
+              },
+              icon: const Icon(Icons.record_voice_over_rounded, size: 26),
+              label: const Text('Read aloud', style: TextStyle(fontSize: 20)),
+              style: OutlinedButton.styleFrom(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 26, vertical: 18),
+              ),
+            ),
           if (item.link != null)
             FilledButton.icon(
               onPressed: () {

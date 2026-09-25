@@ -391,6 +391,17 @@ days, how many stars. A picture is an emoji (see [Emoji](#emoji)). Set a weekly
 star goal and name the reward. It resets each Monday and remembers the week
 through restarts.
 
+#### News: reading an article aloud
+
+Tap a headline, then **Read aloud**. The kiosk fetches the article, leaves
+out the menus, adverts and "related stories", and reads it in the same voice
+as shared notes. It needs piper installed (see
+[Reading notes aloud](#reading-notes-aloud)) and uses the same speech volume.
+Anything playing pauses while it reads and carries on afterwards. A bar along
+the bottom of the screen shows what is being read, on any screen, with pause,
+next paragraph and stop. If the page can't be read (a paywall, a video
+page), it reads the feed's summary instead and says so.
+
 #### Speed test
 
 Runs [Ookla's speedtest CLI](https://www.speedtest.net/apps/cli). Install it —

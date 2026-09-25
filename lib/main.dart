@@ -24,7 +24,9 @@ import 'dashboard/widgets/widgets.dart';
 import 'services/audio_levels_service.dart';
 import 'services/kiosk_control_service.dart';
 import 'services/camera_service.dart';
+import 'services/article_reader.dart';
 import 'services/config_service.dart';
+import 'services/playback_source.dart';
 import 'services/dashboard_service.dart';
 import 'services/feed_service.dart';
 import 'services/immich_service.dart';
@@ -54,6 +56,7 @@ import 'screens/slideshow_screen.dart';
 import 'screens/video_player_screen.dart';
 import 'widgets/camera_overlay.dart';
 import 'widgets/incoming_share_overlay.dart';
+import 'widgets/reading_bar.dart';
 import 'widgets/now_playing_overlay.dart';
 import 'theme.dart';
 import 'dashboard/dashboard_theme.dart';
@@ -95,6 +98,30 @@ void main() async {
 
   final shareInbox = ShareInboxService(config)..speech = speech;
   unawaited(shareInbox.start());
+
+  // Reads a news article aloud, pausing whatever is playing while it does
+  // and carrying it on afterwards — only if it was playing to begin with.
+  PlaybackSource? pausedForReading;
+  final reader = ArticleReader(
+    output: PiperSpeechOutput(speech),
+    volume: () => config.config.shareInbox.speechVolume,
+    onStart: () {
+      for (final PlaybackSource p in [spotify, nowPlaying]) {
+        if (p.available && p.now.isPlaying) {
+          pausedForReading = p;
+          unawaited(p.playPause());
+          return;
+        }
+      }
+    },
+    onEnd: () {
+      final p = pausedForReading;
+      pausedForReading = null;
+      if (p != null && p.available && !p.now.isPlaying) {
+        unawaited(p.playPause());
+      }
+    },
+  );
 
   // Widget types have to be registered before anything reads the dashboard:
   // the editor's palette and each widget's settings form are both generated
@@ -198,6 +225,7 @@ void main() async {
         ChangeNotifierProvider.value(value: spotify),
         ChangeNotifierProvider.value(value: indoor),
         ChangeNotifierProvider.value(value: shareInbox),
+        ChangeNotifierProvider.value(value: reader),
         Provider<ScreenIdleService>.value(value: screenIdle),
         ChangeNotifierProvider(create: (_) => CameraService(config)),
         ChangeNotifierProvider.value(value: feeds),
@@ -331,6 +359,8 @@ class ImmichKioskPiApp extends StatelessWidget {
           children: [
             ?child,
             IncomingShareOverlay(navigatorKey: rootNavigatorKey),
+            // What is being read aloud, with its controls, over any screen.
+            const ReadingBar(),
             CameraOverlay(navigatorKey: rootNavigatorKey),
             // Draws tiles off screen for the dashboard editor's preview.
             const TileRenderHost(),

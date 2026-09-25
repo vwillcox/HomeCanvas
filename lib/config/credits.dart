@@ -81,6 +81,36 @@ const List<Credit> kDartPackages = [
     url: 'https://github.com/canonical/dbus.dart',
   ),
   Credit(
+    name: 'xml',
+    purpose: 'Reads RSS and Atom news feeds',
+    licence: 'MIT',
+    url: 'https://github.com/renggli/dart-xml',
+  ),
+  Credit(
+    name: 'html',
+    purpose: 'Takes an article out of its page, to read it aloud',
+    licence: 'MIT',
+    url: 'https://github.com/dart-lang/tools',
+  ),
+  Credit(
+    name: 'crypto',
+    purpose: 'SHA-256 for the Spotify login and key ids',
+    licence: 'BSD-3-Clause',
+    url: 'https://github.com/dart-lang/tools',
+  ),
+  Credit(
+    name: 'cryptography',
+    purpose: 'X25519, HKDF and ChaCha20-Poly1305 for encrypted shares',
+    licence: 'Apache-2.0',
+    url: 'https://github.com/dint-dev/cryptography',
+  ),
+  Credit(
+    name: 'mqtt_client',
+    purpose: 'Talks to Hisense VIDAA televisions',
+    licence: 'MIT',
+    url: 'https://github.com/shamblett/mqtt_client',
+  ),
+  Credit(
     name: 'path',
     purpose: 'Path joining for cache locations',
     licence: 'BSD-3-Clause',

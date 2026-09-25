@@ -42,6 +42,9 @@ dependencies:
   # RSS/Atom parsing for the dashboard's news widget
   xml: ^6.6.1
 
+  # Pulling an article's text out of its page, to read it aloud
+  html: ^0.15.7
+
   # Hisense VIDAA televisions are controlled over MQTT
   mqtt_client: ^10.11.11
 
