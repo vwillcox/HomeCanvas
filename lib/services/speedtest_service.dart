@@ -153,7 +153,7 @@ class SpeedtestService extends ChangeNotifier {
     if (binary == null) {
       _emit(const SpeedtestState(
         phase: SpeedtestPhase.failed,
-        error: 'speedtest is not installed — see moreinfo.md',
+        error: 'speedtest is not installed — see INSTALL.md',
       ));
       return;
     }

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:ui' show ImageFilter;
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -150,12 +151,22 @@ class _NowPlayingOverlayState extends State<NowPlayingOverlay>
   /// Once shrunk, it stays shrunk until someone opens it again.
   static bool _shrunkByUser = false;
 
+  /// Set by IMMICH_KIOSK_TEST_PLAYER=full; cleared once it has opened.
+  bool _openWhenPlaying = false;
+
   @visibleForTesting
   static void resetForTest() => _shrunkByUser = false;
 
   @override
   void initState() {
     super.initState();
+    // IMMICH_KIOSK_TEST_PLAYER=small: start as if shrunk by hand, for a
+    // screenshot of the home screen with its mini player. =full: open the
+    // full player as soon as there is music, which at start-up is a moment
+    // after the screen is up.
+    final test = Platform.environment['IMMICH_KIOSK_TEST_PLAYER'];
+    if (test == 'small') _shrunkByUser = true;
+    _openWhenPlaying = test == 'full';
     if (widget.startExpanded && !_shrunkByUser) _controller.value = 1;
     _controller.addListener(_reportOpen);
     widget.controller?.addListener(_expandFromOutside);
@@ -223,6 +234,13 @@ class _NowPlayingOverlayState extends State<NowPlayingOverlay>
       // Collapse if the music stopped while expanded.
       if (_controller.value != 0) _controller.reverse();
       return const SizedBox.shrink();
+    }
+
+    if (_openWhenPlaying) {
+      _openWhenPlaying = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _controller.forward();
+      });
     }
 
     return Positioned.fill(

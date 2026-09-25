@@ -17,7 +17,7 @@ import 'package:media_kit/media_kit.dart';
 /// robotic, and this is read aloud in a room rather than into a headset.
 /// Note also that Debian's `piper` package is a *gaming mouse configurator*
 /// that happens to share the name — the engine this wants is rhasspy/piper,
-/// installed under ~/.local. See moreinfo.md.
+/// installed under ~/.local. See INSTALL.md.
 class TtsService {
   TtsService();
 
