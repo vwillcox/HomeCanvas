@@ -249,6 +249,7 @@ class _DashboardImmichWidgetState extends State<DashboardImmichWidget> {
 
 final immichWidgetType = DashboardWidgetType(
   type: 'immich',
+  category: WidgetCategory.photosAndMedia,
   name: 'Photo',
   description:
       'A photo from your Immich server — at random from the whole library, or '

@@ -165,6 +165,8 @@ class DashboardService extends ChangeNotifier {
             'rows': DashboardGrid.rows,
           },
           'widgetTypes': WidgetRegistry.all.map((t) => t.toJson()).toList(),
+          // The palette's groups, in the order to show them.
+          'categories': WidgetCategory.order,
           'themes': themes.all
               .map((t) => {'id': t.id, 'name': t.name, ...t.toJson()})
               .toList(),

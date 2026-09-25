@@ -257,6 +257,7 @@ class _Row extends StatelessWidget {
 
 final servicesWidgetType = DashboardWidgetType(
   type: 'services',
+  category: WidgetCategory.homeLab,
   name: 'Services',
   description:
       'A light per thing that should be up — Immich, CasaOS, the '

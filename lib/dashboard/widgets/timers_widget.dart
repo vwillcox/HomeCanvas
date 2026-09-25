@@ -344,6 +344,7 @@ class _Chip extends StatelessWidget {
 
 final timersWidgetType = DashboardWidgetType(
   type: 'timers',
+  category: WidgetCategory.timeAndDay,
   name: 'Timers',
   description:
       'Kitchen timers. Tap a time to start one, tap its ring to '

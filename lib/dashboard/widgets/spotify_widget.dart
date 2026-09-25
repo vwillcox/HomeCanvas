@@ -325,6 +325,7 @@ class _Button extends StatelessWidget {
 
 final spotifyWidgetType = DashboardWidgetType(
   type: 'spotify',
+  category: WidgetCategory.photosAndMedia,
   name: 'Now playing',
   description:
       'The current track with transport controls. Shows Spotify when it is '

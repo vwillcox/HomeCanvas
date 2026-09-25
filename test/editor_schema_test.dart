@@ -44,4 +44,12 @@ void main() {
       }
     }
   });
+
+  test('every widget type is listed under one of the palette\'s groups', () {
+    for (final t in WidgetRegistry.all) {
+      expect(WidgetCategory.order, contains(t.category), reason: t.type);
+      expect(t.category, isNot(WidgetCategory.other), reason: t.type);
+      expect(t.toJson()['category'], t.category);
+    }
+  });
 }

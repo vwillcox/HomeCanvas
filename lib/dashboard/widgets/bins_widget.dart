@@ -247,6 +247,7 @@ class _BinPainter extends CustomPainter {
 
 final binsWidgetType = DashboardWidgetType(
   type: 'bins',
+  category: WidgetCategory.house,
   name: 'Bin day',
   description:
       'Which bins go out next and when. From the evening before it '

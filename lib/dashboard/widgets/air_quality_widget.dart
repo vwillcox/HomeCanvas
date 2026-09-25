@@ -213,6 +213,7 @@ class _Pollen extends StatelessWidget {
 
 final airQualityWidgetType = DashboardWidgetType(
   type: 'air_quality',
+  category: WidgetCategory.weather,
   name: 'Air & pollen',
   description:
       'Air quality, today’s pollen for grass, trees and weeds, and '

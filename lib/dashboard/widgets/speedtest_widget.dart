@@ -291,6 +291,7 @@ Widget _readoutLine(
 
 final speedtestWidgetType = DashboardWidgetType(
   type: 'speedtest',
+  category: WidgetCategory.network,
   name: 'Speed test',
   description:
       'Runs Ookla speedtest and shows download and upload on one dial as it '

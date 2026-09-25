@@ -318,6 +318,7 @@ class _Dots extends StatelessWidget {
 
 final memoriesWidgetType = DashboardWidgetType(
   type: 'memories',
+  category: WidgetCategory.photosAndMedia,
   name: 'On this day',
   description:
       'Your photos from this date in past years, from Immich’s '

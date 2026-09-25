@@ -58,16 +58,16 @@ class WidgetOption {
   });
 
   Map<String, dynamic> toJson() => {
-        'key': key,
-        'label': label,
-        'kind': kind.name,
-        'default': defaultValue,
-        'choices': choices,
-        'choicesFrom': choicesFrom,
-        'help': help,
-        'fields': fields.map((f) => f.toJson()).toList(),
-        'addLabel': addLabel,
-      };
+    'key': key,
+    'label': label,
+    'kind': kind.name,
+    'default': defaultValue,
+    'choices': choices,
+    'choicesFrom': choicesFrom,
+    'help': help,
+    'fields': fields.map((f) => f.toJson()).toList(),
+    'addLabel': addLabel,
+  };
 }
 
 /// Everything a widget's builder is handed.
@@ -97,6 +97,35 @@ class DashboardWidgetContext {
           .map((r) => r.cast<String, dynamic>())
           .toList() ??
       const [];
+}
+
+/// The groups the editor's palette sorts widgets into, in the order it shows
+/// them. A type names its own, so a new widget lands in the right group
+/// without the editor being touched.
+class WidgetCategory {
+  WidgetCategory._();
+
+  static const timeAndDay = 'Time & day';
+  static const weather = 'Weather & air';
+  static const photosAndMedia = 'Photos, music & TV';
+  static const house = 'Around the house';
+  static const gettingOut = 'Getting out';
+  static const reference = 'News & reference';
+  static const network = 'Network';
+  static const homeLab = 'Home lab';
+  static const other = 'Other';
+
+  static const order = [
+    timeAndDay,
+    weather,
+    photosAndMedia,
+    house,
+    gettingOut,
+    reference,
+    network,
+    homeLab,
+    other,
+  ];
 }
 
 /// A line of stand-in content for the browser editor's preview.
@@ -134,13 +163,13 @@ class PreviewLine {
   });
 
   Map<String, dynamic> toJson() => {
-        'text': text,
-        'scale': scale,
-        if (px != null) 'px': px,
-        'muted': muted,
-        'accent': accent,
-        'centre': centre,
-      };
+    'text': text,
+    'scale': scale,
+    if (px != null) 'px': px,
+    'muted': muted,
+    'accent': accent,
+    'centre': centre,
+  };
 }
 
 /// A widget type the dashboard can show.
@@ -169,7 +198,10 @@ class DashboardWidgetType {
   /// The real thing, for the editor's preview: what this widget would be
   /// showing right now. Returning an empty list falls back to [preview].
   final List<PreviewLine> Function(
-      DashboardWidgetConfig config, PreviewData data)? live;
+    DashboardWidgetConfig config,
+    PreviewData data,
+  )?
+  live;
 
   final Widget Function(BuildContext context, DashboardWidgetContext w) build;
 
@@ -181,6 +213,10 @@ class DashboardWidgetType {
   /// its tile: a list on a wide, one-row strip was cut to 45% for being short,
   /// and rendered its names at seven pixels on a tile with room for forty.
   final bool fitsItself;
+
+  /// Which group of the editor's palette it is listed under — one of
+  /// [WidgetCategory]'s.
+  final String category;
 
   const DashboardWidgetType({
     required this.type,
@@ -196,6 +232,7 @@ class DashboardWidgetType {
     this.preview = const [],
     this.live,
     this.fitsItself = false,
+    this.category = WidgetCategory.other,
   });
 
   /// How much to shrink this widget's contents at [width]x[height] cells.
@@ -224,19 +261,20 @@ class DashboardWidgetType {
   }
 
   Map<String, dynamic> toJson() => {
-        'type': type,
-        'name': name,
-        'description': description,
-        'glyph': glyph,
-        'defaultWidth': defaultWidth,
-        'defaultHeight': defaultHeight,
-        'minWidth': minWidth,
-        'minHeight': minHeight,
-        // So the editor's preview skips the shrink the panel skips.
-        'fitsItself': fitsItself,
-        'options': options.map((o) => o.toJson()).toList(),
-        'preview': preview.map((p) => p.toJson()).toList(),
-      };
+    'type': type,
+    'name': name,
+    'description': description,
+    'glyph': glyph,
+    'category': category,
+    'defaultWidth': defaultWidth,
+    'defaultHeight': defaultHeight,
+    'minWidth': minWidth,
+    'minHeight': minHeight,
+    // So the editor's preview skips the shrink the panel skips.
+    'fitsItself': fitsItself,
+    'options': options.map((o) => o.toJson()).toList(),
+    'preview': preview.map((p) => p.toJson()).toList(),
+  };
 }
 
 /// Every widget type the build knows about.

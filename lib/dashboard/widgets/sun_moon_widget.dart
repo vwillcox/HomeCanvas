@@ -429,6 +429,7 @@ class MoonPainter extends CustomPainter {
 
 final sunMoonWidgetType = DashboardWidgetType(
   type: 'sun_moon',
+  category: WidgetCategory.timeAndDay,
   name: 'Sun & moon',
   description:
       'Sunrise and sunset, where the sun is now, how fast the days '

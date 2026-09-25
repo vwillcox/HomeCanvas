@@ -412,6 +412,7 @@ class _Bar extends StatelessWidget {
 
 final serversWidgetType = DashboardWidgetType(
   type: 'servers',
+  category: WidgetCategory.homeLab,
   name: 'Servers',
   description:
       'CPU, memory, disk and temperature for this Pi and your other '

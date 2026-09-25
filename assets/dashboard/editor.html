@@ -378,6 +378,22 @@
   .swatch b { position: absolute; right: 8px; bottom: 8px; width: 8px; height: 8px; border-radius: 50%; }
 
   .palette { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  /* The palette's groups, each folding to its heading like the panels do. */
+  #palette { display: flex; flex-direction: column; gap: 4px; }
+  .pgroup .phead {
+    width: 100%; display: flex; align-items: center; gap: 8px;
+    background: transparent; border: none; border-radius: 12px;
+    padding: 0 6px; min-height: 36px; color: var(--muted);
+    font-size: 13px; font-weight: 650; letter-spacing: .02em; text-align: left;
+  }
+  .pgroup .phead:hover { background: var(--glass); color: var(--text); }
+  .pgroup .phead .count {
+    margin-left: auto; font-weight: 500; font-size: 12px; color: var(--faint);
+  }
+  .pgroup .phead .chev { font-size: 10px; transition: transform .15s ease; }
+  .pgroup.collapsed .phead .chev { transform: rotate(-90deg); }
+  .pgroup .palette { padding: 2px 0 10px; }
+  .pgroup.collapsed .palette { display: none; }
   .palette button {
     display: flex; align-items: center; gap: 10px; text-align: left;
     padding: 8px 12px 8px 8px; border-radius: 16px; min-height: 52px;
@@ -457,7 +473,7 @@
     <section class="card" data-panel="palette">
       <h2 class="panelHead">Add a widget<span class="chev">▾</span></h2>
       <div class="panelBody">
-        <div class="palette" id="palette"></div>
+        <div id="palette"></div>
       </div>
     </section>
 
@@ -1090,15 +1106,55 @@ function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
 /* ---------- palette ---------- */
 
+/* The widgets, in the groups each type names for itself, every group
+   folding to its heading. Which are folded is remembered alongside the
+   panels, per browser. */
 function renderPalette() {
   const palette = document.getElementById("palette");
   palette.innerHTML = "";
+  const order = state.schema.categories || [];
+  const groups = new Map();
+  for (const name of order) groups.set(name, []);
   for (const t of state.schema.widgetTypes) {
-    const b = document.createElement("button");
-    b.title = t.description;
-    b.innerHTML = '<span class="g">' + t.glyph + '</span><span class="n">' + t.name + "</span>";
-    b.onclick = () => addWidget(t);
-    palette.appendChild(b);
+    const c = t.category || "Other";
+    if (!groups.has(c)) groups.set(c, []);
+    groups.get(c).push(t);
+  }
+  const collapsed = collapsedPanels();
+  for (const [name, types] of groups) {
+    if (!types.length) continue;
+    const key = "palette:" + name;
+    const group = document.createElement("section");
+    group.className = "pgroup" + (collapsed.has(key) ? " collapsed" : "");
+    const head = document.createElement("button");
+    head.type = "button";
+    head.className = "phead";
+    head.setAttribute("aria-expanded", String(!collapsed.has(key)));
+    head.innerHTML = '<span class="chev">▾</span><span>' + escapeHtml(name) +
+      '</span><span class="count">' + types.length + "</span>";
+    head.onclick = () => {
+      const now = collapsedPanels();
+      const fold = !group.classList.contains("collapsed");
+      group.classList.toggle("collapsed", fold);
+      head.setAttribute("aria-expanded", String(!fold));
+      if (fold) now.add(key); else now.delete(key);
+      try {
+        localStorage.setItem(PANEL_KEY, JSON.stringify([...now]));
+      } catch {
+        // Not remembered this time; folding still works.
+      }
+    };
+    const grid = document.createElement("div");
+    grid.className = "palette";
+    for (const t of types) {
+      const b = document.createElement("button");
+      b.title = t.description;
+      b.innerHTML = '<span class="g">' + t.glyph + '</span><span class="n">' + t.name + "</span>";
+      b.onclick = () => addWidget(t);
+      grid.appendChild(b);
+    }
+    group.append(head, grid);
+    palette.appendChild(group);
   }
 }
 

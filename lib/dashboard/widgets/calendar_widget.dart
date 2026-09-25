@@ -419,6 +419,7 @@ class _Hint extends StatelessWidget {
 
 final calendarWidgetType = DashboardWidgetType(
   type: 'calendar',
+  category: WidgetCategory.timeAndDay,
   name: 'Calendar',
   description:
       'Upcoming events from one or more published calendar links, as a '

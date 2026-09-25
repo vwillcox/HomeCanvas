@@ -253,6 +253,7 @@ class _Note extends StatelessWidget {
 
 final notesWidgetType = DashboardWidgetType(
   type: 'notes',
+  category: WidgetCategory.house,
   name: 'Notes',
   description:
       'Sticky notes for the household. Share text from the phone '

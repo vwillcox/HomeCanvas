@@ -124,6 +124,7 @@ class _ClockWidgetState extends State<ClockWidget> {
 
 final clockWidgetType = DashboardWidgetType(
   type: 'clock',
+  category: WidgetCategory.timeAndDay,
   name: 'Clock',
   description: 'The time, with the date underneath.',
   glyph: '🕰',
