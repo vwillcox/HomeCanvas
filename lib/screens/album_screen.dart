@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../look.dart';
 import 'package:provider/provider.dart';
 
 import '../models/immich_models.dart';
@@ -150,7 +151,7 @@ class _AlbumScreenState extends State<AlbumScreen> {
                 onPressed: _startSlideshow,
                 icon: const Icon(Icons.play_arrow_rounded, size: 30),
                 label: const Text('Slideshow'),
-                style: whitePillButton(),
+                style: whitePillButton(context),
               )
             : null,
       ),
@@ -166,10 +167,10 @@ class _AlbumScreenState extends State<AlbumScreen> {
       return const Center(child: CircularProgressIndicator());
     }
     if (assets.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
           'This album is empty',
-          style: TextStyle(fontSize: 24, color: Colors.white60),
+          style: TextStyle(fontSize: 24, color: context.look.textSecondary),
         ),
       );
     }
@@ -205,9 +206,9 @@ class _AlbumScreenState extends State<AlbumScreen> {
                     const SizedBox(width: 12),
                     Text(
                       plural(g.end - g.start, 'item'),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 18,
-                        color: Colors.white54,
+                        color: context.look.textSecondary,
                       ),
                     ),
                   ],
@@ -394,7 +395,7 @@ class _AssetTile extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.play_arrow_rounded,
                           color: Colors.white,
                           size: 18,
@@ -403,7 +404,7 @@ class _AssetTile extends StatelessWidget {
                           const SizedBox(width: 3),
                           Text(
                             _dur(asset.duration!),
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: Colors.white,
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
@@ -435,12 +436,12 @@ class _ErrorState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.white54),
+            Icon(Icons.error_outline, size: 48, color: context.look.textSecondary),
             const SizedBox(height: 12),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white70),
+              style: TextStyle(color: context.look.textSecondary),
             ),
             const SizedBox(height: 16),
             FilledButton.icon(

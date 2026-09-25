@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../look.dart';
 
 /// A telephone-style number pad.
 ///
@@ -47,8 +48,8 @@ class NumericKeypad extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final bg = background ?? const Color(0xFF1B1E27);
-    final fg = foreground ?? Colors.white;
+    final bg = background ?? context.look.solidSurface;
+    final fg = foreground ?? context.look.textPrimary;
 
     Widget key(Widget child, VoidCallback? onTap, {Color? colour}) {
       return Padding(
@@ -95,7 +96,7 @@ class NumericKeypad extends StatelessWidget {
           key(
             Icon(Icons.check,
                 size: keySize * 0.34,
-                color: enterEnabled ? Colors.white : Colors.white38),
+                color: enterEnabled ? context.look.textPrimary : context.look.wash(0.38)),
             enterEnabled ? onEnter : null,
             colour: enterEnabled
                 ? (enterColour ?? scheme.primary)

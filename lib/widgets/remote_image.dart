@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../look.dart';
 
 import '../services/media_cache.dart';
 
@@ -94,7 +95,7 @@ class _Placeholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
-      color: const Color(0xFF20232E),
+      color: context.look.wash(0.08),
       child: Center(
         child: loading
             ? const SizedBox(
@@ -102,8 +103,8 @@ class _Placeholder extends StatelessWidget {
                 height: 24,
                 child: CircularProgressIndicator(strokeWidth: 2.5),
               )
-            : const Icon(Icons.broken_image_outlined,
-                color: Colors.white38, size: 34),
+            : Icon(Icons.broken_image_outlined,
+                color: context.look.wash(0.38), size: 34),
       ),
     );
   }

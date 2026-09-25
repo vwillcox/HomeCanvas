@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../look.dart';
+
 import '../services/indoor_sensor_service.dart';
 
 /// Line chart of recent indoor readings. Drawn with a CustomPainter so the
@@ -21,10 +23,10 @@ class IndoorChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (readings.length < 2) {
-      return const Center(
+      return Center(
         child: Text(
           'Collecting readings…',
-          style: TextStyle(color: Colors.white54, fontSize: 18),
+          style: TextStyle(color: context.look.textSecondary, fontSize: 18),
         ),
       );
     }
@@ -33,6 +35,7 @@ class IndoorChart extends StatelessWidget {
         readings: readings,
         metric: metric,
         showHumidity: showHumidity,
+        ink: context.look.textPrimary,
       ),
       child: const SizedBox.expand(),
     );
@@ -47,10 +50,14 @@ class _ChartPainter extends CustomPainter {
   static const Color tempColour = Color(0xFFFF8A65);
   static const Color humColour = Color(0xFF4FC3F7);
 
+  /// The theme's text colour, for the grid and the labels.
+  final Color ink;
+
   _ChartPainter({
     required this.readings,
     required this.metric,
     required this.showHumidity,
+    required this.ink,
   });
 
   double _temp(IndoorReading r) =>
@@ -91,9 +98,9 @@ class _ChartPainter extends CustomPainter {
     double yForHum(double v) => plot.bottom - (v / 100) * plot.height;
 
     final grid = Paint()
-      ..color = Colors.white.withValues(alpha: 0.10)
+      ..color = ink.withValues(alpha: 0.10)
       ..strokeWidth = 1;
-    final labelStyle = const TextStyle(color: Colors.white54, fontSize: 13);
+    final labelStyle = TextStyle(color: ink.withValues(alpha: 0.54), fontSize: 13);
 
     // Indoors the whole range can be under a degree, where whole numbers would
     // print the same label more than once.
@@ -189,6 +196,7 @@ class _ChartPainter extends CustomPainter {
       old.readings.length != readings.length ||
       old.metric != metric ||
       old.showHumidity != showHumidity ||
+      old.ink != ink ||
       (readings.isNotEmpty &&
           old.readings.isNotEmpty &&
           old.readings.last.time != readings.last.time);

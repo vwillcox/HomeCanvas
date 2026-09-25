@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../look.dart';
 
 import '../widgets/big_back_button.dart';
 
@@ -38,7 +39,7 @@ class SharedTextScreen extends StatelessWidget {
     final size = fontSizeFor(text);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF101828),
+      backgroundColor: context.look.background.first,
       body: SafeArea(
         // A Stack rather than a Column so the note is centred on the *screen*
         // rather than in whatever is left after the two rows of controls.
@@ -70,7 +71,7 @@ class SharedTextScreen extends StatelessWidget {
                           text,
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: Colors.white,
+                            color: context.look.textPrimary,
                             fontSize: size,
                             // Long notes need the extra leading to stay
                             // legible at a distance; short ones look loose
@@ -83,8 +84,8 @@ class SharedTextScreen extends StatelessWidget {
                         Text(
                           'From $sender',
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Colors.white54,
+                          style: TextStyle(
+                            color: context.look.textSecondary,
                             fontSize: 26,
                           ),
                         ),
@@ -135,23 +136,23 @@ class _DismissButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Material(
-        color: const Color(0xFF2E6BE6),
+        color: context.look.accent,
         borderRadius: BorderRadius.circular(36),
         elevation: 6,
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
-          child: const Padding(
+          child: Padding(
             padding: EdgeInsets.symmetric(horizontal: 56, vertical: 22),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.check, color: Colors.white, size: 34),
+                Icon(Icons.check, color: context.look.textPrimary, size: 34),
                 SizedBox(width: 14),
                 Text(
                   'OK',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: context.look.textPrimary,
                     fontSize: 30,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.5,

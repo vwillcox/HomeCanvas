@@ -18,6 +18,7 @@ import '../services/config_service.dart';
 import '../services/dashboard_service.dart';
 import '../services/screen_idle_service.dart';
 import '../services/playback_source.dart';
+import '../look.dart';
 import '../theme.dart' show fontFallback;
 import '../widgets/glass.dart';
 import '../widgets/module_bar.dart';
@@ -231,11 +232,9 @@ class _DashboardScreenState extends State<DashboardScreen>
   Widget build(BuildContext context) {
     final dashboard = context.watch<DashboardService>();
     final settings = context.watch<ConfigService>().config.dashboard;
-    // IMMICH_KIOSK_TEST_THEME=<id>: show a theme without saving it, for a
-    // screenshot.
-    final theme = dashboard.themes.byId(
-      Platform.environment['IMMICH_KIOSK_TEST_THEME'] ?? settings.themeId,
-    );
+    // The kiosk's theme, which the dashboard's choice sets — including the
+    // IMMICH_KIOSK_TEST_THEME override, applied where it is chosen.
+    final theme = context.look;
 
     final visible = visiblePages(
       settings.pageCount,

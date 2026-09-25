@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../look.dart';
 
 import '../widgets/numeric_keypad.dart';
 import '../widgets/glass.dart';
@@ -79,7 +80,7 @@ class _PinScreenState extends State<PinScreen> {
                   padding: const EdgeInsets.only(bottom: 16),
                   child: Text(
                     widget.subtitle,
-                    style: const TextStyle(fontSize: 18, color: Colors.white70),
+                    style: TextStyle(fontSize: 18, color: context.look.textSecondary),
                   ),
                 ),
               // PIN dots
@@ -94,7 +95,7 @@ class _PinScreenState extends State<PinScreen> {
                       shape: BoxShape.circle,
                       color: i < _pin.length
                           ? Theme.of(context).colorScheme.primary
-                          : Colors.white24,
+                          : context.look.wash(0.24),
                     ),
                   );
                 }),

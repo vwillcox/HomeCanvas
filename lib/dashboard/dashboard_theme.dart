@@ -167,6 +167,42 @@ class DashboardTheme {
           ),
         );
 
+  /// A light theme — dark text on a pale background.
+  bool get isLight => background.first.computeLuminance() > 0.4;
+
+  /// Text and icons drawn on [accent]: whichever of near-black and white
+  /// reads better on it.
+  Color get onAccent {
+    const dark = Color(0xFF0B0C10);
+    double contrast(Color a, Color b) {
+      final la = a.computeLuminance(), lb = b.computeLuminance();
+      return (la > lb ? la + 0.05 : lb + 0.05) / (la > lb ? lb + 0.05 : la + 0.05);
+    }
+
+    return contrast(accent, dark) >= contrast(accent, Colors.white)
+        ? dark
+        : Colors.white;
+  }
+
+  /// The tile's colour as it lands on the background — for things that
+  /// must be opaque, such as a dialog or a menu.
+  Color get solidSurface => Color.alphaBlend(surface, background.first);
+
+  /// [c] made readable on this theme: unchanged on a dark one; on a light
+  /// one, deepened to at most 40% lightness, hue kept — so the pale yellows
+  /// and blues chosen for dark screens (weather icons, a temperature's
+  /// orange) still mean the same thing and can still be seen.
+  Color legible(Color c) {
+    if (!isLight) return c;
+    final hsl = HSLColor.fromColor(c);
+    return hsl.lightness <= 0.4 ? c : hsl.withLightness(0.4).toColor();
+  }
+
+  /// A faint wash of the text colour: a hairline, a pressed state, a track.
+  /// White on a dark theme and near-black on a light one, so the same
+  /// strength reads alike on both.
+  Color wash(double alpha) => textPrimary.withValues(alpha: alpha);
+
   BoxDecoration get tileDecoration => tileDecorationWith();
 
   /// The tile's look, with the dashboard's own overrides applied over the

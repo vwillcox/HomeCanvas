@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import '../look.dart';
 import 'package:provider/provider.dart';
 
 import 'burn_in_drift.dart';
@@ -230,7 +231,7 @@ class _CloseLinkButton extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        child: const Padding(
+        child: Padding(
           // Sized for a finger at arm's length rather than a cursor: this is
           // the only way back to the kiosk once a page is open, so it is
           // worth more room than a button normally gets.
@@ -238,12 +239,12 @@ class _CloseLinkButton extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.close, color: Colors.white, size: 38),
+              Icon(Icons.close, color: context.look.textPrimary, size: 38),
               SizedBox(width: 16),
               Text(
                 'Close page',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: context.look.textPrimary,
                   fontSize: 30,
                   fontWeight: FontWeight.w700,
                 ),
@@ -294,9 +295,9 @@ class _Card extends StatelessWidget {
         onTap: onTap,
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.85),
+            color: context.look.background.first.withValues(alpha: 0.85),
             borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+            border: Border.all(color: context.look.wash(0.10)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.45),
@@ -312,10 +313,10 @@ class _Card extends StatelessWidget {
                 width: 52,
                 height: 52,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF2A2F3E),
+                  color: context.look.wash(0.1),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(_icon, color: const Color(0xFF7FB6FF), size: 28),
+                child: Icon(_icon, color: context.look.accent, size: 28),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -324,8 +325,8 @@ class _Card extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(_label,
-                        style: const TextStyle(
-                            color: Colors.white,
+                        style: TextStyle(
+                            color: context.look.textPrimary,
                             fontSize: 18,
                             fontWeight: FontWeight.w600)),
                     const SizedBox(height: 2),
@@ -333,13 +334,13 @@ class _Card extends StatelessWidget {
                       'From ${item.sender}${pendingCount > 1 ? ' · +${pendingCount - 1} more' : ''}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white70, fontSize: 15),
+                      style: TextStyle(color: context.look.textSecondary, fontSize: 15),
                     ),
                   ],
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.close, color: Colors.white54, size: 22),
+                icon: Icon(Icons.close, color: context.look.textSecondary, size: 22),
                 onPressed: onDismiss,
               ),
             ],

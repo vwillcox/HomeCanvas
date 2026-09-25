@@ -56,6 +56,8 @@ import 'widgets/camera_overlay.dart';
 import 'widgets/incoming_share_overlay.dart';
 import 'widgets/now_playing_overlay.dart';
 import 'theme.dart';
+import 'dashboard/dashboard_theme.dart';
+import 'look.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -287,11 +289,29 @@ class ImmichKioskPiApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The theme chosen for the dashboard dresses the whole kiosk.
+    // IMMICH_KIOSK_TEST_THEME=<id> shows another without saving it, for
+    // screenshots.
+    final themeId =
+        Platform.environment['IMMICH_KIOSK_TEST_THEME'] ??
+        context.select<ConfigService, String>(
+          (c) => c.config.dashboard.themeId,
+        );
+    final look = context.select<DashboardService, DashboardTheme>(
+      (d) => d.themes.byId(themeId),
+    );
+    return KioskLook(
+      theme: look,
+      child: _app(context, look),
+    );
+  }
+
+  Widget _app(BuildContext context, DashboardTheme look) {
     return MaterialApp(
       navigatorKey: rootNavigatorKey,
       title: 'ImmichKioskPi',
       debugShowCheckedModeBanner: false,
-      theme: buildTheme(),
+      theme: buildTheme(look),
       // The DSI touchscreen is delivered as mouse/unknown pointer events on
       // Flutter's Linux embedder, so enable drag-scrolling for every pointer
       // kind (otherwise touch drag doesn't scroll lists/grids).

@@ -3,6 +3,8 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
+import '../look.dart';
+
 /// Small pieces of the photo browser's look, shared by the home screen and the
 /// album view so the two read as one app.
 ///
@@ -27,21 +29,27 @@ class Glass extends StatelessWidget {
   final EdgeInsetsGeometry padding;
   final double blur;
 
-  /// How much white to lay over the blur, 0–1.
+  /// How strong the frosting is, where 0.08 is the theme's own tile.
   final double tint;
 
   @override
   Widget build(BuildContext context) {
+    final look = context.look;
     final shape = BorderRadius.circular(radius);
+    // The theme's tile, scaled by [tint] — on Glass that is the faint white
+    // it always was; on a solid theme, its solid tile.
+    final fill = look.surface.withValues(
+      alpha: (look.surface.a * tint / 0.08).clamp(0.0, 1.0),
+    );
     return ClipRRect(
       borderRadius: shape,
       child: BackdropFilter(
         filter: ui.ImageFilter.blur(sigmaX: blur, sigmaY: blur),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: tint),
+            color: fill,
             borderRadius: shape,
-            border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+            border: Border.all(color: look.border),
           ),
           child: Padding(padding: padding, child: child),
         ),
@@ -78,7 +86,11 @@ class GlassIconButton extends StatelessWidget {
           child: SizedBox(
             width: size,
             height: size,
-            child: Icon(icon, size: size * 0.46, color: colour ?? Colors.white),
+            child: Icon(
+              icon,
+              size: size * 0.46,
+              color: colour ?? context.look.textPrimary,
+            ),
           ),
         ),
       ),
@@ -116,7 +128,7 @@ class PillIconButton extends StatelessWidget {
       child: IconButton(
         onPressed: onPressed,
         tooltip: tooltip,
-        icon: Icon(icon, color: colour ?? Colors.white),
+        icon: Icon(icon, color: colour ?? context.look.textPrimary),
         iconSize: 30,
         style: IconButton.styleFrom(
           minimumSize: const Size(60, 60),
@@ -186,16 +198,17 @@ class ChoicePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final a = accent ?? Theme.of(context).colorScheme.primary;
+    final look = context.look;
     return Semantics(
       button: true,
       selected: selected,
       child: Material(
-        color: selected ? Colors.white : Colors.white.withValues(alpha: 0.07),
+        // Chosen: the text colour as a solid pill, the words in the
+        // background's — white on Glass, near-black on a light theme.
+        color: selected ? look.textPrimary : look.wash(0.07),
         shape: StadiumBorder(
           side: BorderSide(
-            color: selected
-                ? Colors.white
-                : Colors.white.withValues(alpha: 0.14),
+            color: selected ? look.textPrimary : look.wash(0.14),
           ),
         ),
         clipBehavior: Clip.antiAlias,
@@ -207,7 +220,7 @@ class ChoicePill extends StatelessWidget {
             child: Text(
               label,
               style: TextStyle(
-                color: selected ? const Color(0xFF0B0C10) : Colors.white,
+                color: selected ? look.background.first : look.textPrimary,
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
               ),
@@ -219,25 +232,22 @@ class ChoicePill extends StatelessWidget {
   }
 }
 
-/// A soft glow of colour behind a screen, so the background is not a flat
-/// black slab. Drawn once; costs nothing while scrolling.
+/// The theme's background behind a screen — its colour, its glow and its
+/// second glow, as on the dashboard — so the background is not a flat slab.
+/// Drawn once; costs nothing while scrolling.
 class AmbientBackground extends StatelessWidget {
-  const AmbientBackground({super.key, required this.accent});
-
-  final Color accent;
+  const AmbientBackground({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: const Color(0xFF0B0C10),
-        gradient: RadialGradient(
-          center: const Alignment(-0.85, -1.1),
-          radius: 1.4,
-          colors: [accent.withValues(alpha: 0.16), const Color(0xFF0B0C10)],
-          stops: const [0.0, 0.7],
-        ),
-      ),
+    final look = context.look;
+    final end = look.glowEndDecoration;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        DecoratedBox(decoration: look.backgroundDecoration),
+        if (end != null) DecoratedBox(decoration: end),
+      ],
     );
   }
 }
@@ -320,20 +330,22 @@ class HeaderTitle extends StatelessWidget {
     super.key,
     required this.title,
     this.subtitle,
-    this.colour = Colors.white,
-    this.secondary = Colors.white60,
+    this.colour,
+    this.secondary,
   });
 
   final String title;
   final String? subtitle;
 
-  /// White on the kiosk's own screens; the dashboard passes its theme's, so
-  /// the bar stays readable on a light theme too.
-  final Color colour;
-  final Color secondary;
+  /// The theme's text colours unless given.
+  final Color? colour;
+  final Color? secondary;
 
   @override
   Widget build(BuildContext context) {
+    final look = context.look;
+    final colour = this.colour ?? look.textPrimary;
+    final secondary = this.secondary ?? look.textSecondary;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -372,13 +384,13 @@ class GreetingTitle extends StatefulWidget {
   const GreetingTitle({
     super.key,
     this.detail,
-    this.colour = Colors.white,
-    this.secondary = Colors.white60,
+    this.colour,
+    this.secondary,
   });
 
   final String? detail;
-  final Color colour;
-  final Color secondary;
+  final Color? colour;
+  final Color? secondary;
 
   @override
   State<GreetingTitle> createState() => _GreetingTitleState();
@@ -414,11 +426,12 @@ class _GreetingTitleState extends State<GreetingTitle> {
   );
 }
 
-/// The white, pill-shaped button used for a screen's one main action —
-/// Slideshow, Try again, Save.
-ButtonStyle whitePillButton() => FilledButton.styleFrom(
-  backgroundColor: Colors.white,
-  foregroundColor: const Color(0xFF0B0C10),
+/// The solid, pill-shaped button used for a screen's one main action —
+/// Slideshow, Try again, Save. The theme's text colour as the fill, so white
+/// on a dark theme and near-black on a light one.
+ButtonStyle whitePillButton(BuildContext context) => FilledButton.styleFrom(
+  backgroundColor: context.look.textPrimary,
+  foregroundColor: context.look.background.first,
   shape: const StadiumBorder(),
   padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 18),
   textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
@@ -433,6 +446,9 @@ class GlassSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final look = context.look;
+    // Rounder or squarer with the theme, but never a bubble.
+    final radius = BorderRadius.circular(look.cornerRadius.clamp(0, 28));
     return Padding(
       padding: const EdgeInsets.only(bottom: 28),
       child: Column(
@@ -442,22 +458,21 @@ class GlassSection extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
             child: Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 26,
                 fontWeight: FontWeight.w700,
                 letterSpacing: -0.2,
-                color: Colors.white,
+                color: look.textPrimary,
               ),
             ),
           ),
           DecoratedBox(
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.09)),
+            decoration: look.tileDecorationWith(
+              radius: radius.topLeft.x,
+              withShadow: false,
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: radius,
               child: Material(
                 type: MaterialType.transparency,
                 child: Padding(
@@ -496,12 +511,11 @@ class ModernScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = Theme.of(context).colorScheme.primary;
     return Scaffold(
-      backgroundColor: const Color(0xFF0B0C10),
+      backgroundColor: context.look.background.first,
       body: Stack(
         children: [
-          Positioned.fill(child: AmbientBackground(accent: accent)),
+          const Positioned.fill(child: AmbientBackground()),
           SafeArea(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
