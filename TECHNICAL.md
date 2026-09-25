@@ -157,6 +157,35 @@ The home screen's full-screen player, `NowPlayingOverlay`, is reused: a
 from wherever they are — it grows out of whatever was tapped and shrinks back
 into it.
 
+### Themes
+
+A theme is data: background, tile surface and edge, text, accent, corner
+radius, gap, font and shadow, all in one JSON shape that the built-ins share
+([`deploy/theme-template.json`](deploy/theme-template.json)). Three settings
+give the glass look:
+
+- **`glow`** — a radial glow from the top left, where the home screen has its
+  own. The editor works the gradient's stops out as Flutter would, since
+  Flutter blends a faint colour into an opaque one without premultiplying and
+  CSS does not, and the two otherwise disagree about how far the glow reaches.
+- **`glowEnd`** — a second glow from the bottom right. A decoration holds one
+  gradient, so it is a layer of its own over the first, fading to its own
+  colour at no opacity so the first shows through.
+- **`sheen`** — the top of each tile a little lighter, gone by the middle:
+  light catching a pane of glass.
+
+Aurora and Abyss use all three. Glossy themes (Obsidian, Sorbet) use solid
+or near-solid tiles with a strong sheen and no glow; flat ones (Espresso,
+Swiss, Terminal) have no sheen, no shadow and often no edge. Some set a font:
+Synthwave's Chakra Petch, Share Tech Mono for both Terminals, Espresso's Lora.
+
+A test (`test/theme_contrast_test.dart`) works out each theme's real tile
+colour — the surface over the background, over each glow and under the
+sheen — and holds body text to a WCAG contrast of 7, secondary text to 3.5 and
+the accent to 3, so a theme cannot look good and read badly. The toolbar's
+notifications switch takes the theme's accent, with a deeper shade of it for
+the knob.
+
 ### Emoji
 
 Flutter on the Pi does not fall back to the system's emoji font by itself, so
@@ -883,6 +912,7 @@ screenshots or testing a screen in isolation. Inert unless set.
 | `IMMICH_KIOSK_TEST_DASHBOARD=<page>` | the dashboard, opened at that page |
 | `IMMICH_KIOSK_TEST_POPUP=forecast` or `inputs` | with the above, opens the full forecast or the TV inputs over the dashboard |
 | `IMMICH_KIOSK_TEST_PLAYER=small` or `full` | the home screen with the player shrunk to the mini player, or the full player opened as soon as music is playing |
+| `IMMICH_KIOSK_TEST_THEME=<id>` | with the dashboard, shows that theme without saving it |
 | `IMMICH_KIOSK_TEST_WEATHER=expanded` | with the slideshow, the weather panel opened |
 
 They are read at start-up, so with the service running they are set with

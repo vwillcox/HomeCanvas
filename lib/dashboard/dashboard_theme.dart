@@ -46,6 +46,14 @@ class DashboardTheme {
   /// the kiosk's own home screen. Null for a plain background.
   final Color? glow;
 
+  /// A second glow, from the bottom right. Null for none.
+  final Color? glowEnd;
+
+  /// Light along the top of each tile, as on a pane of glass catching it:
+  /// how much white it starts with, 0 for none. Around 0.05 to 0.1 reads as
+  /// glass; much more reads as a gradient.
+  final double sheen;
+
   const DashboardTheme({
     required this.id,
     required this.name,
@@ -60,6 +68,8 @@ class DashboardTheme {
     this.fontFamily,
     this.shadow = true,
     this.glow,
+    this.glowEnd,
+    this.sheen = 0,
   });
 
   static Color _colour(Object? v, Color fallback) {
@@ -88,6 +98,10 @@ class DashboardTheme {
       fontFamily: j['fontFamily'] as String?,
       shadow: j['shadow'] as bool? ?? true,
       glow: j['glow'] == null ? null : _colour(j['glow'], Colors.transparent),
+      glowEnd: j['glowEnd'] == null
+          ? null
+          : _colour(j['glowEnd'], Colors.transparent),
+      sheen: ((j['sheen'] as num?)?.toDouble() ?? 0).clamp(0.0, 0.5),
     );
   }
 
@@ -110,6 +124,8 @@ class DashboardTheme {
     'fontFamily': fontFamily,
     'shadow': shadow,
     if (glow != null) 'glow': _hex(glow!),
+    if (glowEnd != null) 'glowEnd': _hex(glowEnd!),
+    if (sheen > 0) 'sheen': sheen,
   };
 
   static String _hex(Color c) =>
@@ -137,13 +153,43 @@ class DashboardTheme {
           color: background.length == 1 ? background.first : null,
         );
 
+  /// The second glow, as a layer over [backgroundDecoration]: a
+  /// decoration has room for one gradient. Fades to its own colour at no
+  /// opacity rather than to the background, so the first glow shows through.
+  BoxDecoration? get glowEndDecoration => glowEnd == null
+      ? null
+      : BoxDecoration(
+          gradient: RadialGradient(
+            center: const Alignment(0.95, 1.15),
+            radius: 1.3,
+            colors: [glowEnd!, glowEnd!.withValues(alpha: 0)],
+            stops: const [0.0, 0.7],
+          ),
+        );
+
   BoxDecoration get tileDecoration => tileDecorationWith();
 
   /// The tile's look, with the dashboard's own overrides applied over the
   /// theme's preferences.
   BoxDecoration tileDecorationWith({double? radius, bool? withShadow}) =>
       BoxDecoration(
-        color: surface,
+        color: sheen > 0 ? null : surface,
+        // The sheen: the top of the tile a little lighter, gone by the
+        // middle, over the same surface.
+        gradient: sheen > 0
+            ? LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color.alphaBlend(
+                    Colors.white.withValues(alpha: sheen),
+                    surface,
+                  ),
+                  surface,
+                ],
+                stops: const [0, 0.45],
+              )
+            : null,
         borderRadius: BorderRadius.circular(radius ?? cornerRadius),
         border: Border.all(color: border),
         boxShadow: (withShadow ?? shadow)
@@ -179,6 +225,72 @@ const List<DashboardTheme> kBuiltInThemes = [
     // rather than islands with a channel of background between each.
     gap: 10,
   ),
+  // Glass after dark: the same frosted tiles, tight gaps and big corners,
+  // over an inkier black lit from two corners at once — violet from the top
+  // left, teal from the bottom right — with light catching the top of each
+  // pane. The mint accent sits between the two glows.
+  DashboardTheme(
+    id: 'aurora',
+    name: 'Aurora',
+    background: [Color(0xFF07080E)],
+    glow: Color(0x338E7BFF),
+    glowEnd: Color(0x3833D6C0),
+    surface: Color(0x14DDE3FF),
+    border: Color(0x22E6EAFF),
+    sheen: 0.07,
+    textPrimary: Color(0xFFF6F7FF),
+    textSecondary: Color(0x9EF6F7FF),
+    accent: Color(0xFF8FF0DC),
+    cornerRadius: 26,
+    gap: 10,
+  ),
+  // Deep water: blue light from above, cyan from below, and very clear glass.
+  DashboardTheme(
+    id: 'abyss',
+    name: 'Abyss',
+    background: [Color(0xFF020A14)],
+    glow: Color(0x2E1E90FF),
+    glowEnd: Color(0x2600E5FF),
+    surface: Color(0x12BFE7FF),
+    border: Color(0x24BFE7FF),
+    sheen: 0.05,
+    textPrimary: Color(0xFFEAF8FF),
+    textSecondary: Color(0x99EAF8FF),
+    accent: Color(0xFF5CE1FF),
+    cornerRadius: 28,
+    gap: 12,
+  ),
+  // Black lacquer: solid tiles, not glass, with a strong gloss along the top
+  // and a champagne-gold accent. Glossy rather than glassy.
+  DashboardTheme(
+    id: 'obsidian',
+    name: 'Obsidian',
+    background: [Color(0xFF050506), Color(0xFF111216)],
+    surface: Color(0xF0191A1F),
+    border: Color(0x2EFFFFFF),
+    sheen: 0.10,
+    textPrimary: Color(0xFFF4F1EA),
+    textSecondary: Color(0x99F4F1EA),
+    accent: Color(0xFFE9C46A),
+    cornerRadius: 22,
+  ),
+  // Eighties neon: magenta and cyan light on deep purple, tiles edged in
+  // pink and glossed, in a techno face that stays readable.
+  DashboardTheme(
+    id: 'synthwave',
+    name: 'Synthwave',
+    background: [Color(0xFF12002A)],
+    glow: Color(0x40FF2E97),
+    glowEnd: Color(0x3300E5FF),
+    surface: Color(0xB3190733),
+    border: Color(0x66FF6AD5),
+    sheen: 0.08,
+    textPrimary: Color(0xFFFDF0FF),
+    textSecondary: Color(0xB3F3D9FF),
+    accent: Color(0xFFFF6AD5),
+    cornerRadius: 14,
+    fontFamily: 'ChakraPetch',
+  ),
   DashboardTheme(
     id: 'midnight',
     name: 'Midnight',
@@ -188,18 +300,6 @@ const List<DashboardTheme> kBuiltInThemes = [
     textPrimary: Color(0xFFF2F5FA),
     textSecondary: Color(0x99F2F5FA),
     accent: Color(0xFF7DD3FC),
-  ),
-  DashboardTheme(
-    id: 'paper',
-    name: 'Paper',
-    background: [Color(0xFFF6F4EF), Color(0xFFEAE6DD)],
-    surface: Color(0xFFFFFFFF),
-    border: Color(0x14000000),
-    textPrimary: Color(0xFF1E1B16),
-    textSecondary: Color(0x991E1B16),
-    accent: Color(0xFFB4531F),
-    cornerRadius: 16,
-    shadow: false,
   ),
   DashboardTheme(
     id: 'ember',
@@ -222,6 +322,56 @@ const List<DashboardTheme> kBuiltInThemes = [
     textSecondary: Color(0x99EAF6F0),
     accent: Color(0xFF6EE7B7),
   ),
+  // Warm and bookish: flat coffee-brown tiles, no edges or shadows, a
+  // serif face and a caramel accent.
+  DashboardTheme(
+    id: 'espresso',
+    name: 'Espresso',
+    background: [Color(0xFF1C1410)],
+    surface: Color(0xFF2A1F19),
+    border: Color(0x00000000),
+    textPrimary: Color(0xFFF3E6D8),
+    textSecondary: Color(0x99F3E6D8),
+    accent: Color(0xFFD9A066),
+    cornerRadius: 10,
+    gap: 12,
+    fontFamily: 'Lora',
+    shadow: false,
+  ),
+  // A green-screen terminal: phosphor on black, hairline boxes, a monospaced
+  // face and the faintest glow, as off an old tube.
+  DashboardTheme(
+    id: 'terminal',
+    name: 'Terminal',
+    background: [Color(0xFF030805)],
+    glow: Color(0x1439FF88),
+    surface: Color(0x0A39FF88),
+    border: Color(0x4D39FF88),
+    textPrimary: Color(0xFFC8FFD9),
+    textSecondary: Color(0x99C8FFD9),
+    accent: Color(0xFF39FF88),
+    cornerRadius: 2,
+    gap: 12,
+    fontFamily: 'ShareTechMono',
+    shadow: false,
+  ),
+  // Terminal with the lights off: true black, no glow, boxes you only just
+  // see, and a softer green that is easy on the eyes in a dark room — the
+  // phosphor turned down rather than a different screen.
+  DashboardTheme(
+    id: 'terminal-night',
+    name: 'Terminal Night',
+    background: [Color(0xFF000000)],
+    surface: Color(0x0529D66F),
+    border: Color(0x2629D66F),
+    textPrimary: Color(0xFF7FD69A),
+    textSecondary: Color(0x8C7FD69A),
+    accent: Color(0xFF29C765),
+    cornerRadius: 2,
+    gap: 12,
+    fontFamily: 'ShareTechMono',
+    shadow: false,
+  ),
   // Deliberately plain and very high contrast: readable across a room, and
   // the safest choice on an always-on panel because so little of it is lit.
   DashboardTheme(
@@ -235,6 +385,67 @@ const List<DashboardTheme> kBuiltInThemes = [
     accent: Color(0xFFFFB300),
     cornerRadius: 0,
     gap: 24,
+    shadow: false,
+  ),
+  // Glass in daylight: frosted white panes on pale ice blue, a white bloom
+  // from the top left, and light along each pane's top edge.
+  DashboardTheme(
+    id: 'frost',
+    name: 'Frost',
+    background: [Color(0xFFD5E1F2)],
+    glow: Color(0x99FFFFFF),
+    glowEnd: Color(0x5589B4FF),
+    surface: Color(0x8CFFFFFF),
+    border: Color(0xCCFFFFFF),
+    sheen: 0.35,
+    textPrimary: Color(0xFF1B2433),
+    textSecondary: Color(0x991B2433),
+    accent: Color(0xFF2F6FEB),
+    cornerRadius: 26,
+    gap: 12,
+  ),
+  DashboardTheme(
+    id: 'paper',
+    name: 'Paper',
+    background: [Color(0xFFF6F4EF), Color(0xFFEAE6DD)],
+    surface: Color(0xFFFFFFFF),
+    border: Color(0x14000000),
+    textPrimary: Color(0xFF1E1B16),
+    textSecondary: Color(0x991E1B16),
+    accent: Color(0xFFB4531F),
+    cornerRadius: 16,
+    shadow: false,
+  ),
+  // Sweets in a shop window: glossy near-white panes over a peach-to-pink
+  // wash, a coral accent and a rounded face.
+  DashboardTheme(
+    id: 'sorbet',
+    name: 'Sorbet',
+    background: [Color(0xFFFFE3D6), Color(0xFFFFCFE6)],
+    surface: Color(0xB3FFFFFF),
+    border: Color(0xE6FFFFFF),
+    sheen: 0.45,
+    textPrimary: Color(0xFF3D1E2E),
+    textSecondary: Color(0x993D1E2E),
+    accent: Color(0xFFE0245E),
+    cornerRadius: 30,
+    fontFamily: 'Nunito',
+  ),
+  // International Typographic Style: flat white blocks on grey, square
+  // corners, wide gutters, black type and one signal red. No gloss, no
+  // glass, no shadow.
+  DashboardTheme(
+    id: 'swiss',
+    name: 'Swiss',
+    background: [Color(0xFFEDEDEA)],
+    surface: Color(0xFFFFFFFF),
+    border: Color(0x00000000),
+    textPrimary: Color(0xFF111111),
+    textSecondary: Color(0x8C111111),
+    accent: Color(0xFFE30613),
+    cornerRadius: 0,
+    gap: 16,
+    fontFamily: 'Inter',
     shadow: false,
   ),
 ];

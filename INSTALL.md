@@ -235,8 +235,10 @@ from a browser on the same network at **`http://<pi>:8090`**.
 - **Widgets that come and go** — each widget's settings end with **Only show it
   between**, for a trains board on weekday mornings or the bins the evening
   before.
-- **The look** — six themes (Glass, Midnight, Paper, Ember, Forest,
-  Nightstand), twenty fonts and twelve sizes per widget, square corners or
+- **The look** — sixteen themes: dark (Glass, Aurora, Abyss, Obsidian,
+  Synthwave, Midnight, Ember, Forest, Espresso, Terminal, Terminal Night,
+  Nightstand) and light
+  (Frost, Paper, Sorbet, Swiss), twenty fonts and twelve sizes per widget, square corners or
   shadows off, and the top bar on or off. Drop your own theme JSON in
   `~/.config/immich_kiosk_pi/themes/`; see
   [`deploy/theme-template.json`](deploy/theme-template.json).

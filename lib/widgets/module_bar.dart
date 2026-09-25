@@ -176,7 +176,7 @@ class _ModuleBarState extends State<ModuleBar> {
               colour: c,
               onPressed: camera.toggleOpen,
             ),
-          DndSwitch(colour: c),
+          DndSwitch(colour: c, accent: accent),
           if (widget.onRefresh != null)
             PillIconButton(
               icon: Icons.refresh,
@@ -241,9 +241,30 @@ Future<void> openLockedFolder(BuildContext context) async {
 /// since that's specifically what was asked for, kept in the top bar so it's
 /// reachable in one tap rather than buried in Settings.
 class DndSwitch extends StatelessWidget {
-  const DndSwitch({super.key, this.colour = Colors.white});
+  const DndSwitch({super.key, this.colour = Colors.white, this.accent});
 
   final Color colour;
+
+  /// The switch's "on" colour — the dashboard theme's accent, so it does not
+  /// stay the app's blue beside a theme's own. Null for the app's.
+  final Color? accent;
+
+  /// The app's switch, in [accent]: the track in the accent and the knob a
+  /// deeper shade of it, as the app's own pairs a pale blue with a deep one.
+  /// Left alone where the accent is the app's anyway.
+  ThemeData _themed(ThemeData app) {
+    final a = accent;
+    if (a == null || a == app.colorScheme.primary) return app;
+    final deep = HSLColor.fromColor(a).withLightness(0.45).toColor();
+    return app.copyWith(
+      colorScheme: app.colorScheme.copyWith(primary: a),
+      switchTheme: app.switchTheme.copyWith(
+        thumbColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected) ? deep : Colors.grey,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -261,12 +282,15 @@ class DndSwitch extends StatelessWidget {
             color: muted ? colour.withValues(alpha: 0.54) : colour,
             size: 26,
           ),
-          Switch(
-            value: !muted,
-            onChanged: (on) {
-              config.config.shareInbox.dndMuted = !on;
-              config.save();
-            },
+          Theme(
+            data: _themed(Theme.of(context)),
+            child: Switch(
+              value: !muted,
+              onChanged: (on) {
+                config.config.shareInbox.dndMuted = !on;
+                config.save();
+              },
+            ),
           ),
         ],
       ),
