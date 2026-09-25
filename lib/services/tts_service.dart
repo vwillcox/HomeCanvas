@@ -109,38 +109,46 @@ class TtsService {
     return out;
   }
 
-  Future<void> _speakNow(String text, double volume) async {
-    if (!await available()) return;
-
+  /// [text] as speech, in a temporary WAV file the caller deletes — or null
+  /// when piper is missing or fails. Nothing is trimmed: this is for callers
+  /// that chunk their own text, such as an article being read out.
+  Future<File?> synthesise(String text) async {
+    if (text.trim().isEmpty || !await available()) return null;
     final wav = File(
       '${Directory.systemTemp.path}/kiosk-tts-${DateTime.now().microsecondsSinceEpoch}.wav',
     );
+    final piper = await Process.start(_binary, [
+      '--model', _voice,
+      '--output_file', wav.path,
+    ]);
+    // Text arrives on stdin, which avoids any question of quoting or of a
+    // shared note — or a web page — being interpreted as arguments.
+    piper.stdin.write(text);
+    piper.stdin.write('\n');
+    await piper.stdin.flush();
+    await piper.stdin.close();
+    unawaited(piper.stderr.drain<void>().catchError((_) {}));
+    unawaited(piper.stdout.drain<void>().catchError((_) {}));
+
+    final code = await piper.exitCode.timeout(
+      const Duration(seconds: 30),
+      onTimeout: () {
+        piper.kill();
+        return -1;
+      },
+    );
+    if (code != 0 || !await wav.exists()) {
+      debugPrint('Tts: piper exited $code');
+      if (await wav.exists()) await wav.delete();
+      return null;
+    }
+    return wav;
+  }
+
+  Future<void> _speakNow(String text, double volume) async {
+    final wav = await synthesise(text);
+    if (wav == null) return;
     try {
-      final piper = await Process.start(_binary, [
-        '--model', _voice,
-        '--output_file', wav.path,
-      ]);
-      // Text arrives on stdin, which avoids any question of quoting or of a
-      // shared note being interpreted as arguments.
-      piper.stdin.write(text);
-      piper.stdin.write('\n');
-      await piper.stdin.flush();
-      await piper.stdin.close();
-      unawaited(piper.stderr.drain<void>().catchError((_) {}));
-      unawaited(piper.stdout.drain<void>().catchError((_) {}));
-
-      final code = await piper.exitCode.timeout(
-        const Duration(seconds: 30),
-        onTimeout: () {
-          piper.kill();
-          return -1;
-        },
-      );
-      if (code != 0 || !await wav.exists()) {
-        debugPrint('Tts: piper exited $code');
-        return;
-      }
-
       // Its own player, like the chime, so speaking does not disturb whatever
       // music or video is playing.
       final player = _player ??= Player();

@@ -528,6 +528,39 @@ own **×**, top left, goes to the original page.
 Chromium, the fallback browser, has no reader view that can be opened by
 address, so with Chromium articles always open as the site serves them.
 
+### Reading an article aloud
+
+**Read aloud** on a headline hands the item to `ArticleReader`, which fetches
+the page and takes the article out of it with `ArticleText`:
+
+1. **The page's own description of itself.** Most news sites embed the whole
+   article as `articleBody` in JSON-LD for search engines — exactly the text,
+   nothing to strip. Looked for through `@graph` and lists too.
+2. **The page.** Scripts, navigation, headers, footers, asides, forms and
+   figures are cut, then anything whose class or id says share, related,
+   newsletter, promo, advert, comment and the like. The block holding the
+   most paragraph text — `<article>` when there is one — is kept, and its
+   paragraphs, subheadings, quotes and prose list items read in order. It
+   stops at a heading that starts the other stories ("Related topics", "More
+   on this story", "Most read"), and drops sign-up pitches and "Published
+   9 May" lines wherever they fall.
+
+Under 300 characters is taken as a teaser or a video page, and the feed's
+summary is read instead. Checked against live WIRED, Verge and BBC articles.
+
+The text is spoken in pieces of up to about 420 characters — whole
+paragraphs where they fit, runs of whole sentences where they don't — so the
+first words come quickly and a stop is heard at once. Each piece is
+synthesised while the one before is said, which on this Pi (piper's
+real-time factor is about 0.16) keeps the voice running without gaps. Text
+goes to piper on its standard input, never as an argument.
+
+Reading pauses whatever is playing, Spotify or the phone, and carries it on
+afterwards — only if it was playing, and only once, even when one article is
+started while another is being read. The `ReadingBar` sits over every screen
+in the app's builder, in the theme's glass, since a reading outlives the
+page it started on.
+
 ### Keeping adverts out of the news
 
 Some feeds are more shopping than news. On the day this was added, 25 of
@@ -999,6 +1032,9 @@ Built with [Flutter](https://flutter.dev) (BSD-3-Clause,
 | [cryptography](https://pub.dev/packages/cryptography) | X25519, HKDF and ChaCha20-Poly1305 for encrypted shares | Apache-2.0 |
 | [crypto](https://pub.dev/packages/crypto) · [src](https://github.com/dart-lang/tools) | SHA-256 for the Spotify OAuth PKCE code challenge and key ids | BSD-3-Clause |
 | [path](https://pub.dev/packages/path) · [src](https://github.com/dart-lang/path) | Path joining for cache locations | BSD-3-Clause |
+| [xml](https://pub.dev/packages/xml) · [src](https://github.com/renggli/dart-xml) | Reads RSS and Atom news feeds | MIT |
+| [html](https://pub.dev/packages/html) · [src](https://github.com/dart-lang/tools) | Takes an article out of its page, to read it aloud | MIT |
+| [mqtt_client](https://pub.dev/packages/mqtt_client) · [src](https://github.com/shamblett/mqtt_client) | Talks to Hisense VIDAA televisions | MIT |
 | [flutter_lints](https://pub.dev/packages/flutter_lints) (dev) | Lint rules | BSD-3-Clause |
 
 ### System libraries
