@@ -229,7 +229,7 @@ class _Row extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = w.theme;
     final (String number, String unit) = switch (days) {
-      0 => ('🎉', 'today'),
+      0 => ('Today', ''),
       1 => ('1', 'day'),
       _ => ('$days', 'days'),
     };

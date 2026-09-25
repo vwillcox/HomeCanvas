@@ -7,6 +7,8 @@
 /// anything here, the web editor, or the saved configuration format.
 library;
 
+import 'schedule.dart';
+
 /// The grid the panel is divided into.
 ///
 /// Coordinates are in cells, not pixels, so a layout drawn on one screen
@@ -54,6 +56,11 @@ class DashboardWidgetConfig {
   String fontFamily;
   double fontScale;
 
+  /// When it is shown — all the time unless set. A widget out of its hours
+  /// leaves its space empty rather than the others moving up, so the page
+  /// keeps its shape.
+  Schedule schedule;
+
   DashboardWidgetConfig({
     required this.id,
     required this.type,
@@ -64,6 +71,7 @@ class DashboardWidgetConfig {
     this.page = 0,
     this.fontFamily = '',
     this.fontScale = 1.0,
+    this.schedule = Schedule.always,
     Map<String, dynamic>? options,
   }) : options = options ?? <String, dynamic>{};
 
@@ -91,6 +99,7 @@ class DashboardWidgetConfig {
       // or so large the tile shows one letter.
       fontScale: ((j['fontScale'] as num?)?.toDouble() ?? 1.0).clamp(0.5, 2.5),
       options: (j['options'] as Map?)?.cast<String, dynamic>() ?? {},
+      schedule: Schedule.fromJson(j['schedule']),
     );
   }
 
@@ -105,6 +114,7 @@ class DashboardWidgetConfig {
     'fontFamily': fontFamily,
     'fontScale': fontScale,
     'options': options,
+    if (!schedule.isAlways) 'schedule': schedule.toJson(),
   };
 
   /// True when this widget's cells overlap [other]'s.
@@ -160,6 +170,24 @@ class DashboardSettings {
   /// whole panel, with a floating back button instead.
   bool topBar;
 
+  /// Each page's own name and hours, by page number. Shorter than the number
+  /// of pages is fine: a page without an entry is always shown.
+  List<DashboardPage> pages;
+
+  /// Your Immich photos behind the widgets, changing slowly, instead of the
+  /// theme's plain background.
+  bool photoBackground;
+
+  /// An album to take them from; empty for the whole library.
+  String photoAlbum;
+
+  /// How much the photo is darkened, 0 to 0.9, so the widgets stay readable
+  /// over a bright picture.
+  double photoDim;
+
+  /// Seconds each photo stays.
+  int photoSeconds;
+
   List<DashboardWidgetConfig> widgets;
 
   DashboardSettings({
@@ -172,8 +200,14 @@ class DashboardSettings {
     this.pageSeconds = 0,
     this.tapToFlip = false,
     this.topBar = true,
+    List<DashboardPage>? pages,
+    this.photoBackground = false,
+    this.photoAlbum = '',
+    this.photoDim = 0.5,
+    this.photoSeconds = 90,
     List<DashboardWidgetConfig>? widgets,
-  }) : widgets = widgets ?? [];
+  }) : pages = pages ?? [],
+       widgets = widgets ?? [];
 
   factory DashboardSettings.fromJson(Map<String, dynamic> j) =>
       DashboardSettings(
@@ -196,6 +230,17 @@ class DashboardSettings {
         }(),
         tapToFlip: j['tapToFlip'] as bool? ?? false,
         topBar: j['topBar'] as bool? ?? true,
+        pages: [
+          for (final p in (j['pages'] as List? ?? const []))
+            DashboardPage.fromJson(p),
+        ],
+        photoBackground: j['photoBackground'] as bool? ?? false,
+        photoAlbum: j['photoAlbum'] as String? ?? '',
+        photoDim: ((j['photoDim'] as num?)?.toDouble() ?? 0.5).clamp(0.0, 0.9),
+        photoSeconds: ((j['photoSeconds'] as num?)?.toInt() ?? 90).clamp(
+          15,
+          3600,
+        ),
         widgets: ((j['widgets'] as List?) ?? const [])
             .whereType<Map<String, dynamic>>()
             .map(DashboardWidgetConfig.fromJson)
@@ -213,6 +258,11 @@ class DashboardSettings {
     'pageSeconds': pageSeconds,
     'tapToFlip': tapToFlip,
     'topBar': topBar,
+    'pages': [for (final p in pages) p.toJson()],
+    'photoBackground': photoBackground,
+    'photoAlbum': photoAlbum,
+    'photoDim': photoDim,
+    'photoSeconds': photoSeconds,
     'widgets': widgets.map((w) => w.toJson()).toList(),
   };
 

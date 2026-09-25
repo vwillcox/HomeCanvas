@@ -256,6 +256,44 @@ class ImmichService with ImmichUrls implements MediaSource {
     );
   }
 
+  /// The server's version, as "3.2.2".
+  Future<String> serverVersion() async {
+    final r = await _dio().get('/api/server/version');
+    final d = r.data as Map;
+    return '${d['major']}.${d['minor']}.${d['patch']}';
+  }
+
+  /// The people Immich knows by name, for the birthdays widget.
+  Future<List<Person>> people() async {
+    final r = await _dio().get('/api/people',
+        queryParameters: {'withHidden': false, 'size': 1000});
+    final d = r.data;
+    final list = d is Map ? d['people'] : d;
+    return [
+      for (final p in (list as List? ?? const []).whereType<Map>())
+        if ('${p['name'] ?? ''}'.trim().isNotEmpty)
+          Person(
+            id: '${p['id']}',
+            name: '${p['name']}'.trim(),
+            birthDate: DateTime.tryParse('${p['birthDate'] ?? ''}'),
+          ),
+    ];
+  }
+
+  /// A photo's preview-sized image, as bytes — for the dashboard editor,
+  /// which cannot fetch from Immich itself.
+  Future<List<int>> previewBytes(String id) async {
+    final r = await _dio().get<List<int>>(
+      '/api/assets/$id/thumbnail',
+      queryParameters: {'size': 'preview'},
+      options: Options(responseType: ResponseType.bytes),
+    );
+    return r.data ?? const [];
+  }
+
+  /// A person's face, as Immich crops it.
+  String personThumbUrl(String id) => '$baseUrl/api/people/$id/thumbnail';
+
   final Map<String, String?> _places = {};
 
   /// Where a photo was taken — "Whitstable" — from its
@@ -338,4 +376,15 @@ class LibraryStats {
 
   /// The newest photos, newest first.
   final List<Asset> latest;
+}
+
+/// Someone Immich recognises in photos.
+class Person {
+  const Person({required this.id, required this.name, this.birthDate});
+
+  final String id;
+  final String name;
+
+  /// Set on the person in Immich, when it has been.
+  final DateTime? birthDate;
 }

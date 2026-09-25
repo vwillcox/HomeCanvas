@@ -1,10 +1,14 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../dashboard/dashboard_model.dart';
+import '../dashboard/photo_backdrop.dart';
+import '../dashboard/schedule.dart';
 import '../dashboard/dashboard_theme.dart';
 import '../dashboard/widgets/tv_inputs_sheet.dart';
 import '../dashboard/widgets/weather_forecast_sheet.dart';
@@ -58,9 +62,20 @@ class _DashboardScreenState extends State<DashboardScreen>
   bool _turning = false;
   int _pageCount = 1;
 
+  /// The pages showing now, by page number — those whose hours are on. The
+  /// page view runs over these, so a page out of its hours is simply not
+  /// there to swipe to.
+  List<int> _visible = const [];
+
+  /// Looks again every half minute at which pages and widgets are due.
+  Timer? _clock;
+
   @override
   void initState() {
     super.initState();
+    _clock = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() {});
+    });
     // A dashboard is a thing you glance at from across the room without
     // touching it, so the idle timer would switch the panel off precisely
     // when it is doing its job. Held awake for as long as it is on screen;
@@ -90,6 +105,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     // Releasing it here rather than on the way in to the next screen means
     // the timer restarts from now, not from whenever the dashboard opened.
     _screenIdle?.dashboardShowing = false;
+    _clock?.cancel();
     _turn.dispose();
     _pages.dispose();
     super.dispose();
@@ -99,9 +115,9 @@ class _DashboardScreenState extends State<DashboardScreen>
   /// and how many pages there actually are. Called from build, so the change
   /// itself waits for the frame to finish: starting an animation mid-build
   /// would redraw the dots in the middle of drawing them.
-  void _syncTurn(DashboardSettings settings) {
-    _pageCount = settings.pageCount;
-    final wanted = settings.pageSeconds > 0 && settings.pageCount > 1;
+  void _syncTurn(DashboardSettings settings, int pageCount) {
+    _pageCount = pageCount;
+    final wanted = settings.pageSeconds > 0 && pageCount > 1;
     final length = Duration(seconds: settings.pageSeconds);
     if (wanted == _turning && (!wanted || _turn.duration == length)) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -116,6 +132,29 @@ class _DashboardScreenState extends State<DashboardScreen>
       } else if (!_paused && (changed || !_turn.isAnimating)) {
         _turn.forward(from: changed ? 0 : _turn.value);
       }
+    });
+  }
+
+  /// Keeps the page view in step as pages come and go with their hours.
+  ///
+  /// A page whose hours have just begun is gone to straight away — the
+  /// morning page arriving at six is the point of giving it hours. Otherwise
+  /// the page being looked at stays, wherever it now sits in the list.
+  void _followVisible(List<int> visible) {
+    final was = _visible;
+    if (listEquals(was, visible)) return;
+    _visible = visible;
+    if (was.isEmpty) return; // first build: the page view starts where it is
+    final arrived = visible.where((p) => !was.contains(p)).toList();
+    final current = _page < was.length ? was[_page] : 0;
+    final target = arrived.isNotEmpty
+        ? visible.indexOf(arrived.first)
+        : math.max(0, visible.indexOf(current));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_pages.hasClients) return;
+      _pages.jumpToPage(target);
+      setState(() => _page = target);
+      _restartTurn();
     });
   }
 
@@ -168,10 +207,16 @@ class _DashboardScreenState extends State<DashboardScreen>
     final settings = context.watch<ConfigService>().config.dashboard;
     final theme = dashboard.themes.byId(settings.themeId);
 
-    final pageCount = settings.pageCount;
+    final visible = visiblePages(
+      settings.pageCount,
+      settings.pages,
+      DateTime.now(),
+    );
+    _followVisible(visible);
+    final pageCount = visible.length;
     // Kept in step with the config on every build, so editing the interval in
     // the browser takes effect without leaving and re-entering the dashboard.
-    _syncTurn(settings);
+    _syncTurn(settings, pageCount);
     final dotsTurn = _turning ? _turn : null;
     final onPause = _turning ? _togglePause : null;
 
@@ -201,8 +246,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                   setState(() => _page = i);
                   _restartTurn();
                 },
-                itemBuilder: (context, page) =>
-                    _Grid(settings: settings, theme: theme, page: page),
+                itemBuilder: (context, i) =>
+                    _Grid(settings: settings, theme: theme, page: visible[i]),
               ),
             ),
           ),
@@ -235,28 +280,40 @@ class _DashboardScreenState extends State<DashboardScreen>
     return Scaffold(
       body: Container(
         decoration: theme.backgroundDecoration,
-        child: SafeArea(
-          child: !settings.topBar
-              ? grid
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // The same bar as every other screen, in the theme's
-                    // colours: back on the left, the greeting and date, and
-                    // the pages on the right where the dots used to float
-                    // over the widgets.
-                    _TopBar(
-                      theme: theme,
-                      pageCount: pageCount,
-                      page: _page,
-                      onPage: (i) => _goTo(i, pageCount),
-                      turn: dotsTurn,
-                      paused: _paused,
-                      onTogglePause: onPause,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (settings.photoBackground)
+              PhotoBackdrop(
+                albumId: settings.photoAlbum,
+                dim: settings.photoDim,
+                every: Duration(seconds: settings.photoSeconds),
+                base: theme.background.first,
+              ),
+            SafeArea(
+              child: !settings.topBar
+                  ? grid
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // The same bar as every other screen, in the theme's
+                        // colours: back on the left, the greeting and date, and
+                        // the pages on the right where the dots used to float
+                        // over the widgets.
+                        _TopBar(
+                          theme: theme,
+                          pageCount: pageCount,
+                          page: _page,
+                          onPage: (i) => _goTo(i, pageCount),
+                          turn: dotsTurn,
+                          paused: _paused,
+                          onTogglePause: onPause,
+                        ),
+                        Expanded(child: grid),
+                      ],
                     ),
-                    Expanded(child: grid),
-                  ],
-                ),
+            ),
+          ],
         ),
       ),
     );
@@ -358,6 +415,7 @@ class _Grid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, c) {
         final gap = theme.gap;
+        final now = DateTime.now();
         // Cells are whatever is left once the gaps are taken out, so the
         // outermost widgets sit the same distance from the edge as they do
         // from each other.
@@ -370,17 +428,18 @@ class _Grid extends StatelessWidget {
         return Stack(
           children: [
             for (final w in settings.widgetsOn(page))
-              Positioned(
-                left: gap + w.x * (cellWidth + gap),
-                top: gap + w.y * (cellHeight + gap),
-                width: w.width * cellWidth + (w.width - 1) * gap,
-                height: w.height * cellHeight + (w.height - 1) * gap,
-                child: DashboardTile(
-                  config: w,
-                  theme: theme,
-                  settings: settings,
+              if (w.schedule.isAlways || w.schedule.activeAt(now))
+                Positioned(
+                  left: gap + w.x * (cellWidth + gap),
+                  top: gap + w.y * (cellHeight + gap),
+                  width: w.width * cellWidth + (w.width - 1) * gap,
+                  height: w.height * cellHeight + (w.height - 1) * gap,
+                  child: DashboardTile(
+                    config: w,
+                    theme: theme,
+                    settings: settings,
+                  ),
                 ),
-              ),
           ],
         );
       },

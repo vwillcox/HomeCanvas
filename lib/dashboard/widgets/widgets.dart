@@ -1,7 +1,10 @@
 import '../widget_registry.dart';
 import 'air_quality_widget.dart';
 import 'bins_widget.dart';
+import 'birthdays_widget.dart';
 import 'carbon_widget.dart';
+import 'certs_widget.dart';
+import 'chores_widget.dart';
 import 'calendar_widget.dart';
 import 'clock_widget.dart';
 import 'countdowns_widget.dart';
@@ -25,6 +28,7 @@ import 'speedtest_widget.dart';
 import 'sun_moon_widget.dart';
 import 'timers_widget.dart';
 import 'trains_widget.dart';
+import 'updates_widget.dart';
 import 'tv_widget.dart';
 import 'unifi_widgets.dart';
 import 'weather_widget.dart';
@@ -71,5 +75,9 @@ void registerBuiltInWidgets() {
     immichLibraryWidgetType,
     historyWidgetType,
     mealsWidgetType,
+    certsWidgetType,
+    updatesWidgetType,
+    birthdaysWidgetType,
+    choresWidgetType,
   ]);
 }

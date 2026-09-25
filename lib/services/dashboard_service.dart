@@ -63,6 +63,10 @@ class DashboardService extends ChangeNotifier {
   /// The shopping list, for its page and API. Null in tests.
   ShoppingService? shopping;
 
+  /// The photo behind the dashboard now, as JPEG bytes, for the editor to
+  /// preview the photo background with. Null in tests.
+  Future<List<int>?> Function()? backgroundImage;
+
   DashboardSettings get settings => _config.config.dashboard;
 
   /// Where to point a browser. The host's own address is resolved once so the
@@ -186,6 +190,18 @@ class DashboardService extends ChangeNotifier {
       }
       if (path == '/api/preview' && request.method == 'GET') {
         return await _json(request, _previewLines());
+      }
+      if (path == '/api/background.jpg' && request.method == 'GET') {
+        final bytes = await backgroundImage?.call().catchError((_) => null);
+        if (bytes == null || bytes.isEmpty) {
+          request.response.statusCode = HttpStatus.noContent;
+          await request.response.close();
+          return;
+        }
+        request.response.headers.contentType = ContentType('image', 'jpeg');
+        request.response.add(bytes);
+        await request.response.close();
+        return;
       }
       if (path == '/api/render' && request.method == 'POST') {
         return await _render(request);
@@ -577,6 +593,11 @@ class DashboardService extends ChangeNotifier {
     current.pageSeconds = incoming.pageSeconds;
     current.tapToFlip = incoming.tapToFlip;
     current.topBar = incoming.topBar;
+    current.pages = incoming.pages;
+    current.photoBackground = incoming.photoBackground;
+    current.photoAlbum = incoming.photoAlbum;
+    current.photoDim = incoming.photoDim;
+    current.photoSeconds = incoming.photoSeconds;
     current.widgets = incoming.widgets;
     await _config.save();
     notifyListeners();
