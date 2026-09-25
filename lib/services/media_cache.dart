@@ -12,17 +12,19 @@ import 'package:path/path.dart' as p;
 /// IMPORTANT: the default `flutter_cache_manager` location is
 /// `getTemporaryDirectory()`, which on this Pi is `/tmp` — a 4 GB **tmpfs**,
 /// i.e. RAM. Caching heavily there would eat memory and vanish on reboot.
-/// Everything here is pinned to `~/.cache/immich_kiosk_pi` on the NVMe instead, which
+/// Everything here is pinned to `~/.cache/homecanvas` on the NVMe instead, which
 /// has hundreds of GB free and survives restarts.
-class ImmichKioskPiCache {
-  ImmichKioskPiCache._();
+class HomeCanvasCache {
+  HomeCanvasCache._();
 
+  // The project's old name, kept on purpose: it names the cache's index, and
+  // renaming it would orphan every photo already cached rather than move it.
   static const String cacheKey = 'immich_kiosk_pi_media';
 
-  /// Root of all on-disk caches: ~/.cache/immich_kiosk_pi
+  /// Root of all on-disk caches: ~/.cache/homecanvas
   static String get root {
     final home = io.Platform.environment['HOME'] ?? '.';
-    return p.join(home, '.cache', 'immich_kiosk_pi');
+    return p.join(home, '.cache', 'homecanvas');
   }
 
   static CacheManager? _manager;
@@ -88,7 +90,7 @@ class ImmichKioskPiCache {
   }
 }
 
-/// Stores cached files under ~/.cache/immich_kiosk_pi/<subdir> on the NVMe.
+/// Stores cached files under ~/.cache/homecanvas/<subdir> on the NVMe.
 class _NvmeFileSystem implements FileSystem {
   final Future<io.Directory> _dir;
   final String _subdir;
@@ -96,7 +98,7 @@ class _NvmeFileSystem implements FileSystem {
   _NvmeFileSystem(this._subdir) : _dir = _create(_subdir);
 
   static Future<io.Directory> _create(String subdir) async {
-    final dir = io.Directory(p.join(ImmichKioskPiCache.root, subdir));
+    final dir = io.Directory(p.join(HomeCanvasCache.root, subdir));
     await dir.create(recursive: true);
     return dir;
   }

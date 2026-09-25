@@ -5,8 +5,8 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:immich_kiosk_pi/services/audio_analyser.dart';
-import 'package:immich_kiosk_pi/services/audio_levels_service.dart';
+import 'package:home_canvas/services/audio_analyser.dart';
+import 'package:home_canvas/services/audio_levels_service.dart';
 
 /// One frame of a sine at [hz], full scale unless told otherwise.
 Int16List tone(double hz, {int samples = 512, int rate = 16000, double amp = 1}) {

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:immich_kiosk_pi/dashboard/dashboard_model.dart';
-import 'package:immich_kiosk_pi/dashboard/dashboard_theme.dart';
-import 'package:immich_kiosk_pi/theme.dart';
-import 'package:immich_kiosk_pi/widgets/glass.dart';
+import 'package:home_canvas/dashboard/dashboard_model.dart';
+import 'package:home_canvas/dashboard/dashboard_theme.dart';
+import 'package:home_canvas/theme.dart';
+import 'package:home_canvas/widgets/glass.dart';
 
 void main() {
   group('the Glass dashboard theme', () {

@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
-import 'package:immich_kiosk_pi/services/camera_service.dart';
-import 'package:immich_kiosk_pi/services/config_service.dart';
-import 'package:immich_kiosk_pi/services/locked_folder_service.dart';
-import 'package:immich_kiosk_pi/widgets/glass.dart';
-import 'package:immich_kiosk_pi/widgets/module_bar.dart';
+import 'package:home_canvas/services/camera_service.dart';
+import 'package:home_canvas/services/config_service.dart';
+import 'package:home_canvas/services/locked_folder_service.dart';
+import 'package:home_canvas/widgets/glass.dart';
+import 'package:home_canvas/widgets/module_bar.dart';
 
 Future<void> pumpBar(WidgetTester tester, ModuleBar bar) async {
   tester.view.physicalSize = const Size(1920, 1200);

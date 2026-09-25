@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:immich_kiosk_pi/dashboard/dashboard_model.dart';
+import 'package:home_canvas/dashboard/dashboard_model.dart';
 
 DashboardWidgetConfig w(String id, {int page = 0, int x = 0, int y = 0}) =>
     DashboardWidgetConfig(

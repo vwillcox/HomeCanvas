@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:immich_kiosk_pi/screens/shared_text_screen.dart';
+import 'package:home_canvas/screens/shared_text_screen.dart';
 
 void main() {
   group('a shared note is sized to be read across the room', () {

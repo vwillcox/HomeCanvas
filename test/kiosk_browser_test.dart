@@ -2,8 +2,8 @@ import 'dart:ui' show Size;
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:immich_kiosk_pi/services/kiosk_browser.dart';
-import 'package:immich_kiosk_pi/widgets/incoming_share_overlay.dart'
+import 'package:home_canvas/services/kiosk_browser.dart';
+import 'package:home_canvas/widgets/incoming_share_overlay.dart'
     show kBrowserCloseGutter;
 
 void main() {

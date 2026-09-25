@@ -1,4 +1,4 @@
-# ImmichKioskPi
+# HomeCanvas
 
 A touchscreen photo frame, media browser and wall dashboard for your own
 [Immich](https://immich.app) server, built for a Raspberry Pi with a DSI touch
@@ -184,11 +184,11 @@ touchscreen setup and starting it on boot.
 
 ## Privacy
 
-ImmichKioskPi talks to your own Immich server, and to a public service only when
+HomeCanvas talks to your own Immich server, and to a public service only when
 you add a widget that needs one — Open-Meteo for the weather, National Grid ESO
 for grid carbon, Realtime Trains for departures — sending no more than that
 widget needs: a place, a postcode district, a station. No analytics, no
-accounts of ours. Your credentials live in `~/.config/immich_kiosk_pi/config.json` on
+accounts of ours. Your credentials live in `~/.config/homecanvas/config.json` on
 the device and are never committed. Shares from the companion app are
 end-to-end encrypted, so even a reverse proxy in the path cannot read them.
 

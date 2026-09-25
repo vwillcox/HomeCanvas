@@ -1,4 +1,4 @@
-# ImmichKioskPi — technical notes
+# HomeCanvas — technical notes
 
 How it works, and why it is the way it is rather than the obvious way. For
 setting it up, see [INSTALL.md](INSTALL.md).
@@ -25,7 +25,7 @@ A Flutter app built as a native **arm64 Linux** binary, running fullscreen and
 borderless under the **labwc** Wayland compositor on Raspberry Pi OS. State is
 held in `ChangeNotifier` services handed down with `provider`; each screen and
 widget watches the ones it needs. Configuration is one JSON file,
-`~/.config/immich_kiosk_pi/config.json`, read and written by `ConfigService`;
+`~/.config/homecanvas/config.json`, read and written by `ConfigService`;
 things the household adds — notes, the shopping list, chores done — are kept in
 small files beside it (`notes.json`, `shopping.json`, `chores.json`), written
 atomically through a temporary file.
@@ -34,7 +34,7 @@ Around the app, a few small pieces on the Pi:
 
 | Piece | What it is |
 |---|---|
-| `immich_kiosk_pi.service` | the app, a systemd **user** unit started from labwc's autostart |
+| `homecanvas.service` | the app, a systemd **user** unit started from labwc's autostart |
 | `screen_control.py` | screen power and touch-to-wake, on `127.0.0.1:8765` |
 | The kiosk's control endpoint | lets the TV remote app open places in the kiosk, on `127.0.0.1:8766` |
 | The editor | the dashboard editor and household pages, on port 8090 |
@@ -470,7 +470,7 @@ the next one.
 
 ### Caching
 
-Images and API responses are cached under `~/.cache/immich_kiosk_pi` —
+Images and API responses are cached under `~/.cache/homecanvas` —
 deliberately **not** in `/tmp`, which on Raspberry Pi OS is a RAM-backed tmpfs.
 The cache holds up to 20,000 files for a year, so restarts are near-instant.
 Clear it any time from **Settings → Photos → Storage**.
@@ -761,7 +761,7 @@ AVRCP media keys appear as one, and a track change shouldn't wake the screen.
 Reading the touchscreen needs membership of the `input` group.
 
 Power changes and wakes are recorded in
-`~/.cache/immich_kiosk_pi/screen_control.log`, which is the quickest way to tell
+`~/.cache/homecanvas/screen_control.log`, which is the quickest way to tell
 whether a touch was seen at all.
 
 ### Touching it awake
@@ -809,6 +809,18 @@ BLE dongle removes the contention entirely: leave the built-in `hci0` for audio
 and give Home Assistant the dongle. Disable the Bluetooth config entry for the
 built-in adapter, or it will scan on both. BlueZ only powers extra controllers at
 boot when `AutoEnable=true` is set in `/etc/bluetooth/main.conf`.
+
+### The rename
+
+The project was ImmichKioskPi until September 2026. `AppPaths`
+(`lib/app_paths.dart`) moves `~/.config/immich_kiosk_pi` and
+`~/.cache/immich_kiosk_pi` to their new names before anything reads them,
+leaving a link behind. If the new folder is already there (the screen
+controller can write its log a moment first), whatever it lacks is moved
+across instead and nothing is overwritten. Two values keep the old name on
+purpose: the share encryption's HKDF label, which phones already running the
+companion app compute too, and the image cache's index key, so the cache
+moves rather than starting again.
 
 ### Burn-in
 
@@ -939,7 +951,7 @@ Everything is configured through `scripts/local.env`, or by overriding `PI_HOST`
 / `PI_DIR` as environment variables.
 
 The window is fullscreen and borderless by default. Set
-`IMMICH_KIOSK_WINDOWED=1` to run it in a normal window while debugging.
+`HOMECANVAS_WINDOWED=1` to run it in a normal window while debugging.
 
 **Tests.** `flutter test` runs the lot, including the size sweeps; the screen
 service's own tests are `python3 -m unittest deploy/test_screen_control.py`.
@@ -951,20 +963,20 @@ screenshots or testing a screen in isolation. Inert unless set.
 
 | Variable | Opens |
 |---|---|
-| `IMMICH_KIOSK_TEST_ALBUMGRID=<albumId>` | an album's asset grid (`IMMICH_KIOSK_TEST_ALBUMNAME` sets its title) |
-| `IMMICH_KIOSK_TEST_GALLERY=<albumId>` | the photo viewer (`IMMICH_KIOSK_TEST_GALLERY_INDEX` picks the photo) |
-| `IMMICH_KIOSK_TEST_SLIDESHOW=<albumId>` | the slideshow |
-| `IMMICH_KIOSK_TEST_VIDEO=<assetId>` | the video player |
-| `IMMICH_KIOSK_TEST_LOCKED=<pin>` | the Locked Folder, unlocked |
-| `IMMICH_KIOSK_TEST_LOCKED_VIDEO=<pin>` | the first locked video |
-| `IMMICH_KIOSK_TEST_ABOUT=1` | the About screen |
-| `IMMICH_KIOSK_TEST_SETTINGS=1` | the Settings screen |
-| `IMMICH_KIOSK_TEST_NOWPLAYING=1` | the now-playing panel on a blank background |
-| `IMMICH_KIOSK_TEST_DASHBOARD=<page>` | the dashboard, opened at that page |
-| `IMMICH_KIOSK_TEST_POPUP=forecast` or `inputs` | with the above, opens the full forecast or the TV inputs over the dashboard |
-| `IMMICH_KIOSK_TEST_PLAYER=small` or `full` | the home screen with the player shrunk to the mini player, or the full player opened as soon as music is playing |
-| `IMMICH_KIOSK_TEST_THEME=<id>` | the whole kiosk in that theme, without saving it |
-| `IMMICH_KIOSK_TEST_WEATHER=expanded` | with the slideshow, the weather panel opened |
+| `HOMECANVAS_TEST_ALBUMGRID=<albumId>` | an album's asset grid (`HOMECANVAS_TEST_ALBUMNAME` sets its title) |
+| `HOMECANVAS_TEST_GALLERY=<albumId>` | the photo viewer (`HOMECANVAS_TEST_GALLERY_INDEX` picks the photo) |
+| `HOMECANVAS_TEST_SLIDESHOW=<albumId>` | the slideshow |
+| `HOMECANVAS_TEST_VIDEO=<assetId>` | the video player |
+| `HOMECANVAS_TEST_LOCKED=<pin>` | the Locked Folder, unlocked |
+| `HOMECANVAS_TEST_LOCKED_VIDEO=<pin>` | the first locked video |
+| `HOMECANVAS_TEST_ABOUT=1` | the About screen |
+| `HOMECANVAS_TEST_SETTINGS=1` | the Settings screen |
+| `HOMECANVAS_TEST_NOWPLAYING=1` | the now-playing panel on a blank background |
+| `HOMECANVAS_TEST_DASHBOARD=<page>` | the dashboard, opened at that page |
+| `HOMECANVAS_TEST_POPUP=forecast` or `inputs` | with the above, opens the full forecast or the TV inputs over the dashboard |
+| `HOMECANVAS_TEST_PLAYER=small` or `full` | the home screen with the player shrunk to the mini player, or the full player opened as soon as music is playing |
+| `HOMECANVAS_TEST_THEME=<id>` | the whole kiosk in that theme, without saving it |
+| `HOMECANVAS_TEST_WEATHER=expanded` | with the slideshow, the weather panel opened |
 
 They are read at start-up, so with the service running they are set with
 `systemctl --user set-environment`, followed by a restart — and cleared

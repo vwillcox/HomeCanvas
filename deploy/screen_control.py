@@ -37,7 +37,7 @@ LISTEN = ("127.0.0.1", 8765)
 # Power changes and wakes are rare and worth a record — without one, working out
 # why the screen did or didn't come back means catching it live. Routine state
 # polling is not logged; Home Assistant does that every 30 seconds.
-LOG = os.path.expanduser("~/.cache/immich_kiosk_pi/screen_control.log")
+LOG = os.path.expanduser("~/.cache/homecanvas/screen_control.log")
 _log_lock = threading.Lock()
 
 

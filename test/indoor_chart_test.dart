@@ -2,8 +2,8 @@ import 'dart:ui' show ClipOp;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:immich_kiosk_pi/services/indoor_sensor_service.dart';
-import 'package:immich_kiosk_pi/widgets/indoor_chart.dart';
+import 'package:home_canvas/services/indoor_sensor_service.dart';
+import 'package:home_canvas/widgets/indoor_chart.dart';
 
 /// A CustomPainter doesn't clip to its box unless it's told to, so a fill path
 /// closed below the plot paints straight over whatever sits underneath — which

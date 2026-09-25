@@ -58,7 +58,7 @@ class NotesService extends ChangeNotifier {
 
   static String defaultFile() {
     final home = Platform.environment['HOME'] ?? '.';
-    return p.join(home, '.config', 'immich_kiosk_pi', 'notes.json');
+    return p.join(home, '.config', 'homecanvas', 'notes.json');
   }
 
   /// A note older than this is taken down, so the board clears itself of

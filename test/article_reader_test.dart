@@ -3,8 +3,8 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:immich_kiosk_pi/services/article_reader.dart';
-import 'package:immich_kiosk_pi/services/article_text.dart';
+import 'package:home_canvas/services/article_reader.dart';
+import 'package:home_canvas/services/article_text.dart';
 
 const _para =
     'The council agreed on Tuesday to extend the town centre scheme for '

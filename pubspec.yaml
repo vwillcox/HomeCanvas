@@ -1,4 +1,4 @@
-name: immich_kiosk_pi
+name: home_canvas
 description: "Touchscreen Immich photo/video browser for a Raspberry Pi DSI display."
 # Licensed under the MIT License — see LICENSE.
 publish_to: 'none'

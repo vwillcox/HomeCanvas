@@ -1,6 +1,6 @@
 # Kiosk Share
 
-The companion Android app for [ImmichKioskPi](../README.md)'s Share Inbox.
+The companion Android app for [HomeCanvas](../README.md)'s Share Inbox.
 Registers as a share target — pick "Kiosk Share" from any app's share sheet
 (Photos, Chrome, a video, anything) to send a photo, GIF, video, link or
 note to the kiosk directly.

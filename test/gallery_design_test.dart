@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:immich_kiosk_pi/models/immich_models.dart';
-import 'package:immich_kiosk_pi/screens/album_screen.dart';
-import 'package:immich_kiosk_pi/screens/home_screen.dart';
-import 'package:immich_kiosk_pi/widgets/glass.dart';
+import 'package:home_canvas/models/immich_models.dart';
+import 'package:home_canvas/screens/album_screen.dart';
+import 'package:home_canvas/screens/home_screen.dart';
+import 'package:home_canvas/widgets/glass.dart';
 
 Album album(String name, int count, {DateTime? updated, String? cover = 'c'}) =>
     Album(

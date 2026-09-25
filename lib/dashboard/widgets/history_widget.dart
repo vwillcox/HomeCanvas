@@ -55,7 +55,7 @@ class _HistoryWidgetState extends State<HistoryWidget> {
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 15),
       // Wikimedia asks every client to say who it is.
-      headers: {'User-Agent': 'ImmichKioskPi/1.0 (home dashboard)'},
+      headers: {'User-Agent': 'HomeCanvas/1.0 (home dashboard)'},
     ),
   );
 

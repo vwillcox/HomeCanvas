@@ -1,6 +1,6 @@
 # Themes
 
-Sixteen themes ship with ImmichKioskPi: dark and light, glassy, glossy and
+Sixteen themes ship with HomeCanvas: dark and light, glassy, glossy and
 flat. A theme dresses the **whole kiosk**: the dashboard, the photo browser,
 the music player, the weather panel, Settings and the rest. Photos and videos
 themselves are always shown on black.
@@ -147,7 +147,7 @@ glass, no shadow.
 
 A theme is a JSON file. Copy
 [`deploy/theme-template.json`](deploy/theme-template.json) into
-`~/.config/immich_kiosk_pi/themes/` on the Pi, change it, and restart the kiosk.
+`~/.config/homecanvas/themes/` on the Pi, change it, and restart the kiosk.
 It appears in both pickers. A file with the same `id` as a built-in theme
 replaces that theme.
 

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:immich_kiosk_pi/dashboard/dashboard_model.dart';
+import 'package:home_canvas/dashboard/dashboard_model.dart';
 
 DashboardWidgetConfig at(int x, int y, int w, int h) => DashboardWidgetConfig(
     id: 'x$x$y', type: 'clock', x: x, y: y, width: w, height: h);

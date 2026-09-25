@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:immich_kiosk_pi/services/spotify_service.dart';
+import 'package:home_canvas/services/spotify_service.dart';
 
 void main() {
   group('PKCE code challenge', () {

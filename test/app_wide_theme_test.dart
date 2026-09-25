@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:immich_kiosk_pi/dashboard/dashboard_theme.dart';
-import 'package:immich_kiosk_pi/look.dart';
-import 'package:immich_kiosk_pi/theme.dart';
-import 'package:immich_kiosk_pi/widgets/glass.dart';
+import 'package:home_canvas/dashboard/dashboard_theme.dart';
+import 'package:home_canvas/look.dart';
+import 'package:home_canvas/theme.dart';
+import 'package:home_canvas/widgets/glass.dart';
 
 DashboardTheme byId(String id) => kBuiltInThemes.firstWhere((t) => t.id == id);
 

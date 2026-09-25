@@ -1,6 +1,6 @@
 {
   "_comment": [
-    "A dashboard theme. Drop this in ~/.config/immich_kiosk_pi/themes/ as",
+    "A dashboard theme. Drop this in ~/.config/homecanvas/themes/ as",
     "<something>.json and it appears in the theme picker, in the browser",
     "editor and in Settings -> Dashboard. Reusing the id of a shipped theme",
     "replaces it, which is how you adjust a built-in without editing the app.",

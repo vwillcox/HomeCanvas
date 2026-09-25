@@ -1,4 +1,4 @@
-# Installing ImmichKioskPi
+# Installing HomeCanvas
 
 How to get the kiosk running on a Pi, and how to set up each optional part.
 For how things work underneath, see [TECHNICAL.md](TECHNICAL.md).
@@ -65,7 +65,7 @@ cp scripts/local.env.example scripts/local.env
 Edit it with your Pi's SSH details. It's git-ignored, so your hostname stays out
 of the repo.
 
-**4. Add your Immich details** — create `~/.config/immich_kiosk_pi/config.json`
+**4. Add your Immich details** — create `~/.config/homecanvas/config.json`
 on the Pi (see [`config.example.json`](config.example.json)) with your server URL
 and an API key from **Account Settings → API Keys**, then `chmod 600` it.
 
@@ -84,11 +84,11 @@ Syncs the source to the Pi, builds a release binary there, and launches it.
 
 ```bash
 mkdir -p ~/.config/systemd/user ~/.config/labwc
-cp deploy/immich_kiosk_pi.service ~/.config/systemd/user/
+cp deploy/homecanvas.service ~/.config/systemd/user/
 cp deploy/labwc-autostart ~/.config/labwc/autostart
 chmod +x ~/.config/labwc/autostart
 systemctl --user daemon-reload
-systemctl --user enable --now immich_kiosk_pi
+systemctl --user enable --now homecanvas
 ```
 
 > Start units from labwc's `autostart`, not from `graphical-session.target` —
@@ -99,12 +99,38 @@ systemctl --user enable --now immich_kiosk_pi
 for *user* units, so everything the app prints goes nowhere. Send it to a file:
 
 ```bash
-mkdir -p ~/.config/systemd/user/immich_kiosk_pi.service.d
+mkdir -p ~/.config/systemd/user/homecanvas.service.d
 printf '[Service]\nStandardOutput=append:/tmp/kiosk.log\nStandardError=append:/tmp/kiosk.log\n' \
-  > ~/.config/systemd/user/immich_kiosk_pi.service.d/log.conf
-systemctl --user daemon-reload && systemctl --user restart immich_kiosk_pi
+  > ~/.config/systemd/user/homecanvas.service.d/log.conf
+systemctl --user daemon-reload && systemctl --user restart homecanvas
 tail -f /tmp/kiosk.log
 ```
+
+**Upgrading from ImmichKioskPi.** The project was called ImmichKioskPi
+until September 2026. Your settings and cache move to their new folders
+(`~/.config/homecanvas`, `~/.cache/homecanvas`) by themselves on the first
+start, and a link is left at each old path. The service has a new name, so
+swap it once:
+
+```bash
+cp ~/.config/immich_kiosk_pi/config.json ~/config-backup.json   # to be safe
+sed -i 's#^PI_DIR=.*#PI_DIR=/home/<you>/homecanvas#' scripts/local.env  # on your computer
+scripts/sync.sh && ssh <pi> 'cd ~/homecanvas && flutter build linux --release'
+# then on the Pi:
+cd ~/.config/systemd/user
+cp ~/homecanvas/deploy/homecanvas.service .
+mkdir -p homecanvas.service.d && cp immich_kiosk_pi.service.d/*.conf homecanvas.service.d/ 2>/dev/null
+sed -i 's#%h/immich_kiosk_pi/#%h/homecanvas/#' screen-control.service
+sed -i 's#immich_kiosk_pi.service#homecanvas.service#' ~/.config/labwc/autostart *.service
+systemctl --user daemon-reload
+systemctl --user disable --now immich_kiosk_pi.service
+systemctl --user enable --now homecanvas.service
+systemctl --user restart screen-control.service
+```
+
+The debug switches are now `HOMECANVAS_…` rather than `IMMICH_KIOSK_…`, and
+the window's app id is `info.talktech.homecanvas`. Phones running the
+companion app keep working without an update.
 
 ---
 
@@ -129,7 +155,7 @@ Pi. Raspberry Pi OS does not include one:
 
 ```bash
 sudo apt install fonts-noto-color-emoji
-systemctl --user restart immich_kiosk_pi
+systemctl --user restart homecanvas
 ```
 
 Without it, emoji show as blank space. Everything the app draws itself — stars,
@@ -209,7 +235,7 @@ curl -sL https://dtcooper.github.io/raspotify/install.sh | sudo sh
 sudo systemctl disable --now raspotify
 
 mkdir -p ~/.config/systemd/user ~/.cache/librespot
-cp ~/immich_kiosk_pi/deploy/librespot.service ~/.config/systemd/user/
+cp ~/homecanvas/deploy/librespot.service ~/.config/systemd/user/
 systemctl --user daemon-reload
 systemctl --user enable --now librespot.service
 ```
@@ -239,7 +265,7 @@ from a browser on the same network at **`http://<pi>:8090`**.
   Midnight, Ember, Forest, Espresso, Terminal, Terminal Night, Nightstand) and
   light (Frost, Paper, Sorbet, Swiss); see [THEMES.md](THEMES.md). The theme
   dresses the whole kiosk, not just the dashboard. To make your own, drop a
-  JSON file in `~/.config/immich_kiosk_pi/themes/`, starting from
+  JSON file in `~/.config/homecanvas/themes/`, starting from
   [`deploy/theme-template.json`](deploy/theme-template.json).
 - **The look of each widget** — twenty fonts and twelve sizes, square corners
   or shadows off, and the top bar on or off.
@@ -506,7 +532,7 @@ Assistant**. Create a token under your user name → Security → Long-lived acc
 tokens, then, rather than typing it on the touchscreen:
 
 ```bash
-bash ~/immich_kiosk_pi/scripts/set-ha-token.sh
+bash ~/homecanvas/scripts/set-ha-token.sh
 ```
 
 > Bluetooth audio and Bluetooth sensing share one radio on the Pi and make each
@@ -618,7 +644,7 @@ The gear at the top right. Six tabs:
 
 ## Troubleshooting
 
-**Nothing appears on screen** — check `systemctl --user status immich_kiosk_pi`.
+**Nothing appears on screen** — check `systemctl --user status homecanvas`.
 It needs the labwc session up first, which is why it starts from
 `~/.config/labwc/autostart`.
 
@@ -646,7 +672,7 @@ this reason; if you have changed that in
 boot"). If it was force-stopped repeatedly, force-stop and reopen it once more.
 
 **Text fields are hard to fill in** — there's no on-screen keyboard. Edit
-`~/.config/immich_kiosk_pi/config.json` over SSH, or use the web pages
+`~/.config/homecanvas/config.json` over SSH, or use the web pages
 (`http://<pi>:8090` for the dashboard, `/senders` for share tokens).
 
 **Harmless log noise** — `Unable to find mixer control: Master` is an ALSA probe

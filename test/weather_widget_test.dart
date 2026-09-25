@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:immich_kiosk_pi/dashboard/widgets/weather_widget.dart';
+import 'package:home_canvas/dashboard/widgets/weather_widget.dart';
 
 void main() {
   group('the day label', () {

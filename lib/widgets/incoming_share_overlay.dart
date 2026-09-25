@@ -46,7 +46,7 @@ class _IncomingShareOverlayState extends State<IncomingShareOverlay>
   /// takes its own focus back and closes it — a safety net for whenever the
   /// close button below isn't used.
   static const Duration _webViewTimeout = Duration(minutes: 2);
-  static const String _kioskAppId = 'info.talktech.immichkioskpi';
+  static const String _kioskAppId = 'info.talktech.homecanvas';
 
   /// The open link-viewer's process, if any — kept so the close button and
   /// the timeout can both actually end the same one.

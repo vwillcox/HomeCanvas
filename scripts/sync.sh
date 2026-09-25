@@ -9,7 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 [ -f "$SCRIPT_DIR/local.env" ] && . "$SCRIPT_DIR/local.env"
 
 PI="${PI_HOST:-pi@raspberrypi.local}"
-PI_DIR="${PI_DIR:-/home/pi/immich_kiosk_pi}"
+PI_DIR="${PI_DIR:-/home/pi/homecanvas}"
 HERE="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 ssh "$PI" "mkdir -p '$PI_DIR'"

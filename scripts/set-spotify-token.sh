@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Connect a Spotify account to the ImmichKioskPi config, so the now-playing
+# Connect a Spotify account to the HomeCanvas config, so the now-playing
 # panel can control it directly over the Web API.
 #
 # Create a free app at https://developer.spotify.com/dashboard, add
@@ -11,9 +11,9 @@
 # Spotify password, which nothing here ever sees or stores. Only the Client ID
 # (not confidential) and a refresh token end up in the config.
 #
-# Run on the Pi:  bash ~/immich_kiosk_pi/scripts/set-spotify-token.sh <client_id>
+# Run on the Pi:  bash ~/homecanvas/scripts/set-spotify-token.sh <client_id>
 set -e
-CONFIG="$HOME/.config/immich_kiosk_pi/config.json"
+CONFIG="$HOME/.config/homecanvas/config.json"
 [ -f "$CONFIG" ] || { echo "Config not found at $CONFIG"; exit 1; }
 
 CLIENT_ID="${1:-}"
@@ -171,4 +171,4 @@ print("Spotify connected and saved.")
 PY
 
 chmod 600 "$CONFIG"
-systemctl --user restart immich_kiosk_pi.service 2>/dev/null && echo "Kiosk restarted."
+systemctl --user restart homecanvas.service 2>/dev/null && echo "Kiosk restarted."

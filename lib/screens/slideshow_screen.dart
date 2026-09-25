@@ -70,7 +70,7 @@ class _SlideshowScreenState extends State<SlideshowScreen> {
   ImageProvider _providerFor(int i) => CachedNetworkImageProvider(
         widget.source.previewUrl(_order[i].id),
         headers: widget.source.authHeaders,
-        cacheManager: ImmichKioskPiCache.manager,
+        cacheManager: HomeCanvasCache.manager,
       );
 
   /// Fully decode the image at [i]. Bounded so a broken/slow image can't stall
@@ -138,7 +138,7 @@ class _SlideshowScreenState extends State<SlideshowScreen> {
         CachedNetworkImageProvider(
           widget.source.thumbUrl(_order[i].id),
           headers: widget.source.authHeaders,
-          cacheManager: ImmichKioskPiCache.manager,
+          cacheManager: HomeCanvasCache.manager,
         ),
         context,
       );
@@ -181,7 +181,7 @@ class _SlideshowScreenState extends State<SlideshowScreen> {
             backdropProvider: CachedNetworkImageProvider(
               widget.source.thumbUrl(asset.id),
               headers: widget.source.authHeaders,
-              cacheManager: ImmichKioskPiCache.manager,
+              cacheManager: HomeCanvasCache.manager,
             ),
             kenBurns: t == SlideshowTransition.kenBurns,
             durationSeconds: widget.settings.intervalSeconds,

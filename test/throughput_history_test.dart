@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:immich_kiosk_pi/services/throughput_history.dart';
+import 'package:home_canvas/services/throughput_history.dart';
 
 void main() {
   group('sampling', () {

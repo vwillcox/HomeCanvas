@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:immich_kiosk_pi/config/app_config.dart';
-import 'package:immich_kiosk_pi/services/config_service.dart';
-import 'package:immich_kiosk_pi/services/retry_schedule.dart';
-import 'package:immich_kiosk_pi/services/tv_service.dart';
+import 'package:home_canvas/config/app_config.dart';
+import 'package:home_canvas/services/config_service.dart';
+import 'package:home_canvas/services/retry_schedule.dart';
+import 'package:home_canvas/services/tv_service.dart';
 
 /// The backoff TvService is built with.
 RetrySchedule asBuilt() => RetrySchedule(

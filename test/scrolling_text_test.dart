@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:immich_kiosk_pi/dashboard/widgets/scrolling_text.dart';
+import 'package:home_canvas/dashboard/widgets/scrolling_text.dart';
 
 Widget host(String text, double width) => MaterialApp(
       home: Scaffold(

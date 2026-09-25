@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:immich_kiosk_pi/services/indoor_sensor_service.dart';
+import 'package:home_canvas/services/indoor_sensor_service.dart';
 
 /// Home Assistant returns a state change every few seconds for this sensor, so
 /// a 24-hour window is thousands of points. Thinning them keeps the chart's

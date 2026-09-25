@@ -4,18 +4,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
-import 'package:immich_kiosk_pi/dashboard/dashboard_model.dart';
-import 'package:immich_kiosk_pi/dashboard/dashboard_theme.dart';
-import 'package:immich_kiosk_pi/dashboard/widget_registry.dart';
-import 'package:immich_kiosk_pi/dashboard/widgets/servers_widget.dart';
-import 'package:immich_kiosk_pi/dashboard/widgets/widgets.dart';
-import 'package:immich_kiosk_pi/services/air_quality_service.dart';
-import 'package:immich_kiosk_pi/services/bins_service.dart';
-import 'package:immich_kiosk_pi/services/config_service.dart';
-import 'package:immich_kiosk_pi/services/dashboard_service.dart';
-import 'package:immich_kiosk_pi/services/notes_service.dart';
-import 'package:immich_kiosk_pi/services/system_stats.dart';
-import 'package:immich_kiosk_pi/services/timer_service.dart';
+import 'package:home_canvas/dashboard/dashboard_model.dart';
+import 'package:home_canvas/dashboard/dashboard_theme.dart';
+import 'package:home_canvas/dashboard/widget_registry.dart';
+import 'package:home_canvas/dashboard/widgets/servers_widget.dart';
+import 'package:home_canvas/dashboard/widgets/widgets.dart';
+import 'package:home_canvas/services/air_quality_service.dart';
+import 'package:home_canvas/services/bins_service.dart';
+import 'package:home_canvas/services/config_service.dart';
+import 'package:home_canvas/services/dashboard_service.dart';
+import 'package:home_canvas/services/notes_service.dart';
+import 'package:home_canvas/services/system_stats.dart';
+import 'package:home_canvas/services/timer_service.dart';
 
 /// The panel's grid, with the tile's padding taken off, as the dashboard does.
 Size tile(int w, int h) {

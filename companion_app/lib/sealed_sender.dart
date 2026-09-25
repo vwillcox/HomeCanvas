@@ -26,6 +26,9 @@ class SealedSender {
   static const int version = 1;
   static const int chunkSize = 64 * 1024;
   static const String sealedMime = 'application/vnd.kiosk.sealed';
+  // The project's old name, kept on purpose: this label is part of the key
+  // derivation both ends share, so changing it would stop every phone
+  // already running the companion app from sharing to the panel.
   static const String _info = 'immich-kiosk-pi/share/v1';
 
   static final _x25519 = X25519();

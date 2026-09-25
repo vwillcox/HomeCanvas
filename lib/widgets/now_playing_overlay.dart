@@ -149,7 +149,7 @@ class _NowPlayingOverlayState extends State<NowPlayingOverlay>
   /// Once shrunk, it stays shrunk until someone opens it again.
   static bool _shrunkByUser = false;
 
-  /// Set by IMMICH_KIOSK_TEST_PLAYER=full; cleared once it has opened.
+  /// Set by HOMECANVAS_TEST_PLAYER=full; cleared once it has opened.
   bool _openWhenPlaying = false;
 
   @visibleForTesting
@@ -158,11 +158,11 @@ class _NowPlayingOverlayState extends State<NowPlayingOverlay>
   @override
   void initState() {
     super.initState();
-    // IMMICH_KIOSK_TEST_PLAYER=small: start as if shrunk by hand, for a
+    // HOMECANVAS_TEST_PLAYER=small: start as if shrunk by hand, for a
     // screenshot of the home screen with its mini player. =full: open the
     // full player as soon as there is music, which at start-up is a moment
     // after the screen is up.
-    final test = Platform.environment['IMMICH_KIOSK_TEST_PLAYER'];
+    final test = Platform.environment['HOMECANVAS_TEST_PLAYER'];
     if (test == 'small') _shrunkByUser = true;
     _openWhenPlaying = test == 'full';
     if (widget.startExpanded && !_shrunkByUser) _controller.value = 1;
