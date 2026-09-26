@@ -83,15 +83,18 @@ class _WeatherForecastSheetState extends State<WeatherForecastSheet>
 
   /// How far the sheet has been dragged down, for swipe-to-dismiss.
   double _drag = 0;
-  late final AnimationController _settle = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 220),
-  )..addListener(() => setState(() => _drag = _dragFrom * (1 - _settle.value)));
+  // Made in initState rather than lazily, like the dashboard's page turn:
+  // a sheet closed without being dragged would first make it in dispose.
+  late final AnimationController _settle;
   double _dragFrom = 0;
 
   @override
   void initState() {
     super.initState();
+    _settle = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+    )..addListener(() => setState(() => _drag = _dragFrom * (1 - _settle.value)));
     _timer = Timer(widget.autoClose, _close);
   }
 

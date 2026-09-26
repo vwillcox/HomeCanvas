@@ -563,22 +563,29 @@ class ScreenSettings {
   /// Bring the screen back up by itself when music starts.
   bool wakeOnMusic;
 
+  /// The backlight, in percent. Put back each time the kiosk starts — see
+  /// BrightnessService.
+  int brightness;
+
   ScreenSettings({
     this.autoOffEnabled = false,
     this.idleMinutes = 15,
     this.wakeOnMusic = true,
+    this.brightness = 100,
   });
 
   factory ScreenSettings.fromJson(Map<String, dynamic> j) => ScreenSettings(
         autoOffEnabled: j['autoOffEnabled'] as bool? ?? false,
         idleMinutes: (j['idleMinutes'] as num?)?.toInt() ?? 15,
         wakeOnMusic: j['wakeOnMusic'] as bool? ?? true,
+        brightness: ((j['brightness'] as num?)?.round() ?? 100).clamp(5, 100),
       );
 
   Map<String, dynamic> toJson() => {
         'autoOffEnabled': autoOffEnabled,
         'idleMinutes': idleMinutes,
         'wakeOnMusic': wakeOnMusic,
+        'brightness': brightness,
       };
 }
 

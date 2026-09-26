@@ -2,8 +2,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 
-import 'unifi_models.dart';
-
 /// One minute of throughput, reduced to what a graph can use.
 ///
 /// Peak as well as mean because they answer different questions: the mean says

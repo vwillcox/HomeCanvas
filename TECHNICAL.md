@@ -555,6 +555,19 @@ synthesised while the one before is said, which on this Pi (piper's
 real-time factor is about 0.16) keeps the voice running without gaps. Text
 goes to piper on its standard input, never as an argument.
 
+**The author, and their voice.** The byline comes from the article's own
+JSON-LD record (`author`, then `creator` — a string, a Person, or a list,
+joined as a byline says them), or else the page's `author` meta tag,
+`article:author` (unless it is a profile link) or `rel="author"`. It is read
+before the page is cleaned, since that removes bylines as furniture. Each
+author gets one of the installed voices — the main `voice.onnx` and anything
+in `~/.local/share/piper/voices/`, in a fixed order — chosen by FNV-1a over
+the name in lower case with any "By" removed: the same voice for the same
+writer on every run, which `String.hashCode` does not promise. The choice is
+deliberately arbitrary: a name says nothing reliable about a person, so the
+voice is not meant to say anything about them either. Piper is only ever
+given a voice from that list.
+
 Reading pauses whatever is playing, Spotify or the phone, and carries it on
 afterwards — only if it was playing, and only once, even when one article is
 started while another is being read. The `ReadingBar` sits over every screen

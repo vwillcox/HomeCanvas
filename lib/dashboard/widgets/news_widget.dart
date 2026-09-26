@@ -155,7 +155,7 @@ class DashboardNewsWidget extends StatelessWidget {
     final summary = item.summary ?? '';
     // Straight to the page only when there is nothing else to offer — no
     // summary to show, and no voice to read it out.
-    if (summary.isEmpty && reader == null) {
+    if (summary.isEmpty && (reader == null || !w.option('readAloud', true))) {
       if (item.link != null) _openPage(context, item);
       return;
     }
@@ -177,7 +177,7 @@ class DashboardNewsWidget extends StatelessWidget {
           // The whole article read out, a paragraph at a time, while you
           // get on with something else. Controls stay along the bottom of
           // the screen.
-          if (reader != null)
+          if (reader != null && w.option('readAloud', true))
             OutlinedButton.icon(
               onPressed: () {
                 Navigator.of(ctx).pop();
@@ -185,6 +185,8 @@ class DashboardNewsWidget extends StatelessWidget {
                   title: item.title,
                   link: item.link,
                   summary: item.summary,
+                  speeds: voiceSpeeds(w),
+                  sayAuthor: w.option('readAuthor', true),
                 );
               },
               icon: const Icon(Icons.record_voice_over_rounded, size: 26),
@@ -229,6 +231,22 @@ class DashboardNewsWidget extends StatelessWidget {
         reader: readerStyle(w),
       ),
     ));
+  }
+
+  /// Each voice's pace from the settings, by voice id. Until the list has
+  /// been saved, its declared default — the male voice a little faster —
+  /// which the editor shows as the list's first row.
+  static Map<String, double> voiceSpeeds(DashboardWidgetContext w) {
+    final rows = w.config.options.containsKey('voiceSpeeds')
+        ? w.rows('voiceSpeeds')
+        : const [
+            {'voice': 'en_GB-alan-medium', 'speed': '1.15'},
+          ];
+    return {
+      for (final r in rows)
+        if ('${r['voice'] ?? ''}'.isNotEmpty)
+          '${r['voice']}': double.tryParse('${r['speed']}') ?? 1,
+    };
   }
 
   /// How articles should open, from this widget's settings — or null for the
@@ -384,6 +402,56 @@ final newsWidgetType = DashboardWidgetType(
         'sepia': 'Sepia',
         'contrast': 'High contrast',
       },
+    ),
+    WidgetOption(
+      key: 'readAloud',
+      label: 'Offer “Read aloud”',
+      kind: OptionKind.boolean,
+      defaultValue: true,
+      help: 'A button on each headline that reads the whole article out, a '
+          'paragraph at a time, with pause and stop along the bottom of the '
+          'screen. Needs piper on the Pi — see INSTALL.md.',
+    ),
+    WidgetOption(
+      key: 'readAuthor',
+      label: 'Say who wrote it',
+      kind: OptionKind.boolean,
+      defaultValue: true,
+      help: '“By …” after the headline, when the page names its author.',
+    ),
+    WidgetOption(
+      key: 'voiceSpeeds',
+      label: 'Voice speeds',
+      kind: OptionKind.list,
+      addLabel: 'Set a voice’s speed',
+      help: 'Each writer is read in one of the voices installed on the Pi, '
+          'always the same one. Any voice not listed here reads at its own '
+          'pace.',
+      defaultValue: [
+        {'voice': 'en_GB-alan-medium', 'speed': '1.15'},
+      ],
+      fields: [
+        WidgetOption(
+          key: 'voice',
+          label: 'Voice',
+          kind: OptionKind.choice,
+          choicesFrom: 'voices',
+          defaultValue: 'main',
+        ),
+        WidgetOption(
+          key: 'speed',
+          label: 'Speed',
+          kind: OptionKind.choice,
+          defaultValue: '1.0',
+          choices: {
+            '0.85': 'Slower',
+            '1.0': 'Normal',
+            '1.15': 'A little faster',
+            '1.3': 'Faster',
+            '1.5': 'Much faster',
+          },
+        ),
+      ],
     ),
   ],
   preview: const [

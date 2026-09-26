@@ -381,16 +381,20 @@ class _SlideImage extends StatefulWidget {
 
 class _SlideImageState extends State<_SlideImage>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(
-    vsync: this,
-    duration: Duration(seconds: widget.durationSeconds + 1),
-  );
+  // Made in initState rather than lazily: without Ken Burns nothing else
+  // touches it, and one made first in dispose looks up a TickerMode that is
+  // gone.
+  late final AnimationController _c;
   late final Alignment _from;
   late final Alignment _to;
 
   @override
   void initState() {
     super.initState();
+    _c = AnimationController(
+      vsync: this,
+      duration: Duration(seconds: widget.durationSeconds + 1),
+    );
     final r = Random();
     Alignment rnd() =>
         Alignment(r.nextDouble() * 1.4 - 0.7, r.nextDouble() * 1.4 - 0.7);

@@ -105,8 +105,10 @@ class _Words extends StatelessWidget {
       ReaderStatus.fetching => 'Getting the article…',
       ReaderStatus.paused => 'Paused',
       _ when reader.summaryOnly => 'Reading the summary',
-      _ when reader.total > 0 =>
-        'Reading aloud · ${reader.position + 1} of ${reader.total}',
+      _ when reader.total > 0 => [
+          if (reader.author != null) 'by ${reader.author}',
+          '${reader.position + 1} of ${reader.total}',
+        ].join(' · '),
       _ => 'Reading aloud',
     };
     return Column(

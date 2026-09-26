@@ -152,9 +152,6 @@ class _NowPlayingOverlayState extends State<NowPlayingOverlay>
   /// Set by HOMECANVAS_TEST_PLAYER=full; cleared once it has opened.
   bool _openWhenPlaying = false;
 
-  @visibleForTesting
-  static void resetForTest() => _shrunkByUser = false;
-
   @override
   void initState() {
     super.initState();

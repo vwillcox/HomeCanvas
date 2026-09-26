@@ -188,10 +188,9 @@ class ZoomablePhoto extends StatefulWidget {
 class _ZoomablePhotoState extends State<ZoomablePhoto>
     with SingleTickerProviderStateMixin {
   final TransformationController _tc = TransformationController();
-  late final AnimationController _anim = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 220),
-  );
+  // Made in initState rather than lazily: most photos are never zoomed,
+  // and one made first in dispose looks up a TickerMode that is gone.
+  late final AnimationController _anim;
   Animation<Matrix4>? _animation;
   TapDownDetails? _doubleTapDetails;
   bool _useFallback = false;
@@ -202,6 +201,10 @@ class _ZoomablePhotoState extends State<ZoomablePhoto>
   @override
   void initState() {
     super.initState();
+    _anim = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+    );
     _tc.addListener(_reportZoom);
   }
 

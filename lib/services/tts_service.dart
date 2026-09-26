@@ -26,6 +26,10 @@ class TtsService {
   static const String _binRelative = '.local/bin/piper';
   static const String _voiceRelative = '.local/share/piper/voice.onnx';
 
+  /// More voices, each a piper `.onnx` with its `.onnx.json` beside it. The
+  /// reader gives each article's author one of these or the main voice.
+  static const String _voicesRelative = '.local/share/piper/voices';
+
   Player? _player;
 
   /// One at a time, in order. Two notes arriving together should be read one
@@ -38,6 +42,86 @@ class TtsService {
   String get _home => Platform.environment['HOME'] ?? '';
   String get _binary => '$_home/$_binRelative';
   String get _voice => '$_home/$_voiceRelative';
+  String get _voicesDir => '$_home/$_voicesRelative';
+
+  List<String>? _voicesCache;
+
+  /// Every voice there is: the main one first, then the extra ones in name
+  /// order — an order that does not change from one start to the next, so
+  /// an author keeps their voice.
+  Future<List<String>> voices() async {
+    if (_voicesCache != null) return _voicesCache!;
+    final found = <String>[];
+    if (await File(_voice).exists()) found.add(_voice);
+    final dir = Directory(_voicesDir);
+    if (await dir.exists()) {
+      final extra = <String>[];
+      await for (final e in dir.list()) {
+        if (e is File &&
+            e.path.endsWith('.onnx') &&
+            await File('${e.path}.json').exists()) {
+          extra.add(e.path);
+        }
+      }
+      found.addAll(extra..sort());
+    }
+    return _voicesCache = found;
+  }
+
+  /// A voice's id, for settings: the model's file name — "main" for the
+  /// main voice, which is always called voice.onnx.
+  String voiceId(String path) {
+    if (path == _voice) return 'main';
+    final name = path.split('/').last;
+    return name.endsWith('.onnx') ? name.substring(0, name.length - 5) : name;
+  }
+
+  /// Every voice as id → a name to show: "Main voice — jenny_dioco",
+  /// "alan (en_GB)". For the news widget's speed settings.
+  Future<Map<String, String>> voiceChoices() async {
+    final out = <String, String>{};
+    for (final v in await voices()) {
+      String label = voiceId(v);
+      try {
+        final j = jsonDecode(await File('$v.json').readAsString());
+        final dataset = j is Map ? j['dataset']?.toString() : null;
+        final language = j is Map ? j['language'] : null;
+        final lang = language is Map ? language['code']?.toString() : null;
+        if (dataset != null) label = lang == null ? dataset : '$dataset ($lang)';
+      } catch (_) {}
+      out[voiceId(v)] = v == _voice ? 'Main voice — $label' : label;
+    }
+    return out;
+  }
+
+  /// The voice for an article by [author]: always the same one for the same
+  /// name, picked from it rather than from anything the name might suggest
+  /// about the person. Null — the main voice — with no author, or only one
+  /// voice installed.
+  Future<String?> voiceFor(String? author) async {
+    if (author == null || author.trim().isEmpty) return null;
+    final all = await voices();
+    if (all.length < 2) return null;
+    return all[voiceIndex(author, all.length)];
+  }
+
+  /// Which of [count] voices [author] gets. FNV-1a over the name as written
+  /// in any case or spacing, with any "By" in front taken off: a hash that,
+  /// unlike [String.hashCode], is the same on every run.
+  @visibleForTesting
+  static int voiceIndex(String author, int count) {
+    final name = author
+        .toLowerCase()
+        .replaceFirst(RegExp(r'^\s*by\s+'), '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    var h = 0x811c9dc5;
+    for (final c in utf8.encode(name)) {
+      h ^= c;
+      h = (h * 0x01000193) & 0xFFFFFFFF;
+    }
+    return h % count;
+  }
 
   /// Whether speech is possible: both the engine and a voice are present.
   Future<bool> available() async {
@@ -68,7 +152,9 @@ class TtsService {
         if (i > 0) await Future<void>.delayed(gap);
         await _speakNow(say[i], volume);
       }
-    }).catchError((Object e) => debugPrint('Tts: $e'));
+    }).catchError((Object e) {
+      debugPrint('Tts: $e');
+    });
   }
 
   /// Speaks [text], after anything already queued.
@@ -112,14 +198,23 @@ class TtsService {
   /// [text] as speech, in a temporary WAV file the caller deletes — or null
   /// when piper is missing or fails. Nothing is trimmed: this is for callers
   /// that chunk their own text, such as an article being read out.
-  Future<File?> synthesise(String text) async {
+  /// [speed] is how much faster than the voice's own pace: 1.15 is a
+  /// little faster, 0.85 a little slower. Piper takes it as a length scale,
+  /// the inverse; held to half to twice the pace.
+  Future<File?> synthesise(String text, {String? voice, double speed = 1}) async {
     if (text.trim().isEmpty || !await available()) return null;
+    // Only ever a voice from the list — never a path from anywhere else.
+    final model = voice != null && (await voices()).contains(voice)
+        ? voice
+        : _voice;
     final wav = File(
       '${Directory.systemTemp.path}/kiosk-tts-${DateTime.now().microsecondsSinceEpoch}.wav',
     );
+    final pace = speed.clamp(0.5, 2.0);
     final piper = await Process.start(_binary, [
-      '--model', _voice,
+      '--model', model,
       '--output_file', wav.path,
+      if (pace != 1) ...['--length_scale', (1 / pace).toStringAsFixed(3)],
     ]);
     // Text arrives on stdin, which avoids any question of quoting or of a
     // shared note — or a web page — being interpreted as arguments.

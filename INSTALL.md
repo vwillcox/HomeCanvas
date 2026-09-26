@@ -56,7 +56,22 @@ mouse ones.
 Reload labwc with `killall -HUP labwc`. (`labwc --reconfigure` looks like it
 should do this and does nothing to the running compositor.)
 
-**3. Point the helper scripts at your Pi**
+**3. Give it a name** — so you can reach it as `homecanvas.local` from any
+machine on the network instead of remembering its IP address:
+
+```bash
+bash scripts/set-hostname.sh            # or: bash scripts/set-hostname.sh kitchen
+```
+
+Sets the hostname and makes sure Avahi is announcing it over mDNS — on the Pi's
+real network cards only, since with Docker installed Avahi otherwise hands out
+the container bridge's `172.17.0.1`, which nothing else can reach. The dashboard
+editor is then at `http://homecanvas.local:8090` and SSH at
+`pi@homecanvas.local`. The kiosk shows the `.local` address on screen once
+restarted, with the IP beside it for the odd browser (some Android versions)
+that can't resolve `.local` names.
+
+**4. Point the helper scripts at your Pi**
 
 ```bash
 cp scripts/local.env.example scripts/local.env
@@ -65,14 +80,14 @@ cp scripts/local.env.example scripts/local.env
 Edit it with your Pi's SSH details. It's git-ignored, so your hostname stays out
 of the repo.
 
-**4. Add your Immich details** — create `~/.config/homecanvas/config.json`
+**5. Add your Immich details** — create `~/.config/homecanvas/config.json`
 on the Pi (see [`config.example.json`](config.example.json)) with your server URL
 and an API key from **Account Settings → API Keys**, then `chmod 600` it.
 
 There is no on-screen keyboard, so this file is the easiest place for anything
 long: addresses, keys and tokens.
 
-**5. Build and run**
+**6. Build and run**
 
 ```bash
 scripts/run.sh
@@ -80,7 +95,7 @@ scripts/run.sh
 
 Syncs the source to the Pi, builds a release binary there, and launches it.
 
-**6. Start it on boot**
+**7. Start it on boot**
 
 ```bash
 mkdir -p ~/.config/systemd/user ~/.config/labwc
@@ -95,7 +110,7 @@ systemctl --user enable --now homecanvas
 > labwc never activates it, so anything bound to it silently never runs. This
 > caused three separate "worked until I rebooted" faults.
 
-**7. Keep its output** (recommended). A Pi OS install typically keeps no journal
+**8. Keep its output** (recommended). A Pi OS install typically keeps no journal
 for *user* units, so everything the app prints goes nowhere. Send it to a file:
 
 ```bash
@@ -247,7 +262,7 @@ and how to build it.
 ### The widget dashboard
 
 Reach it from the dashboard button in the toolbar at the top right. Arrange it
-from a browser on the same network at **`http://<pi>:8090`**.
+from a browser on the same network at **`http://homecanvas.local:8090`**.
 
 - **Add a widget** from the groups on the right, then drag it into place and
   pull its corner to resize. Tap one to change its settings.
@@ -303,7 +318,7 @@ reminds you from the evening before, and can say so out loud at a time you set
 #### Notes and the shopping list
 
 Nothing to set up. Anyone on the home network can add to them from a phone at
-**`http://<pi>:8090/notes`** and **`http://<pi>:8090/list`** — add those to a
+**`http://homecanvas.local:8090/notes`** and **`http://homecanvas.local:8090/list`** — add those to a
 phone's home screen. Text shared from the companion app lands on the Notes
 widget too. Port 8090 is meant for the home network: don't forward it.
 
@@ -428,6 +443,23 @@ the bottom of the screen shows what is being read, on any screen, with pause,
 next paragraph and stop. If the page can't be read (a paywall, a video
 page), it reads the feed's summary instead and says so.
 
+**A voice per writer.** Put more piper voices in
+`~/.local/share/piper/voices/` (each a `.onnx` with its `.onnx.json`) and each
+article's author gets one of them or the main voice: the same one every
+time for the same writer, so you come to know who wrote what by ear. It says
+"By …" after the headline. The choice comes from the name as spelt, not from
+anything it might suggest about the person. To add a British male voice:
+
+```bash
+mkdir -p ~/.local/share/piper/voices && cd ~/.local/share/piper/voices
+V=https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_GB/alan/medium
+curl -fsSL -O $V/en_GB-alan-medium.onnx
+curl -fsSL -O $V/en_GB-alan-medium.onnx.json
+```
+
+Restart the kiosk after adding voices. Shared notes and reminders keep the
+main voice.
+
 #### Speed test
 
 Runs [Ookla's speedtest CLI](https://www.speedtest.net/apps/cli). Install it —
@@ -477,7 +509,7 @@ In **Settings → Sharing**:
 1. Set the listen port (8081 by default) and point your router or proxy at it.
 2. Add a name for each person — this makes a token for their copy of the app.
    There's also a page for this, on the local network only, at
-   `http://<pi>:8090/senders`.
+   `http://homecanvas.local:8090/senders`.
 3. Shares arrive with a chime and the sender's name. Photos open in the viewer,
    videos in the player, notes in large type, links in a browser window.
 
@@ -673,7 +705,16 @@ boot"). If it was force-stopped repeatedly, force-stop and reopen it once more.
 
 **Text fields are hard to fill in** — there's no on-screen keyboard. Edit
 `~/.config/homecanvas/config.json` over SSH, or use the web pages
-(`http://<pi>:8090` for the dashboard, `/senders` for share tokens).
+(`http://homecanvas.local:8090` for the dashboard, `/senders` for share tokens).
+
+**`homecanvas.local` doesn't open** — on the Pi, `systemctl status avahi-daemon`
+should be running and `hostname` should say `homecanvas`; re-run
+`scripts/set-hostname.sh` if not. Windows and macOS resolve `.local` out of the
+box; a Linux desktop needs `nss-mdns` (Arch: `sudo pacman -S nss-mdns`, then add
+`mdns_minimal [NOTFOUND=return]` before `resolve` on the `hosts:` line of
+`/etc/nsswitch.conf`). If another device already has the name, Avahi announces
+`homecanvas-2.local` instead — `journalctl -u avahi-daemon` says which. The IP
+address shown under it on the kiosk always works.
 
 **Harmless log noise** — `Unable to find mixer control: Master` is an ALSA probe
 from media_kit; audio still works.

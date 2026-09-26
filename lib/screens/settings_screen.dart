@@ -9,6 +9,7 @@ import 'dart:math';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 
 import '../config/app_config.dart';
+import '../services/brightness_service.dart';
 import '../services/camera_service.dart';
 import '../services/config_service.dart';
 import '../services/dashboard_service.dart';
@@ -1463,8 +1464,22 @@ class _ScreenSettingsTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final service = context.watch<ConfigService>();
     final s = service.config.screen;
+    final light = context.watch<BrightnessService>();
     return Column(
       children: [
+        ListTile(
+          leading: const Icon(Icons.brightness_6),
+          title: const Text('Brightness'),
+          subtitle: Slider(
+            value: light.level.toDouble(),
+            min: BrightnessService.minimum.toDouble(),
+            max: 100,
+            divisions: 100 - BrightnessService.minimum,
+            label: '${light.level}%',
+            onChanged: light.set,
+          ),
+          trailing: Text('${light.level}%'),
+        ),
         SwitchListTile(
           secondary: const Icon(Icons.brightness_4),
           title: const Text('Turn the screen off when idle'),
@@ -1765,7 +1780,10 @@ class _DashboardSettingsTile extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.open_in_browser),
             title: const Text('Arrange it in a browser'),
-            subtitle: Text(dashboard.editorAddress),
+            isThreeLine: dashboard.editorIpAddress != null,
+            subtitle: Text(dashboard.editorIpAddress == null
+                ? dashboard.editorAddress
+                : '${dashboard.editorAddress}\nor ${dashboard.editorIpAddress}'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _editPort(context),
           ),

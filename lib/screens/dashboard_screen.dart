@@ -55,12 +55,11 @@ class _DashboardScreenState extends State<DashboardScreen>
   /// from 0 to 1 over the page's time and turns the page when it gets there.
   /// That same value fills the current page's dot, so a turn is never a
   /// surprise, and pausing is simply stopping it.
-  late final AnimationController _turn = AnimationController(vsync: this)
-    ..addStatusListener((status) {
-      if (status == AnimationStatus.completed && mounted) {
-        _goTo(_page + 1, _pageCount);
-      }
-    });
+  ///
+  /// Made in initState, not lazily: a dashboard whose pages never turn would
+  /// otherwise first touch it in dispose, and a controller made there looks
+  /// up its TickerMode through an element that is already gone.
+  late final AnimationController _turn;
 
   /// Paused from the page dots. Holds until tapped again or the dashboard
   /// is left; coming back starts turning again.
@@ -95,6 +94,12 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   void initState() {
     super.initState();
+    _turn = AnimationController(vsync: this)
+      ..addStatusListener((status) {
+        if (status == AnimationStatus.completed && mounted) {
+          _goTo(_page + 1, _pageCount);
+        }
+      });
     _player.isOpen.addListener(_playerOpened);
     _clock = Timer.periodic(const Duration(seconds: 30), (_) {
       if (mounted) setState(() {});
@@ -252,7 +257,11 @@ class _DashboardScreenState extends State<DashboardScreen>
     final grid = Stack(
       children: [
         if (settings.widgets.isEmpty)
-          _Empty(theme: theme, address: dashboard.editorAddress)
+          _Empty(
+            theme: theme,
+            address: dashboard.editorAddress,
+            fallback: dashboard.editorIpAddress,
+          )
         else
           // Behind the widgets, not over them: a translucent layer on
           // top would swallow every tap meant for a widget. This only
@@ -605,10 +614,13 @@ class DashboardTile extends StatelessWidget {
 }
 
 class _Empty extends StatelessWidget {
-  const _Empty({required this.theme, required this.address});
+  const _Empty({required this.theme, required this.address, this.fallback});
 
   final DashboardTheme theme;
   final String address;
+
+  /// The same address by IP, for a browser that can't resolve .local names.
+  final String? fallback;
 
   @override
   Widget build(BuildContext context) {
@@ -644,6 +656,13 @@ class _Empty extends StatelessWidget {
               fontWeight: FontWeight.w500,
             ),
           ),
+          if (fallback != null) ...[
+            const SizedBox(height: 6),
+            SelectableText(
+              'or $fallback',
+              style: TextStyle(color: theme.textSecondary, fontSize: 16),
+            ),
+          ],
         ],
       ),
     );

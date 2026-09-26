@@ -14,6 +14,7 @@ import '../dashboard/live_preview.dart';
 import '../dashboard/tile_renderer.dart';
 import '../config/app_config.dart' show SenderToken;
 import '../dashboard/widget_registry.dart';
+import 'brightness_service.dart';
 import 'config_service.dart';
 import 'notes_service.dart';
 import 'shopping_service.dart';
@@ -63,6 +64,9 @@ class DashboardService extends ChangeNotifier {
   /// The shopping list, for its page and API. Null in tests.
   ShoppingService? shopping;
 
+  /// The panel's backlight, for the editor's slider. Null in tests.
+  BrightnessService? brightness;
+
   /// The photo behind the dashboard now, as JPEG bytes, for the editor to
   /// preview the photo background with. Null in tests.
   Future<List<int>?> Function()? backgroundImage;
@@ -72,13 +76,40 @@ class DashboardService extends ChangeNotifier {
   /// Where to point a browser. The host's own address is resolved once so the
   /// kiosk can show something you can actually type in, rather than
   /// "localhost", which is useless from the sofa.
+  ///
+  /// Its mDNS name (homecanvas.local) when Avahi is announcing one — that
+  /// survives the router handing out a new lease — otherwise the IP address.
   String _host = 'this device';
+  String? _ip;
   String get editorAddress => 'http://$_host:${settings.editorPort}';
+
+  /// The same editor by IP address, for a browser that can't resolve .local
+  /// names (some Android versions). Null when [editorAddress] already is it.
+  String? get editorIpAddress =>
+      _ip == null || _ip == _host ? null : 'http://$_ip:${settings.editorPort}';
 
   Future<void> start() async {
     await themes.load();
-    _host = await _localAddress();
+    final ip = await _localAddress();
+    _ip = ip == 'this device' ? null : ip;
+    _host = _mdnsName() ?? ip;
     await _bind();
+  }
+
+  /// This machine's name on the network as `<hostname>.local`, or null when
+  /// nothing is announcing it. See scripts/set-hostname.sh.
+  static String? _mdnsName() {
+    try {
+      // avahi-daemon writes its pid here while it runs, on Debian and
+      // Raspberry Pi OS alike; without it the .local name resolves nowhere.
+      if (!File('/run/avahi-daemon/pid').existsSync()) return null;
+      final name = Platform.localHostname.split('.').first;
+      if (name.isEmpty || name == 'localhost') return null;
+      return '$name.local';
+    } catch (e) {
+      debugPrint('Dashboard: could not resolve mDNS name: $e');
+      return null;
+    }
   }
 
   /// Rebinds when the port changes; otherwise leaves a working server alone.
@@ -185,6 +216,7 @@ class DashboardService extends ChangeNotifier {
           'lists': {
             'albums': await _albumChoices(),
             'haEntities': await _haChoices(),
+            'voices': await _voiceChoices(),
           },
         });
       }
@@ -211,6 +243,18 @@ class DashboardService extends ChangeNotifier {
       }
       if (path == '/api/dashboard' && request.method == 'PUT') {
         return await _save(request);
+      }
+      // The backlight: live, not part of the layout's Save, since you judge
+      // it by looking at the panel as you drag.
+      if (path == '/api/brightness') {
+        if (request.method == 'PUT' &&
+            !sameOrigin(request.headers.value('origin'),
+                request.headers.value(HttpHeaders.hostHeader))) {
+          request.response.statusCode = HttpStatus.forbidden;
+          await request.response.close();
+          return;
+        }
+        return await _brightnessApi(request);
       }
 
       // The notes board: a page for posting from any phone in the house,
@@ -573,6 +617,34 @@ class DashboardService extends ChangeNotifier {
     await request.response.close();
   }
 
+  Future<void> _brightnessApi(HttpRequest request) async {
+    final light = brightness;
+    if (light == null) {
+      request.response.statusCode = HttpStatus.serviceUnavailable;
+      await request.response.close();
+      return;
+    }
+    if (request.method == 'PUT') {
+      final data = jsonDecode(await utf8.decoder.bind(request).join());
+      final v = data is Map ? data['value'] : null;
+      if (v is! num) {
+        request.response.statusCode = HttpStatus.badRequest;
+        await request.response.close();
+        return;
+      }
+      light.set(v);
+    } else if (request.method != 'GET') {
+      request.response.statusCode = HttpStatus.methodNotAllowed;
+      await request.response.close();
+      return;
+    }
+    return await _json(request, {
+      'value': light.level,
+      'min': BrightnessService.minimum,
+      'max': 100,
+    });
+  }
+
   Future<void> _save(HttpRequest request) async {
     final body = await utf8.decoder.bind(request).join();
     final data = jsonDecode(body);
@@ -621,6 +693,19 @@ class DashboardService extends ChangeNotifier {
     if (fetch == null) return const {};
     try {
       return await fetch().timeout(const Duration(seconds: 6));
+    } catch (_) {
+      return const {};
+    }
+  }
+
+  /// The piper voices installed, for the news widget's speed settings.
+  Future<Map<String, String>> Function()? voices;
+
+  Future<Map<String, String>> _voiceChoices() async {
+    final fetch = voices;
+    if (fetch == null) return const {};
+    try {
+      return await fetch();
     } catch (_) {
       return const {};
     }

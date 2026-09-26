@@ -22,10 +22,91 @@ String plainText(String s) {
       .trim();
 }
 
-/// [plainText], then made for a voice: a standalone "&" is "and", which a
-/// voice would otherwise read as "ampersand", or skip.
-String speakable(String s) =>
-    plainText(s).replaceAll(RegExp(r'\s+&\s+'), ' and ');
+/// [plainText], then made for a voice. Written text is full of things a
+/// reader's eye skips over and a voice reads out literally — "f slash four",
+/// "one slash three", "aitch tee tee pee ess colon" — so each is said the way
+/// a person reading it aloud would:
+///
+/// - a standalone "&" is "and";
+/// - web addresses are "a link";
+/// - f-stops are "f 1.8";
+/// - simple fractions are words: "one third", "three quarters";
+/// - "24/7" is "twenty-four seven", "km/h" "kilometres an hour";
+/// - numbers in a date are read as numbers, not "slash";
+/// - "and/or", "iOS/Android" are "and or", "iOS or Android";
+/// - any slash left over is a pause, not the word "slash".
+String speakable(String s) {
+  var out = plainText(s).replaceAll(RegExp(r'\s+&\s+'), ' and ');
+  out = out.replaceAll(_url, 'a link');
+  out = out.replaceAllMapped(
+    RegExp(r'\b[fF]/(\d+(?:\.\d+)?)'),
+    (m) => 'f ${m[1]}',
+  );
+  out = out.replaceAll(RegExp(r'\b24/7\b'), 'twenty-four seven');
+  _units.forEach((k, v) => out = out.replaceAll(RegExp('\\b$k\\b'), v));
+  // Dates: 25/9/2026, 25/09/26 — read as the numbers they are.
+  out = out.replaceAllMapped(
+    RegExp(r'\b(\d{1,4})/(\d{1,2})/(\d{2,4})\b'),
+    (m) => '${m[1]} ${m[2]} ${m[3]}',
+  );
+  out = out.replaceAllMapped(
+    RegExp(r'(?<![\d/.])(\d{1,2})/(\d{1,2})(?![\d/])'),
+    (m) => _fraction(int.parse(m[1]!), int.parse(m[2]!)) ?? '${m[1]} ${m[2]}',
+  );
+  // "and/or" already says "or"; the rule below would say it twice.
+  out = out.replaceAll(RegExp(r'\band/or\b', caseSensitive: false), 'and or');
+  // Word or name on both sides: an alternative.
+  out = out.replaceAllMapped(
+    RegExp(r'(?<=[A-Za-z0-9])/(?=[A-Za-z])|(?<=[A-Za-z])/(?=[A-Za-z0-9])'),
+    (_) => ' or ',
+  );
+  // Anything else: a pause.
+  return out
+      .replaceAll('/', ', ')
+      .replaceAll(RegExp(r'\s+,'), ',')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+}
+
+final _url = RegExp(
+  r'\bhttps?://\S+|\bwww\.\S+|\b[\w-]+(?:\.[\w-]+)*\.(?:com|org|net|co\.uk|io|gov|edu)/\S*',
+  caseSensitive: false,
+);
+
+const _units = {
+  'km/h': 'kilometres an hour',
+  'kph': 'kilometres an hour',
+  'mph': 'miles an hour',
+  'm/s': 'metres a second',
+  'Mb/s': 'megabits a second',
+  'Gb/s': 'gigabits a second',
+  'MB/s': 'megabytes a second',
+  'GB/s': 'gigabytes a second',
+  'fps': 'frames a second',
+};
+
+const _counts = [
+  'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight',
+  'nine', 'ten', 'eleven', 'twelve',
+];
+const _parts = {
+  2: ('half', 'halves'),
+  3: ('third', 'thirds'),
+  4: ('quarter', 'quarters'),
+  5: ('fifth', 'fifths'),
+  6: ('sixth', 'sixths'),
+  8: ('eighth', 'eighths'),
+  10: ('tenth', 'tenths'),
+  12: ('twelfth', 'twelfths'),
+};
+
+/// "one third", "three quarters" — for the fractions people say in words.
+/// Anything else (7/9, 13/4) is left to be read as two numbers.
+String? _fraction(int n, int d) {
+  final part = _parts[d];
+  if (part == null || n < 1 || n >= d || n >= _counts.length) return null;
+  return '${_counts[n]} ${n == 1 ? part.$1 : part.$2}';
+}
 
 final _tag = RegExp(r'<\/?[a-zA-Z!][^<>]*>');
 final _blockEnd = RegExp(

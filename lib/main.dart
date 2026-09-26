@@ -11,6 +11,7 @@ import 'dashboard/live_preview.dart';
 import 'dashboard/photo_backdrop.dart';
 import 'dashboard/tile_renderer.dart';
 import 'services/air_quality_service.dart';
+import 'services/brightness_service.dart';
 import 'services/bins_service.dart';
 import 'services/carbon_service.dart';
 import 'services/chores_service.dart';
@@ -108,6 +109,8 @@ void main() async {
   PlaybackSource? pausedForReading;
   final reader = ArticleReader(
     output: PiperSpeechOutput(speech),
+    voiceFor: speech.voiceFor,
+    voiceId: speech.voiceId,
     volume: () => config.config.shareInbox.speechVolume,
     onStart: () {
       for (final PlaybackSource p in [spotify, nowPlaying]) {
@@ -168,6 +171,12 @@ void main() async {
   // itself is left to the host-side screen_control.py service.
   final screenIdle = ScreenIdleService(config, [spotify, nowPlaying])..start();
 
+  // The backlight as it was left in Settings or the editor, rather than
+  // whatever systemd restored — which after a shutdown while asleep is 1.
+  final brightness = BrightnessService(config);
+  unawaited(brightness.start());
+  dashboard.brightness = brightness;
+
   // A share arriving is worth waking the panel for — unless Do Not Disturb is
   // on, which the screen service checks for itself.
   shareInbox.onItemArrived = screenIdle.wakeForNotification;
@@ -216,6 +225,7 @@ void main() async {
 
   final homeAssistant = HomeAssistantService(config);
   dashboard.haEntities = homeAssistant.choices;
+  dashboard.voices = speech.voiceChoices;
 
   runApp(
     MultiProvider(
@@ -231,6 +241,7 @@ void main() async {
         ChangeNotifierProvider.value(value: shareInbox),
         ChangeNotifierProvider.value(value: reader),
         Provider<ScreenIdleService>.value(value: screenIdle),
+        ChangeNotifierProvider.value(value: brightness),
         ChangeNotifierProvider(create: (_) => CameraService(config)),
         ChangeNotifierProvider.value(value: feeds),
         ChangeNotifierProvider.value(value: dashboard),
