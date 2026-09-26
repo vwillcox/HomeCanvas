@@ -152,7 +152,9 @@ class TtsService {
         if (i > 0) await Future<void>.delayed(gap);
         await _speakNow(say[i], volume);
       }
-    }).catchError((Object e) => debugPrint('Tts: $e'));
+    }).catchError((Object e) {
+      debugPrint('Tts: $e');
+    });
   }
 
   /// Speaks [text], after anything already queued.
