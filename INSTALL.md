@@ -236,6 +236,18 @@ In **Settings → Music → Spotify**:
 No client secret is needed. If you connected before liking and playlists
 existed, tap **Reconnect** once.
 
+**Or over SSH**, which saves typing the Client ID on the panel with no
+keyboard:
+
+```bash
+bash ~/homecanvas/scripts/set-spotify-token.sh <client_id>
+```
+
+It still opens the login on the Pi's own screen, since that step needs your
+Spotify password, which nothing here sees. Only the Client ID and a refresh
+token are saved to `~/.config/homecanvas/config.json`, and the kiosk restarts
+to pick them up.
+
 #### Playing Spotify on the Pi ("Kiosk" in the Connect picker)
 
 The Pi can appear as its own device, **Kiosk**, in Spotify's device picker.
