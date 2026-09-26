@@ -72,13 +72,40 @@ class DashboardService extends ChangeNotifier {
   /// Where to point a browser. The host's own address is resolved once so the
   /// kiosk can show something you can actually type in, rather than
   /// "localhost", which is useless from the sofa.
+  ///
+  /// Its mDNS name (homecanvas.local) when Avahi is announcing one — that
+  /// survives the router handing out a new lease — otherwise the IP address.
   String _host = 'this device';
+  String? _ip;
   String get editorAddress => 'http://$_host:${settings.editorPort}';
+
+  /// The same editor by IP address, for a browser that can't resolve .local
+  /// names (some Android versions). Null when [editorAddress] already is it.
+  String? get editorIpAddress =>
+      _ip == null || _ip == _host ? null : 'http://$_ip:${settings.editorPort}';
 
   Future<void> start() async {
     await themes.load();
-    _host = await _localAddress();
+    final ip = await _localAddress();
+    _ip = ip == 'this device' ? null : ip;
+    _host = _mdnsName() ?? ip;
     await _bind();
+  }
+
+  /// This machine's name on the network as `<hostname>.local`, or null when
+  /// nothing is announcing it. See scripts/set-hostname.sh.
+  static String? _mdnsName() {
+    try {
+      // avahi-daemon writes its pid here while it runs, on Debian and
+      // Raspberry Pi OS alike; without it the .local name resolves nowhere.
+      if (!File('/run/avahi-daemon/pid').existsSync()) return null;
+      final name = Platform.localHostname.split('.').first;
+      if (name.isEmpty || name == 'localhost') return null;
+      return '$name.local';
+    } catch (e) {
+      debugPrint('Dashboard: could not resolve mDNS name: $e');
+      return null;
+    }
   }
 
   /// Rebinds when the port changes; otherwise leaves a working server alone.

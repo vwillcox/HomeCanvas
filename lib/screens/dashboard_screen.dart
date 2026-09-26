@@ -252,7 +252,11 @@ class _DashboardScreenState extends State<DashboardScreen>
     final grid = Stack(
       children: [
         if (settings.widgets.isEmpty)
-          _Empty(theme: theme, address: dashboard.editorAddress)
+          _Empty(
+            theme: theme,
+            address: dashboard.editorAddress,
+            fallback: dashboard.editorIpAddress,
+          )
         else
           // Behind the widgets, not over them: a translucent layer on
           // top would swallow every tap meant for a widget. This only
@@ -605,10 +609,13 @@ class DashboardTile extends StatelessWidget {
 }
 
 class _Empty extends StatelessWidget {
-  const _Empty({required this.theme, required this.address});
+  const _Empty({required this.theme, required this.address, this.fallback});
 
   final DashboardTheme theme;
   final String address;
+
+  /// The same address by IP, for a browser that can't resolve .local names.
+  final String? fallback;
 
   @override
   Widget build(BuildContext context) {
@@ -644,6 +651,13 @@ class _Empty extends StatelessWidget {
               fontWeight: FontWeight.w500,
             ),
           ),
+          if (fallback != null) ...[
+            const SizedBox(height: 6),
+            SelectableText(
+              'or $fallback',
+              style: TextStyle(color: theme.textSecondary, fontSize: 16),
+            ),
+          ],
         ],
       ),
     );

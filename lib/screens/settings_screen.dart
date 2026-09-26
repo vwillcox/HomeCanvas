@@ -1765,7 +1765,10 @@ class _DashboardSettingsTile extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.open_in_browser),
             title: const Text('Arrange it in a browser'),
-            subtitle: Text(dashboard.editorAddress),
+            isThreeLine: dashboard.editorIpAddress != null,
+            subtitle: Text(dashboard.editorIpAddress == null
+                ? dashboard.editorAddress
+                : '${dashboard.editorAddress}\nor ${dashboard.editorIpAddress}'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _editPort(context),
           ),
