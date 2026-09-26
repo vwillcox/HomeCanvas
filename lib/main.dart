@@ -108,6 +108,8 @@ void main() async {
   PlaybackSource? pausedForReading;
   final reader = ArticleReader(
     output: PiperSpeechOutput(speech),
+    voiceFor: speech.voiceFor,
+    voiceId: speech.voiceId,
     volume: () => config.config.shareInbox.speechVolume,
     onStart: () {
       for (final PlaybackSource p in [spotify, nowPlaying]) {
@@ -216,6 +218,7 @@ void main() async {
 
   final homeAssistant = HomeAssistantService(config);
   dashboard.haEntities = homeAssistant.choices;
+  dashboard.voices = speech.voiceChoices;
 
   runApp(
     MultiProvider(

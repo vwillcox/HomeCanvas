@@ -1457,7 +1457,11 @@ function normaliseColour(v) {
    list of anything without the editor knowing what it is. */
 function listField(w, o) {
   const host = document.createElement("div");
-  const rows = Array.isArray(w.options[o.key]) ? w.options[o.key] : [];
+  // A list not saved yet shows its declared default — the rows the panel is
+  // already using — rather than an empty list that pretends to be the truth.
+  const rows = Array.isArray(w.options[o.key])
+    ? w.options[o.key]
+    : (Array.isArray(o.default) ? JSON.parse(JSON.stringify(o.default)) : []);
   w.options[o.key] = rows;
 
   rows.forEach((row, index) => {

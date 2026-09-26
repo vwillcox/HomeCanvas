@@ -185,6 +185,7 @@ class DashboardService extends ChangeNotifier {
           'lists': {
             'albums': await _albumChoices(),
             'haEntities': await _haChoices(),
+            'voices': await _voiceChoices(),
           },
         });
       }
@@ -621,6 +622,19 @@ class DashboardService extends ChangeNotifier {
     if (fetch == null) return const {};
     try {
       return await fetch().timeout(const Duration(seconds: 6));
+    } catch (_) {
+      return const {};
+    }
+  }
+
+  /// The piper voices installed, for the news widget's speed settings.
+  Future<Map<String, String>> Function()? voices;
+
+  Future<Map<String, String>> _voiceChoices() async {
+    final fetch = voices;
+    if (fetch == null) return const {};
+    try {
+      return await fetch();
     } catch (_) {
       return const {};
     }

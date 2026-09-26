@@ -13,8 +13,9 @@ import 'tts_service.dart';
 /// fetching, chunking, looking ahead, pausing, skipping — can be tested
 /// without piper or a speaker.
 abstract class SpeechOutput {
-  /// [text] as a sound file, or null if it could not be made.
-  Future<File?> synthesise(String text);
+  /// [text] as a sound file in [voice] (a voice's model path; null for the
+  /// main voice), or null if it could not be made.
+  Future<File?> synthesise(String text, {String? voice, double speed = 1});
 
   /// Plays [file]; completes when it has finished or been stopped.
   Future<void> play(File file, double volume);
@@ -34,7 +35,8 @@ class PiperSpeechOutput implements SpeechOutput {
   StreamSubscription<bool>? _done;
 
   @override
-  Future<File?> synthesise(String text) => tts.synthesise(text);
+  Future<File?> synthesise(String text, {String? voice, double speed = 1}) =>
+      tts.synthesise(text, voice: voice, speed: speed);
 
   @override
   Future<void> play(File file, double volume) async {
@@ -88,8 +90,18 @@ class ArticleReader extends ChangeNotifier {
     required this.volume,
     this.onStart,
     this.onEnd,
+    this.voiceFor,
+    this.voiceId,
     Future<String> Function(String url)? fetch,
   }) : _fetch = fetch ?? _fetchPage;
+
+  /// A voice's id for settings ([TtsService.voiceId]), to look up its speed.
+  final String Function(String voicePath)? voiceId;
+
+  /// The voice for an article's author — the same one every time for the
+  /// same name ([TtsService.voiceFor]). Null, or a null answer, is the main
+  /// voice.
+  final Future<String?> Function(String? author)? voiceFor;
 
   final SpeechOutput output;
 
@@ -110,6 +122,14 @@ class ArticleReader extends ChangeNotifier {
 
   String _title = '';
   String get title => _title;
+
+  /// Who wrote it, when the page says.
+  String? _author;
+  String? get author => _author;
+
+  /// The voice this reading is in, and how fast.
+  String? _voice;
+  double _speed = 1;
 
   /// The link being read, so the news tile can mark its headline.
   String? _link;
@@ -133,11 +153,15 @@ class ArticleReader extends ChangeNotifier {
   bool _started = false;
 
   /// Reads the article at [link], or [summary] if it cannot be fetched.
+  /// [speeds] is each voice's pace by id ("main", "en_GB-alan-medium"), from
+  /// the news widget's settings; [sayAuthor] adds "By …" after the headline.
   Future<void> read({
     required String title,
     String? link,
     String? summary,
     String? source,
+    Map<String, double> speeds = const {},
+    bool sayAuthor = true,
   }) async {
     // Taking over from a reading already going, the music stays paused
     // rather than coming back for a moment in between.
@@ -145,6 +169,8 @@ class ArticleReader extends ChangeNotifier {
     final run = ++_run;
     if (taking) await output.stop();
     _title = plainText(title);
+    _author = null;
+    _voice = null;
     _link = link;
     _summaryOnly = false;
     _chunks = const [];
@@ -167,6 +193,10 @@ class ArticleReader extends ChangeNotifier {
 
     final parts = <String>['$_title.'];
     if (article != null) {
+      _author = article.author;
+      _voice = await voiceFor?.call(_author);
+      if (run != _run) return;
+      if (_author != null && sayAuthor) parts.add('By $_author.');
       if (source != null && source.isNotEmpty) parts.add('From $source.');
       parts.addAll(article.paragraphs);
     } else if (summary != null && summary.trim().isNotEmpty) {
@@ -178,6 +208,8 @@ class ArticleReader extends ChangeNotifier {
     }
     // Whatever the source — the page, its embedded text, the feed's summary,
     // the headline — nothing encoded reaches the voice.
+    final id = _voice == null ? 'main' : (voiceId?.call(_voice!) ?? 'main');
+    _speed = speeds[id] ?? 1;
     _chunks = speakableChunks(
       parts.map(speakable).where((p) => p.isNotEmpty).toList(),
     );
@@ -186,13 +218,16 @@ class ArticleReader extends ChangeNotifier {
   }
 
   Future<void> _readFrom(int run) async {
-    Future<File?>? next = output.synthesise(_chunks[_index]);
+    final voice = _voice;
+    final speed = _speed;
+    Future<File?>? next =
+        output.synthesise(_chunks[_index], voice: voice, speed: speed);
     try {
       while (run == _run && _index < _chunks.length) {
         final file = await next;
         // Start on the next piece while this one is said.
         next = _index + 1 < _chunks.length
-            ? output.synthesise(_chunks[_index + 1])
+            ? output.synthesise(_chunks[_index + 1], voice: voice, speed: speed)
             : null;
         if (run != _run) {
           _discard(file);
@@ -249,6 +284,8 @@ class ArticleReader extends ChangeNotifier {
     _chunks = const [];
     _index = 0;
     _link = null;
+    _author = null;
+    _voice = null;
     _skipping = false;
     _set(ReaderStatus.idle);
     if (_started) {

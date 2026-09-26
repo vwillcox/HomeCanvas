@@ -428,6 +428,23 @@ the bottom of the screen shows what is being read, on any screen, with pause,
 next paragraph and stop. If the page can't be read (a paywall, a video
 page), it reads the feed's summary instead and says so.
 
+**A voice per writer.** Put more piper voices in
+`~/.local/share/piper/voices/` (each a `.onnx` with its `.onnx.json`) and each
+article's author gets one of them or the main voice: the same one every
+time for the same writer, so you come to know who wrote what by ear. It says
+"By …" after the headline. The choice comes from the name as spelt, not from
+anything it might suggest about the person. To add a British male voice:
+
+```bash
+mkdir -p ~/.local/share/piper/voices && cd ~/.local/share/piper/voices
+V=https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_GB/alan/medium
+curl -fsSL -O $V/en_GB-alan-medium.onnx
+curl -fsSL -O $V/en_GB-alan-medium.onnx.json
+```
+
+Restart the kiosk after adding voices. Shared notes and reminders keep the
+main voice.
+
 #### Speed test
 
 Runs [Ookla's speedtest CLI](https://www.speedtest.net/apps/cli). Install it —

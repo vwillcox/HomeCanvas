@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:home_canvas/services/article_reader.dart';
 import 'package:home_canvas/services/article_text.dart';
+import 'package:home_canvas/services/tts_service.dart';
 
 const _para =
     'The council agreed on Tuesday to extend the town centre scheme for '
@@ -20,13 +21,18 @@ String _page({String body = '', String head = ''}) =>
 class FakeOutput implements SpeechOutput {
   final said = <String>[];
   final made = <String>[];
+  final voices = <String?>[];
   Completer<void>? playing;
   bool paused = false;
   final _files = <File, String>{};
 
+  final speeds = <double>[];
+
   @override
-  Future<File?> synthesise(String text) async {
+  Future<File?> synthesise(String text, {String? voice, double speed = 1}) async {
     made.add(text);
+    voices.add(voice);
+    speeds.add(speed);
     final f = File('${Directory.systemTemp.path}/fake-${made.length}-'
         '${DateTime.now().microsecondsSinceEpoch}.wav')
       ..writeAsStringSync(text);
@@ -124,6 +130,20 @@ void main() {
       final a = ArticleText.extract(page)!;
       expect(a.paragraphs, hasLength(3));
       expect(a.paragraphs.last, 'Third. $_para');
+    });
+
+    test("a decimal point is not the end of a sentence", () {
+      // Joined back up, a split at "1." read aloud as "one. forty-eight".
+      final long = List.filled(6,
+              'You can set the aperture from f/1.48 to f/4.0 in 1/3 stops.')
+          .join(' ');
+      final chunks = speakableChunks([long], max: 130);
+      expect(chunks.length, greaterThan(1));
+      for (final c in chunks) {
+        expect(c, isNot(contains('1. 48')));
+        expect(c, isNot(contains('4. 0')));
+      }
+      expect(chunks.join(' '), long);
     });
 
     test('a teaser is not an article', () {
@@ -262,6 +282,137 @@ void main() {
       expect(ended, 0);
       await r.stop();
       expect(ended, 1);
+    });
+  });
+
+  group('the author', () {
+    String withRecord(String author) => _page(
+          head: '<script type="application/ld+json">{"@type":"NewsArticle",'
+              '"author":$author,"articleBody":"First. $_para\\nSecond. '
+              '$_para\\nThird. $_para"}</script>',
+        );
+
+    test('a Person in the article record', () {
+      expect(ArticleText.extract(withRecord('{"@type":"Person","name":"Steven Levy"}'))!.author,
+          'Steven Levy');
+    });
+
+    test('several, as a byline says them', () {
+      expect(
+          ArticleText.extract(withRecord(
+                  '[{"name":"Anna Smith"},{"name":"Raj Patel"},{"name":"Li Wei"}]'))!
+              .author,
+          'Anna Smith, Raj Patel and Li Wei');
+    });
+
+    test("the page's author tag, when the record has none", () {
+      final page = _page(
+        head: '<meta name="author" content="By Jo Bloggs">',
+        body: '<article><p>First. $_para</p><p>Second. $_para</p>'
+            '<p>Third. $_para</p></article>',
+      );
+      expect(ArticleText.extract(page)!.author, 'Jo Bloggs');
+    });
+
+    test('a profile link is not a name', () {
+      final page = _page(
+        head: '<meta property="article:author" content="https://x.com/people/jo">',
+        body: '<article><p>First. $_para</p><p>Second. $_para</p>'
+            '<p>Third. $_para</p></article>',
+      );
+      expect(ArticleText.extract(page)!.author, isNull);
+    });
+  });
+
+  group('a voice per author', () {
+    test('the same name always gets the same voice, however it is written',
+        () {
+      final i = TtsService.voiceIndex('Steven Levy', 2);
+      expect(TtsService.voiceIndex('steven  levy', 2), i);
+      expect(TtsService.voiceIndex('By Steven Levy', 2), i);
+      expect(TtsService.voiceIndex('Steven Levy', 2), i);
+    });
+
+    test('different writers are spread across the voices', () {
+      final names = ['Steven Levy', 'Lauren Goode', 'Anna Smith', 'Raj Patel',
+          'Li Wei', 'Jo Bloggs', 'Sam Jones', 'Alex Kim'];
+      final used = names.map((n) => TtsService.voiceIndex(n, 2)).toSet();
+      expect(used, {0, 1});
+    });
+
+    test('the reader says who wrote it, and reads it all in their voice',
+        () async {
+      final out = FakeOutput();
+      final r = ArticleReader(
+        output: out,
+        volume: () => 45,
+        voiceFor: (author) async => author == null ? null : '/voices/$author',
+        fetch: (_) async => _page(
+          head: '<meta name="author" content="Jo Bloggs">',
+          body: '<article><p>First. $_para</p><p>Second. $_para</p>'
+              '<p>Third. $_para</p></article>',
+        ),
+      );
+      unawaited(r.read(title: 'Scheme extended', link: 'https://x/1'));
+      await settle();
+      expect(r.author, 'Jo Bloggs');
+      for (var i = 0; i < 5; i++) {
+        await settle();
+        out.finishOne();
+      }
+      await settle();
+      expect(out.said.take(2), ['Scheme extended.', 'By Jo Bloggs.']);
+      expect(out.voices.toSet(), {'/voices/Jo Bloggs'});
+    });
+  });
+
+  group('voice settings', () {
+    ArticleReader readerWith(FakeOutput out) => ArticleReader(
+          output: out,
+          volume: () => 45,
+          voiceFor: (author) async => author == null ? null : '/v/alan.onnx',
+          voiceId: (path) => path.split('/').last.replaceAll('.onnx', ''),
+          fetch: (_) async => _page(
+            head: '<meta name="author" content="Jo Bloggs">',
+            body: '<article><p>First. $_para</p><p>Second. $_para</p>'
+                '<p>Third. $_para</p></article>',
+          ),
+        );
+
+    test("each voice reads at the speed set for it", () async {
+      final out = FakeOutput();
+      final r = readerWith(out);
+      unawaited(r.read(
+        title: 'Scheme extended',
+        link: 'https://x/1',
+        speeds: {'alan': 1.15, 'main': 0.85},
+      ));
+      await settle();
+      await r.stop();
+      expect(out.speeds, isNotEmpty);
+      expect(out.speeds.toSet(), {1.15});
+    });
+
+    test('a voice with no speed set reads at its own pace', () async {
+      final out = FakeOutput();
+      final r = readerWith(out);
+      unawaited(r.read(title: 'Scheme extended', link: 'https://x/1'));
+      await settle();
+      await r.stop();
+      expect(out.speeds.toSet(), {1.0});
+    });
+
+    test('"Say who wrote it" off leaves the byline out', () async {
+      final out = FakeOutput();
+      final r = readerWith(out);
+      unawaited(r.read(
+          title: 'Scheme extended', link: 'https://x/1', sayAuthor: false));
+      await settle();
+      out.finishOne();
+      await settle();
+      expect(out.said, isNot(contains('By Jo Bloggs.')));
+      expect(out.made[1], startsWith('First.'));
+      await r.stop();
     });
   });
 }

@@ -54,6 +54,45 @@ void main() {
   });
 
   group('for the voice', () {
+    test('the camera article that read out "slash": f-stops and fractions',
+        () {
+      expect(
+        speakable('manual mode: f/1.48, f/1.8, f/2.8, and f/4.'),
+        'manual mode: f 1.48, f 1.8, f 2.8, and f 4.',
+      );
+      expect(
+        speakable('from f/1.48 to f/4.0 in 1/3 stop increments'),
+        'from f 1.48 to f 4.0 in one third stop increments',
+      );
+      expect(speakable('three quarters, or 3/4, and 1/2'),
+          'three quarters, or three quarters, and one half');
+    });
+
+    test('no slash is ever said', () {
+      for (final s in [
+        'f/4', '1/3', '24/7', '120 km/h', '25/9/2026', 'and/or',
+        'iOS/Android', 'see wired.com/newsletters', 'https://x.com/a/b',
+        '7/9 of them', '4G/5G', 'Gear / Deals',
+      ]) {
+        expect(speakable(s), isNot(contains('/')), reason: s);
+      }
+    });
+
+    test('each read as a person would say it', () {
+      expect(speakable('open 24/7'), 'open twenty-four seven');
+      expect(speakable('at 120 km/h'), 'at 120 kilometres an hour');
+      expect(speakable('on 25/9/2026'), 'on 25 9 2026');
+      expect(speakable('you and/or me'), 'you and or me');
+      expect(speakable('iOS/Android apps'), 'iOS or Android apps');
+      expect(speakable('Read more at https://wired.com/story/x today'),
+          'Read more at a link today');
+      expect(speakable('7/9 of them'), '7 9 of them');
+    });
+
+    test('decimals and version numbers are left whole', () {
+      expect(speakable('It costs 3.5 million'), 'It costs 3.5 million');
+    });
+
     test('a standalone ampersand is said as "and"', () {
       expect(speakable('Fish &amp; chips'), 'Fish and chips');
       expect(speakable('AT&T'), 'AT&T');
