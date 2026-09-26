@@ -55,12 +55,11 @@ class _DashboardScreenState extends State<DashboardScreen>
   /// from 0 to 1 over the page's time and turns the page when it gets there.
   /// That same value fills the current page's dot, so a turn is never a
   /// surprise, and pausing is simply stopping it.
-  late final AnimationController _turn = AnimationController(vsync: this)
-    ..addStatusListener((status) {
-      if (status == AnimationStatus.completed && mounted) {
-        _goTo(_page + 1, _pageCount);
-      }
-    });
+  ///
+  /// Made in initState, not lazily: a dashboard whose pages never turn would
+  /// otherwise first touch it in dispose, and a controller made there looks
+  /// up its TickerMode through an element that is already gone.
+  late final AnimationController _turn;
 
   /// Paused from the page dots. Holds until tapped again or the dashboard
   /// is left; coming back starts turning again.
@@ -95,6 +94,12 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   void initState() {
     super.initState();
+    _turn = AnimationController(vsync: this)
+      ..addStatusListener((status) {
+        if (status == AnimationStatus.completed && mounted) {
+          _goTo(_page + 1, _pageCount);
+        }
+      });
     _player.isOpen.addListener(_playerOpened);
     _clock = Timer.periodic(const Duration(seconds: 30), (_) {
       if (mounted) setState(() {});
