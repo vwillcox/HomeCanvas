@@ -140,6 +140,11 @@
   .setting input[type=number] { width: 84px; text-align: center; padding: 9px 8px; }
   .settings-list { display: flex; flex-direction: column; }
 
+  /* The backlight slider: the whole width, with the level beside it. */
+  .rangeRow { display: flex; align-items: center; gap: 12px; padding: 10px 0 4px; }
+  .rangeRow input[type=range] { flex: 1; accent-color: var(--accent); height: 28px; margin: 0; }
+  .rangeRow output { min-width: 3.2em; text-align: right; font-variant-numeric: tabular-nums; color: var(--text); }
+
   /* ---------- layout ---------- */
   main {
     display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 22px;
@@ -489,6 +494,18 @@
       <h2 class="panelHead">Add a widget<span class="chev">▾</span></h2>
       <div class="panelBody">
         <div id="palette"></div>
+      </div>
+    </section>
+
+    <section class="card" data-panel="screen">
+      <h2 class="panelHead">Screen<span class="chev">▾</span></h2>
+      <div class="panelBody">
+        <label class="field" for="brightness">Brightness</label>
+        <div class="rangeRow">
+          <input type="range" id="brightness" min="5" max="100" step="1" disabled>
+          <output id="brightnessValue" for="brightness">…</output>
+        </div>
+        <p class="help">Changes the panel as you drag — no need to save. Kept across restarts.</p>
       </div>
     </section>
 
@@ -2044,11 +2061,44 @@ async function load(quiet) {
     renderPhoto();
     renderPaging();
     render();
+    renderBrightness();
     setStatus("Up to date", "ok");
   } catch (e) {
     setStatus("Could not reach the kiosk", true);
     console.error(e);
   }
+}
+
+/* The backlight. Sent as the slider moves, one request at a time with the
+   latest value winning, so a fast drag doesn't queue up dozens of writes. */
+async function renderBrightness() {
+  const slider = document.getElementById("brightness");
+  const out = document.getElementById("brightnessValue");
+  const show = v => { slider.value = v; out.textContent = v + "%"; };
+  try {
+    const b = await api.get("/api/brightness");
+    slider.min = b.min; slider.max = b.max;
+    show(b.value);
+    slider.disabled = false;
+  } catch (e) {
+    out.textContent = "—";
+    return;
+  }
+  let sending = false, pending = null;
+  const send = async () => {
+    if (sending || pending == null) return;
+    sending = true;
+    const v = pending; pending = null;
+    try { await api.put("/api/brightness", { value: v }); }
+    catch (e) { setStatus("Could not set the brightness", true); }
+    sending = false;
+    send();
+  };
+  slider.oninput = () => {
+    out.textContent = slider.value + "%";
+    pending = Number(slider.value);
+    send();
+  };
 }
 
 /* The panel's current content. Refreshed on a timer so a clock ticks and a

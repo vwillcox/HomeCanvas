@@ -14,6 +14,7 @@ import '../dashboard/live_preview.dart';
 import '../dashboard/tile_renderer.dart';
 import '../config/app_config.dart' show SenderToken;
 import '../dashboard/widget_registry.dart';
+import 'brightness_service.dart';
 import 'config_service.dart';
 import 'notes_service.dart';
 import 'shopping_service.dart';
@@ -62,6 +63,9 @@ class DashboardService extends ChangeNotifier {
 
   /// The shopping list, for its page and API. Null in tests.
   ShoppingService? shopping;
+
+  /// The panel's backlight, for the editor's slider. Null in tests.
+  BrightnessService? brightness;
 
   /// The photo behind the dashboard now, as JPEG bytes, for the editor to
   /// preview the photo background with. Null in tests.
@@ -239,6 +243,18 @@ class DashboardService extends ChangeNotifier {
       }
       if (path == '/api/dashboard' && request.method == 'PUT') {
         return await _save(request);
+      }
+      // The backlight: live, not part of the layout's Save, since you judge
+      // it by looking at the panel as you drag.
+      if (path == '/api/brightness') {
+        if (request.method == 'PUT' &&
+            !sameOrigin(request.headers.value('origin'),
+                request.headers.value(HttpHeaders.hostHeader))) {
+          request.response.statusCode = HttpStatus.forbidden;
+          await request.response.close();
+          return;
+        }
+        return await _brightnessApi(request);
       }
 
       // The notes board: a page for posting from any phone in the house,
@@ -599,6 +615,34 @@ class DashboardService extends ChangeNotifier {
     request.response.headers.contentType = ContentType('image', 'png');
     request.response.add(png);
     await request.response.close();
+  }
+
+  Future<void> _brightnessApi(HttpRequest request) async {
+    final light = brightness;
+    if (light == null) {
+      request.response.statusCode = HttpStatus.serviceUnavailable;
+      await request.response.close();
+      return;
+    }
+    if (request.method == 'PUT') {
+      final data = jsonDecode(await utf8.decoder.bind(request).join());
+      final v = data is Map ? data['value'] : null;
+      if (v is! num) {
+        request.response.statusCode = HttpStatus.badRequest;
+        await request.response.close();
+        return;
+      }
+      light.set(v);
+    } else if (request.method != 'GET') {
+      request.response.statusCode = HttpStatus.methodNotAllowed;
+      await request.response.close();
+      return;
+    }
+    return await _json(request, {
+      'value': light.level,
+      'min': BrightnessService.minimum,
+      'max': 100,
+    });
   }
 
   Future<void> _save(HttpRequest request) async {
