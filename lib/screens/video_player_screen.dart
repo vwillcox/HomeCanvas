@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import '../models/immich_models.dart';
 import '../services/config_service.dart';
 import '../services/media_source.dart';
+import '../services/mpv_tuning.dart';
 import '../widgets/big_back_button.dart';
 
 const List<double> kPlaybackSpeeds = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
@@ -148,6 +149,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     if (widget.onBeforePlay != null) {
       await widget.onBeforePlay!();
     }
+    await MpvTuning.apply(_player);
     await _player.open(Media(
       widget.source.videoUrl(widget.asset.id),
       httpHeaders: widget.source.authHeaders,
@@ -304,7 +306,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                 duration: const Duration(milliseconds: 200),
                 child: IgnorePointer(
                   ignoring: !_controlsVisible,
-                  child: _BottomControls(
+                  child: VideoBottomControls(
                     playing: _playing,
                     position: _position,
                     duration: _duration,
@@ -339,7 +341,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                   duration: const Duration(milliseconds: 200),
                   child: IgnorePointer(
                     ignoring: !_controlsVisible,
-                    child: _VolumeColumn(
+                    child: VideoVolumeColumn(
                       volume: _volume,
                       muted: _muted,
                       onChanged: (v) => _setVolume(v),
@@ -383,7 +385,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   }
 }
 
-class _BottomControls extends StatelessWidget {
+/// Play/pause, the timeline and the speed chips, sized for a finger. Shared
+/// with the YouTube player so both videos are driven the same way.
+class VideoBottomControls extends StatelessWidget {
   final bool playing;
   final Duration position;
   final Duration duration;
@@ -397,7 +401,8 @@ class _BottomControls extends StatelessWidget {
   final ValueChanged<double> onSeekEnd;
   final ValueChanged<double> onRate;
 
-  const _BottomControls({
+  const VideoBottomControls({
+    super.key,
     required this.playing,
     required this.position,
     required this.duration,
@@ -479,13 +484,14 @@ class _BottomControls extends StatelessWidget {
 }
 
 /// Vertical volume slider with a mute button underneath, sized for fingers.
-class _VolumeColumn extends StatelessWidget {
+class VideoVolumeColumn extends StatelessWidget {
   final double volume;
   final bool muted;
   final ValueChanged<double> onChanged;
   final VoidCallback onToggleMute;
 
-  const _VolumeColumn({
+  const VideoVolumeColumn({
+    super.key,
     required this.volume,
     required this.muted,
     required this.onChanged,

@@ -49,11 +49,13 @@ class KioskState {
 ///     POST /open/<place>        photos, dashboard, settings, locked-folder
 ///     POST /camera              show or hide the camera
 ///     POST /dnd?muted=true      the notifications switch
+///     POST /youtube?url=…       play a YouTube video on the panel
 class KioskControlService {
   KioskControlService({
     required this.state,
     required this.run,
     required this.setDnd,
+    this.playYouTube,
     this.port = defaultPort,
   });
 
@@ -64,6 +66,9 @@ class KioskControlService {
   final KioskState Function() state;
   final void Function(KioskCommand) run;
   final void Function(bool muted) setDnd;
+
+  /// Plays a YouTube link; false when it is not one.
+  final bool Function(String url)? playYouTube;
 
   HttpServer? _server;
 
@@ -135,6 +140,13 @@ class KioskControlService {
         }
         setDnd(muted == 'true');
         return reply(HttpStatus.ok, state().toJson());
+      }
+      if (path == '/youtube' && playYouTube != null) {
+        final url = request.uri.queryParameters['url'] ?? '';
+        if (!playYouTube!(url)) {
+          return reply(HttpStatus.badRequest, {'error': 'not a YouTube link'});
+        }
+        return reply(HttpStatus.ok, {'ok': true});
       }
       return reply(HttpStatus.notFound, {'error': 'not found'});
     } catch (e) {

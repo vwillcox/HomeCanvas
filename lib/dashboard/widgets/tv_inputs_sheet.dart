@@ -144,6 +144,18 @@ class _TvInputsSheetState extends State<TvInputsSheet> {
                           ),
                         ),
                       ),
+                      // The list is remembered between sessions rather than
+                      // asked for on every connect — asking shows the pairing
+                      // code on the TV — so re-reading it is left to a tap.
+                      if (sources.isNotEmpty && tv.isConnected) ...[
+                        _RoundButton(
+                          theme: t,
+                          icon: Icons.refresh,
+                          label: 'Refresh',
+                          onPressed: tv.refreshSources,
+                        ),
+                        const SizedBox(width: 12),
+                      ],
                       _RoundButton(
                         theme: t,
                         icon: Icons.close,

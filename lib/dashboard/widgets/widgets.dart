@@ -32,6 +32,7 @@ import 'updates_widget.dart';
 import 'tv_widget.dart';
 import 'unifi_widgets.dart';
 import 'weather_widget.dart';
+import 'youtube_widget.dart';
 
 /// Every widget type the dashboard ships with.
 ///
@@ -78,6 +79,7 @@ void registerBuiltInWidgets() {
     certsWidgetType,
     updatesWidgetType,
     birthdaysWidgetType,
+    youtubeWidgetType,
     choresWidgetType,
   ]);
 }

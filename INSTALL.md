@@ -319,6 +319,52 @@ It streams at 320 kbps, the most Connect carries. Moving playback *off* the
 kiosk restarts the track with stock librespot; [`patches/`](patches/) has a fix
 and how to build it.
 
+### YouTube
+
+Share a YouTube link from the phone app (or tap one in the News widget) and it
+plays on the panel — full screen, or as a picture-in-picture window you can
+drag, pinch or pull by its corner to resize, over whatever else is on screen.
+The **YouTube** dashboard widget shows the latest videos from your
+subscriptions; touch one to watch it. It can instead play one video in the
+tile, muted or with sound, and go full screen when touched.
+
+Videos play at up to 1080p60 — about 99% of frames on time on a Pi 5 at its
+standard clock. The Pi 5 has no hardware decoder for anything YouTube serves
+(its only one is for HEVC), so the CPU does the work; while a video is full
+screen, everything under it stops drawing, and the slideshow, photo widgets
+and audio visualiser pause. Each minute of playback writes the frame rate and
+any dropped frames to the log (`/tmp/kiosk.log`).
+
+It is played by the kiosk's own video player, which needs
+[yt-dlp](https://github.com/yt-dlp/yt-dlp) to find the stream. Distribution
+packages of yt-dlp fall behind YouTube's changes within weeks, so install it
+from **Settings → Music → YouTube → Install** instead: that fetches the current
+yt-dlp and [deno](https://deno.com) (which yt-dlp now needs for YouTube) into
+`~/.local/share/homecanvas/bin`, and the kiosk updates yt-dlp daily after
+that. No sudo needed.
+
+**Signing in** is optional, from the same place or by tapping a Subscriptions
+tile. YouTube's own sign-in page opens in the kiosk's browser; afterwards
+yt-dlp uses that browser profile's cookies, which is how Premium,
+members-only and age-restricted videos play and how the subscriptions feed is
+read. **Sign out** deletes the profile. YouTube does not approve of programs
+like yt-dlp using accounts, so a spare account is the cautious choice.
+
+To avoid typing a password on the panel, sign in on a computer instead: open
+the editor's address followed by `/youtube` (local network only). It walks
+through exporting YouTube's cookies from a private browser window with the
+*Get cookies.txt LOCALLY* extension and uploading the file. Only the
+youtube.com and google.com cookies are kept, readable by the kiosk's user
+alone, in `~/.local/share/homecanvas/profiles/youtube-cookies.txt`; yt-dlp
+renews them there as YouTube asks.
+
+A video that will not play this way offers **Open in the browser**, signed in
+if the kiosk is. Scripts on the Pi can send one too:
+
+```bash
+curl -X POST "http://127.0.0.1:8766/youtube?url=https%3A%2F%2Fyoutu.be%2F<id>"
+```
+
 ### The widget dashboard
 
 Reach it from the dashboard button in the toolbar at the top right. Arrange it

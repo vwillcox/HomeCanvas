@@ -73,6 +73,29 @@ Future<void> finish(WidgetTester tester, FakeTv tv) async {
 }
 
 void main() {
+  group('a kept input list', () {
+    // What the set sends, and so what is kept on disk between sessions.
+    const kept = '[{"sourceid":"HDMI1","displayname":"HDMI1",'
+        '"displayname2":"Fire TV Stick","has_signal":1},'
+        '{"sourceid":"TV","displayname":"TV","has_signal":0}]';
+
+    test('shows the inputs without asking the television', () {
+      final client = VidaaClient(host: 'tv', uuid: 'u');
+      client.state.sourceId = 'HDMI1';
+      expect(client.loadSourceList(kept), isTrue);
+      expect(client.state.sources.map((s) => s.name), ['HDMI1', 'TV']);
+      expect(client.state.sources.first.deviceName, 'Fire TV Stick');
+      expect(client.state.sources.first.isActive, isTrue);
+    });
+
+    test('is ignored when it holds nothing usable', () {
+      final client = VidaaClient(host: 'tv', uuid: 'u');
+      expect(client.loadSourceList('[]'), isFalse);
+      expect(client.loadSourceList('not json'), isFalse);
+      expect(client.state.sources, isEmpty);
+    });
+  });
+
   group('what each input says about itself', () {
     test('something plugged in and on names the device', () {
       final s = src('HDMI1', 'HDMI1', device: 'Fire TV Stick', signal: true);

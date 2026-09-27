@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -5,6 +7,8 @@ import '../../screens/link_viewer_screen.dart';
 import '../../services/article_reader.dart';
 import '../../services/kiosk_browser.dart' show ReaderStyle;
 import '../../services/feed_service.dart';
+import '../../services/youtube_link.dart';
+import '../../services/youtube_service.dart';
 import '../widget_registry.dart';
 
 /// Headlines from an RSS or Atom feed.
@@ -224,6 +228,12 @@ class DashboardNewsWidget extends StatelessWidget {
   }
 
   void _openPage(BuildContext context, FeedItem item) {
+    // A news item that is a YouTube clip plays on the panel itself.
+    final video = YouTubeLink.parse(item.link!);
+    if (video != null) {
+      unawaited(context.read<YouTubeService>().play(video));
+      return;
+    }
     Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => LinkViewerScreen(
         url: item.link!,

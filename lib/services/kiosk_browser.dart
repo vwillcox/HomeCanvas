@@ -3,6 +3,8 @@ import 'dart:ui' show Size;
 
 import 'package:flutter/foundation.dart';
 
+import '../app_paths.dart';
+
 /// Opens web pages in a real browser window on the kiosk's screen.
 ///
 /// Firefox is preferred over Chromium, for two reasons that matter on a panel
@@ -90,6 +92,10 @@ class KioskBrowser {
   /// it, which would bury the one control that closes it. Hiding the browser's
   /// own chrome with [chromeless] gives the same uncluttered result while
   /// leaving that strip free.
+  ///
+  /// [keep] puts the profile beside the settings rather than in the cache, for
+  /// one that holds something worth keeping — a sign-in — which clearing the
+  /// cache in Settings would otherwise quietly undo.
   static Future<Process?> open(
     String url, {
     required String profile,
@@ -97,6 +103,7 @@ class KioskBrowser {
     double bottomGutter = 0,
     bool chromeless = false,
     ReaderStyle? reader,
+    bool keep = false,
   }) async {
     final browser = await resolve();
     if (browser == null) {
@@ -104,10 +111,7 @@ class KioskBrowser {
       return null;
     }
 
-    final home = Platform.environment['HOME'];
-    final dir = home == null
-        ? null
-        : '$home/.cache/homecanvas/$browser-$profile';
+    final dir = profileDir(browser, profile, keep: keep);
 
     final window = windowFor(screen, bottomGutter);
 
@@ -162,6 +166,14 @@ class KioskBrowser {
       debugPrint('KioskBrowser: could not open $url: $e');
       return null;
     }
+  }
+
+  /// Where [browser] keeps [profile], or null without a home directory.
+  static String? profileDir(String browser, String profile, {bool keep = false}) {
+    if (Platform.environment['HOME'] == null) return null;
+    return keep
+        ? '${AppPaths.profiles}/$browser-$profile'
+        : '${AppPaths.cache}/$browser-$profile';
   }
 
   /// A narrow margin at the sides and top; the interesting gap is the one

@@ -26,6 +26,8 @@ class LinkViewerScreen extends StatefulWidget {
     this.title,
     this.reader,
     this.timeout = const Duration(minutes: 5),
+    this.profile = 'article-viewer',
+    this.keepProfile = false,
   });
 
   final String url;
@@ -38,6 +40,11 @@ class LinkViewerScreen extends StatefulWidget {
   /// Closes itself eventually. A kiosk left on an article is a kiosk showing
   /// an article tomorrow morning.
   final Duration timeout;
+
+  /// The browser profile to open it in — see [KioskBrowser.open]. YouTube's
+  /// sign-in has one of its own, kept where clearing the cache cannot reach.
+  final String profile;
+  final bool keepProfile;
 
   @override
   State<LinkViewerScreen> createState() => _LinkViewerScreenState();
@@ -76,7 +83,8 @@ class _LinkViewerScreenState extends State<LinkViewerScreen> {
 
     final proc = await KioskBrowser.open(
       widget.url,
-      profile: 'article-viewer',
+      profile: widget.profile,
+      keep: widget.keepProfile,
       screen: screen,
       bottomGutter: kBrowserCloseGutter,
       chromeless: true,

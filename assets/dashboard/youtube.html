@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>YouTube sign-in</title>
+<style>
+  :root {
+    --bg: #0e1016; --panel: #171a22; --line: #262b36;
+    --text: #eef1f6; --muted: #9aa3b2; --accent: #7dd3fc; --danger: #f87171;
+    --good: #86efac;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  header {
+    padding: 16px 18px; border-bottom: 1px solid var(--line);
+    background: var(--panel); position: sticky; top: 0;
+  }
+  header h1 { margin: 0; font-size: 18px; }
+  header p { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+  main { padding: 18px; max-width: 720px; margin: 0 auto; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 12px; padding: 14px; margin-bottom: 14px;
+  }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em;
+       color: var(--muted); margin: 0 0 10px; }
+  button, textarea {
+    font: inherit; color: var(--text); background: #212734;
+    border: 1px solid var(--line); border-radius: 9px; padding: 11px 14px;
+    min-height: 44px;
+  }
+  button { cursor: pointer; }
+  button.primary { background: var(--accent); color: #06232e; border-color: transparent; font-weight: 600; }
+  button.danger { color: var(--danger); }
+  button:disabled { opacity: .5; cursor: default; }
+  textarea {
+    width: 100%; min-height: 120px; background: #0f1219; resize: vertical;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+  }
+  ol { margin: 0; padding-left: 22px; }
+  li { margin: 0 0 10px; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .note { color: var(--muted); font-size: 13px; }
+  .warn { color: var(--danger); }
+  .state { font-weight: 600; }
+  .state.on { color: var(--good); }
+  #result { min-height: 1.4em; font-size: 14px; }
+  #result.bad { color: var(--danger); }
+  #result.good { color: var(--good); }
+  input[type=file] { color: var(--muted); max-width: 100%; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Sign the panel in to YouTube</h1>
+  <p>Sign in on this computer instead of typing a password on the panel. This
+     page is served to the local network only.</p>
+</header>
+
+<main>
+  <div class="card">
+    <h2>Now</h2>
+    <div class="row">
+      <span id="state" class="state">Checking…</span>
+      <span id="how" class="note"></span>
+      <span style="flex:1"></span>
+      <button class="danger" id="signout" hidden>Sign out</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Sign in from this browser</h2>
+    <ol>
+      <li>Add the <b>Get cookies.txt LOCALLY</b> extension from your browser's
+        add-on store (Chrome, Edge, Brave or Firefox).
+        <span class="warn">Not the older "Get cookies.txt" without
+        "LOCALLY" — it was withdrawn for sending people's cookies away.</span></li>
+      <li>Open a <b>private / incognito window</b> and allow the extension to
+        run there (the browser asks, or it is in the extension's settings).</li>
+      <li>In that window, go to <b>youtube.com</b> and sign in — Premium, your
+        subscriptions, whatever the panel should have.</li>
+      <li>Still on youtube.com, open the extension and choose
+        <b>Export</b> (as <i>Netscape</i> format) to save a
+        <code>cookies.txt</code> file.</li>
+      <li><b>Close the private window without signing out.</b> Signing out
+        would cancel the cookies you just saved; closing the window leaves the
+        panel as their only user.</li>
+      <li>Choose that file below, or paste what is in it.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2>Upload</h2>
+    <div class="row">
+      <input type="file" id="file" accept=".txt,text/plain">
+    </div>
+    <p class="note">or paste it:</p>
+    <textarea id="paste" placeholder="# Netscape HTTP Cookie File&#10;.youtube.com	TRUE	/	TRUE	…"></textarea>
+    <div class="row" style="margin-top:10px">
+      <button class="primary" id="send">Sign in</button>
+      <span id="result"></span>
+    </div>
+    <p class="note">Only the youtube.com and google.com cookies are kept; the
+      rest of the file is thrown away. The panel keeps them to itself — they
+      are never shown here or sent anywhere but YouTube — and renews them as
+      YouTube asks. On a phone this works in a browser with add-ons, such as
+      Firefox for Android, if the extension is offered there; a computer is
+      easier.</p>
+  </div>
+</main>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+
+  function show(s) {
+    $('state').textContent = s.signedIn ? 'Signed in' : 'Not signed in';
+    $('state').className = 'state' + (s.signedIn ? ' on' : '');
+    $('how').textContent = s.signedIn && s.how ? '— ' + s.how : '';
+    $('signout').hidden = !s.signedIn;
+    if (!s.ready) {
+      $('how').textContent = '— install yt-dlp first, in the panel’s ' +
+          'Settings → Music → YouTube';
+    }
+  }
+
+  async function load() {
+    try {
+      const r = await fetch('/api/youtube');
+      show(await r.json());
+    } catch (_) {
+      $('state').textContent = 'Could not reach the panel';
+    }
+  }
+
+  function result(text, good) {
+    $('result').textContent = text;
+    $('result').className = good ? 'good' : 'bad';
+  }
+
+  $('send').addEventListener('click', async () => {
+    let text = $('paste').value.trim();
+    const f = $('file').files[0];
+    if (f) text = await f.text();
+    if (!text) return result('Choose the cookies.txt file, or paste it.', false);
+    $('send').disabled = true;
+    result('Checking with YouTube…', true);
+    try {
+      const r = await fetch('/api/youtube', {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: text,
+      });
+      if (r.status === 413) return result('That file is too big to be a cookies.txt.', false);
+      const s = await r.json();
+      show(s);
+      if (s.error) {
+        result(s.error, false);
+      } else {
+        result('Signed in. The YouTube tile shows your subscriptions shortly.', true);
+        $('paste').value = '';
+        $('file').value = '';
+      }
+    } catch (_) {
+      result('Could not reach the panel.', false);
+    } finally {
+      $('send').disabled = false;
+    }
+  });
+
+  $('signout').addEventListener('click', async () => {
+    if (!confirm('Sign the panel out of YouTube?')) return;
+    const r = await fetch('/api/youtube', { method: 'DELETE' });
+    show(await r.json());
+    result('Signed out.', true);
+  });
+
+  load();
+</script>
+</body>
+</html>
