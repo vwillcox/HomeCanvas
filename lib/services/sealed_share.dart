@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart' as legacy show sha256;
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
+
+import 'private_file.dart';
 
 /// End-to-end encryption for shared content.
 ///
@@ -292,18 +293,14 @@ class ShareKeys {
   }
 
   Future<void> _save() async {
-    final dir = Directory(_directory);
-    if (!await dir.exists()) await dir.create(recursive: true);
-    final file = _file;
-    await file.writeAsString(jsonEncode({
-      'current': await _current?.toJson(),
-      'previous': await _previous?.toJson(),
-    }));
-    // Private keys: readable by this account and nobody else. Best effort —
-    // it is a plain file on a Pi, and anyone with a shell here can read it.
-    try {
-      await Process.run('chmod', ['600', file.path]);
-    } catch (_) {}
+    // Private keys: readable by this account and nobody else, from before
+    // they are written. Anyone with this account's shell can still read it.
+    await writePrivateFile(
+        _file.path,
+        jsonEncode({
+          'current': await _current?.toJson(),
+          'previous': await _previous?.toJson(),
+        }));
   }
 }
 

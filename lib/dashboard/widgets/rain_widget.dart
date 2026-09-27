@@ -1,9 +1,9 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../services/rain_service.dart';
+import '../../widgets/pause_when_hidden.dart';
+import '../../widgets/rebuild_every_minute.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
@@ -20,25 +20,8 @@ class RainWidget extends StatefulWidget {
   State<RainWidget> createState() => _RainWidgetState();
 }
 
-class _RainWidgetState extends State<RainWidget> {
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    // The sentence is about "now", which moves even when the forecast does
-    // not.
-    _timer = Timer.periodic(const Duration(minutes: 1), (_) {
-      if (mounted) setState(() {});
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
+class _RainWidgetState extends State<RainWidget>
+    with PauseWhenHidden, RebuildEveryMinute {
   @override
   Widget build(BuildContext context) {
     final t = widget.w.theme;

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 import '../config/app_config.dart';
+import 'private_file.dart';
 
 /// Loads/saves [AppConfig] to ~/.config/homecanvas/config.json and notifies
 /// listeners on change. A single instance is shared app-wide.
@@ -52,19 +53,37 @@ class ConfigService extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint('ConfigService.load error: $e');
+      // Kept aside rather than overwritten by the first save of an empty
+      // config, so what was in it can still be recovered by hand.
+      try {
+        await _file.copy('${_file.path}.unreadable');
+      } catch (_) {}
     }
     notifyListeners();
   }
 
-  Future<void> save() async {
+  /// The save under way, so the next waits for it: saves are started from
+  /// all over, often without waiting, and two writing at once could finish
+  /// in either order.
+  Future<void> _saving = Future.value();
+
+  Future<void> save() {
+    // What is saved is the config as it is when this save's turn comes.
+    final done = _saving.then((_) => _write());
+    _saving = done;
+    return done.whenComplete(notifyListeners);
+  }
+
+  /// Private — it holds the Immich password and every token — and written
+  /// whole: a power cut part-way through a save used to leave half a file,
+  /// which the next start could not read, and so began again from nothing.
+  Future<void> _write() async {
     try {
-      final f = _file;
-      await f.parent.create(recursive: true);
-      await f.writeAsString(const JsonEncoder.withIndent('  ').convert(_config.toJson()));
+      await writePrivateFile(_file.path,
+          const JsonEncoder.withIndent('  ').convert(_config.toJson()));
     } catch (e) {
       debugPrint('ConfigService.save error: $e');
     }
-    notifyListeners();
   }
 
   Future<void> setConnection(String url, String key) async {

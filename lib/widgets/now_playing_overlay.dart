@@ -407,7 +407,7 @@ class _ArtworkBackdrop extends StatelessWidget {
           child: CachedNetworkImage(
             imageUrl: url!,
             fit: BoxFit.cover,
-            errorWidget: (_, __, ___) => const SizedBox.shrink(),
+            errorWidget: (_, _, _) => const SizedBox.shrink(),
           ),
         ),
         DecoratedBox(
@@ -459,7 +459,7 @@ class _Artwork extends StatelessWidget {
             : CachedNetworkImage(
                 imageUrl: url!,
                 fit: BoxFit.cover,
-                placeholder: (_, __) => ColoredBox(
+                placeholder: (_, _) => ColoredBox(
                   color: context.look.solidSurface,
                   child: Icon(
                     Icons.music_note,
@@ -467,7 +467,7 @@ class _Artwork extends StatelessWidget {
                     size: 40,
                   ),
                 ),
-                errorWidget: (_, __, ___) => ColoredBox(
+                errorWidget: (_, _, _) => ColoredBox(
                   color: context.look.solidSurface,
                   child: Icon(
                     Icons.music_note,
@@ -964,7 +964,7 @@ class _PlaylistPickerDialogState extends State<_PlaylistPickerDialog> {
                     return ListView.separated(
                       shrinkWrap: true,
                       itemCount: playlists.length,
-                      separatorBuilder: (_, __) =>
+                      separatorBuilder: (_, _) =>
                           Divider(color: context.look.wash(0.12), height: 1),
                       itemBuilder: (context, i) {
                         final p = playlists[i];

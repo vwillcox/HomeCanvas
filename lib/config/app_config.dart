@@ -331,7 +331,9 @@ class SpotifySettings {
       };
 }
 
-/// YouTube, played by the kiosk itself — see [YouTubeService].
+/// Videos played by the kiosk — see [VideoPlayerService] — and YouTube's
+/// sign-in. The picture quality and sound level apply to every site; they
+/// live here because YouTube came first.
 class YouTubeSettings {
   /// The tallest picture to ask for, in lines. 1080 decodes comfortably on a
   /// Pi 5 in software; above that it does not.
@@ -367,6 +369,20 @@ class YouTubeSettings {
         'volume': volume,
         'muted': muted,
       };
+}
+
+/// A video site other than YouTube — Floatplane, Nebula — see
+/// [VideoSite]. Only whether it is signed in: the sign-in itself is a
+/// cookie file beside the settings, not in them.
+class VideoSiteSettings {
+  bool signedIn;
+
+  VideoSiteSettings({this.signedIn = false});
+
+  factory VideoSiteSettings.fromJson(Map<String, dynamic> j) =>
+      VideoSiteSettings(signedIn: j['signedIn'] as bool? ?? false);
+
+  Map<String, dynamic> toJson() => {'signedIn': signedIn};
 }
 
 /// A phone running the android-ip-camera app, used as a wireless camera.
@@ -768,6 +784,8 @@ class AppConfig {
   TvSettings tv;
   UnifiSettings unifi;
   YouTubeSettings youtube;
+  VideoSiteSettings floatplane;
+  VideoSiteSettings nebula;
 
   /// Video player volume (0-100) and mute, remembered between videos.
   double videoVolume;
@@ -790,6 +808,8 @@ class AppConfig {
     TvSettings? tv,
     UnifiSettings? unifi,
     YouTubeSettings? youtube,
+    VideoSiteSettings? floatplane,
+    VideoSiteSettings? nebula,
     this.videoVolume = 100,
     this.videoMuted = false,
   })  : slideshow = slideshow ?? SlideshowSettings(),
@@ -803,7 +823,9 @@ class AppConfig {
         dashboard = dashboard ?? DashboardSettings(),
         tv = tv ?? TvSettings(),
         unifi = unifi ?? UnifiSettings(),
-        youtube = youtube ?? YouTubeSettings();
+        youtube = youtube ?? YouTubeSettings(),
+        floatplane = floatplane ?? VideoSiteSettings(),
+        nebula = nebula ?? VideoSiteSettings();
 
   bool get isConfigured => immichUrl.isNotEmpty && apiKey.isNotEmpty;
 
@@ -908,6 +930,12 @@ class AppConfig {
       youtube: j['youtube'] is Map<String, dynamic>
           ? YouTubeSettings.fromJson(j['youtube'] as Map<String, dynamic>)
           : YouTubeSettings(),
+      floatplane: j['floatplane'] is Map<String, dynamic>
+          ? VideoSiteSettings.fromJson(j['floatplane'] as Map<String, dynamic>)
+          : VideoSiteSettings(),
+      nebula: j['nebula'] is Map<String, dynamic>
+          ? VideoSiteSettings.fromJson(j['nebula'] as Map<String, dynamic>)
+          : VideoSiteSettings(),
       videoVolume: (j['videoVolume'] as num?)?.toDouble() ?? 100,
       videoMuted: j['videoMuted'] as bool? ?? false,
     );
@@ -930,6 +958,8 @@ class AppConfig {
         'tv': tv.toJson(),
         'unifi': unifi.toJson(),
         'youtube': youtube.toJson(),
+        'floatplane': floatplane.toJson(),
+        'nebula': nebula.toJson(),
         'videoVolume': videoVolume,
         'videoMuted': videoMuted,
       };

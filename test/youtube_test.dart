@@ -1,7 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:home_canvas/services/youtube_link.dart';
-import 'package:home_canvas/services/youtube_service.dart';
+import 'package:home_canvas/services/cookie_file.dart';
+import 'package:home_canvas/services/video_stream.dart';
+import 'package:home_canvas/services/youtube_site.dart';
+import 'package:home_canvas/services/yt_dlp.dart';
 
 void main() {
   group('YouTubeLink.parse', () {
@@ -62,9 +65,9 @@ void main() {
     });
   });
 
-  group('YouTubeStream.fromInfo', () {
+  group('VideoStream.fromInfo', () {
     test('joins separate picture and sound into one address', () {
-      final s = YouTubeStream.fromInfo({
+      final s = VideoStream.fromInfo({
         'title': 'Big Buck Bunny',
         'channel': 'Blender',
         'duration': 634.5,
@@ -88,7 +91,7 @@ void main() {
     });
 
     test('takes a single stream as it is', () {
-      final s = YouTubeStream.fromInfo({
+      final s = VideoStream.fromInfo({
         'title': 'Live',
         'uploader': 'Someone',
         'url': 'https://v.example/live.m3u8',
@@ -101,13 +104,23 @@ void main() {
     });
 
     test('gives nothing when there is nothing to play', () {
-      expect(YouTubeStream.fromInfo({'title': 'x'}), isNull);
-      expect(YouTubeStream.fromInfo({'requested_formats': [{}]}), isNull);
+      expect(VideoStream.fromInfo({'title': 'x'}), isNull);
+      expect(VideoStream.fromInfo({'requested_formats': [{}]}), isNull);
+    });
+
+    test('an empty list of formats falls back to the url', () {
+      final s = VideoStream.fromInfo({
+        'requested_formats': [],
+        'url': 'https://v.example/a.mp4',
+        'vcodec': 'hev1.2.4.L120',
+      })!;
+      expect(s.uri, 'https://v.example/a.mp4');
+      expect(s.hevc, isTrue);
     });
   });
 
   test('a feed keeps only its videos', () {
-    final items = YouTubeFeedItem.listFromInfo({
+    final items = YouTubeSite.feedFromInfo({
       'entries': [
         {'id': 'aqz-KE-bpKQ', 'title': 'Bunny', 'channel': 'Blender',
             'duration': 634},
@@ -117,29 +130,29 @@ void main() {
     });
     expect(items.map((i) => i.title), ['Bunny']);
     expect(items.single.duration, const Duration(seconds: 634));
-    expect(YouTubeFeedItem.listFromInfo({}), isEmpty);
+    expect(YouTubeSite.feedFromInfo({}), isEmpty);
   });
 
   group('yt-dlp', () {
     test('is only told about deno when it knows what that means', () {
-      expect(YouTubeService.takesJsRuntimes('2025.04.30'), isFalse);
-      expect(YouTubeService.takesJsRuntimes('2025.11.12'), isTrue);
-      expect(YouTubeService.takesJsRuntimes('2026.08.19'), isTrue);
-      expect(YouTubeService.takesJsRuntimes(null), isFalse);
+      expect(YtDlp.takesJsRuntimes('2025.04.30'), isFalse);
+      expect(YtDlp.takesJsRuntimes('2025.11.12'), isTrue);
+      expect(YtDlp.takesJsRuntimes('2026.08.19'), isTrue);
+      expect(YtDlp.takesJsRuntimes(null), isFalse);
     });
 
     test('is asked for H.264 at the most frames a second, no taller than the '
         'setting', () {
-      final args = YouTubeService.streamArgs(720);
+      final args = YtDlp.streamArgs(720);
       expect(args,
           containsAllInOrder(['-S', 'vcodec:h264,res:720,fps,acodec:m4a']));
       expect(args, contains('--no-playlist'));
     });
 
     test('uses the account only when there is one', () {
-      expect(YouTubeService.baseArgs(), isNot(contains('--cookies-from-browser')));
+      expect(YtDlp.baseArgs(), isNot(contains('--cookies-from-browser')));
       expect(
-        YouTubeService.baseArgs(
+        YtDlp.baseArgs(
             deno: '/d', account: ['--cookies-from-browser', 'firefox:/p']),
         containsAllInOrder(
             ['--js-runtimes', 'deno:/d', '--cookies-from-browser', 'firefox:/p']),
@@ -156,7 +169,7 @@ void main() {
           '.notyoutube.com\tTRUE\t/\tTRUE\t1893456000\tid\tnope\n'
           '# a comment\n'
           'garbage line\n';
-      final kept = YouTubeService.filterCookies(upload)!;
+      final kept = CookieFile.filter(upload, YouTubeSite.domains)!;
       expect(kept, contains('PREF'));
       expect(kept, contains('#HttpOnly_.youtube.com'));
       expect(kept, contains('SAPISID'));
@@ -167,38 +180,38 @@ void main() {
     });
 
     test('refuses an upload with no YouTube cookies in it', () {
-      expect(YouTubeService.filterCookies(''), isNull);
-      expect(YouTubeService.filterCookies('not a cookie file at all'), isNull);
+      expect(CookieFile.filter('', YouTubeSite.domains), isNull);
+      expect(CookieFile.filter('not a cookie file at all', YouTubeSite.domains), isNull);
       expect(
-          YouTubeService.filterCookies(
-              '.example.com\tTRUE\t/\tTRUE\t0\tid\t1\n'),
+          CookieFile.filter('.example.com\tTRUE\t/\tTRUE\t0\tid\t1\n',
+              YouTubeSite.domains),
           isNull);
     });
 
     test('knows "sign in first" from any other failure', () {
       expect(
-          YouTubeService.wantsSignIn(
+          YtDlp.wantsSignIn(
               'This feed is only available when logged in. Use '
               '--cookies-from-browser or --cookies for the authentication.'),
           isTrue);
-      expect(YouTubeService.wantsSignIn('Unable to download webpage: '
+      expect(YtDlp.wantsSignIn('Unable to download webpage: '
           'network is unreachable'), isFalse);
-      expect(YouTubeService.wantsSignIn('YouTube took too long to answer.'),
+      expect(YtDlp.wantsSignIn('YouTube took too long to answer.'),
           isFalse);
     });
 
     test('its complaints are cut down to the point', () {
       expect(
-        YouTubeService.explain('WARNING: meh\n'
+        YtDlp.explain('WARNING: meh\n'
             'ERROR: [youtube] aqz-KE-bpKQ: Video unavailable. This video is private\n'),
         'Video unavailable. This video is private',
       );
       expect(
-        YouTubeService.explain(
+        YtDlp.explain(
             'ERROR: [youtube] aqz-KE-bpKQ: Sign in to confirm your age.'),
-        contains('Signing in to YouTube in Settings'),
+        contains('Signing in, in Settings'),
       );
-      expect(YouTubeService.explain(''), 'YouTube would not play this video.');
+      expect(YtDlp.explain(''), 'That video would not play.');
     });
   });
 }

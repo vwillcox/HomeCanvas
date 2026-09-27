@@ -23,12 +23,26 @@ class ImmichService with ImmichUrls implements MediaSource {
   @override
   Map<String, String> get authHeaders => {'x-api-key': config.apiKey};
 
-  Dio _dio() => Dio(BaseOptions(
+  Dio? _client;
+  String? _clientFor;
+
+  /// One client for as long as the server and key stay the same, so its
+  /// connections are reused — a new one for every request meant a new TLS
+  /// handshake for every request, which on a Pi is most of the wait.
+  Dio _dio() {
+    final key = '$_base\n${config.apiKey}';
+    if (_client == null || _clientFor != key) {
+      _client?.close();
+      _clientFor = key;
+      _client = Dio(BaseOptions(
         baseUrl: _base,
         headers: {'x-api-key': config.apiKey, 'Accept': 'application/json'},
         connectTimeout: const Duration(seconds: 12),
         receiveTimeout: const Duration(seconds: 30),
       ));
+    }
+    return _client!;
+  }
 
   Future<bool> testConnection() async {
     try {

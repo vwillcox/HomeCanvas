@@ -1,10 +1,10 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../services/bin_schedule.dart';
 import '../../services/bins_service.dart';
+import '../../widgets/pause_when_hidden.dart';
+import '../../widgets/rebuild_every_minute.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
@@ -21,23 +21,8 @@ class BinsWidget extends StatefulWidget {
   State<BinsWidget> createState() => _BinsWidgetState();
 }
 
-class _BinsWidgetState extends State<BinsWidget> {
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    _timer = Timer.periodic(const Duration(minutes: 1), (_) {
-      if (mounted) setState(() {});
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
+class _BinsWidgetState extends State<BinsWidget>
+    with PauseWhenHidden, RebuildEveryMinute {
   static const _days = [
     'Monday',
     'Tuesday',

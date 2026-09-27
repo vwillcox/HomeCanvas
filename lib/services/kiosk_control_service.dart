@@ -49,13 +49,14 @@ class KioskState {
 ///     POST /open/<place>        photos, dashboard, settings, locked-folder
 ///     POST /camera              show or hide the camera
 ///     POST /dnd?muted=true      the notifications switch
-///     POST /youtube?url=…       play a YouTube video on the panel
+///     POST /youtube?url=…       play a YouTube, Floatplane or Nebula video
+///                               on the panel (named for the first of them)
 class KioskControlService {
   KioskControlService({
     required this.state,
     required this.run,
     required this.setDnd,
-    this.playYouTube,
+    this.playVideo,
     this.port = defaultPort,
   });
 
@@ -67,8 +68,8 @@ class KioskControlService {
   final void Function(KioskCommand) run;
   final void Function(bool muted) setDnd;
 
-  /// Plays a YouTube link; false when it is not one.
-  final bool Function(String url)? playYouTube;
+  /// Plays a video link; false when it is not one the panel can play.
+  final bool Function(String url)? playVideo;
 
   HttpServer? _server;
 
@@ -112,6 +113,13 @@ class KioskControlService {
     if (!request.connectionInfo!.remoteAddress.isLoopback) {
       return reply(HttpStatus.forbidden, {'error': 'local only'});
     }
+    // Loopback is not enough on its own: a web page open in a browser on
+    // the Pi — a news article, a shared link — can send a bare POST here
+    // too, and turn the camera on. Browsers name the page in Origin; the
+    // remote and scripts send none.
+    if (request.method == 'POST' && request.headers.value('origin') != null) {
+      return reply(HttpStatus.forbidden, {'error': 'not from a web page'});
+    }
 
     final path = request.uri.path;
     try {
@@ -141,10 +149,10 @@ class KioskControlService {
         setDnd(muted == 'true');
         return reply(HttpStatus.ok, state().toJson());
       }
-      if (path == '/youtube' && playYouTube != null) {
+      if (path == '/youtube' && playVideo != null) {
         final url = request.uri.queryParameters['url'] ?? '';
-        if (!playYouTube!(url)) {
-          return reply(HttpStatus.badRequest, {'error': 'not a YouTube link'});
+        if (!playVideo!(url)) {
+          return reply(HttpStatus.badRequest, {'error': 'not a video link'});
         }
         return reply(HttpStatus.ok, {'ok': true});
       }

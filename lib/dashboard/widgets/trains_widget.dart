@@ -7,6 +7,7 @@ import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
+import '../../time_format.dart';
 
 /// The next trains from your station, as a station board shows them: time,
 /// where to, platform, and whether it is on time, late or cancelled.
@@ -90,9 +91,6 @@ class _TrainsWidgetState extends State<TrainsWidget> {
     }
   }
 
-  static String _hm(DateTime t) =>
-      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
-
   @override
   Widget build(BuildContext context) {
     final t = widget.w.theme;
@@ -145,8 +143,8 @@ class _TrainsWidgetState extends State<TrainsWidget> {
                     ? null
                     : Text(
                         _error != null
-                            ? 'last at ${_hm(_updated!)}'
-                            : _hm(_updated!),
+                            ? 'last at ${hhmm(_updated!)}'
+                            : hhmm(_updated!),
                         style: TextStyle(
                           color: _error != null ? status.warn : t.textSecondary,
                           fontSize: 10,
@@ -183,9 +181,6 @@ class _Row extends StatelessWidget {
   final DashboardTheme theme;
   final StatusColours status;
 
-  static String _hm(DateTime t) =>
-      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
-
   @override
   Widget build(BuildContext context) {
     final (String text, Color colour) = d.cancelled
@@ -196,7 +191,7 @@ class _Row extends StatelessWidget {
         ? ('At platform', theme.accent)
         : ('On time', status.good);
     final sub = [
-      if (d.late && d.expected != null) 'expected ${_hm(d.expected!)}',
+      if (d.late && d.expected != null) 'expected ${hhmm(d.expected!)}',
       if (d.bus) 'replacement bus',
       if ((d.cancelled || d.late) && d.reason != null) d.reason!,
     ].join(' · ');
@@ -204,7 +199,7 @@ class _Row extends StatelessWidget {
     return Row(
       children: [
         Text(
-          _hm(d.scheduled),
+          hhmm(d.scheduled),
           style: TextStyle(
             color: d.cancelled ? theme.textSecondary : theme.textPrimary,
             fontSize: 22,

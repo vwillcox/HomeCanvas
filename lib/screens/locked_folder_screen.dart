@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import '../look.dart';
 import 'package:provider/provider.dart';
@@ -11,9 +14,15 @@ import 'gallery_screen.dart';
 
 /// Shows the assets in Immich's server-side Locked Folder. Assumes the session
 /// is already unlocked (navigated here after a successful PIN unlock). Re-locks
-/// when the screen is popped.
+/// when the screen is popped — and closes itself when nobody has touched the
+/// panel for [lockAfter], so a folder left open on a wall in a shared house
+/// does not stay open for whoever comes past next.
 class LockedFolderScreen extends StatefulWidget {
   const LockedFolderScreen({super.key});
+
+  /// Long enough for a video watched without touching the screen; short
+  /// enough that a folder walked away from is not open all evening.
+  static const Duration lockAfter = Duration(minutes: 10);
 
   @override
   State<LockedFolderScreen> createState() => _LockedFolderScreenState();
@@ -24,10 +33,41 @@ class _LockedFolderScreenState extends State<LockedFolderScreen> {
   List<Asset>? _assets;
   String? _error;
 
+  /// Touches anywhere count, not just on this screen: a photo or video
+  /// opened from here is a screen of its own on top.
+  DateTime _lastTouch = DateTime.now();
+  Timer? _idleCheck;
+
   @override
   void initState() {
     super.initState();
+    GestureBinding.instance.pointerRouter.addGlobalRoute(_touched);
+    _idleCheck = Timer.periodic(const Duration(seconds: 30), (_) {
+      final idle = DateTime.now().difference(_lastTouch);
+      if (idle >= LockedFolderScreen.lockAfter) {
+        _closeForIdle();
+      }
+    });
     _load();
+  }
+
+  @override
+  void dispose() {
+    GestureBinding.instance.pointerRouter.removeGlobalRoute(_touched);
+    _idleCheck?.cancel();
+    super.dispose();
+  }
+
+  void _touched(PointerEvent _) => _lastTouch = DateTime.now();
+
+  /// Back past anything opened from here, then out, which locks it again.
+  void _closeForIdle() {
+    _idleCheck?.cancel();
+    if (!mounted) return;
+    final route = ModalRoute.of(context);
+    final navigator = Navigator.of(context);
+    navigator.popUntil((r) => r == route);
+    navigator.pop();
   }
 
   Future<void> _load() async {

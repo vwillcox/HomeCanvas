@@ -21,7 +21,7 @@ import 'hue_relay.dart';
 import 'notes_service.dart';
 import 'shopping_service.dart';
 import 'timer_sounds.dart';
-import 'youtube_service.dart';
+import 'video_site.dart';
 
 /// Hosts the dashboard's web editor and the small API behind it.
 ///
@@ -76,8 +76,20 @@ class DashboardService extends ChangeNotifier {
   /// The shopping list, for its page and API. Null in tests.
   ShoppingService? shopping;
 
-  /// For signing in to YouTube from another browser. Null in tests.
-  YouTubeService? youtube;
+  /// The video sites, for signing in to them from another browser. Each is
+  /// served at its [VideoSite.id]: `/youtube`, `/api/youtube`. Empty in
+  /// tests.
+  List<VideoSite> videoSites = const [];
+
+  /// The site a sign-in page or its API is for, from its address — or null
+  /// when the address is not one of theirs.
+  VideoSite? _videoSiteAt(String path, {required bool api}) {
+    final id = (api ? _siteApiPath : _sitePagePath).firstMatch(path)?.group(1);
+    return videoSites.where((s) => s.id == id).firstOrNull;
+  }
+
+  static final _sitePagePath = RegExp(r'^/([a-z]+)/?$');
+  static final _siteApiPath = RegExp(r'^/api/([a-z]+)$');
 
   /// The panel's backlight, for the editor's slider. Null in tests.
   BrightnessService? brightness;
@@ -294,6 +306,16 @@ class DashboardService extends ChangeNotifier {
   Future<void> _handle(HttpRequest request) async {
     final path = request.uri.path;
     try {
+      // A page elsewhere that points its own domain name at this address —
+      // DNS rebinding — becomes "same origin" as far as the browser and
+      // [sameOrigin] can tell. Its name gives it away: only addresses and
+      // names that exist on a home network alone are answered.
+      if (!localHostName(request.headers.value(HttpHeaders.hostHeader))) {
+        request.response.statusCode = HttpStatus.forbidden;
+        request.response.write('Use the address the panel shows.');
+        await request.response.close();
+        return;
+      }
       // The editor is served to a browser on the same network, which is also
       // where the requests come from. No credentials are involved and nothing
       // here reaches beyond this app's own configuration.
@@ -305,9 +327,7 @@ class DashboardService extends ChangeNotifier {
         request.response.headers
           ..set('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE, OPTIONS')
           ..set('Access-Control-Allow-Headers', 'Content-Type');
-        request.response.statusCode = HttpStatus.noContent;
-        await request.response.close();
-        return;
+        return await _status(request, HttpStatus.noContent);
       }
 
       if (path == '/' || path == '/index.html') {
@@ -343,9 +363,7 @@ class DashboardService extends ChangeNotifier {
       if (path == '/api/background.jpg' && request.method == 'GET') {
         final bytes = await backgroundImage?.call().catchError((_) => null);
         if (bytes == null || bytes.isEmpty) {
-          request.response.statusCode = HttpStatus.noContent;
-          await request.response.close();
-          return;
+          return await _status(request, HttpStatus.noContent);
         }
         request.response.headers.contentType = ContentType('image', 'jpeg');
         request.response.add(bytes);
@@ -359,29 +377,26 @@ class DashboardService extends ChangeNotifier {
         return await _json(request, settings.toJson());
       }
       if (path == '/api/dashboard' && request.method == 'PUT') {
+        // Only from the editor itself: otherwise any web page open in the
+        // house could rearrange the panel.
+        if (!_fromThisSite(request)) {
+          return await _status(request, HttpStatus.forbidden);
+        }
         return await _save(request);
       }
       // The backlight: live, not part of the layout's Save, since you judge
       // it by looking at the panel as you drag.
       if (path == '/api/brightness') {
-        if (request.method == 'PUT' &&
-            !sameOrigin(request.headers.value('origin'),
-                request.headers.value(HttpHeaders.hostHeader))) {
-          request.response.statusCode = HttpStatus.forbidden;
-          await request.response.close();
-          return;
+        if (request.method == 'PUT' && !_fromThisSite(request)) {
+          return await _status(request, HttpStatus.forbidden);
         }
         return await _brightnessApi(request);
       }
       // The volumes the panel makes its own sounds at — live, like the
       // backlight, since you judge them by ear in the room.
       if (path == '/api/volume') {
-        if (request.method == 'PUT' &&
-            !sameOrigin(request.headers.value('origin'),
-                request.headers.value(HttpHeaders.hostHeader))) {
-          request.response.statusCode = HttpStatus.forbidden;
-          await request.response.close();
-          return;
+        if (request.method == 'PUT' && !_fromThisSite(request)) {
+          return await _status(request, HttpStatus.forbidden);
         }
         return await _volumeApi(request);
       }
@@ -392,11 +407,8 @@ class DashboardService extends ChangeNotifier {
       if (path == '/api/sounds' || path.startsWith('/api/sounds/')) {
         if (request.method != 'GET') {
           if (!_requireLocal(request)) return;
-          if (!sameOrigin(request.headers.value('origin'),
-              request.headers.value(HttpHeaders.hostHeader))) {
-            request.response.statusCode = HttpStatus.forbidden;
-            await request.response.close();
-            return;
+          if (!_fromThisSite(request)) {
+            return await _status(request, HttpStatus.forbidden);
           }
         }
         return await _soundsApi(request, path);
@@ -417,11 +429,8 @@ class DashboardService extends ChangeNotifier {
       }
       if (path == '/api/list') {
         if (!_requireLocal(request)) return;
-        if (!sameOrigin(request.headers.value('origin'),
-            request.headers.value(HttpHeaders.hostHeader))) {
-          request.response.statusCode = HttpStatus.forbidden;
-          await request.response.close();
-          return;
+        if (!_fromThisSite(request)) {
+          return await _status(request, HttpStatus.forbidden);
         }
         return await _listApi(request);
       }
@@ -430,34 +439,30 @@ class DashboardService extends ChangeNotifier {
         // Only from the notes page itself. The server answers every origin
         // for the editor's sake, which would otherwise let any web page open
         // on a phone in the house post onto the wall.
-        if (!sameOrigin(request.headers.value('origin'),
-            request.headers.value(HttpHeaders.hostHeader))) {
-          request.response.statusCode = HttpStatus.forbidden;
-          await request.response.close();
-          return;
+        if (!_fromThisSite(request)) {
+          return await _status(request, HttpStatus.forbidden);
         }
         return await _notesApi(request);
       }
 
-      // Signing the panel in to YouTube from a computer, by uploading the
-      // cookies of a browser signed in there. Held to the local network, as
-      // the senders are: what is uploaded is as good as a password.
-      if (path == '/youtube' || path == '/youtube/') {
+      // Signing the panel in to a video site from a computer, by uploading
+      // the cookies of a browser signed in there. Held to the local network,
+      // as the senders are: what is uploaded is as good as a password. One
+      // page serves every site, told apart by its address.
+      if (_videoSiteAt(path, api: false) != null) {
         if (!_requireLocal(request)) return;
         return await _serveAsset(
-            request, 'assets/dashboard/youtube.html', ContentType.html);
+            request, 'assets/dashboard/sign_in.html', ContentType.html);
       }
-      if (path == '/api/youtube') {
+      final signInApi = _videoSiteAt(path, api: true);
+      if (signInApi != null) {
         if (!_requireLocal(request)) return;
         // Only from the sign-in page itself, as with the notes: otherwise
         // any web page open in the house could sign the panel in or out.
-        if (!sameOrigin(request.headers.value('origin'),
-            request.headers.value(HttpHeaders.hostHeader))) {
-          request.response.statusCode = HttpStatus.forbidden;
-          await request.response.close();
-          return;
+        if (!_fromThisSite(request)) {
+          return await _status(request, HttpStatus.forbidden);
         }
-        return await _youtubeAccount(request);
+        return await _accountApi(request, signInApi);
       }
 
       // Managing who may share to the panel. Held to the local network
@@ -469,6 +474,12 @@ class DashboardService extends ChangeNotifier {
       }
       if (path == '/api/senders') {
         if (!_requireLocal(request)) return;
+        // Every method, reads included: the answer is the senders' tokens,
+        // and the server answers every origin for the editor's sake — any
+        // web page open on a phone in the house could otherwise read them.
+        if (!_fromThisSite(request)) {
+          return await _status(request, HttpStatus.forbidden);
+        }
         switch (request.method) {
           case 'GET':
             return await _json(request, {
@@ -489,8 +500,7 @@ class DashboardService extends ChangeNotifier {
         return await _serveFont(request, path.substring('/fonts/'.length));
       }
 
-      request.response.statusCode = HttpStatus.notFound;
-      await request.response.close();
+      await _status(request, HttpStatus.notFound);
     } catch (e) {
       debugPrint('Dashboard: $path failed: $e');
       try {
@@ -592,19 +602,14 @@ class DashboardService extends ChangeNotifier {
   /// a whole browser's cookies can be a few hundred.
   static const _maxCookieUpload = 2 * 1024 * 1024;
 
-  /// GET says whether the panel is signed in, POST takes a `cookies.txt` as
-  /// the body, DELETE signs out. The cookies are never sent back.
-  Future<void> _youtubeAccount(HttpRequest request) async {
-    final yt = youtube;
-    if (yt == null) {
-      request.response.statusCode = HttpStatus.serviceUnavailable;
-      await request.response.close();
-      return;
-    }
+  /// GET says whether the panel is signed in to [site], POST takes a
+  /// `cookies.txt` as the body, DELETE signs out. The cookies are never
+  /// sent back.
+  Future<void> _accountApi(HttpRequest request, VideoSite site) async {
     Future<void> status([String? error]) async => _json(request, {
-          'signedIn': yt.settings.signedIn,
-          'how': await yt.accountSource(),
-          'ready': yt.ytDlpVersion != null,
+          'signedIn': site.signedIn,
+          'how': await site.accountSource(),
+          'ready': site.ready,
           'error': ?error,
         });
 
@@ -612,39 +617,32 @@ class DashboardService extends ChangeNotifier {
       case 'GET':
         return status();
       case 'DELETE':
-        await yt.signOut();
+        await site.signOut();
         return status();
       case 'POST':
         final bytes = <int>[];
         await for (final chunk in request) {
           bytes.addAll(chunk);
           if (bytes.length > _maxCookieUpload) {
-            request.response.statusCode = HttpStatus.requestEntityTooLarge;
-            await request.response.close();
-            return;
+            return await _status(request, HttpStatus.requestEntityTooLarge);
           }
         }
         return status(
-            await yt.useCookies(utf8.decode(bytes, allowMalformed: true)));
+            await site.useCookies(utf8.decode(bytes, allowMalformed: true)));
     }
-    request.response.statusCode = HttpStatus.methodNotAllowed;
-    await request.response.close();
+    return await _status(request, HttpStatus.methodNotAllowed);
   }
 
   Future<void> _addSender(HttpRequest request) async {
-    final body = await utf8.decoder.bind(request).join();
+    final body = await _body(request);
     final data = jsonDecode(body);
     final name = (data is Map ? '${data['name'] ?? ''}' : '').trim();
     if (name.isEmpty) {
-      request.response.statusCode = HttpStatus.badRequest;
-      await request.response.close();
-      return;
+      return await _status(request, HttpStatus.badRequest);
     }
     final tokens = _config.config.shareInbox.senderTokens;
     if (tokens.any((t) => t.name.toLowerCase() == name.toLowerCase())) {
-      request.response.statusCode = HttpStatus.conflict;
-      await request.response.close();
-      return;
+      return await _status(request, HttpStatus.conflict);
     }
     final token = SenderToken(name: name, token: _newToken());
     tokens.add(token);
@@ -660,9 +658,7 @@ class DashboardService extends ChangeNotifier {
     final before = tokens.length;
     tokens.removeWhere((t) => t.name == name);
     if (tokens.length == before) {
-      request.response.statusCode = HttpStatus.notFound;
-      await request.response.close();
-      return;
+      return await _status(request, HttpStatus.notFound);
     }
     await _config.save();
     await _json(request, {'removed': name});
@@ -675,9 +671,7 @@ class DashboardService extends ChangeNotifier {
   Future<void> _serveFont(HttpRequest request, String file) async {
     final known = kDashboardFonts.any((f) => f.file == file && file.isNotEmpty);
     if (!known) {
-      request.response.statusCode = HttpStatus.notFound;
-      await request.response.close();
-      return;
+      return await _status(request, HttpStatus.notFound);
     }
     final bytes = await rootBundle.load('assets/fonts/$file');
     request.response
@@ -693,6 +687,68 @@ class DashboardService extends ChangeNotifier {
       ..write(jsonEncode(body));
     await request.response.close();
   }
+
+  /// The largest JSON body taken. A dashboard of every widget is tens of
+  /// kilobytes; anything near this is not from the editor.
+  static const _maxJsonBody = 4 * 1024 * 1024;
+
+  /// A request's body as text, refusing — with [HttpException] — to hold
+  /// more than [_maxJsonBody] of it in memory.
+  static Future<String> _body(HttpRequest request) async {
+    final bytes = BytesBuilder(copy: false);
+    await for (final chunk in request) {
+      bytes.add(chunk);
+      if (bytes.length > _maxJsonBody) {
+        throw const HttpException('request body too large');
+      }
+    }
+    return utf8.decode(bytes.takeBytes(), allowMalformed: true);
+  }
+
+  /// Name suffixes that exist only on a home network, which nobody on the
+  /// internet can register and point at this panel.
+  static const _localSuffixes = [
+    '.local',
+    '.lan',
+    '.home',
+    '.internal',
+    '.home.arpa',
+    '.localdomain',
+  ];
+
+  /// Whether a request's Host is this panel as someone on the home network
+  /// would name it: an address, `localhost`, a bare machine name, or a
+  /// name under one of [_localSuffixes]. A public domain name here means
+  /// the page came from that domain's owner, whatever address it reached.
+  @visibleForTesting
+  static bool localHostName(String? host) {
+    if (host == null || host.isEmpty) return false;
+    var name = host.toLowerCase();
+    // An IPv6 address in brackets, with or without a port.
+    if (name.startsWith('[')) {
+      final end = name.indexOf(']');
+      return end > 0 && InternetAddress.tryParse(name.substring(1, end)) != null;
+    }
+    final colon = name.lastIndexOf(':');
+    if (colon >= 0) name = name.substring(0, colon);
+    if (name.endsWith('.')) name = name.substring(0, name.length - 1);
+    if (name.isEmpty) return false;
+    if (InternetAddress.tryParse(name) != null) return true;
+    if (!name.contains('.')) return true;
+    return _localSuffixes.any(name.endsWith);
+  }
+
+  /// Answers [request] with [code] and nothing else.
+  static Future<void> _status(HttpRequest request, int code) async {
+    request.response.statusCode = code;
+    await request.response.close();
+  }
+
+  /// Whether [request] came from one of this server's own pages, or from
+  /// no web page at all — see [sameOrigin].
+  static bool _fromThisSite(HttpRequest request) => sameOrigin(
+      request.headers.value('origin'),
+      request.headers.value(HttpHeaders.hostHeader));
 
   /// Whether a request's Origin, if it sent one, is this server. No Origin
   /// means it did not come from a web page at all — curl, or a same-origin
@@ -711,29 +767,23 @@ class DashboardService extends ChangeNotifier {
   Future<void> _listApi(HttpRequest request) async {
     final list = shopping;
     if (list == null) {
-      request.response.statusCode = HttpStatus.serviceUnavailable;
-      await request.response.close();
-      return;
+      return await _status(request, HttpStatus.serviceUnavailable);
     }
     switch (request.method) {
       case 'POST':
-        final body = await utf8.decoder.bind(request).join();
+        final body = await _body(request);
         final data = body.isEmpty ? null : jsonDecode(body);
         if (data is Map && data['toggle'] != null) {
           list.toggle('${data['toggle']}');
         } else if (data is! Map || list.add('${data['text'] ?? ''}') == null) {
-          request.response.statusCode = HttpStatus.badRequest;
-          await request.response.close();
-          return;
+          return await _status(request, HttpStatus.badRequest);
         }
       case 'DELETE':
         list.remove(request.uri.queryParameters['id'] ?? '');
       case 'GET':
         break;
       default:
-        request.response.statusCode = HttpStatus.methodNotAllowed;
-        await request.response.close();
-        return;
+        return await _status(request, HttpStatus.methodNotAllowed);
     }
     await _json(request, {
       'items': [for (final i in list.items) i.toJson()],
@@ -743,30 +793,24 @@ class DashboardService extends ChangeNotifier {
   Future<void> _notesApi(HttpRequest request) async {
     final board = notes;
     if (board == null) {
-      request.response.statusCode = HttpStatus.serviceUnavailable;
-      await request.response.close();
-      return;
+      return await _status(request, HttpStatus.serviceUnavailable);
     }
     switch (request.method) {
       case 'POST':
-        final body = await utf8.decoder.bind(request).join();
+        final body = await _body(request);
         final data = body.isEmpty ? null : jsonDecode(body);
         final text = data is Map ? '${data['text'] ?? ''}' : '';
         final from = data is Map ? '${data['from'] ?? ''}' : '';
         if (board.add(text, from: from.length > 40 ? from.substring(0, 40) : from) ==
             null) {
-          request.response.statusCode = HttpStatus.badRequest;
-          await request.response.close();
-          return;
+          return await _status(request, HttpStatus.badRequest);
         }
       case 'DELETE':
         board.remove(request.uri.queryParameters['id'] ?? '');
       case 'GET':
         break;
       default:
-        request.response.statusCode = HttpStatus.methodNotAllowed;
-        await request.response.close();
-        return;
+        return await _status(request, HttpStatus.methodNotAllowed);
     }
     await _json(request, {
       'notes': [for (final n in board.notes) n.toJson()],
@@ -783,17 +827,13 @@ class DashboardService extends ChangeNotifier {
   ///      "tileShadows": true, "width": 620, "height": 380}
   Future<void> _render(HttpRequest request) async {
     final render = renderTile;
-    final body = await utf8.decoder.bind(request).join();
+    final body = await _body(request);
     final data = jsonDecode(body);
     if (data is! Map<String, dynamic> || data['widget'] is! Map) {
-      request.response.statusCode = HttpStatus.badRequest;
-      await request.response.close();
-      return;
+      return await _status(request, HttpStatus.badRequest);
     }
     if (render == null) {
-      request.response.statusCode = HttpStatus.serviceUnavailable;
-      await request.response.close();
-      return;
+      return await _status(request, HttpStatus.serviceUnavailable);
     }
     double dimension(Object? v, double max) =>
         (v is num ? v.toDouble() : 0).clamp(16, max).toDouble();
@@ -817,9 +857,7 @@ class DashboardService extends ChangeNotifier {
       size: size,
     ));
     if (png == null) {
-      request.response.statusCode = HttpStatus.serviceUnavailable;
-      await request.response.close();
-      return;
+      return await _status(request, HttpStatus.serviceUnavailable);
     }
     request.response.headers.contentType = ContentType('image', 'png');
     request.response.add(png);
@@ -829,23 +867,17 @@ class DashboardService extends ChangeNotifier {
   Future<void> _brightnessApi(HttpRequest request) async {
     final light = brightness;
     if (light == null) {
-      request.response.statusCode = HttpStatus.serviceUnavailable;
-      await request.response.close();
-      return;
+      return await _status(request, HttpStatus.serviceUnavailable);
     }
     if (request.method == 'PUT') {
-      final data = jsonDecode(await utf8.decoder.bind(request).join());
+      final data = jsonDecode(await _body(request));
       final v = data is Map ? data['value'] : null;
       if (v is! num) {
-        request.response.statusCode = HttpStatus.badRequest;
-        await request.response.close();
-        return;
+        return await _status(request, HttpStatus.badRequest);
       }
       light.set(v);
     } else if (request.method != 'GET') {
-      request.response.statusCode = HttpStatus.methodNotAllowed;
-      await request.response.close();
-      return;
+      return await _status(request, HttpStatus.methodNotAllowed);
     }
     return await _json(request, {
       'value': light.level,
@@ -860,11 +892,9 @@ class DashboardService extends ChangeNotifier {
   Future<void> _volumeApi(HttpRequest request) async {
     final inbox = _config.config.shareInbox;
     if (request.method == 'PUT') {
-      final data = jsonDecode(await utf8.decoder.bind(request).join());
+      final data = jsonDecode(await _body(request));
       if (data is! Map) {
-        request.response.statusCode = HttpStatus.badRequest;
-        await request.response.close();
-        return;
+        return await _status(request, HttpStatus.badRequest);
       }
       double? level(String key) {
         final v = data[key];
@@ -879,9 +909,7 @@ class DashboardService extends ChangeNotifier {
       if (data['dnd'] is bool) inbox.dndMuted = data['dnd'] as bool;
       await _config.save();
     } else if (request.method != 'GET') {
-      request.response.statusCode = HttpStatus.methodNotAllowed;
-      await request.response.close();
-      return;
+      return await _status(request, HttpStatus.methodNotAllowed);
     }
     return await _json(request, {
       'notification': inbox.notificationVolume.round(),
@@ -893,12 +921,10 @@ class DashboardService extends ChangeNotifier {
   }
 
   Future<void> _save(HttpRequest request) async {
-    final body = await utf8.decoder.bind(request).join();
+    final body = await _body(request);
     final data = jsonDecode(body);
     if (data is! Map<String, dynamic>) {
-      request.response.statusCode = HttpStatus.badRequest;
-      await request.response.close();
-      return;
+      return await _status(request, HttpStatus.badRequest);
     }
 
     final incoming = DashboardSettings.fromJson(data);
@@ -972,9 +998,7 @@ class DashboardService extends ChangeNotifier {
   Future<void> _soundsApi(HttpRequest request, String path) async {
     final sounds = timerSounds;
     if (sounds == null) {
-      request.response.statusCode = HttpStatus.serviceUnavailable;
-      await request.response.close();
-      return;
+      return await _status(request, HttpStatus.serviceUnavailable);
     }
     final id = request.uri.queryParameters['id'] ?? '';
 
@@ -982,9 +1006,7 @@ class DashboardService extends ChangeNotifier {
     if (path == '/api/sounds/file' && request.method == 'GET') {
       final bytes = await sounds.bytes(id);
       if (bytes == null) {
-        request.response.statusCode = HttpStatus.notFound;
-        await request.response.close();
-        return;
+        return await _status(request, HttpStatus.notFound);
       }
       final ext = id.toLowerCase();
       request.response.headers.contentType = ext.endsWith('.mp3')
@@ -1005,9 +1027,7 @@ class DashboardService extends ChangeNotifier {
       return await _json(request, {'playing': id});
     }
     if (path != '/api/sounds') {
-      request.response.statusCode = HttpStatus.notFound;
-      await request.response.close();
-      return;
+      return await _status(request, HttpStatus.notFound);
     }
 
     switch (request.method) {
@@ -1041,14 +1061,11 @@ class DashboardService extends ChangeNotifier {
         }
       case 'DELETE':
         if (!await sounds.delete(id)) {
-          request.response.statusCode = HttpStatus.notFound;
-          await request.response.close();
-          return;
+          return await _status(request, HttpStatus.notFound);
         }
         return await _json(request, {'choices': await sounds.choices()});
     }
-    request.response.statusCode = HttpStatus.methodNotAllowed;
-    await request.response.close();
+    return await _status(request, HttpStatus.methodNotAllowed);
   }
 
   Future<Map<String, String>> _albumChoices() async {

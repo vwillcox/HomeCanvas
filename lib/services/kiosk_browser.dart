@@ -4,6 +4,7 @@ import 'dart:ui' show Size;
 import 'package:flutter/foundation.dart';
 
 import '../app_paths.dart';
+import 'programs.dart';
 
 /// Opens web pages in a real browser window on the kiosk's screen.
 ///
@@ -58,14 +59,9 @@ class KioskBrowser {
     if (_looked) return _cached;
     _looked = true;
     for (final candidate in ['firefox', 'chromium']) {
-      try {
-        final found = await Process.run('which', [candidate]);
-        if (found.exitCode == 0) {
-          _cached = candidate;
-          break;
-        }
-      } catch (_) {
-        // `which` itself missing is not worth failing over; try the next.
+      if (await findOnPath(candidate) != null) {
+        _cached = candidate;
+        break;
       }
     }
     debugPrint('KioskBrowser: using ${_cached ?? "no browser"}');
@@ -105,6 +101,14 @@ class KioskBrowser {
     ReaderStyle? reader,
     bool keep = false,
   }) async {
+    // Web pages only. What arrives here comes from news feeds and shares,
+    // and is handed to the browser as a command-line argument: a "link" of
+    // `--some-flag` would be taken as an option, and `file://` would put
+    // the panel's own files — its config, with every password — on screen.
+    if (!isWebAddress(url)) {
+      debugPrint('KioskBrowser: not a web address, not opening: $url');
+      return null;
+    }
     final browser = await resolve();
     if (browser == null) {
       debugPrint('KioskBrowser: no browser installed, cannot open $url');
@@ -166,6 +170,28 @@ class KioskBrowser {
       debugPrint('KioskBrowser: could not open $url: $e');
       return null;
     }
+  }
+
+  /// Whether [url] is an http or https address with a host.
+  @visibleForTesting
+  static bool isWebAddress(String url) {
+    final uri = Uri.tryParse(url.trim());
+    return uri != null &&
+        (uri.scheme == 'http' || uri.scheme == 'https') &&
+        uri.host.isNotEmpty &&
+        !url.trimLeft().startsWith('-');
+  }
+
+  /// The kiosk's own window, as the compositor knows it.
+  static const String kioskAppId = 'info.talktech.homecanvas';
+
+  /// Brings the kiosk's window back to the front, after a browser window
+  /// has been closed. Quietly nothing without wlrctl: the browser going is
+  /// enough to get back by touch.
+  static Future<void> focusKiosk() async {
+    try {
+      await Process.run('wlrctl', ['toplevel', 'focus', 'app_id:$kioskAppId']);
+    } catch (_) {}
   }
 
   /// Where [browser] keeps [profile], or null without a home directory.

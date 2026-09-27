@@ -14,6 +14,7 @@ import '../widgets/glass.dart';
 import '../widgets/remote_image.dart';
 import 'gallery_screen.dart';
 import 'slideshow_screen.dart';
+import '../time_format.dart';
 
 class AlbumScreen extends StatefulWidget {
   final Album album;
@@ -143,7 +144,7 @@ class _AlbumScreenState extends State<AlbumScreen> {
             : [
                 if (photos > 0) plural(photos, 'photo'),
                 if (videos > 0) plural(videos, 'video'),
-                if (dateSpan(assets) case final span?) span,
+                ?dateSpan(assets),
               ].join('  ·  '),
         padding: const EdgeInsets.fromLTRB(28, 20, 40, 16),
         trailing: assets != null && assets.any((a) => a.isImage)
@@ -356,13 +357,6 @@ class _AssetTile extends StatelessWidget {
     required this.onTap,
   });
 
-  String _dur(Duration d) {
-    String two(int n) => n.toString().padLeft(2, '0');
-    final m = d.inMinutes.remainder(60);
-    final s = d.inSeconds.remainder(60);
-    return '${d.inHours > 0 ? '${d.inHours}:' : ''}${two(m)}:${two(s)}';
-  }
-
   @override
   Widget build(BuildContext context) {
     return PressScale(
@@ -403,7 +397,7 @@ class _AssetTile extends StatelessWidget {
                         if (asset.duration != null) ...[
                           const SizedBox(width: 3),
                           Text(
-                            _dur(asset.duration!),
+                            playTime(asset.duration!),
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 14,

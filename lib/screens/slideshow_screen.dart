@@ -455,7 +455,7 @@ class _SlideImageState extends State<_SlideImage>
                 width: double.infinity,
                 height: double.infinity,
                 gaplessPlayback: true,
-                errorBuilder: (_, __, ___) => const ColoredBox(color: Colors.black),
+                errorBuilder: (_, _, _) => const ColoredBox(color: Colors.black),
               ),
             ),
           ),

@@ -211,7 +211,12 @@ class TtsService {
       '${Directory.systemTemp.path}/kiosk-tts-${DateTime.now().microsecondsSinceEpoch}.wav',
     );
     final pace = speed.clamp(0.5, 2.0);
-    final piper = await Process.start(_binary, [
+    // At the lowest priority: the reader makes the next paragraph while
+    // this one is being said, and piper takes every core it can get. The
+    // sound playing, and the panel itself, come first.
+    final piper = await Process.start('nice', [
+      '-n', '19',
+      _binary,
       '--model', model,
       '--output_file', wav.path,
       if (pace != 1) ...['--length_scale', (1 / pace).toStringAsFixed(3)],

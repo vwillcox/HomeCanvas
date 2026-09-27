@@ -8,6 +8,7 @@ import '../../services/notes_service.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
+import '../../time_format.dart';
 
 /// Sticky notes for the household, sent from a phone.
 ///
@@ -49,7 +50,7 @@ class _NotesWidgetState extends State<NotesWidget> {
     if (d.inMinutes < 1) return 'just now';
     if (d.inHours < 1) return '${d.inMinutes} min ago';
     if (d.inDays < 1) {
-      return '${at.hour.toString().padLeft(2, '0')}:${at.minute.toString().padLeft(2, '0')}';
+      return hhmm(at);
     }
     if (d.inDays == 1) return 'yesterday';
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];

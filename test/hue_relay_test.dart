@@ -28,6 +28,10 @@ void main() {
       '/api/background.jpg',
       '/youtube',
       '/api/youtube',
+      '/floatplane',
+      '/api/floatplane',
+      '/nebula',
+      '/api/nebula',
       '/fonts/Inter.ttf',
     ]) {
       expect(HueRelay.handles(own), isFalse, reason: own);

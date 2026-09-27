@@ -8,6 +8,7 @@ import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
+import '../../time_format.dart';
 
 /// How clean the grid's electricity is now, the next day as bars, and the
 /// greenest three hours to run the washing machine or the dishwasher.
@@ -57,9 +58,6 @@ class _CarbonWidgetState extends State<CarbonWidget> {
     _timer?.cancel();
     super.dispose();
   }
-
-  static String _hm(DateTime t) =>
-      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
   @override
   Widget build(BuildContext context) {
@@ -184,7 +182,7 @@ class _CarbonWidgetState extends State<CarbonWidget> {
                   TextSpan(
                     children: [
                       TextSpan(
-                        text: 'Greenest ${_hm(best.from)}–${_hm(best.to)}',
+                        text: 'Greenest ${hhmm(best.from)}–${hhmm(best.to)}',
                         style: TextStyle(
                           color: status.good,
                           fontSize: 12,

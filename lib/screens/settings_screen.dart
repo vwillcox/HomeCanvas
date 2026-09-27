@@ -21,8 +21,13 @@ import '../services/now_playing_service.dart';
 import '../services/screen_idle_service.dart';
 import '../services/share_inbox_service.dart';
 import '../services/spotify_service.dart';
-import '../services/youtube_service.dart';
-import 'youtube_sign_in.dart';
+import '../services/floatplane_site.dart';
+import '../services/nebula_site.dart';
+import '../services/video_player_service.dart';
+import '../services/video_site.dart';
+import '../services/youtube_site.dart';
+import '../services/yt_dlp.dart';
+import 'video_sign_in.dart';
 import '../services/tv_service.dart';
 import '../services/weather_service.dart';
 import '../widgets/weather_overlay.dart';
@@ -127,8 +132,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [const _SpotifySettingsTile()],
           ),
           GlassSection(
-            title: 'YouTube',
-            children: [const _YouTubeSettingsTile()],
+            title: 'Videos',
+            children: [
+              const _VideoPlayerTile(),
+              _SiteSignInTile<YouTubeSite>(
+                icon: Icons.smart_display,
+                colour: const Color(0xFFFF0033),
+                signedInText: 'Signed in — Premium, your subscriptions and '
+                    'members-only videos',
+              ),
+              _SiteSignInTile<FloatplaneSite>(
+                icon: Icons.live_tv,
+                colour: const Color(0xFF00AFEC),
+                signedInText:
+                    'Signed in — your creators’ latest videos on the dashboard',
+              ),
+              _SiteSignInTile<NebulaSite>(
+                icon: Icons.auto_awesome,
+                colour: const Color(0xFF6C7CFF),
+                signedInText: 'Signed in — the creators you follow on the '
+                    'dashboard',
+              ),
+            ],
           ),
         ];
       case 2: // Home
@@ -987,46 +1012,42 @@ class _HomeAssistantSettingsTile extends StatelessWidget {
   }
 }
 
-/// YouTube, played by the kiosk: the yt-dlp it needs, the account, and how
-/// sharp a picture to ask for. See [YouTubeService].
-class _YouTubeSettingsTile extends StatelessWidget {
-  const _YouTubeSettingsTile();
+/// What every video site needs: yt-dlp, which finds the stream, and how
+/// sharp a picture to ask for. See [VideoPlayerService].
+class _VideoPlayerTile extends StatelessWidget {
+  const _VideoPlayerTile();
 
   @override
   Widget build(BuildContext context) {
-    final yt = context.watch<YouTubeService>();
+    final ytDlp = context.watch<YtDlp>();
     return ListTile(
-      leading: Icon(
-        Icons.smart_display,
-        color: yt.settings.signedIn ? const Color(0xFFFF0033) : null,
-      ),
-      title: const Text('YouTube'),
-      subtitle: Text(
-        yt.ytDlpVersion == null
-            ? 'Not set up — needs yt-dlp to play videos here'
-            : yt.settings.signedIn
-                ? 'Signed in — Premium, subscriptions and members-only videos'
-                : 'Ready — not signed in',
-      ),
+      leading: const Icon(Icons.play_circle_outline),
+      title: const Text('Video player'),
+      subtitle: Text(ytDlp.installing
+          ? ytDlp.status ?? 'Installing…'
+          : ytDlp.status ??
+              (ytDlp.ready
+                  ? 'yt-dlp ${ytDlp.version}, updated daily — '
+                      'YouTube, Floatplane and Nebula play here'
+                  : 'Not set up — needs yt-dlp to play videos here')),
       trailing: const Icon(Icons.chevron_right),
       onTap: () => showDialog<void>(
         context: context,
-        builder: (_) => const _YouTubeDialog(),
+        builder: (_) => const _VideoPlayerDialog(),
       ),
     );
   }
 }
 
-class _YouTubeDialog extends StatelessWidget {
-  const _YouTubeDialog();
+class _VideoPlayerDialog extends StatelessWidget {
+  const _VideoPlayerDialog();
 
   @override
   Widget build(BuildContext context) {
-    final yt = context.watch<YouTubeService>();
-    final s = yt.settings;
-    final version = yt.ytDlpVersion;
+    final ytDlp = context.watch<YtDlp>();
+    final player = context.watch<VideoPlayerService>();
     return AlertDialog(
-      title: const Text('YouTube'),
+      title: const Text('Video player'),
       content: SizedBox(
         width: 620,
         child: SingleChildScrollView(
@@ -1044,59 +1065,24 @@ class _YouTubeDialog extends StatelessWidget {
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.download),
                 title: const Text('yt-dlp'),
-                subtitle: Text(yt.installing
-                    ? yt.toolStatus ?? 'Installing…'
-                    : yt.toolStatus ??
-                        (version == null
-                            ? 'Not installed. It fetches the video from '
-                                'YouTube; kept up to date automatically once '
-                                'installed.'
-                            : 'Version $version — updated daily')),
-                trailing: yt.installing
+                subtitle: Text(ytDlp.installing
+                    ? ytDlp.status ?? 'Installing…'
+                    : ytDlp.status ??
+                        (ytDlp.ready
+                            ? 'Version ${ytDlp.version} — updated daily'
+                            : 'Not installed. It fetches the video from the '
+                                'site; kept up to date automatically once '
+                                'installed.')),
+                trailing: ytDlp.installing
                     ? const SizedBox(
                         width: 28,
                         height: 28,
                         child: CircularProgressIndicator(strokeWidth: 3))
                     : FilledButton.tonal(
-                        onPressed: yt.install,
-                        child: Text(version == null ? 'Install' : 'Reinstall'),
+                        onPressed: ytDlp.install,
+                        child: Text(ytDlp.ready ? 'Reinstall' : 'Install'),
                       ),
               ),
-              const Divider(),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.account_circle),
-                title: Text(s.signedIn ? 'Signed in' : 'Not signed in'),
-                subtitle: const Text(
-                  'Optional. Signing in lets Premium, members-only and '
-                  'age-restricted videos play, and puts your subscriptions on '
-                  'the dashboard. You sign in on Google’s own page; the '
-                  'panel never sees your password.',
-                ),
-                isThreeLine: true,
-                trailing: s.signedIn
-                    ? OutlinedButton(
-                        onPressed: yt.signOut,
-                        child: const Text('Sign out'),
-                      )
-                    : FilledButton(
-                        onPressed: version == null
-                            ? null
-                            : () => signInToYouTube(context),
-                        child: const Text('Sign in'),
-                      ),
-              ),
-              if (!s.signedIn)
-                Padding(
-                  padding: const EdgeInsets.only(left: 40, bottom: 8),
-                  child: Text(
-                    'Rather not type a password here? Sign in on a computer '
-                    'instead: open '
-                    '${context.read<DashboardService>().editorAddress}/youtube '
-                    'in its browser.',
-                    style: const TextStyle(fontSize: 14),
-                  ),
-                ),
               const Divider(),
               const SizedBox(height: 8),
               const Text('Picture quality'),
@@ -1106,8 +1092,8 @@ class _YouTubeDialog extends StatelessWidget {
                   ButtonSegment(value: 720, label: Text('720p')),
                   ButtonSegment(value: 1080, label: Text('1080p')),
                 ],
-                selected: {s.maxHeight <= 720 ? 720 : 1080},
-                onSelectionChanged: (v) => yt.setMaxHeight(v.first),
+                selected: {player.settings.maxHeight <= 720 ? 720 : 1080},
+                onSelectionChanged: (v) => player.setMaxHeight(v.first),
               ),
               const SizedBox(height: 6),
               const Text(
@@ -1125,6 +1111,48 @@ class _YouTubeDialog extends StatelessWidget {
           child: const Text('Done'),
         ),
       ],
+    );
+  }
+}
+
+/// Signing in to one video site — YouTube, Floatplane, Nebula — whose
+/// dashboard tile shows its latest videos. [T] is the site.
+class _SiteSignInTile<T extends VideoSite> extends StatelessWidget {
+  const _SiteSignInTile({
+    required this.icon,
+    required this.colour,
+    required this.signedInText,
+  });
+
+  final IconData icon;
+  final Color colour;
+  final String signedInText;
+
+  @override
+  Widget build(BuildContext context) {
+    final site = context.watch<T>();
+    final address = context.read<DashboardService>().editorAddress;
+    return ListTile(
+      leading: Icon(icon, color: site.signedIn ? colour : null),
+      title: Text(site.name),
+      subtitle: Text(site.signedIn
+          ? signedInText
+          : !site.ready
+              ? 'Needs yt-dlp — install it under Video player, above'
+              : 'Not signed in. Sign in here, or — rather than typing a '
+                  'password on the panel — on a computer at '
+                  '$address/${site.id}'),
+      isThreeLine: !site.signedIn,
+      trailing: site.signedIn
+          ? OutlinedButton(
+              onPressed: site.signOut,
+              child: const Text('Sign out'),
+            )
+          : FilledButton(
+              onPressed:
+                  site.ready ? () => signInOnPanel(context, site) : null,
+              child: const Text('Sign in'),
+            ),
     );
   }
 }
@@ -1183,6 +1211,12 @@ class _SpotifyDialogState extends State<_SpotifyDialog> {
   );
   bool _connecting = false;
   String? _error;
+
+  @override
+  void dispose() {
+    _clientId.dispose();
+    super.dispose();
+  }
 
   Future<void> _connect() async {
     final id = _clientId.text.trim();

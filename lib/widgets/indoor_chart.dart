@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../look.dart';
 
 import '../services/indoor_sensor_service.dart';
+import '../time_format.dart';
 
 /// Line chart of recent indoor readings. Drawn with a CustomPainter so the
 /// project doesn't take on a charting dependency for one graph.
@@ -133,9 +134,9 @@ class _ChartPainter extends CustomPainter {
     canvas.restore();
 
     // Time labels at each end.
-    _text(canvas, _clock(readings.first.time),
+    _text(canvas, hhmm(readings.first.time),
         Offset(plot.left, plot.bottom + 6), labelStyle);
-    final endLabel = _clock(readings.last.time);
+    final endLabel = hhmm(readings.last.time);
     _text(canvas, endLabel,
         Offset(plot.right - endLabel.length * 8.0, plot.bottom + 6), labelStyle);
   }
@@ -179,9 +180,6 @@ class _ChartPainter extends CustomPainter {
         ..strokeCap = StrokeCap.round,
     );
   }
-
-  String _clock(DateTime t) =>
-      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
   void _text(Canvas canvas, String s, Offset at, TextStyle style) {
     final tp = TextPainter(

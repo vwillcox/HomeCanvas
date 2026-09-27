@@ -85,7 +85,31 @@ class ShareInboxService extends ChangeNotifier {
     await keys.load();
     _keysReady = true;
     await _extractChimeAsset();
+    // The queue is not kept across a restart, so any file still here belongs
+    // to a share nobody can open any more.
+    await clearFolder(_sharedDir);
     await _bind();
+  }
+
+  /// Where shared photos and videos are kept until they have been seen.
+  static Directory get _sharedDir =>
+      Directory(p.join(HomeCanvasCache.root, 'shared'));
+
+  /// Empties [dir] of files, leaving the folder.
+  @visibleForTesting
+  static Future<void> clearFolder(Directory dir) async {
+    try {
+      if (!await dir.exists()) return;
+      await for (final e in dir.list()) {
+        if (e is File) {
+          try {
+            await e.delete();
+          } catch (_) {}
+        }
+      }
+    } catch (e) {
+      debugPrint('ShareInbox: could not clear ${dir.path}: $e');
+    }
   }
 
   /// Call after Settings saves a change — rebinds if the port changed.
@@ -208,10 +232,25 @@ class ShareInboxService extends ChangeNotifier {
     final auth = request.headers.value(HttpHeaders.authorizationHeader) ?? '';
     if (!auth.startsWith('Bearer ')) return null;
     final token = auth.substring(7);
+    String? found;
+    // Every token compared in full, whichever matches: how long a refusal
+    // takes then says nothing about how close a guess came — this port is
+    // meant to be reachable from outside the house.
     for (final t in _settings.senderTokens) {
-      if (t.token == token) return t.name;
+      if (sameSecret(t.token, token)) found ??= t.name;
     }
-    return null;
+    return found;
+  }
+
+  /// [a] == [b], in a time that depends on their lengths alone.
+  @visibleForTesting
+  static bool sameSecret(String a, String b) {
+    final x = utf8.encode(a), y = utf8.encode(b);
+    var diff = x.length ^ y.length;
+    for (var i = 0; i < x.length; i++) {
+      diff |= x[i] ^ (i < y.length ? y[i] : 0);
+    }
+    return diff == 0;
   }
 
   /// Opens a sealed body and hands the plaintext to the ordinary handlers.
@@ -300,7 +339,7 @@ class ShareInboxService extends ChangeNotifier {
       await request.response.close();
       return;
     }
-    final dir = Directory(p.join(HomeCanvasCache.root, 'shared'));
+    final dir = _sharedDir;
     await dir.create(recursive: true);
     final path = p.join(
         dir.path, '${DateTime.now().microsecondsSinceEpoch}${_extForMime(mime)}');
@@ -426,10 +465,30 @@ class ShareInboxService extends ChangeNotifier {
     }
   }
 
-  /// Called once the popup has shown (or the user dismissed) [current].
+  /// Takes [current] off the queue, as it is opened. Its file stays until
+  /// [discard] once it has been looked at.
   void dequeue() {
     if (_queue.isNotEmpty) _queue.removeAt(0);
     notifyListeners();
+  }
+
+  /// Turns [current] away unopened, and its file with it: there is no way
+  /// back to a share once its card has gone.
+  void dismiss() {
+    final item = current;
+    dequeue();
+    if (item != null) unawaited(discard(item));
+  }
+
+  /// Deletes [item]'s photo or video, once it has been seen. Shares are
+  /// shown once, not kept, and without this every one ever sent stayed on
+  /// the disk.
+  Future<void> discard(SharedItem item) async {
+    final path = item.localPath;
+    if (path == null) return;
+    try {
+      await File(path).delete();
+    } catch (_) {}
   }
 
   @override

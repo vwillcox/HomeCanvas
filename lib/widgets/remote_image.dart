@@ -77,8 +77,8 @@ class _RemoteImageState extends State<RemoteImage> {
       cacheManager: HomeCanvasCache.manager,
       fit: widget.fit,
       fadeInDuration: const Duration(milliseconds: 200),
-      placeholder: (_, __) => const _Placeholder(loading: true),
-      errorWidget: (_, __, ___) {
+      placeholder: (_, _) => const _Placeholder(loading: true),
+      errorWidget: (_, _, _) {
         _onError();
         // While retrying, keep showing a loading shimmer rather than a broken
         // icon; only show the broken icon once we've truly given up.
