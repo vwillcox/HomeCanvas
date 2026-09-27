@@ -29,6 +29,7 @@ import struct
 import subprocess
 import threading
 import time
+import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
@@ -38,6 +39,12 @@ LISTEN = ("127.0.0.1", 8765)
 # why the screen did or didn't come back means catching it live. Routine state
 # polling is not logged; Home Assistant does that every 30 seconds.
 LOG = os.path.expanduser("~/.cache/homecanvas/screen_control.log")
+
+# The kiosk's own control endpoint, told whenever the screen goes dark or
+# lights up, so it can stop drawing and polling for a screen nobody can see.
+KIOSK_SCREEN = "http://127.0.0.1:8766/screen?lit="
+_announced = None
+_announce_lock = threading.Lock()
 _log_lock = threading.Lock()
 
 
@@ -150,7 +157,34 @@ def set_brightness(percent):
     value = max(1, round(percent * maximum / 100)) if percent else 0
     with open(path + "brightness", "w") as f:
         f.write(str(value))
-    return brightness()
+    level = brightness()
+    announce(level)
+    return level
+
+
+def announce(level):
+    """Tells the kiosk whether the screen is lit, when that has changed.
+
+    In the background, and quietly nothing when the kiosk is not running:
+    it reads the backlight itself as it starts, and every so often after.
+    """
+    global _announced
+    lit = level is None or level > 0
+    with _announce_lock:
+        if lit == _announced:
+            return
+        _announced = lit
+
+    def send():
+        try:
+            request = urllib.request.Request(
+                KIOSK_SCREEN + ("true" if lit else "false"), method="POST"
+            )
+            urllib.request.urlopen(request, timeout=2).close()
+        except OSError:
+            pass
+
+    threading.Thread(target=send, daemon=True).start()
 
 
 def state():
@@ -382,6 +416,9 @@ class Waker:
         if now - self._checked < self.RECHECK:
             return
         level = brightness()
+        # A change made behind this service's back — straight to sysfs —
+        # is passed on to the kiosk as well.
+        announce(level)
         with self._lock:
             self._checked = now
             if level is not None and not self.touch.waking:
@@ -417,10 +454,14 @@ class Waker:
             self._resync(now)
             with self._lock:
                 self._set_grab(opened, self.touch.want_grab(now))
-            # Short while anything is changing hands, so a lift is acted on
-            # promptly; long otherwise, since nothing needs doing.
-            busy = self.touch.off or self.touch.waking
-            for key, _ in sel.select(timeout=0.05 if busy else 1.0):
+            # Short while anything is changing hands — waiting for the panel
+            # to be still enough to take, or for the waking finger to lift —
+            # so it is acted on promptly. Otherwise as long as the backlight
+            # check allows: a touch wakes the select at once regardless. It
+            # was short for the whole time the screen was off, which is to
+            # say twenty wake-ups a second all night.
+            busy = self.touch.waking or (self.touch.off and not self.touch.grabbed)
+            for key, _ in sel.select(timeout=0.05 if busy else self.RECHECK):
                 try:
                     raw = key.fileobj.read(EVENT.size * 64)
                 except OSError:

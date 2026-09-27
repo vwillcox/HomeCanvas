@@ -9,6 +9,8 @@ import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
 import '../../time_format.dart';
+import '../../widgets/pause_when_hidden.dart';
+import '../../widgets/shown_timers.dart';
 
 /// How clean the grid's electricity is now, the next day as bars, and the
 /// greenest three hours to run the washing machine or the dishwasher.
@@ -21,7 +23,8 @@ class CarbonWidget extends StatefulWidget {
   State<CarbonWidget> createState() => _CarbonWidgetState();
 }
 
-class _CarbonWidgetState extends State<CarbonWidget> {
+class _CarbonWidgetState extends State<CarbonWidget>
+    with PauseWhenHidden, ShownTimers {
   Timer? _timer;
 
   String? get _outcode {
@@ -37,7 +40,7 @@ class _CarbonWidgetState extends State<CarbonWidget> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
     // Once a minute moves the "now" marker along; the service only fetches
     // when its half hour is up.
-    _timer = Timer.periodic(const Duration(minutes: 1), (_) => _refresh());
+    _timer = everyWhileShown(const Duration(minutes: 1), () => _refresh());
   }
 
   @override

@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../../services/system_stats.dart';
+import '../../widgets/pause_when_hidden.dart';
+import '../../widgets/shown_timers.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
@@ -27,7 +29,8 @@ class ServersWidget extends StatefulWidget {
   State<ServersWidget> createState() => _ServersWidgetState();
 }
 
-class _ServersWidgetState extends State<ServersWidget> {
+class _ServersWidgetState extends State<ServersWidget>
+    with PauseWhenHidden, ShownTimers {
   final LocalStats _local = LocalStats();
   final Map<String, GlancesClient> _clients = {};
   List<MachineStats> _stats = const [];
@@ -69,7 +72,7 @@ class _ServersWidgetState extends State<ServersWidget> {
     // two readings to work out — appears promptly rather than after a full
     // interval.
     _second = Timer(const Duration(seconds: 2), () => unawaited(_poll()));
-    _timer = Timer.periodic(const Duration(seconds: 10), (_) => _poll());
+    _timer = everyWhileShown(const Duration(seconds: 10), () => _poll());
   }
 
   @override

@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../services/service_checks.dart';
+import '../../widgets/pause_when_hidden.dart';
+import '../../widgets/shown_timers.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'tile_bits.dart';
@@ -19,7 +21,8 @@ class ServicesWidget extends StatefulWidget {
   State<ServicesWidget> createState() => _ServicesWidgetState();
 }
 
-class _ServicesWidgetState extends State<ServicesWidget> {
+class _ServicesWidgetState extends State<ServicesWidget>
+    with PauseWhenHidden, ShownTimers {
   static const _checker = ServiceChecker();
   final Map<String, CheckResult> _results = {};
   final Set<String> _waking = {};
@@ -63,7 +66,7 @@ class _ServicesWidgetState extends State<ServicesWidget> {
   void _restartTimer() {
     _timer?.cancel();
     _interval = _everySeconds;
-    _timer = Timer.periodic(Duration(seconds: _interval), (_) => _checkAll());
+    _timer = everyWhileShown(Duration(seconds: _interval), () => _checkAll());
   }
 
   Future<void> _checkAll() async {

@@ -7,6 +7,8 @@ import 'package:provider/provider.dart';
 import '../../services/home_assistant_service.dart';
 import '../../services/immich_service.dart';
 import '../../services/unifi_service.dart';
+import '../../widgets/pause_when_hidden.dart';
+import '../../widgets/shown_timers.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'tile_bits.dart';
@@ -57,7 +59,8 @@ class UpdatesWidget extends StatefulWidget {
   State<UpdatesWidget> createState() => _UpdatesWidgetState();
 }
 
-class _UpdatesWidgetState extends State<UpdatesWidget> {
+class _UpdatesWidgetState extends State<UpdatesWidget>
+    with PauseWhenHidden, ShownTimers {
   /// GitHub allows sixty unauthenticated requests an hour; the answer is
   /// kept for six, and shared by every tile.
   static (String, DateTime)? _latestImmich;
@@ -78,7 +81,7 @@ class _UpdatesWidgetState extends State<UpdatesWidget> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
-    _timer = Timer.periodic(const Duration(minutes: 30), (_) => _refresh());
+    _timer = everyWhileShown(const Duration(minutes: 30), () => _refresh());
   }
 
   @override

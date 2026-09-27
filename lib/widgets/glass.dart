@@ -1,9 +1,10 @@
-import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
 import '../look.dart';
+import 'pause_when_hidden.dart';
+import 'shown_timers.dart';
 
 /// Small pieces of the photo browser's look, shared by the home screen and the
 /// album view so the two read as one app.
@@ -396,22 +397,15 @@ class GreetingTitle extends StatefulWidget {
   State<GreetingTitle> createState() => _GreetingTitleState();
 }
 
-class _GreetingTitleState extends State<GreetingTitle> {
-  late final Timer _tick;
+class _GreetingTitleState extends State<GreetingTitle>
+    with PauseWhenHidden, ShownTimers {
   DateTime _now = DateTime.now();
 
   @override
   void initState() {
     super.initState();
-    _tick = Timer.periodic(const Duration(minutes: 1), (_) {
-      if (mounted) setState(() => _now = DateTime.now());
-    });
-  }
-
-  @override
-  void dispose() {
-    _tick.cancel();
-    super.dispose();
+    everyWhileShown(const Duration(minutes: 1),
+        () => setState(() => _now = DateTime.now()));
   }
 
   @override

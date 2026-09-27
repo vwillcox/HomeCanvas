@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' show Icons, IconData;
 
 import 'playback_source.dart';
+import 'screen_state.dart';
 
 /// What the connected phone is playing, read from BlueZ over D-Bus.
 class NowPlaying {
@@ -141,10 +142,13 @@ class NowPlayingService extends ChangeNotifier implements PlaybackSource {
       _client = DBusClient.system();
       await _findPlayer();
       await _watchObjectManager();
-      // BlueZ doesn't push Position updates, so poll while playing.
+      // BlueZ doesn't push Position updates, so poll while playing — and
+      // while the screen is lit, since the position is only for showing.
       _positionTimer = Timer.periodic(
         const Duration(seconds: 1),
-        (_) => _refreshPosition(),
+        (_) {
+          if (_screen?.lit ?? true) _refreshPosition();
+        },
       );
     } catch (e) {
       debugPrint('NowPlayingService.start error: $e');
@@ -574,6 +578,10 @@ class NowPlayingService extends ChangeNotifier implements PlaybackSource {
       _artCache[key] = null;
     }
   }
+
+  /// Whether the screen is lit — see [start].
+  ScreenState? _screen;
+  set screen(ScreenState screen) => _screen = screen;
 
   @override
   void dispose() {

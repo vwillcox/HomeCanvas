@@ -206,18 +206,22 @@ class _Backdrop extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           // Clipped: a blur spreads past its own box, and that spill is what
-          // drew a hard-edged rectangle with a glow round it.
-          ClipRect(
-            child: ImageFiltered(
-              imageFilter: ImageFilter.blur(
-                sigmaX: 16,
-                sigmaY: 16,
-                tileMode: TileMode.clamp,
-              ),
-              child: CachedNetworkImage(
-                imageUrl: url,
-                fit: BoxFit.cover,
-                errorWidget: (_, _, _) => const SizedBox.shrink(),
+          // drew a hard-edged rectangle with a glow round it. On a layer of
+          // its own, so the progress moving every second above it does not
+          // blur the whole cover again each time.
+          RepaintBoundary(
+            child: ClipRect(
+              child: ImageFiltered(
+                imageFilter: ImageFilter.blur(
+                  sigmaX: 16,
+                  sigmaY: 16,
+                  tileMode: TileMode.clamp,
+                ),
+                child: CachedNetworkImage(
+                  imageUrl: url,
+                  fit: BoxFit.cover,
+                  errorWidget: (_, _, _) => const SizedBox.shrink(),
+                ),
               ),
             ),
           ),

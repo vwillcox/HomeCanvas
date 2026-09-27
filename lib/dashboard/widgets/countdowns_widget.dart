@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../services/bin_schedule.dart' show Bin, dateOnly, daysBetween;
 import '../../widgets/pause_when_hidden.dart';
 import '../../widgets/rebuild_every_minute.dart';
+import '../../widgets/shown_timers.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
@@ -128,7 +129,7 @@ class CountdownsWidget extends StatefulWidget {
 }
 
 class _CountdownsWidgetState extends State<CountdownsWidget>
-    with PauseWhenHidden, RebuildEveryMinute {
+    with PauseWhenHidden, ShownTimers, RebuildEveryMinute {
   String get _region => '${widget.w.config.options['bankHolidays'] ?? ''}';
 
   Future<void> _loadHolidays() async {

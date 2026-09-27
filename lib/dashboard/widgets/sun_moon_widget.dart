@@ -7,6 +7,7 @@ import '../../services/config_service.dart';
 import '../../services/sun_moon.dart';
 import '../../widgets/pause_when_hidden.dart';
 import '../../widgets/rebuild_every_minute.dart';
+import '../../widgets/shown_timers.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
@@ -28,7 +29,7 @@ class SunMoonWidget extends StatefulWidget {
 }
 
 class _SunMoonWidgetState extends State<SunMoonWidget>
-    with PauseWhenHidden, RebuildEveryMinute {
+    with PauseWhenHidden, ShownTimers, RebuildEveryMinute {
   @override
   Widget build(BuildContext context) {
     final t = widget.w.theme;

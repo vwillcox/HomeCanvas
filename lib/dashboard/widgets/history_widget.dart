@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
+import '../../widgets/pause_when_hidden.dart';
+import '../../widgets/shown_timers.dart';
 
 /// Something that happened on this date.
 @immutable
@@ -47,7 +49,8 @@ class HistoryWidget extends StatefulWidget {
   State<HistoryWidget> createState() => _HistoryWidgetState();
 }
 
-class _HistoryWidgetState extends State<HistoryWidget> {
+class _HistoryWidgetState extends State<HistoryWidget>
+    with PauseWhenHidden, ShownTimers {
   /// A day's events, fetched once and shared by every tile.
   static final Map<String, List<HistoryEvent>> _byDay = {};
   static final Dio _dio = Dio(
@@ -73,7 +76,7 @@ class _HistoryWidgetState extends State<HistoryWidget> {
   void initState() {
     super.initState();
     unawaited(_load());
-    _timer = Timer.periodic(const Duration(seconds: 25), (_) => _next());
+    _timer = everyWhileShown(const Duration(seconds: 25), () => _next());
   }
 
   @override

@@ -8,10 +8,13 @@ import 'package:flutter/material.dart';
 /// nothing to say is a nuisance. So the animation only exists while the text
 /// actually overflows — no controller is even created otherwise.
 ///
-/// While it does overflow, it goes round and round: the text runs off to the
-/// left and comes back in from the right, with a second copy drawn a lap
-/// behind so the wrap has no seam. It pauses briefly at the start of each lap
-/// so the beginning can be read without waiting for the loop.
+/// While it does overflow, it goes round: the text runs off to the left and
+/// comes back in from the right, with a second copy drawn a lap behind so
+/// the wrap has no seam. It pauses briefly at the start of each lap so the
+/// beginning can be read without waiting for the loop — and after [laps]
+/// of them it rests there, until the text changes. Round and round for
+/// ever was a screen redrawn sixty times a second for as long as a long
+/// title stayed up, paused music included.
 class ScrollingText extends StatefulWidget {
   const ScrollingText(
     this.text, {
@@ -21,6 +24,7 @@ class ScrollingText extends StatefulWidget {
     this.pause = const Duration(seconds: 2),
     this.gap = 56,
     this.align = TextAlign.start,
+    this.laps = 3,
   });
 
   final String text;
@@ -39,6 +43,9 @@ class ScrollingText extends StatefulWidget {
 
   /// Used when the text does fit, where there is nothing to scroll.
   final TextAlign align;
+
+  /// How many times round before resting at the start.
+  final int laps;
 
   @override
   State<ScrollingText> createState() => _ScrollingTextState();
@@ -104,10 +111,17 @@ class _ScrollingTextState extends State<ScrollingText>
     ]).animate(controller);
 
     _controller = controller;
+    // Ending a lap at -lap puts the second copy exactly where the first
+    // began, so resting there shows the start of the text.
+    var done = 0;
+    controller.addStatusListener((status) {
+      if (status != AnimationStatus.completed || !mounted) return;
+      if (++done < widget.laps) controller.forward(from: 0);
+    });
     // Started after this frame: creating and running a controller during
     // layout is what schedules a build during build.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) controller.repeat();
+      if (mounted) controller.forward(from: 0);
     });
   }
 
@@ -156,37 +170,44 @@ class _ScrollingTextState extends State<ScrollingText>
         // child a tight width of its own choosing, which is the only way it
         // gets to lay out at its full length.
         final lap = _lap(painter.width);
-        return SizedBox(
-          height: painter.height,
-          child: ClipRect(
-            child: AnimatedBuilder(
-              animation: offset,
-              // The text is built once and passed through, so each frame
-              // moves it rather than laying it out again.
-              child: Text(
-                widget.text,
-                maxLines: 1,
-                softWrap: false,
-                style: widget.style,
-              ),
-              builder: (context, child) => Stack(
-                children: [
-                  Positioned(
-                    left: offset.value,
-                    top: 0,
-                    width: painter.width,
-                    child: child!,
-                  ),
-                  // The same text a lap behind. As the first copy leaves to
-                  // the left this one arrives from the right, so the wrap is
-                  // continuous rather than a jump back to the start.
-                  Positioned(
-                    left: offset.value + lap,
-                    top: 0,
-                    width: painter.width,
-                    child: child,
-                  ),
-                ],
+        final text = Text(
+          widget.text,
+          maxLines: 1,
+          softWrap: false,
+          style: widget.style,
+        );
+        // Laid out once; each frame only slides the picture along — and on
+        // a layer of its own, so the tile around it is not drawn again.
+        return RepaintBoundary(
+          child: SizedBox(
+            height: painter.height,
+            child: ClipRect(
+              child: AnimatedBuilder(
+                animation: offset,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      width: painter.width,
+                      child: text,
+                    ),
+                    // The same text a lap behind. As the first copy leaves to
+                    // the left this one arrives from the right, so the wrap
+                    // is continuous rather than a jump back to the start.
+                    Positioned(
+                      left: lap,
+                      top: 0,
+                      width: painter.width,
+                      child: text,
+                    ),
+                  ],
+                ),
+                builder: (context, child) => Transform.translate(
+                  offset: Offset(offset.value, 0),
+                  child: child,
+                ),
               ),
             ),
           ),

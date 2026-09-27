@@ -45,6 +45,7 @@ import 'services/locked_folder_service.dart';
 import 'services/media_cache.dart';
 import 'services/now_playing_service.dart';
 import 'services/screen_idle_service.dart';
+import 'services/screen_state.dart';
 import 'services/share_inbox_service.dart';
 import 'services/spotify_service.dart';
 import 'services/lan_speedtest_service.dart';
@@ -94,15 +95,20 @@ void main() async {
   final indoor = IndoorSensorService();
   unawaited(indoor.start(config.config.homeAssistant));
 
+  // Whether the screen is lit. While it is dark the kiosk rests: no
+  // animation, no photo decoding, no polling for the screen's sake.
+  final screen = ScreenState()..start();
+
   // Reads what the paired phone is playing over Bluetooth AVRCP.
   final nowPlaying = NowPlayingService()
+    ..screen = screen
     ..preferAudioRouted = config.config.nowPlaying.playAudioHere;
   unawaited(nowPlaying.start());
 
   // Full playback control for a Spotify Premium account via the Web API,
   // shown in preference to the AVRCP source above whenever it has something
   // to show. A no-op until the one-time login is done in Settings.
-  final spotify = SpotifyService(config);
+  final spotify = SpotifyService(config)..screen = screen;
   unawaited(spotify.start());
 
   // Lets the companion phone app share a photo/GIF/video/link/note to the
@@ -320,6 +326,7 @@ void main() async {
         ChangeNotifierProvider.value(value: nebula),
         ChangeNotifierProvider.value(value: reader),
         Provider<ScreenIdleService>.value(value: screenIdle),
+        ChangeNotifierProvider.value(value: screen),
         ChangeNotifierProvider.value(value: brightness),
         ChangeNotifierProvider(create: (_) => CameraService(config)),
         ChangeNotifierProvider.value(value: feeds),
@@ -377,6 +384,7 @@ void main() async {
       config.config.shareInbox.dndMuted = muted;
       unawaited(config.save());
     },
+    screenLit: screen.set,
   ).start());
 }
 
@@ -455,24 +463,44 @@ class HomeCanvasApp extends StatelessWidget {
         // behaves any differently.
         behavior: HitTestBehavior.translucent,
         onPointerDown: (_) => context.read<ScreenIdleService>().noteInteraction(),
-        child: Stack(
-          children: [
-            if (child != null) _HiddenUnderVideo(child: child),
-            // A video sent to the panel, full screen or floating over
-            // whatever else is on it. Below the share popup, so something
-            // arriving mid-video still shows.
-            VideoOverlay(navigatorKey: rootNavigatorKey),
-            IncomingShareOverlay(navigatorKey: rootNavigatorKey),
-            // What is being read aloud, with its controls, over any screen.
-            const ReadingBar(),
-            CameraOverlay(navigatorKey: rootNavigatorKey),
-            // Draws tiles off screen for the dashboard editor's preview.
-            const TileRenderHost(),
-          ],
+        child: _RestWhileDark(
+          child: Stack(
+            children: [
+              if (child != null) _HiddenUnderVideo(child: child),
+              // A video sent to the panel, full screen or floating over
+              // whatever else is on it. Below the share popup, so something
+              // arriving mid-video still shows.
+              VideoOverlay(navigatorKey: rootNavigatorKey),
+              IncomingShareOverlay(navigatorKey: rootNavigatorKey),
+              // What is being read aloud, with its controls, over any screen.
+              const ReadingBar(),
+              CameraOverlay(navigatorKey: rootNavigatorKey),
+              // Draws tiles off screen for the dashboard editor's preview.
+              const TileRenderHost(),
+            ],
+          ),
         ),
       ),
       home: const _RootGate(),
     );
+  }
+}
+
+/// The whole kiosk, hidden while the screen is dark.
+///
+/// Hidden as far as Flutter is concerned: TickerMode stops every animation,
+/// and everything that works on a timer for the screen's sake checks it —
+/// see PauseWhenHidden. Nothing is taken off screen, so the last picture
+/// stays in place and is there the instant the backlight comes back, while
+/// the animations take up again with the next frame.
+class _RestWhileDark extends StatelessWidget {
+  const _RestWhileDark({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final lit = context.select<ScreenState, bool>((s) => s.lit);
+    return TickerMode(enabled: lit, child: child);
   }
 }
 

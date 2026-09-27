@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -184,7 +185,15 @@ class ArticleReader extends ChangeNotifier {
     Article? article;
     if (link != null) {
       try {
-        article = ArticleText.extract(await _fetch(link), fallbackTitle: title);
+        final page = await _fetch(link);
+        Article? extract(String p) =>
+            ArticleText.extract(p, fallbackTitle: title);
+        // A real news page, hundreds of kilobytes of HTML, is picked apart
+        // on another isolate: long enough to parse to stall the screen. A
+        // small one is not worth the hand-over.
+        article = page.length > 64 * 1024
+            ? await compute(extract, page)
+            : extract(page);
       } catch (e) {
         debugPrint('Reader: could not fetch $link: $e');
       }
@@ -306,20 +315,33 @@ class ArticleReader extends ChangeNotifier {
 
   /// A browser's user agent: some sites serve a stripped page, or nothing,
   /// to anything that does not look like one.
+  static final Dio _dio = Dio(BaseOptions(
+    connectTimeout: const Duration(seconds: 10),
+    receiveTimeout: const Duration(seconds: 15),
+    responseType: ResponseType.bytes,
+    headers: {
+      'User-Agent':
+          'Mozilla/5.0 (X11; Linux aarch64; rv:128.0) Gecko/20100101 '
+          'Firefox/128.0',
+      'Accept': 'text/html,application/xhtml+xml',
+      'Accept-Language': 'en-GB,en;q=0.8',
+    },
+  ));
+
+  /// The most of a page taken: news pages run to a few hundred kilobytes,
+  /// and a link can point at anything.
+  static const int _maxPage = 5 * 1024 * 1024;
+
   static Future<String> _fetchPage(String url) async {
-    final dio = Dio(BaseOptions(
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 15),
-      responseType: ResponseType.plain,
-      headers: {
-        'User-Agent':
-            'Mozilla/5.0 (X11; Linux aarch64; rv:128.0) Gecko/20100101 '
-            'Firefox/128.0',
-        'Accept': 'text/html,application/xhtml+xml',
-        'Accept-Language': 'en-GB,en;q=0.8',
+    final cancel = CancelToken();
+    final r = await _dio.get<List<int>>(
+      url,
+      cancelToken: cancel,
+      onReceiveProgress: (got, _) {
+        if (got > _maxPage) cancel.cancel('page too large');
       },
-    ));
-    final r = await dio.get<String>(url);
-    return r.data ?? '';
+    );
+    final bytes = r.data;
+    return bytes == null ? '' : utf8.decode(bytes, allowMalformed: true);
   }
 }

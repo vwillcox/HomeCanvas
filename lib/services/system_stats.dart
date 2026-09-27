@@ -312,18 +312,36 @@ class LocalStats {
 
   (int, int)? _lastCpu;
 
+  /// How long the disks and containers are taken as read. Each is a
+  /// program started to ask — `docker` a large one — and neither changes
+  /// from one ten-second reading to the next; the CPU, memory and
+  /// temperature, read from files, stay live.
+  static const Duration _slowLife = Duration(minutes: 1);
+
+  DateTime? _slowAt;
+  List<DiskUse> _disksRead = const [];
+  double? _diskRead;
+  List<ContainerState>? _containersRead;
+
   Future<MachineStats> read(String name) async {
-    final disks = await _disks();
-    final root = disks.where((d) => d.mount == '/');
+    final now = DateTime.now();
+    final at = _slowAt;
+    if (at == null || now.difference(at) >= _slowLife) {
+      _disksRead = await _disks();
+      final root = _disksRead.where((d) => d.mount == '/');
+      _diskRead = root.isEmpty ? await _disk() : root.first.percent;
+      _containersRead = await dockerContainers();
+      _slowAt = now;
+    }
     return MachineStats(
       name: name,
       cpu: await _cpu(),
       memory: await _memory(),
-      disk: root.isEmpty ? await _disk() : root.first.percent,
-      disks: disks,
+      disk: _diskRead,
+      disks: _disksRead,
       temperature: await _temperature(),
       uptime: await _uptime(),
-      containers: await dockerContainers(),
+      containers: _containersRead,
     );
   }
 

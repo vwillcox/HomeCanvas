@@ -13,6 +13,7 @@ import 'config_service.dart';
 import 'kiosk_browser.dart';
 import 'now_playing_service.dart' show NowPlaying;
 import 'playback_source.dart';
+import 'screen_state.dart';
 
 /// A Spotify Connect device the account can play on.
 class SpotifyDevice {
@@ -82,10 +83,37 @@ class SpotifyService extends ChangeNotifier implements PlaybackSource {
   static const Duration _activePoll = Duration(seconds: 2);
   static const Duration _idlePoll = Duration(seconds: 10);
   /// Advances the shown position between real polls, so the progress bar
-  /// moves smoothly instead of jumping once every [_activePoll] — the same
-  /// reason AVRCP has its own 1-second position timer. Purely local; doesn't
-  /// touch the network.
-  static const Duration _tick = Duration(milliseconds: 250);
+  /// moves on its own instead of jumping once every [_activePoll] — the
+  /// same reason AVRCP has its own 1-second position timer. Purely local;
+  /// doesn't touch the network. Once a second, as the time shown changes:
+  /// every tick rebuilds everything showing the track, and four a second
+  /// moved a bar by a fraction of a pixel for the cost of four rebuilds.
+  static const Duration _tick = Duration(seconds: 1);
+
+  ScreenState? _screen;
+
+  /// While the screen is dark nothing shows the position, so it is not
+  /// ticked, and Spotify is asked only at the idle rate — often enough to
+  /// see music start, which can wake the screen.
+  set screen(ScreenState screen) {
+    _screen?.removeListener(_screenChanged);
+    _screen = screen..addListener(_screenChanged);
+  }
+
+  bool get _lit => _screen?.lit ?? true;
+
+  void _screenChanged() {
+    if (!_settings.isConfigured) return;
+    if (_lit) {
+      unawaited(_poll());
+      _tickTimer ??= Timer.periodic(_tick, (_) => _advancePosition());
+      if (_now.isPlaying) _speedUpPolling();
+    } else {
+      _tickTimer?.cancel();
+      _tickTimer = null;
+      _slowDownPolling();
+    }
+  }
 
   final ConfigService _configService;
   final Dio _dio = Dio(BaseOptions(
@@ -216,7 +244,7 @@ class SpotifyService extends ChangeNotifier implements PlaybackSource {
   void _beginPolling() {
     unawaited(_poll());
     _speedUpPolling();
-    _tickTimer ??= Timer.periodic(_tick, (_) => _advancePosition());
+    if (_lit) _tickTimer ??= Timer.periodic(_tick, (_) => _advancePosition());
   }
 
   void _advancePosition() {
@@ -607,6 +635,11 @@ display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
   /// nothing to report.
   void _speedUpPolling() {
     if (_fastPolling) return;
+    // Nobody is looking: the idle rate still sees music start.
+    if (!_lit) {
+      _pollTimer ??= Timer.periodic(_idlePoll, (_) => _poll());
+      return;
+    }
     _fastPolling = true;
     _pollTimer?.cancel();
     _pollTimer = Timer.periodic(_activePoll, (_) => _poll());
@@ -1043,6 +1076,7 @@ display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
 
   @override
   void dispose() {
+    _screen?.removeListener(_screenChanged);
     _pollTimer?.cancel();
     _tickTimer?.cancel();
     _idleTimer?.cancel();

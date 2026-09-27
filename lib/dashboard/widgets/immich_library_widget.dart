@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 import '../../services/immich_service.dart';
 import '../../services/system_stats.dart' show shortSize;
 import '../../widgets/remote_image.dart';
+import '../../widgets/pause_when_hidden.dart';
+import '../../widgets/shown_timers.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
@@ -30,7 +32,8 @@ class ImmichLibraryWidget extends StatefulWidget {
   State<ImmichLibraryWidget> createState() => _ImmichLibraryWidgetState();
 }
 
-class _ImmichLibraryWidgetState extends State<ImmichLibraryWidget> {
+class _ImmichLibraryWidgetState extends State<ImmichLibraryWidget>
+    with PauseWhenHidden, ShownTimers {
   LibraryStats? _stats = ImmichLibraryWidget.last;
   String? _error;
   Timer? _timer;
@@ -39,7 +42,7 @@ class _ImmichLibraryWidgetState extends State<ImmichLibraryWidget> {
   void initState() {
     super.initState();
     unawaited(_load());
-    _timer = Timer.periodic(const Duration(minutes: 15), (_) => _load());
+    _timer = everyWhileShown(const Duration(minutes: 15), () => _load());
   }
 
   @override
