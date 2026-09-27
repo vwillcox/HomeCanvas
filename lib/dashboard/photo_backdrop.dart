@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../models/immich_models.dart';
 import '../services/immich_service.dart';
 import '../widgets/remote_image.dart';
+import '../widgets/pause_when_hidden.dart';
 
 /// Your Immich photos behind the dashboard, one after another, darkened so
 /// the tiles in front stay readable.
@@ -37,7 +38,8 @@ class PhotoBackdrop extends StatefulWidget {
   State<PhotoBackdrop> createState() => _PhotoBackdropState();
 }
 
-class _PhotoBackdropState extends State<PhotoBackdrop> {
+class _PhotoBackdropState extends State<PhotoBackdrop>
+    with PauseWhenHidden {
   final _rng = Random();
   List<Asset> _pool = const [];
   int _index = 0;
@@ -68,7 +70,9 @@ class _PhotoBackdropState extends State<PhotoBackdrop> {
 
   void _restart() {
     _timer?.cancel();
-    _timer = Timer.periodic(widget.every, (_) => _advance());
+    _timer = Timer.periodic(widget.every, (_) {
+      if (shown) _advance();
+    });
   }
 
   Future<void> _load() async {

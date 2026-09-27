@@ -21,6 +21,7 @@ import 'hue_relay.dart';
 import 'notes_service.dart';
 import 'shopping_service.dart';
 import 'timer_sounds.dart';
+import 'youtube_service.dart';
 
 /// Hosts the dashboard's web editor and the small API behind it.
 ///
@@ -74,6 +75,9 @@ class DashboardService extends ChangeNotifier {
 
   /// The shopping list, for its page and API. Null in tests.
   ShoppingService? shopping;
+
+  /// For signing in to YouTube from another browser. Null in tests.
+  YouTubeService? youtube;
 
   /// The panel's backlight, for the editor's slider. Null in tests.
   BrightnessService? brightness;
@@ -435,6 +439,27 @@ class DashboardService extends ChangeNotifier {
         return await _notesApi(request);
       }
 
+      // Signing the panel in to YouTube from a computer, by uploading the
+      // cookies of a browser signed in there. Held to the local network, as
+      // the senders are: what is uploaded is as good as a password.
+      if (path == '/youtube' || path == '/youtube/') {
+        if (!_requireLocal(request)) return;
+        return await _serveAsset(
+            request, 'assets/dashboard/youtube.html', ContentType.html);
+      }
+      if (path == '/api/youtube') {
+        if (!_requireLocal(request)) return;
+        // Only from the sign-in page itself, as with the notes: otherwise
+        // any web page open in the house could sign the panel in or out.
+        if (!sameOrigin(request.headers.value('origin'),
+            request.headers.value(HttpHeaders.hostHeader))) {
+          request.response.statusCode = HttpStatus.forbidden;
+          await request.response.close();
+          return;
+        }
+        return await _youtubeAccount(request);
+      }
+
       // Managing who may share to the panel. Held to the local network
       // whatever the port is exposed to — see [_isLocal].
       if (path == '/senders' || path == '/senders/') {
@@ -561,6 +586,49 @@ class DashboardService extends ChangeNotifier {
     const chars =
         'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     return List.generate(32, (_) => chars[_rand.nextInt(chars.length)]).join();
+  }
+
+  /// The largest cookie upload taken. A YouTube sign-in is a few kilobytes;
+  /// a whole browser's cookies can be a few hundred.
+  static const _maxCookieUpload = 2 * 1024 * 1024;
+
+  /// GET says whether the panel is signed in, POST takes a `cookies.txt` as
+  /// the body, DELETE signs out. The cookies are never sent back.
+  Future<void> _youtubeAccount(HttpRequest request) async {
+    final yt = youtube;
+    if (yt == null) {
+      request.response.statusCode = HttpStatus.serviceUnavailable;
+      await request.response.close();
+      return;
+    }
+    Future<void> status([String? error]) async => _json(request, {
+          'signedIn': yt.settings.signedIn,
+          'how': await yt.accountSource(),
+          'ready': yt.ytDlpVersion != null,
+          'error': ?error,
+        });
+
+    switch (request.method) {
+      case 'GET':
+        return status();
+      case 'DELETE':
+        await yt.signOut();
+        return status();
+      case 'POST':
+        final bytes = <int>[];
+        await for (final chunk in request) {
+          bytes.addAll(chunk);
+          if (bytes.length > _maxCookieUpload) {
+            request.response.statusCode = HttpStatus.requestEntityTooLarge;
+            await request.response.close();
+            return;
+          }
+        }
+        return status(
+            await yt.useCookies(utf8.decode(bytes, allowMalformed: true)));
+    }
+    request.response.statusCode = HttpStatus.methodNotAllowed;
+    await request.response.close();
   }
 
   Future<void> _addSender(HttpRequest request) async {

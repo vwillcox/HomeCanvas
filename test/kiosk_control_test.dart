@@ -9,11 +9,13 @@ void main() {
   late KioskControlService control;
   late List<KioskCommand> ran;
   late bool dnd;
+  late List<String> played;
   final client = HttpClient();
 
   setUp(() async {
     ran = [];
     dnd = false;
+    played = [];
     control = KioskControlService(
       port: 0,
       state: () => KioskState(
@@ -25,6 +27,11 @@ void main() {
       ),
       run: ran.add,
       setDnd: (m) => dnd = m,
+      playYouTube: (url) {
+        if (!url.contains('youtu')) return false;
+        played.add(url);
+        return true;
+      },
     );
     await control.start();
   });
@@ -63,6 +70,13 @@ void main() {
       'cameraOpen': false,
       'dnd': false,
     });
+  });
+
+  test('plays a YouTube link, and refuses anything else', () async {
+    final link = Uri.encodeQueryComponent('https://youtu.be/aqz-KE-bpKQ');
+    expect((await call('POST', '/youtube?url=$link')).$1, 200);
+    expect((await call('POST', '/youtube?url=https%3A%2F%2Fbbc.co.uk')).$1, 400);
+    expect(played, ['https://youtu.be/aqz-KE-bpKQ']);
   });
 
   test('opens each place the kiosk has', () async {

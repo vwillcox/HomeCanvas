@@ -10,6 +10,7 @@ import '../../widgets/remote_image.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
+import '../../widgets/pause_when_hidden.dart';
 
 /// Your photos from this date in past years, from Immich's own memories.
 ///
@@ -33,7 +34,8 @@ class _Shown {
   final int? year;
 }
 
-class _MemoriesWidgetState extends State<MemoriesWidget> {
+class _MemoriesWidgetState extends State<MemoriesWidget>
+    with PauseWhenHidden {
   List<_Shown> _photos = const [];
   int _index = 0;
   bool _loading = true;
@@ -75,7 +77,9 @@ class _MemoriesWidgetState extends State<MemoriesWidget> {
     _timer?.cancel();
     final s = _everySeconds;
     if (s <= 0) return;
-    _timer = Timer.periodic(Duration(seconds: s), (_) => _step(1));
+    _timer = Timer.periodic(Duration(seconds: s), (_) {
+      if (shown) _step(1);
+    });
   }
 
   static DateTime _today() {

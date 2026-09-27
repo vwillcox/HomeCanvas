@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../config/app_config.dart';
 import '../services/audio_levels_service.dart';
+import 'pause_when_hidden.dart';
 
 /// The music, drawn.
 ///
@@ -67,11 +68,19 @@ class AudioVisualiser extends StatefulWidget {
   State<AudioVisualiser> createState() => _AudioVisualiserState();
 }
 
-class _AudioVisualiserState extends State<AudioVisualiser> {
+class _AudioVisualiserState extends State<AudioVisualiser>
+    with PauseWhenHidden {
   AudioLevelsService? _service;
   bool _holding = false;
 
-  bool get _wanted => widget.active && widget.style != VisualiserStyle.off;
+  /// Only while it can be seen: the capture and its analysis run for as long
+  /// as anything holds them, and a visualiser behind a video is holding one
+  /// for nobody.
+  bool get _wanted =>
+      widget.active && widget.style != VisualiserStyle.off && shown;
+
+  @override
+  void onShownChanged(bool shown) => _sync();
 
   @override
   void didChangeDependencies() {

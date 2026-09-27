@@ -34,6 +34,7 @@ class HueRelay {
     'list',
     'notes',
     'senders',
+    'youtube',
   };
 
   /// Whether [path] is for the Hue bridge rather than the editor.

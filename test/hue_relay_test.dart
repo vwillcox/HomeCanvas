@@ -26,6 +26,8 @@ void main() {
       '/api/volume',
       '/api/sounds/file',
       '/api/background.jpg',
+      '/youtube',
+      '/api/youtube',
       '/fonts/Inter.ttf',
     ]) {
       expect(HueRelay.handles(own), isFalse, reason: own);

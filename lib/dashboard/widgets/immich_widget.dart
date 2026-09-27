@@ -9,6 +9,7 @@ import '../../services/immich_service.dart';
 import '../../services/retry_schedule.dart';
 import '../../widgets/remote_image.dart';
 import '../widget_registry.dart';
+import '../../widgets/pause_when_hidden.dart';
 
 /// Photos from Immich, either at random from the whole library or from one
 /// album.
@@ -25,7 +26,8 @@ class DashboardImmichWidget extends StatefulWidget {
   State<DashboardImmichWidget> createState() => _DashboardImmichWidgetState();
 }
 
-class _DashboardImmichWidgetState extends State<DashboardImmichWidget> {
+class _DashboardImmichWidgetState extends State<DashboardImmichWidget>
+    with PauseWhenHidden {
   final _rng = Random();
 
   List<Asset> _pool = const [];
@@ -90,7 +92,9 @@ class _DashboardImmichWidgetState extends State<DashboardImmichWidget> {
     _timer?.cancel();
     final seconds = _everySeconds;
     if (seconds <= 0) return;
-    _timer = Timer.periodic(Duration(seconds: seconds), (_) => _advance());
+    _timer = Timer.periodic(Duration(seconds: seconds), (_) {
+      if (shown) _advance();
+    });
   }
 
   Future<void> _load() async {

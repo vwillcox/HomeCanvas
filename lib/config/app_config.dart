@@ -331,6 +331,44 @@ class SpotifySettings {
       };
 }
 
+/// YouTube, played by the kiosk itself — see [YouTubeService].
+class YouTubeSettings {
+  /// The tallest picture to ask for, in lines. 1080 decodes comfortably on a
+  /// Pi 5 in software; above that it does not.
+  int maxHeight;
+
+  /// Signed in through Settings, so the account's cookies are used — for
+  /// Premium, members-only and age-restricted videos, and the subscriptions
+  /// feed. The sign-in itself lives in a browser profile, not here.
+  bool signedIn;
+
+  /// Its own level rather than the photo videos': a YouTube video is mastered
+  /// far louder than a clip off a phone, and came out too loud at theirs.
+  double volume;
+  bool muted;
+
+  YouTubeSettings({
+    this.maxHeight = 1080,
+    this.signedIn = false,
+    this.volume = 40,
+    this.muted = false,
+  });
+
+  factory YouTubeSettings.fromJson(Map<String, dynamic> j) => YouTubeSettings(
+        maxHeight: (j['maxHeight'] as num?)?.toInt() ?? 1080,
+        signedIn: j['signedIn'] as bool? ?? false,
+        volume: (j['volume'] as num?)?.toDouble() ?? 40,
+        muted: j['muted'] as bool? ?? false,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'maxHeight': maxHeight,
+        'signedIn': signedIn,
+        'volume': volume,
+        'muted': muted,
+      };
+}
+
 /// A phone running the android-ip-camera app, used as a wireless camera.
 ///
 /// The phone streams hardware-encoded H.264 from `/video/h264` and takes
@@ -729,6 +767,7 @@ class AppConfig {
   DashboardSettings dashboard;
   TvSettings tv;
   UnifiSettings unifi;
+  YouTubeSettings youtube;
 
   /// Video player volume (0-100) and mute, remembered between videos.
   double videoVolume;
@@ -750,6 +789,7 @@ class AppConfig {
     DashboardSettings? dashboard,
     TvSettings? tv,
     UnifiSettings? unifi,
+    YouTubeSettings? youtube,
     this.videoVolume = 100,
     this.videoMuted = false,
   })  : slideshow = slideshow ?? SlideshowSettings(),
@@ -762,7 +802,8 @@ class AppConfig {
         camera = camera ?? CameraSettings(),
         dashboard = dashboard ?? DashboardSettings(),
         tv = tv ?? TvSettings(),
-        unifi = unifi ?? UnifiSettings();
+        unifi = unifi ?? UnifiSettings(),
+        youtube = youtube ?? YouTubeSettings();
 
   bool get isConfigured => immichUrl.isNotEmpty && apiKey.isNotEmpty;
 
@@ -864,6 +905,9 @@ class AppConfig {
       unifi: j['unifi'] is Map<String, dynamic>
           ? UnifiSettings.fromJson(j['unifi'] as Map<String, dynamic>)
           : UnifiSettings(),
+      youtube: j['youtube'] is Map<String, dynamic>
+          ? YouTubeSettings.fromJson(j['youtube'] as Map<String, dynamic>)
+          : YouTubeSettings(),
       videoVolume: (j['videoVolume'] as num?)?.toDouble() ?? 100,
       videoMuted: j['videoMuted'] as bool? ?? false,
     );
@@ -885,6 +929,7 @@ class AppConfig {
         'dashboard': dashboard.toJson(),
         'tv': tv.toJson(),
         'unifi': unifi.toJson(),
+        'youtube': youtube.toJson(),
         'videoVolume': videoVolume,
         'videoMuted': videoMuted,
       };

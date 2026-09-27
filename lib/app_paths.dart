@@ -21,6 +21,15 @@ class AppPaths {
   static String get config => p.join(_home, '.config', name);
   static String get cache => p.join(_home, '.cache', name);
 
+  /// Programs HomeCanvas fetches and keeps up to date itself — yt-dlp, which
+  /// has to track YouTube's changes far faster than a distribution's package
+  /// does. Not under [cache], which Settings can clear.
+  static String get bin => p.join(_home, '.local', 'share', name, 'bin');
+
+  /// Browser profiles worth keeping, such as a YouTube sign-in. Not under
+  /// [cache] for the same reason.
+  static String get profiles => p.join(_home, '.local', 'share', name, 'profiles');
+
   /// Moves an old settings or cache folder to its new name, if there is one
   /// and nothing is at the new name yet. Safe to call on every start.
   static Future<void> migrate() async {

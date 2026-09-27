@@ -96,6 +96,14 @@ class TvService extends ChangeNotifier {
 
   Future<File> get _tokenFile async => _tokenFileSync;
 
+  /// The TV's input list as it last sent it, beside the token.
+  File get _sourcesFile => File(
+      _tokenFileSync.path.replaceFirst(RegExp(r'\.json$'), '_inputs.json'));
+
+  /// Set as a PIN is accepted: the one time asking for the inputs is free,
+  /// because the code has only just left the screen.
+  bool _askForInputs = false;
+
   /// Loads the client certificate and key the television's MQTT interface
   /// requires.
   ///
@@ -216,6 +224,13 @@ class TvService extends ChangeNotifier {
       state: state,
       onState: (_) => notifyListeners(),
       onLog: (s) => debugPrint('[vidaa] $s'),
+      onSourceList: (payload) {
+        try {
+          _sourcesFile.writeAsStringSync(payload);
+        } catch (e) {
+          debugPrint('[vidaa] could not keep the input list: $e');
+        }
+      },
     );
     try {
       return await _client!.connect();
@@ -230,11 +245,21 @@ class TvService extends ChangeNotifier {
   void _finishConnected() {
     _client!.getState();
     _client!.getVolume();
-    // Asked for once here and not again. The set runs its authentication
-    // check whenever it is asked for the source list, which puts the pairing
-    // code up on the television — so polling it, however cheap it looks,
-    // interrupts whatever is being watched.
-    _client!.getSourceList();
+    // Not asked for here. The set runs its authentication check whenever it
+    // is asked for the source list, which puts the pairing code up on the
+    // television — and asking on every connect put it up each time the
+    // panel restarted, with a perfectly good token. The list is kept on
+    // disk instead, and asked for again only just after pairing, when the
+    // code has been on screen anyway, or when someone taps refresh.
+    if (_askForInputs) {
+      _askForInputs = false;
+      _client!.getSourceList();
+    } else if (state.sources.isEmpty) {
+      try {
+        final kept = _sourcesFile;
+        if (kept.existsSync()) _client!.loadSourceList(kept.readAsStringSync());
+      } catch (_) {}
+    }
     _setConn(ConnState.connected);
   }
 
@@ -242,7 +267,8 @@ class TvService extends ChangeNotifier {
   List<TvSource> get sources => state.sources;
 
   /// Re-reads the inputs. Only for an explicit user action — see the note in
-  /// [_finishConnected] about what asking costs.
+  /// [_finishConnected] about what asking costs: it shows the pairing code on
+  /// the TV for a moment.
   void refreshSources() => _client?.getSourceList();
 
   /// Ask for a connection, and keep asking.
@@ -343,11 +369,35 @@ class TvService extends ChangeNotifier {
     _setConn(ConnState.needsPairing);
   }
 
+  /// Pair again, for when the remote has stopped working: puts the code up
+  /// on the TV, connecting first if there is no session to ask through.
+  Future<void> pairAgain() async {
+    _wanted = true;
+    _cancelRetry();
+    if (_client == null || conn != ConnState.connected) {
+      _setConn(ConnState.connecting);
+      try {
+        await _loadAssets();
+      } on TvCredentialsMissing catch (e) {
+        _setConn(ConnState.error,
+            err: 'TV client certificate not set up — ${e.message}');
+        return;
+      }
+      if (!await _openAndConnect(null)) {
+        _setConn(ConnState.error,
+            err: 'Could not connect to $host', retry: true);
+        return;
+      }
+    }
+    startPairing();
+  }
+
   /// Submit the PIN shown on the TV. Returns true on success (token saved).
   Future<bool> submitPin(String pin) async {
     final tok = await _client?.submitPin(pin);
     if (tok != null && tok['accesstoken'] != null) {
       await _saveToken(tok);
+      _askForInputs = true;
       // Reconnect with the token for full ACL access.
       _client?.disconnect();
       await Future.delayed(const Duration(milliseconds: 400));

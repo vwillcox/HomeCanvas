@@ -14,6 +14,7 @@ import '../services/screen_idle_service.dart';
 import '../widgets/big_back_button.dart';
 import '../widgets/now_playing_overlay.dart';
 import '../widgets/weather_overlay.dart';
+import '../widgets/pause_when_hidden.dart';
 
 class SlideshowScreen extends StatefulWidget {
   final List<Asset> images;
@@ -35,7 +36,8 @@ class SlideshowScreen extends StatefulWidget {
   State<SlideshowScreen> createState() => _SlideshowScreenState();
 }
 
-class _SlideshowScreenState extends State<SlideshowScreen> {
+class _SlideshowScreenState extends State<SlideshowScreen>
+    with PauseWhenHidden {
   late List<Asset> _order;
   int _index = 0;
   bool _playing = true;
@@ -97,7 +99,10 @@ class _SlideshowScreenState extends State<SlideshowScreen> {
     _timer?.cancel();
     _timer = Timer.periodic(
       Duration(seconds: widget.settings.intervalSeconds),
-      (_) => _next(),
+      // Not behind a video or another screen: each step decodes a photo.
+      (_) {
+        if (shown) _next();
+      },
     );
     _playing = true;
   }

@@ -146,6 +146,10 @@ class VidaaClient {
   final PinCallback? onPinRequired;
   final LogCallback? onLog;
 
+  /// Given each input list the TV sends, as it sent it, so the owner can keep
+  /// it — see [loadSourceList] for why.
+  final void Function(String payload)? onSourceList;
+
   MqttServerClient? _client;
   late String _clientId;
   final TvState state;
@@ -170,6 +174,7 @@ class VidaaClient {
     this.onState,
     this.onPinRequired,
     this.onLog,
+    this.onSourceList,
     TvState? state,
   }) : state = state ?? TvState();
 
@@ -286,7 +291,7 @@ class VidaaClient {
     } else if (topic.endsWith('/data/sourcelist')) {
       // A JSON array, not an object, so the decode above leaves d null —
       // which is why this reply was previously received and thrown away.
-      _parseSourceList(payload);
+      if (_parseSourceList(payload)) onSourceList?.call(payload);
     } else if (topic == '/remoteapp/mobile/broadcast/ui_service/state') {
       if (d != null) {
         state.raw = d;
@@ -307,10 +312,15 @@ class VidaaClient {
     }
   }
 
-  void _parseSourceList(String payload) {
+  /// Shows an input list kept from an earlier session, without asking the
+  /// TV for it — which, see [getSourceList], puts the pairing code up on the
+  /// screen. Returns whether it held any inputs.
+  bool loadSourceList(String payload) => _parseSourceList(payload);
+
+  bool _parseSourceList(String payload) {
     try {
       final list = jsonDecode(payload);
-      if (list is! List) return;
+      if (list is! List) return false;
       final parsed = <TvSource>[];
       for (final e in list) {
         final s = TvSource.parse(e, currentId: state.sourceId);
@@ -318,11 +328,13 @@ class VidaaClient {
       }
       // An empty reply is not an answer — keeping the previous list beats
       // blanking the inputs because one poll came back short.
-      if (parsed.isEmpty) return;
+      if (parsed.isEmpty) return false;
       state.sources = parsed;
       onState?.call(state);
+      return true;
     } catch (e) {
       _log('could not read the source list: $e');
+      return false;
     }
   }
 

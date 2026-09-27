@@ -50,6 +50,10 @@ class ScreenIdleService {
 
   ScreenIdleService(this._configService, this._sources);
 
+  /// Whether a video is playing — YouTube, which is not a [PlaybackSource]
+  /// but is every bit as much a reason to leave the screen on.
+  bool Function()? videoPlaying;
+
   ScreenSettings get _settings => _configService.config.screen;
 
   void start() {
@@ -102,7 +106,8 @@ class ScreenIdleService {
   }
 
   bool get _musicPlaying =>
-      _sources.any((s) => s.available && s.now.isPlaying);
+      _sources.any((s) => s.available && s.now.isPlaying) ||
+      (videoPlaying?.call() ?? false);
 
   Future<void> _tick() async {
     final playing = _musicPlaying;

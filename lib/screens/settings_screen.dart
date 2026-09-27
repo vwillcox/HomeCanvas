@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -20,6 +21,8 @@ import '../services/now_playing_service.dart';
 import '../services/screen_idle_service.dart';
 import '../services/share_inbox_service.dart';
 import '../services/spotify_service.dart';
+import '../services/youtube_service.dart';
+import 'youtube_sign_in.dart';
 import '../services/tv_service.dart';
 import '../services/weather_service.dart';
 import '../widgets/weather_overlay.dart';
@@ -122,6 +125,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           GlassSection(
             title: 'Spotify',
             children: [const _SpotifySettingsTile()],
+          ),
+          GlassSection(
+            title: 'YouTube',
+            children: [const _YouTubeSettingsTile()],
           ),
         ];
       case 2: // Home
@@ -976,6 +983,148 @@ class _HomeAssistantSettingsTile extends StatelessWidget {
       trailing: const Icon(Icons.chevron_right),
       onTap: () => _edit(context),
       isThreeLine: false,
+    );
+  }
+}
+
+/// YouTube, played by the kiosk: the yt-dlp it needs, the account, and how
+/// sharp a picture to ask for. See [YouTubeService].
+class _YouTubeSettingsTile extends StatelessWidget {
+  const _YouTubeSettingsTile();
+
+  @override
+  Widget build(BuildContext context) {
+    final yt = context.watch<YouTubeService>();
+    return ListTile(
+      leading: Icon(
+        Icons.smart_display,
+        color: yt.settings.signedIn ? const Color(0xFFFF0033) : null,
+      ),
+      title: const Text('YouTube'),
+      subtitle: Text(
+        yt.ytDlpVersion == null
+            ? 'Not set up — needs yt-dlp to play videos here'
+            : yt.settings.signedIn
+                ? 'Signed in — Premium, subscriptions and members-only videos'
+                : 'Ready — not signed in',
+      ),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () => showDialog<void>(
+        context: context,
+        builder: (_) => const _YouTubeDialog(),
+      ),
+    );
+  }
+}
+
+class _YouTubeDialog extends StatelessWidget {
+  const _YouTubeDialog();
+
+  @override
+  Widget build(BuildContext context) {
+    final yt = context.watch<YouTubeService>();
+    final s = yt.settings;
+    final version = yt.ytDlpVersion;
+    return AlertDialog(
+      title: const Text('YouTube'),
+      content: SizedBox(
+        width: 620,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Videos shared from the phone app, opened from the news, or '
+                'put on the dashboard play here, full screen or as a '
+                'picture-in-picture window you can drag, pinch and resize.',
+              ),
+              const SizedBox(height: 20),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.download),
+                title: const Text('yt-dlp'),
+                subtitle: Text(yt.installing
+                    ? yt.toolStatus ?? 'Installing…'
+                    : yt.toolStatus ??
+                        (version == null
+                            ? 'Not installed. It fetches the video from '
+                                'YouTube; kept up to date automatically once '
+                                'installed.'
+                            : 'Version $version — updated daily')),
+                trailing: yt.installing
+                    ? const SizedBox(
+                        width: 28,
+                        height: 28,
+                        child: CircularProgressIndicator(strokeWidth: 3))
+                    : FilledButton.tonal(
+                        onPressed: yt.install,
+                        child: Text(version == null ? 'Install' : 'Reinstall'),
+                      ),
+              ),
+              const Divider(),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.account_circle),
+                title: Text(s.signedIn ? 'Signed in' : 'Not signed in'),
+                subtitle: const Text(
+                  'Optional. Signing in lets Premium, members-only and '
+                  'age-restricted videos play, and puts your subscriptions on '
+                  'the dashboard. You sign in on Google’s own page; the '
+                  'panel never sees your password.',
+                ),
+                isThreeLine: true,
+                trailing: s.signedIn
+                    ? OutlinedButton(
+                        onPressed: yt.signOut,
+                        child: const Text('Sign out'),
+                      )
+                    : FilledButton(
+                        onPressed: version == null
+                            ? null
+                            : () => signInToYouTube(context),
+                        child: const Text('Sign in'),
+                      ),
+              ),
+              if (!s.signedIn)
+                Padding(
+                  padding: const EdgeInsets.only(left: 40, bottom: 8),
+                  child: Text(
+                    'Rather not type a password here? Sign in on a computer '
+                    'instead: open '
+                    '${context.read<DashboardService>().editorAddress}/youtube '
+                    'in its browser.',
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                ),
+              const Divider(),
+              const SizedBox(height: 8),
+              const Text('Picture quality'),
+              const SizedBox(height: 8),
+              SegmentedButton<int>(
+                segments: const [
+                  ButtonSegment(value: 720, label: Text('720p')),
+                  ButtonSegment(value: 1080, label: Text('1080p')),
+                ],
+                selected: {s.maxHeight <= 720 ? 720 : 1080},
+                onSelectionChanged: (v) => yt.setMaxHeight(v.first),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                '1080p is sharper and works the Pi harder. Dashboard tiles '
+                'use 720p either way.',
+                style: TextStyle(fontSize: 13),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Done'),
+        ),
+      ],
     );
   }
 }
@@ -1992,8 +2141,67 @@ class _TvSettingsTile extends StatelessWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _edit(context),
           ),
+        if (s.enabled)
+          ListTile(
+            leading: const Icon(Icons.pin),
+            title: const Text('Pair again'),
+            subtitle: const Text(
+              'Only if the remote has stopped working. The saved pairing is '
+              'kept across restarts, so the TV no longer shows its code each '
+              'time the panel starts.',
+            ),
+            isThreeLine: true,
+            trailing: OutlinedButton(
+              onPressed: () => _pairAgain(context),
+              child: const Text('Show code on TV'),
+            ),
+          ),
       ],
     );
+  }
+
+  Future<void> _pairAgain(BuildContext context) async {
+    final tv = context.read<TvService>();
+    await tv.pairAgain();
+    if (!context.mounted || tv.conn != ConnState.needsPairing) return;
+    final pin = TextEditingController();
+    final entered = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Enter the code on the TV'),
+        content: TextField(
+          controller: pin,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          style: const TextStyle(fontSize: 28, letterSpacing: 6),
+          textAlign: TextAlign.center,
+          onSubmitted: (v) => Navigator.of(ctx).pop(v),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(pin.text),
+            child: const Text('Pair'),
+          ),
+        ],
+      ),
+    );
+    final code = entered?.trim() ?? '';
+    if (code.isEmpty || int.tryParse(code) == null) {
+      // Left waiting for a PIN, the widget would say so; reconnecting on
+      // the old token puts things back as they were.
+      unawaited(tv.connect());
+      return;
+    }
+    final ok = await tv.submitPin(code);
+    if (context.mounted) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
+        content: Text(ok ? 'Paired with the TV.' : 'The TV did not accept that code.'),
+      ));
+    }
   }
 }
 
