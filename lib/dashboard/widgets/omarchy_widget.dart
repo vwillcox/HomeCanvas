@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'omarchy_hotkeys.dart';
+import '../../widgets/pause_when_hidden.dart';
+import '../../widgets/shown_timers.dart';
 
 /// The Omarchy keyboard shortcuts, as a wall-sized cheat sheet.
 ///
@@ -25,7 +27,8 @@ class DashboardOmarchyWidget extends StatefulWidget {
   State<DashboardOmarchyWidget> createState() => _DashboardOmarchyWidgetState();
 }
 
-class _DashboardOmarchyWidgetState extends State<DashboardOmarchyWidget> {
+class _DashboardOmarchyWidgetState extends State<DashboardOmarchyWidget>
+    with PauseWhenHidden, ShownTimers {
   int _section = 0;
   int _page = 0;
 
@@ -73,7 +76,7 @@ class _DashboardOmarchyWidgetState extends State<DashboardOmarchyWidget> {
     // Floored, for the same reason the dashboard's own page timer is: a typo
     // of 1 would otherwise make a wall panel strobe.
     final every = Duration(seconds: seconds < 3 ? 3 : seconds);
-    _timer = Timer.periodic(every, (_) => _advance());
+    _timer = everyWhileShown(every, () => _advance());
   }
 
   void _advance() {

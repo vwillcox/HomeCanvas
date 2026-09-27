@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -13,6 +12,8 @@ import '../services/camera_service.dart';
 import '../services/config_service.dart';
 import '../services/locked_folder_service.dart';
 import 'glass.dart';
+import 'pause_when_hidden.dart';
+import 'shown_timers.dart';
 
 /// The kiosk's top-level places.
 enum KioskModule { photos, dashboard }
@@ -51,28 +52,20 @@ class ModuleBar extends StatefulWidget {
   State<ModuleBar> createState() => _ModuleBarState();
 }
 
-class _ModuleBarState extends State<ModuleBar> {
+class _ModuleBarState extends State<ModuleBar>
+    with PauseWhenHidden, ShownTimers {
   static const String _remoteAppId = 'com.vwillcox.vidaa_remote';
 
   /// Whether the TV remote app is running, so its button only appears when
   /// it can actually flip to it.
   bool _remoteRunning = false;
-  Timer? _remotePoll;
-
   @override
   void initState() {
     super.initState();
     _checkRemote();
-    _remotePoll = Timer.periodic(
-      const Duration(seconds: 4),
-      (_) => _checkRemote(),
-    );
-  }
-
-  @override
-  void dispose() {
-    _remotePoll?.cancel();
-    super.dispose();
+    // A process started to ask, so not often, and only while the bar can
+    // be seen: every 4 seconds it was fifteen processes a minute, all day.
+    everyWhileShown(const Duration(seconds: 10), _checkRemote);
   }
 
   /// Detect the remote's window via wlrctl; hide the button if wlrctl is

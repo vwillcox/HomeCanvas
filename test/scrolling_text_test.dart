@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:home_canvas/dashboard/widgets/scrolling_text.dart';
 
-Widget host(String text, double width) => MaterialApp(
+Widget host(String text, double width, {int laps = 3}) => MaterialApp(
       home: Scaffold(
         body: Center(
           child: SizedBox(
@@ -11,6 +11,7 @@ Widget host(String text, double width) => MaterialApp(
               text,
               style: const TextStyle(fontSize: 20),
               pause: const Duration(milliseconds: 300),
+              laps: laps,
             ),
           ),
         ),
@@ -24,16 +25,27 @@ final scrollTransform = find.descendant(
   matching: find.byType(Positioned),
 );
 
+/// How far the pair of copies has been slid: one translation moving both,
+/// so a frame is only painted, not laid out again.
+double slid(WidgetTester tester) => tester
+    .widget<Transform>(find.descendant(
+      of: find.byType(ScrollingText),
+      matching: find.byType(Transform),
+    ))
+    .transform
+    .getTranslation()
+    .x;
+
 /// How far along the text has been slid, and how wide it was allowed to be.
 ({double left, double width}) offsetOf(WidgetTester tester) {
   final p = tester.widget<Positioned>(scrollTransform.first);
-  return (left: p.left!, width: p.width!);
+  return (left: p.left! + slid(tester), width: p.width!);
 }
 
 /// Both copies of the text — the one on screen and the one a lap behind.
 List<double> lefts(WidgetTester tester) => tester
     .widgetList<Positioned>(scrollTransform)
-    .map((p) => p.left!)
+    .map((p) => p.left! + slid(tester))
     .toList();
 
 void main() {
@@ -100,6 +112,24 @@ void main() {
     expect(lefts(tester).first, lessThanOrEqualTo(0.0));
 
     await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('after its laps it rests at the start, and stops animating',
+      (tester) async {
+    await tester.pumpWidget(
+        host('A title far too long for this narrow box', 100, laps: 1));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 16));
+    expect(tester.hasRunningAnimations, isTrue);
+
+    // Well past one lap.
+    for (var i = 0; i < 60; i++) {
+      await tester.pump(const Duration(seconds: 1));
+    }
+    expect(tester.hasRunningAnimations, isFalse,
+        reason: 'nothing should be drawn again once it has come to rest');
+    // The copy a lap behind sits where the text starts.
+    expect(lefts(tester)[1], closeTo(0, 0.01));
   });
 
   testWidgets('a new track re-measures rather than inheriting the old scroll',

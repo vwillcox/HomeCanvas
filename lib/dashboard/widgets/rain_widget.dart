@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../services/rain_service.dart';
 import '../../widgets/pause_when_hidden.dart';
 import '../../widgets/rebuild_every_minute.dart';
+import '../../widgets/shown_timers.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
@@ -21,7 +22,7 @@ class RainWidget extends StatefulWidget {
 }
 
 class _RainWidgetState extends State<RainWidget>
-    with PauseWhenHidden, RebuildEveryMinute {
+    with PauseWhenHidden, ShownTimers, RebuildEveryMinute {
   @override
   Widget build(BuildContext context) {
     final t = widget.w.theme;

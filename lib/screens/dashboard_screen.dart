@@ -3,7 +3,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/foundation.dart' show listEquals;
+import 'package:flutter/foundation.dart' show ValueListenable, listEquals;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -24,6 +24,9 @@ import '../widgets/glass.dart';
 import '../widgets/module_bar.dart';
 import '../widgets/now_playing_overlay.dart';
 import 'home_screen.dart' show showablePlayback;
+import '../widgets/pause_when_hidden.dart';
+import '../widgets/shown_timers.dart';
+import '../widgets/stepped_timeline.dart';
 
 /// The dashboard: widgets laid out on a grid, drawn in the chosen theme.
 ///
@@ -43,7 +46,7 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen>
-    with SingleTickerProviderStateMixin {
+    with PauseWhenHidden, ShownTimers {
   ScreenIdleService? _screenIdle;
 
   late final PageController _pages = PageController(
@@ -51,15 +54,13 @@ class _DashboardScreenState extends State<DashboardScreen>
   );
   late int _page = widget.initialPage;
 
-  /// The automatic page turn, as an animation rather than a timer: it runs
-  /// from 0 to 1 over the page's time and turns the page when it gets there.
-  /// That same value fills the current page's dot, so a turn is never a
-  /// surprise, and pausing is simply stopping it.
-  ///
-  /// Made in initState, not lazily: a dashboard whose pages never turn would
-  /// otherwise first touch it in dispose, and a controller made there looks
-  /// up its TickerMode through an element that is already gone.
-  late final AnimationController _turn;
+  /// The automatic page turn: it runs from 0 to 1 over the page's time and
+  /// turns the page when it gets there. That same value fills the current
+  /// page's dot, so a turn is never a surprise, and pausing is simply
+  /// stopping it. In steps, not frames — see [SteppedTimeline] — and held
+  /// while the dashboard cannot be seen, as an animation would be.
+  late final SteppedTimeline _turn =
+      SteppedTimeline(onDone: () => _goTo(_page + 1, _pageCount));
 
   /// Paused from the page dots. Holds until they are tapped again — through
   /// leaving the dashboard and through a restart, since it is saved.
@@ -95,16 +96,10 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   void initState() {
     super.initState();
-    _turn = AnimationController(vsync: this)
-      ..addStatusListener((status) {
-        if (status == AnimationStatus.completed && mounted) {
-          _goTo(_page + 1, _pageCount);
-        }
-      });
     _player.isOpen.addListener(_playerOpened);
-    _clock = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (mounted) setState(() {});
-    });
+    // Scheduled pages and tiles come and go by the clock — only looked at
+    // while the dashboard can be seen.
+    _clock = everyWhileShown(const Duration(seconds: 30), () => setState(() {}));
     // A dashboard is a thing you glance at from across the room without
     // touching it, so the idle timer would switch the panel off precisely
     // when it is doing its job. Held awake for as long as it is on screen;
@@ -127,6 +122,12 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
     if (which == 'forecast') unawaited(showWeatherForecast(context, theme));
     if (which == 'inputs') unawaited(showTvInputs(context, theme));
+  }
+
+  @override
+  void onShownChanged(bool shown) {
+    super.onShownChanged(shown);
+    _turn.hold(!shown);
   }
 
   @override
@@ -331,7 +332,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     DashboardTheme theme,
     Widget grid,
     int pageCount,
-    Animation<double>? dotsTurn,
+    ValueListenable<double>? dotsTurn,
     VoidCallback? onPause,
   ) {
     return Scaffold(
@@ -404,7 +405,7 @@ class _TopBar extends StatelessWidget {
   final int pageCount;
   final int page;
   final void Function(int) onPage;
-  final Animation<double>? turn;
+  final ValueListenable<double>? turn;
   final bool paused;
   final VoidCallback? onTogglePause;
   final NowPlayingOverlayController? player;
@@ -785,7 +786,7 @@ class _PageDots extends StatelessWidget {
 
   /// How far through its time the current page is, when pages turn
   /// themselves. Fills the current dot.
-  final Animation<double>? turn;
+  final ValueListenable<double>? turn;
   final bool paused;
   final VoidCallback? onTogglePause;
 
@@ -875,63 +876,29 @@ class _PageDots extends StatelessWidget {
 }
 
 /// The current dot filling up as its page's time runs out. Paused, the fill
-/// stays where it stopped and breathes, so a held page reads as held rather
-/// than stuck.
-class _Fill extends StatefulWidget {
+/// stays where it stopped, dimmed, beside the play button that says it is
+/// held. It used to breathe, which kept the whole screen redrawing sixty
+/// times a second for as long as the pages were held — and being held is
+/// saved, so that was often for good.
+class _Fill extends StatelessWidget {
   const _Fill({required this.turn, required this.paused, required this.colour});
 
-  final Animation<double> turn;
+  final ValueListenable<double> turn;
   final bool paused;
   final Color colour;
 
   @override
-  State<_Fill> createState() => _FillState();
-}
-
-class _FillState extends State<_Fill> with SingleTickerProviderStateMixin {
-  late final AnimationController _breath = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 1400),
-  );
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.paused) _breath.repeat(reverse: true);
-  }
-
-  @override
-  void didUpdateWidget(covariant _Fill old) {
-    super.didUpdateWidget(old);
-    if (widget.paused && !_breath.isAnimating) {
-      _breath.repeat(reverse: true);
-    } else if (!widget.paused && _breath.isAnimating) {
-      _breath
-        ..stop()
-        ..value = 0;
-    }
-  }
-
-  @override
-  void dispose() {
-    _breath.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: Listenable.merge([widget.turn, _breath]),
-      builder: (context, _) => Align(
+    return ValueListenableBuilder<double>(
+      valueListenable: turn,
+      builder: (context, value, _) => Align(
         alignment: Alignment.centerLeft,
         child: FractionallySizedBox(
-          widthFactor: widget.turn.value.clamp(0.0, 1.0),
+          widthFactor: value.clamp(0.0, 1.0),
           heightFactor: 1,
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: widget.colour.withValues(
-                alpha: widget.paused ? 0.55 + 0.35 * _breath.value : 1,
-              ),
+              color: colour.withValues(alpha: paused ? 0.55 : 1),
               borderRadius: BorderRadius.circular(8),
             ),
           ),

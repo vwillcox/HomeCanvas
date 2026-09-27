@@ -51,12 +51,15 @@ class KioskState {
 ///     POST /dnd?muted=true      the notifications switch
 ///     POST /youtube?url=…       play a YouTube, Floatplane or Nebula video
 ///                               on the panel (named for the first of them)
+///     POST /screen?lit=true     the screen was lit or darkened — from
+///                               screen_control.py, so the kiosk can rest
 class KioskControlService {
   KioskControlService({
     required this.state,
     required this.run,
     required this.setDnd,
     this.playVideo,
+    this.screenLit,
     this.port = defaultPort,
   });
 
@@ -70,6 +73,9 @@ class KioskControlService {
 
   /// Plays a video link; false when it is not one the panel can play.
   final bool Function(String url)? playVideo;
+
+  /// Told whether the screen is lit — see `ScreenState`.
+  final void Function(bool lit)? screenLit;
 
   HttpServer? _server;
 
@@ -148,6 +154,14 @@ class KioskControlService {
         }
         setDnd(muted == 'true');
         return reply(HttpStatus.ok, state().toJson());
+      }
+      if (path == '/screen' && screenLit != null) {
+        final lit = request.uri.queryParameters['lit'];
+        if (lit != 'true' && lit != 'false') {
+          return reply(HttpStatus.badRequest, {'error': 'lit=true|false'});
+        }
+        screenLit!(lit == 'true');
+        return reply(HttpStatus.ok, {'ok': true});
       }
       if (path == '/youtube' && playVideo != null) {
         final url = request.uri.queryParameters['url'] ?? '';

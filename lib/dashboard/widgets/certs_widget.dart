@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../services/cert_check.dart';
+import '../../widgets/pause_when_hidden.dart';
+import '../../widgets/shown_timers.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'tile_bits.dart';
@@ -22,7 +24,8 @@ class CertsWidget extends StatefulWidget {
   State<CertsWidget> createState() => _CertsWidgetState();
 }
 
-class _CertsWidgetState extends State<CertsWidget> {
+class _CertsWidgetState extends State<CertsWidget>
+    with PauseWhenHidden, ShownTimers {
   /// Results shared by every tile and kept across page flips; certificates
   /// change every few weeks, not every few seconds.
   static final Map<String, (CertInfo, DateTime)> _cache = {};
@@ -42,7 +45,7 @@ class _CertsWidgetState extends State<CertsWidget> {
   void initState() {
     super.initState();
     unawaited(_checkAll());
-    _timer = Timer.periodic(const Duration(minutes: 30), (_) => _checkAll());
+    _timer = everyWhileShown(const Duration(minutes: 30), () => _checkAll());
   }
 
   @override

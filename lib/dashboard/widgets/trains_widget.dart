@@ -8,6 +8,8 @@ import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
 import '../../time_format.dart';
+import '../../widgets/pause_when_hidden.dart';
+import '../../widgets/shown_timers.dart';
 
 /// The next trains from your station, as a station board shows them: time,
 /// where to, platform, and whether it is on time, late or cancelled.
@@ -24,7 +26,8 @@ class TrainsWidget extends StatefulWidget {
   State<TrainsWidget> createState() => _TrainsWidgetState();
 }
 
-class _TrainsWidgetState extends State<TrainsWidget> {
+class _TrainsWidgetState extends State<TrainsWidget>
+    with PauseWhenHidden, ShownTimers {
   late final TrainsClient _client = TrainsWidget.debugClient ?? TrainsClient();
   Board? _board;
   String? _error;
@@ -48,7 +51,7 @@ class _TrainsWidgetState extends State<TrainsWidget> {
       _updated = cached.$2;
     }
     unawaited(_load());
-    _timer = Timer.periodic(const Duration(seconds: 60), (_) => _load());
+    _timer = everyWhileShown(const Duration(seconds: 60), () => _load());
   }
 
   @override

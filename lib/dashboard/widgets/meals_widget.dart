@@ -5,6 +5,7 @@ import 'fit_canvas.dart';
 import 'tile_bits.dart';
 import '../../widgets/pause_when_hidden.dart';
 import '../../widgets/rebuild_every_minute.dart';
+import '../../widgets/shown_timers.dart';
 
 const _days = [
   'monday',
@@ -41,7 +42,7 @@ class MealsWidget extends StatefulWidget {
 }
 
 class _MealsWidgetState extends State<MealsWidget>
-    with PauseWhenHidden, RebuildEveryMinute {
+    with PauseWhenHidden, ShownTimers, RebuildEveryMinute {
   static String _dayName(DateTime d) =>
       '${_days[d.weekday - 1][0].toUpperCase()}${_days[d.weekday - 1].substring(1)}';
 

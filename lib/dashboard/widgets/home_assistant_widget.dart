@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../services/home_assistant_service.dart';
+import '../../widgets/pause_when_hidden.dart';
+import '../../widgets/shown_timers.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
@@ -22,7 +24,8 @@ class HomeAssistantWidget extends StatefulWidget {
   State<HomeAssistantWidget> createState() => _HomeAssistantWidgetState();
 }
 
-class _HomeAssistantWidgetState extends State<HomeAssistantWidget> {
+class _HomeAssistantWidgetState extends State<HomeAssistantWidget>
+    with PauseWhenHidden, ShownTimers {
   Timer? _timer;
 
   List<({String id, String name})> get _picked => [
@@ -36,7 +39,7 @@ class _HomeAssistantWidgetState extends State<HomeAssistantWidget> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
-    _timer = Timer.periodic(const Duration(seconds: 15), (_) => _refresh());
+    _timer = everyWhileShown(const Duration(seconds: 15), () => _refresh());
   }
 
   @override

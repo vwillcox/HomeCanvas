@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 
 import '../../services/bin_schedule.dart' show Bin;
 import '../../services/govee_service.dart';
+import '../../widgets/pause_when_hidden.dart';
+import '../../widgets/shown_timers.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
@@ -22,7 +24,8 @@ class LightsWidget extends StatefulWidget {
   State<LightsWidget> createState() => _LightsWidgetState();
 }
 
-class _LightsWidgetState extends State<LightsWidget> {
+class _LightsWidgetState extends State<LightsWidget>
+    with PauseWhenHidden, ShownTimers {
   Timer? _timer;
 
   String get _key => '${widget.w.config.options['apiKey'] ?? ''}'.trim();
@@ -57,7 +60,7 @@ class _LightsWidgetState extends State<LightsWidget> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
     // Local devices are cheap to ask; the cloud counts against a daily
     // allowance, so once a minute is the most this asks it.
-    _timer = Timer.periodic(const Duration(seconds: 60), (_) => _refresh());
+    _timer = everyWhileShown(const Duration(seconds: 60), () => _refresh());
   }
 
   @override

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
@@ -222,10 +223,24 @@ class FeedService extends ChangeNotifier {
     }
   }
 
+  /// The most of a feed or calendar taken. Ordinary ones are tens of
+  /// kilobytes, a calendar with years of history a few megabytes; anything
+  /// past this is not something to hold in memory on a Pi.
+  static const int _maxBytes = 10 * 1024 * 1024;
+
   Future<String?> _get(String url) async {
+    final cancel = CancelToken();
     try {
-      final r = await _dio.get<String>(url);
-      return r.data;
+      final r = await _dio.get<List<int>>(
+        url,
+        cancelToken: cancel,
+        options: Options(responseType: ResponseType.bytes),
+        onReceiveProgress: (got, _) {
+          if (got > _maxBytes) cancel.cancel('over ${_maxBytes ~/ 1048576} MB');
+        },
+      );
+      final bytes = r.data;
+      return bytes == null ? null : utf8.decode(bytes, allowMalformed: true);
     } catch (e) {
       debugPrint('FeedService: $url failed: $e');
       return null;
@@ -240,7 +255,10 @@ class FeedService extends ChangeNotifier {
         _feeds[url] = _Cached(
             _feeds[url]?.items ?? const [], DateTime.now(), 'Feed unreachable');
       } else {
-        _feeds[url] = _Cached(parseFeed(body), DateTime.now(), null);
+        // Parsed on another isolate: a long feed took long enough on this
+        // one to drop frames from whatever was playing.
+        _feeds[url] =
+            _Cached(await compute(parseFeed, body), DateTime.now(), null);
       }
       notifyListeners();
     } finally {
@@ -259,7 +277,8 @@ class FeedService extends ChangeNotifier {
         _calendars[url] = _Cached(_calendars[url]?.items ?? const [],
             DateTime.now(), 'Calendar unreachable');
       } else {
-        _calendars[url] = _Cached(parseIcs(body), DateTime.now(), null);
+        _calendars[url] =
+            _Cached(await compute(parseIcs, body), DateTime.now(), null);
       }
       notifyListeners();
     } finally {

@@ -10,12 +10,14 @@ void main() {
   late List<KioskCommand> ran;
   late bool dnd;
   late List<String> played;
+  late List<bool> lit;
   final client = HttpClient();
 
   setUp(() async {
     ran = [];
     dnd = false;
     played = [];
+    lit = [];
     control = KioskControlService(
       port: 0,
       state: () => KioskState(
@@ -32,6 +34,7 @@ void main() {
         played.add(url);
         return true;
       },
+      screenLit: lit.add,
     );
     await control.start();
   });
@@ -101,6 +104,13 @@ void main() {
     final (_, body) = await call('POST', '/dnd?muted=true');
     expect(dnd, isTrue);
     expect(body['dnd'], isTrue);
+  });
+
+  test('is told when the screen goes dark and lights again', () async {
+    expect((await call('POST', '/screen?lit=false')).$1, 200);
+    expect((await call('POST', '/screen?lit=true')).$1, 200);
+    expect((await call('POST', '/screen?lit=dim')).$1, 400);
+    expect(lit, [false, true]);
   });
 
   test('refuses what it does not understand, and does nothing', () async {

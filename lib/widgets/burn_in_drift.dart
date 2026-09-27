@@ -45,6 +45,10 @@ mixin BurnInDriftMixin<T extends StatefulWidget> on State<T> {
     drift = BurnInDrift.offsetAt(DateTime.now());
     _driftTimer = Timer.periodic(BurnInDrift.tick, (_) {
       if (!mounted) return;
+      // Not while nothing can be seen — a dark screen, or covered: the next
+      // tick after it is shown again catches up, since the drift is worked
+      // out from the time rather than stepped.
+      if (!TickerMode.getValuesNotifier(context).value.enabled) return;
       setState(() => drift = BurnInDrift.offsetAt(DateTime.now()));
     });
   }

@@ -7,6 +7,7 @@ import 'package:flutter/services.dart' show rootBundle;
 
 import '../config/app_config.dart' show TvSettings;
 import 'config_service.dart';
+import 'private_file.dart';
 import 'retry_schedule.dart';
 import 'vidaa_client.dart';
 
@@ -170,7 +171,8 @@ class TvService extends ChangeNotifier {
     _accessExpiry = aTime + aDays * 86400;
     _refreshExpiry = rTime + rDays * 86400;
     final f = await _tokenFile;
-    await f.writeAsString(jsonEncode({
+    // Private and whole: these tokens are as good as the TV's remote.
+    await writePrivateFile(f.path, jsonEncode({
       'host': host,
       'accesstoken': _accessToken,
       'refreshtoken': _refreshToken,

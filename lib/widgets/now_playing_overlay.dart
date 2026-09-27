@@ -402,12 +402,16 @@ class _ArtworkBackdrop extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        ImageFiltered(
-          imageFilter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-          child: CachedNetworkImage(
-            imageUrl: url!,
-            fit: BoxFit.cover,
-            errorWidget: (_, _, _) => const SizedBox.shrink(),
+        // On a layer of its own: the progress moving every second in
+        // front of it would otherwise blur the whole cover again each time.
+        RepaintBoundary(
+          child: ImageFiltered(
+            imageFilter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+            child: CachedNetworkImage(
+              imageUrl: url!,
+              fit: BoxFit.cover,
+              errorWidget: (_, _, _) => const SizedBox.shrink(),
+            ),
           ),
         ),
         DecoratedBox(

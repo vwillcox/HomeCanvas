@@ -7,6 +7,8 @@ import 'package:provider/provider.dart';
 import '../../services/bin_schedule.dart' show dateOnly, daysBetween;
 import '../../services/immich_service.dart';
 import '../../widgets/remote_image.dart';
+import '../../widgets/pause_when_hidden.dart';
+import '../../widgets/shown_timers.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
@@ -83,7 +85,8 @@ class BirthdaysWidget extends StatefulWidget {
   State<BirthdaysWidget> createState() => _BirthdaysWidgetState();
 }
 
-class _BirthdaysWidgetState extends State<BirthdaysWidget> {
+class _BirthdaysWidgetState extends State<BirthdaysWidget>
+    with PauseWhenHidden, ShownTimers {
   /// Shared by every tile; people and their birthdays change rarely.
   static (List<Person>, DateTime)? _cache;
   List<Person>? _people = _cache?.$1;
@@ -94,7 +97,7 @@ class _BirthdaysWidgetState extends State<BirthdaysWidget> {
   void initState() {
     super.initState();
     unawaited(_load());
-    _timer = Timer.periodic(const Duration(hours: 1), (_) => _load());
+    _timer = everyWhileShown(const Duration(hours: 1), () => _load());
   }
 
   @override
