@@ -362,6 +362,9 @@ class VidaaClient {
   void sendKey(String key) =>
       _publish(_tvTopic('remote_service', 'sendkey'), key);
 
+  /// Asks the TV for its state. Like [getSourceList], this makes the set run
+  /// its authentication check and put the pairing code on screen; and it is
+  /// never needed on connect, when the set broadcasts its state anyway.
   void getState() => _publish(_tvTopic('ui_service', 'gettvstate'), '');
 
   /// Asks the TV for its input list; the reply arrives on the sourcelist

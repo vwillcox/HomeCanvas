@@ -243,7 +243,10 @@ class TvService extends ChangeNotifier {
   }
 
   void _finishConnected() {
-    _client!.getState();
+    // Not the state: asking for it puts the pairing code up on the TV, and
+    // the set announces its state to every client that connects regardless.
+    // Tested against the set: connecting alone, or asking for the volume,
+    // brings no code; asking for the state does, every time.
     _client!.getVolume();
     // Not asked for here. The set runs its authentication check whenever it
     // is asked for the source list, which puts the pairing code up on the
@@ -416,7 +419,6 @@ class TvService extends ChangeNotifier {
   void changeSource(String id) => _client?.changeSource(id);
   void launchApp(Map<String, dynamic> app) => _client?.launchApp(app);
   void refresh() {
-    _client?.getState();
     _client?.getVolume();
   }
 
