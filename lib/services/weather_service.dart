@@ -221,14 +221,18 @@ class WeatherService extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _timer?.cancel();
+    _client.close();
     super.dispose();
   }
 
-  Dio _dio() => Dio(BaseOptions(
-        connectTimeout: const Duration(seconds: 12),
-        receiveTimeout: const Duration(seconds: 15),
-        validateStatus: (s) => s != null && s < 500,
-      ));
+  /// One client, so its connections are reused between fetches.
+  final Dio _client = Dio(BaseOptions(
+    connectTimeout: const Duration(seconds: 12),
+    receiveTimeout: const Duration(seconds: 15),
+    validateStatus: (s) => s != null && s < 500,
+  ));
+
+  Dio _dio() => _client;
 
   static final _ukPostcode = RegExp(
     r'^[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}$',

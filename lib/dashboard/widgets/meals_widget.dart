@@ -1,10 +1,10 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
+import '../../widgets/pause_when_hidden.dart';
+import '../../widgets/rebuild_every_minute.dart';
 
 const _days = [
   'monday',
@@ -23,8 +23,10 @@ String mealOn(Map<String, dynamic> options, DateTime date) =>
 /// Which day counts as "tonight": today until [switchHour], then tomorrow —
 /// once dinner is eaten, the question is what is for tomorrow.
 DateTime tonight(DateTime now, int switchHour) {
-  final today = DateTime(now.year, now.month, now.day);
-  return now.hour >= switchHour ? today.add(const Duration(days: 1)) : today;
+  // A day on by the calendar, not 24 hours: on the Sunday the clocks go
+  // back, midnight plus 24 hours is 11pm the same day.
+  final after = now.hour >= switchHour ? 1 : 0;
+  return DateTime(now.year, now.month, now.day + after);
 }
 
 /// The week's dinners, set in the editor: tonight's large, tomorrow's
@@ -38,23 +40,8 @@ class MealsWidget extends StatefulWidget {
   State<MealsWidget> createState() => _MealsWidgetState();
 }
 
-class _MealsWidgetState extends State<MealsWidget> {
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    _timer = Timer.periodic(const Duration(minutes: 1), (_) {
-      if (mounted) setState(() {});
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
+class _MealsWidgetState extends State<MealsWidget>
+    with PauseWhenHidden, RebuildEveryMinute {
   static String _dayName(DateTime d) =>
       '${_days[d.weekday - 1][0].toUpperCase()}${_days[d.weekday - 1].substring(1)}';
 
@@ -66,7 +53,7 @@ class _MealsWidgetState extends State<MealsWidget> {
         .clamp(0, 23);
     final now = DateTime.now();
     final first = tonight(now, switchHour);
-    final second = first.add(const Duration(days: 1));
+    final second = DateTime(first.year, first.month, first.day + 1);
     final a = mealOn(options, first), b = mealOn(options, second);
     if (_days.every((d) => '${options[d] ?? ''}'.trim().isEmpty)) {
       return TileMessage(

@@ -27,8 +27,12 @@ import 'dashboard/widgets/widgets.dart';
 import 'services/audio_levels_service.dart';
 import 'services/background_pause.dart';
 import 'services/kiosk_control_service.dart';
-import 'services/youtube_link.dart';
-import 'services/youtube_service.dart';
+import 'services/floatplane_site.dart';
+import 'services/nebula_site.dart';
+import 'services/video_link.dart';
+import 'services/video_player_service.dart';
+import 'services/youtube_site.dart';
+import 'services/yt_dlp.dart';
 import 'services/camera_service.dart';
 import 'services/article_reader.dart';
 import 'services/config_service.dart';
@@ -64,7 +68,7 @@ import 'widgets/camera_overlay.dart';
 import 'widgets/incoming_share_overlay.dart';
 import 'widgets/reading_bar.dart';
 import 'widgets/now_playing_overlay.dart';
-import 'widgets/youtube_overlay.dart';
+import 'widgets/video_overlay.dart';
 import 'app_paths.dart';
 import 'theme.dart';
 import 'dashboard/dashboard_theme.dart';
@@ -179,19 +183,32 @@ void main() async {
   // itself is left to the host-side screen_control.py service.
   final screenIdle = ScreenIdleService(config, [spotify, nowPlaying])..start();
 
-  // YouTube, played by the kiosk itself: sent from the phone, opened from
-  // the news, or on the dashboard. Music playing already is paused rather
-  // than talked over, and a video playing keeps the screen on.
-  final youtube = YouTubeService(config)
+  // YouTube, Floatplane and Nebula, played by the kiosk itself: sent from
+  // the phone, opened from the news, or picked on the dashboard. yt-dlp
+  // finds the streams; each site holds its sign-in and its feed.
+  final ytDlp = YtDlp();
+  final youtube = YouTubeSite(config, ytDlp);
+  final floatplane = FloatplaneSite(config, ytDlp);
+  final nebula = NebulaSite(config, ytDlp);
+  final sites = [youtube, floatplane, nebula];
+  // The sign-ins are checked once yt-dlp is known to be there to check them.
+  unawaited(ytDlp.start().then((_) {
+    for (final site in sites) {
+      site.start();
+    }
+  }));
+  // Music playing already is paused rather than talked over, and a video
+  // playing keeps the screen on.
+  final player = VideoPlayerService(config, ytDlp, sites)
     ..onStart = () {
       for (final PlaybackSource p in [spotify, nowPlaying]) {
         if (p.available && p.now.isPlaying) unawaited(p.playPause());
       }
     }
     ..start();
-  screenIdle.videoPlaying = () => youtube.playing;
-  // Its sign-in page, for signing in from a computer instead of the panel.
-  dashboard.youtube = youtube;
+  screenIdle.videoPlaying = () => player.playing;
+  // Their sign-in pages, for signing in from a computer instead of the panel.
+  dashboard.videoSites = sites;
 
   // Programs that cannot be seen behind a full-screen video — the desktop's
   // taskbar, the TV remote app — are paused for its length, leaving the CPU
@@ -201,8 +218,8 @@ void main() async {
   final background = BackgroundPause();
   var backgroundChange = background.resume(all: true);
   var coveredByVideo = false;
-  youtube.addListener(() {
-    final covered = youtube.view == YouTubeView.full;
+  player.addListener(() {
+    final covered = player.view == VideoView.full;
     if (covered == coveredByVideo) return;
     coveredByVideo = covered;
     backgroundChange = backgroundChange
@@ -296,7 +313,11 @@ void main() async {
         ChangeNotifierProvider.value(value: spotify),
         ChangeNotifierProvider.value(value: indoor),
         ChangeNotifierProvider.value(value: shareInbox),
+        ChangeNotifierProvider.value(value: ytDlp),
+        ChangeNotifierProvider.value(value: player),
         ChangeNotifierProvider.value(value: youtube),
+        ChangeNotifierProvider.value(value: floatplane),
+        ChangeNotifierProvider.value(value: nebula),
         ChangeNotifierProvider.value(value: reader),
         Provider<ScreenIdleService>.value(value: screenIdle),
         ChangeNotifierProvider.value(value: brightness),
@@ -346,10 +367,10 @@ void main() async {
       );
     },
     run: (command) => runKioskCommand(command, config),
-    playYouTube: (url) {
-      final link = YouTubeLink.parse(url);
+    playVideo: (url) {
+      final link = VideoLink.parse(url);
       if (link == null) return false;
-      unawaited(youtube.play(link));
+      unawaited(player.play(link));
       return true;
     },
     setDnd: (muted) {
@@ -440,7 +461,7 @@ class HomeCanvasApp extends StatelessWidget {
             // A video sent to the panel, full screen or floating over
             // whatever else is on it. Below the share popup, so something
             // arriving mid-video still shows.
-            YouTubeOverlay(navigatorKey: rootNavigatorKey),
+            VideoOverlay(navigatorKey: rootNavigatorKey),
             IncomingShareOverlay(navigatorKey: rootNavigatorKey),
             // What is being read aloud, with its controls, over any screen.
             const ReadingBar(),
@@ -455,7 +476,7 @@ class HomeCanvasApp extends StatelessWidget {
   }
 }
 
-/// Everything the Navigator shows, taken off screen while a YouTube video
+/// Everything the Navigator shows, taken off screen while a video
 /// covers it.
 ///
 /// Flutter does not skip what is hidden behind something opaque: without
@@ -472,8 +493,8 @@ class _HiddenUnderVideo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final covered = context.select<YouTubeService, bool>(
-      (y) => y.view == YouTubeView.full,
+    final covered = context.select<VideoPlayerService, bool>(
+      (y) => y.view == VideoView.full,
     );
     return TickerMode(
       enabled: !covered,
@@ -637,11 +658,13 @@ class _DebugLockedVideoLoaderState extends State<_DebugLockedVideoLoader> {
 
   Future<void> _go() async {
     final r = await _locked.unlock(widget.pin);
+    if (!mounted) return;
     if (r != UnlockResult.success) {
       setState(() => _status = 'unlock failed: $r');
       return;
     }
     final assets = await _locked.getLockedAssets();
+    if (!mounted) return;
     final v = assets.where((a) => a.isVideo).cast<Asset?>().firstWhere(
           (a) => true,
           orElse: () => null,

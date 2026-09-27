@@ -144,7 +144,9 @@ libmpv with speed, scrub, zoom and volume; portrait and landscape uncropped.
 **YouTube** — links shared from the phone play on the panel, full screen or
 as a picture-in-picture window you can drag and resize over anything else; a
 dashboard widget lists your subscriptions to pick from, and signing in brings
-Premium and members-only videos. Up to 1080p60.
+Premium and members-only videos. Up to 1080p60. **Floatplane** and
+**Nebula** too: widgets of your creators' latest videos, played the same way
+(Nebula's HEVC decoded by the Pi's hardware).
 
 **Slideshow** — fade, slide, Ken Burns or page-turn transitions, shuffle, a
 blurred backdrop behind letterboxed shots, and several albums played as one.

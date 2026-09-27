@@ -1,3 +1,5 @@
+import 'video_link.dart';
+
 /// A YouTube video, picked out of whichever of YouTube's many link shapes it
 /// arrived as.
 ///
@@ -5,19 +7,31 @@
 /// `youtube.com/watch?v=ID`, Shorts and live streams have paths of their own,
 /// and a news feed can carry an embed. All of them name the same eleven
 /// characters, and that id is all the kiosk needs to play one.
-class YouTubeLink {
+class YouTubeLink implements VideoLink {
   const YouTubeLink(this.id, {this.start = Duration.zero});
 
+  @override
   final String id;
 
   /// Where to start, from the link's `t=` or `start=`. Zero for the start.
+  @override
   final Duration start;
+
+  @override
+  String get site => 'youtube';
+
+  @override
+  String get siteName => 'YouTube';
 
   /// The address yt-dlp is given — the plain watch page, without the tracking
   /// and playlist parameters a shared link carries.
   String get watchUrl => 'https://www.youtube.com/watch?v=$id';
 
+  @override
+  String get url => watchUrl;
+
   /// A still of the video, served by YouTube without signing in.
+  @override
   String get thumbnailUrl => 'https://i.ytimg.com/vi/$id/hqdefault.jpg';
 
   static final RegExp _id = RegExp(r'^[A-Za-z0-9_-]{11}$');

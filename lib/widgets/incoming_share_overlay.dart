@@ -13,8 +13,8 @@ import '../screens/video_player_screen.dart';
 import '../services/kiosk_browser.dart';
 import '../services/local_file_media_source.dart';
 import '../services/share_inbox_service.dart';
-import '../services/youtube_link.dart';
-import '../services/youtube_service.dart';
+import '../services/video_link.dart';
+import '../services/video_player_service.dart';
 
 /// A small corner notification whenever something new has been shared to
 /// the kiosk. Placed once, globally, in `main.dart`'s `MaterialApp.builder`
@@ -48,7 +48,6 @@ class _IncomingShareOverlayState extends State<IncomingShareOverlay>
   /// takes its own focus back and closes it — a safety net for whenever the
   /// close button below isn't used.
   static const Duration _webViewTimeout = Duration(minutes: 2);
-  static const String _kioskAppId = 'info.talktech.homecanvas';
 
   /// The open link-viewer's process, if any — kept so the close button and
   /// the timeout can both actually end the same one.
@@ -74,8 +73,8 @@ class _IncomingShareOverlayState extends State<IncomingShareOverlay>
     if (navigator == null) return;
     // Opening something else while a video fills the screen: the video moves
     // aside into picture-in-picture rather than hiding what was opened.
-    final youtube = context.read<YouTubeService>();
-    if (youtube.view == YouTubeView.full) youtube.showPip();
+    final player = context.read<VideoPlayerService>();
+    if (player.view == VideoView.full) player.showPip();
     switch (item.type) {
       case ShareType.image:
       case ShareType.gif:
@@ -99,15 +98,17 @@ class _IncomingShareOverlayState extends State<IncomingShareOverlay>
               SharedTextScreen(text: item.content!, sender: item.sender),
         ));
       case ShareType.link:
-        // A YouTube link plays here, full screen, rather than in a browser
-        // window that closes itself two minutes in.
-        final video = YouTubeLink.parse(item.content!);
+        // A YouTube, Floatplane or Nebula link plays here, full screen,
+        // rather than in a browser window that closes itself two minutes in.
+        final video = VideoLink.parse(item.content!);
         if (video != null) {
-          await context.read<YouTubeService>().play(video);
+          await player.play(video);
         } else {
           await _openLink(item.content!);
         }
     }
+    // Seen, and closed: a photo or video is shown once, not kept.
+    await service.discard(item);
   }
 
   /// The browser window is deliberately shorter than the screen, leaving a
@@ -147,12 +148,7 @@ class _IncomingShareOverlayState extends State<IncomingShareOverlay>
     final proc = _browserProc;
     if (proc == null) return;
     setState(() => _browserProc = null);
-    try {
-      await Process.run('wlrctl', ['toplevel', 'focus', 'app_id:$_kioskAppId']);
-    } catch (_) {
-      // wlrctl not installed — the close below still ends the page; the
-      // user can switch back by touch same as for any other window.
-    }
+    await KioskBrowser.focusKiosk();
     proc.kill();
   }
 
@@ -197,7 +193,7 @@ class _IncomingShareOverlayState extends State<IncomingShareOverlay>
                         item: item,
                         pendingCount: service.pendingCount,
                         onTap: () => _open(service, item),
-                        onDismiss: service.dequeue,
+                        onDismiss: service.dismiss,
                       ),
                     ),
                   ),
@@ -283,10 +279,10 @@ class _Card extends StatelessWidget {
     required this.onDismiss,
   });
 
-  bool get _isVideoLink =>
-      item.type == ShareType.link && YouTubeLink.parse(item.content!) != null;
+  VideoLink? get _video =>
+      item.type == ShareType.link ? VideoLink.parse(item.content!) : null;
 
-  IconData get _icon => _isVideoLink ? Icons.smart_display : switch (item.type) {
+  IconData get _icon => _video != null ? Icons.smart_display : switch (item.type) {
         ShareType.image => Icons.image,
         ShareType.gif => Icons.gif_box,
         ShareType.video => Icons.movie,
@@ -294,7 +290,9 @@ class _Card extends StatelessWidget {
         ShareType.text => Icons.notes,
       };
 
-  String get _label => _isVideoLink ? 'YouTube video' : switch (item.type) {
+  String get _label => _video == null ? _typeLabel : '${_video!.siteName} video';
+
+  String get _typeLabel => switch (item.type) {
         ShareType.image => 'Photo shared',
         ShareType.gif => 'GIF shared',
         ShareType.video => 'Video shared',

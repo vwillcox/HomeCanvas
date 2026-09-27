@@ -19,6 +19,9 @@ import 'package:media_kit/media_kit.dart';
 /// the more accurate of the two, which on a wall panel across a room is not
 /// the part anyone notices. No scaling happens at full screen — the video's
 /// own size is drawn — so the scaler named here matters only for tiles.
+///
+/// Also where media_kit's own choices are overridden, when they do not suit
+/// streaming on the panel — see the buffer sizes.
 class MpvTuning {
   MpvTuning._();
 
@@ -26,6 +29,13 @@ class MpvTuning {
     'sws-allow-zimg': 'no',
     'sws-fast': 'yes',
     'sws-scaler': 'fast-bilinear',
+    // mpv's own buffer sizes, in place of the 32 MB media_kit sets both to.
+    // A 1080p60 stream fills 32 MB in under a minute, and with it that full
+    // the first seek outside it froze the picture for ten seconds while the
+    // sound went on; with mpv's sizes it takes two. Measured on the panel
+    // with a 6.6 Mbit/s Nebula video. The Pi has memory to spare.
+    'demuxer-max-bytes': '150MiB',
+    'demuxer-max-back-bytes': '50MiB',
   };
 
   /// Dev aid, like `HOMECANVAS_TEST_*`: `HOMECANVAS_MPV=name=value,…` adds

@@ -1,4 +1,5 @@
 /// Data models for the subset of the Immich API this app uses.
+library;
 
 class Album {
   final String id;

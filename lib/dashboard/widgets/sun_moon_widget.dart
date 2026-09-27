@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -6,10 +5,13 @@ import 'package:provider/provider.dart';
 
 import '../../services/config_service.dart';
 import '../../services/sun_moon.dart';
+import '../../widgets/pause_when_hidden.dart';
+import '../../widgets/rebuild_every_minute.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
+import '../../time_format.dart';
 
 /// Where the sun is in its arc, sunrise and sunset, how the days are
 /// changing, and the moon's phase.
@@ -25,24 +27,8 @@ class SunMoonWidget extends StatefulWidget {
   State<SunMoonWidget> createState() => _SunMoonWidgetState();
 }
 
-class _SunMoonWidgetState extends State<SunMoonWidget> {
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    // Once a minute is as often as anything here changes.
-    _timer = Timer.periodic(const Duration(minutes: 1), (_) {
-      if (mounted) setState(() {});
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
+class _SunMoonWidgetState extends State<SunMoonWidget>
+    with PauseWhenHidden, RebuildEveryMinute {
   @override
   Widget build(BuildContext context) {
     final t = widget.w.theme;
@@ -200,9 +186,7 @@ class _Times extends StatelessWidget {
   final DashboardTheme theme;
   final bool showLength;
 
-  static String _hm(DateTime? t) => t == null
-      ? '—'
-      : '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+  static String _hm(DateTime? t) => t == null ? '—' : hhmm(t);
 
   @override
   Widget build(BuildContext context) {

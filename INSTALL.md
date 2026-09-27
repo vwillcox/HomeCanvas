@@ -16,6 +16,7 @@ For how things work underneath, see [TECHNICAL.md](TECHNICAL.md).
   - [A phone as a wireless camera](#a-phone-as-a-wireless-camera)
   - [Indoor temperature sensor](#indoor-temperature-sensor)
   - [Turning the screen off with Alexa](#turning-the-screen-off-with-alexa)
+  - [Booting straight into the kiosk](#booting-straight-into-the-kiosk)
   - [Turning the screen off by itself](#turning-the-screen-off-by-itself)
   - [TV Remote](#tv-remote)
   - [Locked Folder](#locked-folder)
@@ -338,17 +339,18 @@ any dropped frames to the log (`/tmp/kiosk.log`).
 It is played by the kiosk's own video player, which needs
 [yt-dlp](https://github.com/yt-dlp/yt-dlp) to find the stream. Distribution
 packages of yt-dlp fall behind YouTube's changes within weeks, so install it
-from **Settings → Music → YouTube → Install** instead: that fetches the current
+from **Settings → Music → Videos → Video player → Install** instead: that fetches the current
 yt-dlp and [deno](https://deno.com) (which yt-dlp now needs for YouTube) into
 `~/.local/share/homecanvas/bin`, and the kiosk updates yt-dlp daily after
 that. No sudo needed.
 
-**Signing in** is optional, from the same place or by tapping a Subscriptions
-tile. YouTube's own sign-in page opens in the kiosk's browser; afterwards
-yt-dlp uses that browser profile's cookies, which is how Premium,
-members-only and age-restricted videos play and how the subscriptions feed is
-read. **Sign out** deletes the profile. YouTube does not approve of programs
-like yt-dlp using accounts, so a spare account is the cautious choice.
+**Signing in** is optional, from **Settings → Music → Videos** or by tapping a
+Subscriptions tile. YouTube's own sign-in page opens in the kiosk's browser;
+afterwards its cookies are copied into a file only the kiosk's user can read,
+which is how Premium, members-only and age-restricted videos play and how the
+subscriptions feed is read. **Sign out** deletes the file and the browser
+profile. YouTube does not approve of programs like yt-dlp using accounts, so a
+spare account is the cautious choice.
 
 To avoid typing a password on the panel, sign in on a computer instead: open
 the editor's address followed by `/youtube` (local network only). It walks
@@ -364,6 +366,37 @@ if the kiosk is. Scripts on the Pi can send one too:
 ```bash
 curl -X POST "http://127.0.0.1:8766/youtube?url=https%3A%2F%2Fyoutu.be%2F<id>"
 ```
+
+### Floatplane
+
+The **Floatplane** dashboard widget shows the latest videos from the creators
+you subscribe to on [Floatplane](https://www.floatplane.com); touch one to
+watch it, with the same player, picture-in-picture and controls as YouTube.
+Floatplane post links shared from the phone app (`floatplane.com/post/…`)
+play the same way. It uses the yt-dlp installed for YouTube.
+
+Sign in from **Settings → Music → Videos**, by tapping the widget, or —
+to avoid typing on the panel — from a computer at the editor's address
+followed by `/floatplane`, which works like the YouTube one: export
+floatplane.com's cookies from a private window with *Get cookies.txt
+LOCALLY* and upload the file. Only floatplane.com cookies are kept, in
+`~/.local/share/homecanvas/profiles/floatplane-cookies.txt`, readable by the
+kiosk's user alone. The list of videos comes from the API Floatplane's own
+site uses, which is unofficial and may change.
+
+### Nebula
+
+The **Nebula** dashboard widget shows the latest videos from the creators you
+follow on [Nebula](https://nebula.tv); touch one to watch it in the same
+player. Nebula links shared from the phone app (`nebula.tv/videos/…`) play
+too. Nebula serves HEVC, which the Pi 5 decodes in hardware — about a sixth of
+the CPU of decoding it in software — so its videos are the lightest of the
+three to play.
+
+Sign in from **Settings → Music → Videos**, by tapping the widget, or from a
+computer at the editor's address followed by `/nebula` (the same cookie
+upload as YouTube and Floatplane; only nebula.tv's cookies are kept, in
+`~/.local/share/homecanvas/profiles/nebula-cookies.txt`).
 
 ### The widget dashboard
 
@@ -745,6 +778,19 @@ screen" should still work. If Home Assistant is down, Alexa's requests get a
 **To undo the sharing:** `bash scripts/setup-port-80.sh --undo` puts Home
 Assistant's config back from the backup, restarts it, and turns port 80 off
 in HomeCanvas.
+
+### Booting straight into the kiosk
+
+Out of the box the Pi logs in to its full desktop and the kiosk runs on top
+of it. The taskbar, the desktop icons and the rest carry on behind the kiosk
+all day, the taskbar alone using some 370 MB. `bash scripts/kiosk-session.sh`
+sets the Pi to log in to a session that has only the kiosk and what it needs:
+labwc for its windows, the screen rotation, the on-screen keyboard and the
+services the kiosk starts. It asks for sudo, and takes effect at the next
+boot (or `sudo systemctl restart lightdm`).
+
+**To go back to the desktop:** `bash scripts/kiosk-session.sh remove`, over
+SSH if the screen is showing nothing.
 
 ### Turning the screen off by itself
 

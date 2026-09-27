@@ -30,14 +30,27 @@ class LockedFolderService extends ChangeNotifier {
   MediaSource? get mediaSource =>
       _token == null ? null : BearerMediaSource(config.immichUrl, _token!);
 
-  Dio _dio() => Dio(BaseOptions(
-        baseUrl: config.immichUrl,
+  Dio? _client;
+  String? _clientFor;
+
+  /// One client for as long as the server stays the same, so its
+  /// connections are reused rather than a new one made for every request.
+  Dio _dio() {
+    final base = config.immichUrl;
+    if (_client == null || _clientFor != base) {
+      _client?.close();
+      _clientFor = base;
+      _client = Dio(BaseOptions(
+        baseUrl: base,
         headers: {'Accept': 'application/json'},
         connectTimeout: const Duration(seconds: 12),
         receiveTimeout: const Duration(seconds: 30),
         // Accept 2xx-4xx so we can inspect status codes ourselves.
         validateStatus: (s) => s != null && s < 500,
       ));
+    }
+    return _client!;
+  }
 
   Options _auth() => Options(headers: {'Authorization': 'Bearer $_token'});
 
@@ -64,11 +77,20 @@ class LockedFolderService extends ChangeNotifier {
     if (!canUse) return UnlockResult.notConfigured;
     if (!await _ensureLoggedIn()) return UnlockResult.error;
     try {
-      final r = await _dio().post(
-        '/api/auth/session/unlock',
-        data: {'pinCode': pin},
-        options: _auth(),
-      );
+      Future<Response<dynamic>> send() => _dio().post(
+            '/api/auth/session/unlock',
+            data: {'pinCode': pin},
+            options: _auth(),
+          );
+      var r = await send();
+      // The session itself has lapsed — Immich signs sessions out, and the
+      // panel stays up for weeks. Without a fresh one the right PIN was
+      // turned away as "Incorrect PIN" until the kiosk restarted.
+      if (r.statusCode == 401) {
+        _token = null;
+        if (!await _ensureLoggedIn()) return UnlockResult.error;
+        r = await send();
+      }
       if (r.statusCode == 200 || r.statusCode == 204) {
         _pin = pin;
         _elevated = true;

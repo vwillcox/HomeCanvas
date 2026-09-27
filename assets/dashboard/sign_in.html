@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>YouTube sign-in</title>
+<title>Sign-in</title>
 <style>
   :root {
     --bg: #0e1016; --panel: #171a22; --line: #262b36;
@@ -57,7 +57,7 @@
 </head>
 <body>
 <header>
-  <h1>Sign the panel in to YouTube</h1>
+  <h1>Sign the panel in to <span class="site">YouTube</span></h1>
   <p>Sign in on this computer instead of typing a password on the panel. This
      page is served to the local network only.</p>
 </header>
@@ -82,9 +82,10 @@
         "LOCALLY" — it was withdrawn for sending people's cookies away.</span></li>
       <li>Open a <b>private / incognito window</b> and allow the extension to
         run there (the browser asks, or it is in the extension's settings).</li>
-      <li>In that window, go to <b>youtube.com</b> and sign in — Premium, your
-        subscriptions, whatever the panel should have.</li>
-      <li>Still on youtube.com, open the extension and choose
+      <li>In that window, go to <b class="domain">youtube.com</b> and sign in
+        <span id="what">— Premium, your subscriptions, whatever the panel
+        should have</span>.</li>
+      <li>Still on <span class="domain">youtube.com</span>, open the extension and choose
         <b>Export</b> (as <i>Netscape</i> format) to save a
         <code>cookies.txt</code> file.</li>
       <li><b>Close the private window without signing out.</b> Signing out
@@ -100,15 +101,15 @@
       <input type="file" id="file" accept=".txt,text/plain">
     </div>
     <p class="note">or paste it:</p>
-    <textarea id="paste" placeholder="# Netscape HTTP Cookie File&#10;.youtube.com	TRUE	/	TRUE	…"></textarea>
+    <textarea id="paste" placeholder="# Netscape HTTP Cookie File&#10;…"></textarea>
     <div class="row" style="margin-top:10px">
       <button class="primary" id="send">Sign in</button>
       <span id="result"></span>
     </div>
-    <p class="note">Only the youtube.com and google.com cookies are kept; the
-      rest of the file is thrown away. The panel keeps them to itself — they
-      are never shown here or sent anywhere but YouTube — and renews them as
-      YouTube asks. On a phone this works in a browser with add-ons, such as
+    <p class="note">Only the <span id="kept">youtube.com and google.com</span>
+      cookies are kept; the rest of the file is thrown away. The panel keeps them to itself — they
+      are never shown here or sent anywhere but <span class="site">YouTube</span> — and renews them as
+      <span class="site">YouTube</span> asks. On a phone this works in a browser with add-ons, such as
       Firefox for Android, if the extension is offered there; a computer is
       easier.</p>
   </div>
@@ -117,6 +118,33 @@
 <script>
   const $ = (id) => document.getElementById(id);
 
+  // One page for each site the panel can sign in to, told apart by address.
+  const SITES = {
+    youtube: {
+      name: 'YouTube', domain: 'youtube.com', kept: 'youtube.com and google.com',
+      what: '— Premium, your subscriptions, whatever the panel should have',
+      done: 'Signed in. The YouTube tile shows your subscriptions shortly.',
+    },
+    floatplane: {
+      name: 'Floatplane', domain: 'floatplane.com', kept: 'floatplane.com',
+      what: 'with the account that has your subscriptions',
+      done: 'Signed in. The Floatplane tile shows your creators\u2019 latest shortly.',
+    },
+    nebula: {
+      name: 'Nebula', domain: 'nebula.tv', kept: 'nebula.tv',
+      what: 'with the account that follows your creators',
+      done: 'Signed in. The Nebula tile shows your creators\u2019 latest shortly.',
+    },
+  };
+  const site = ['floatplane', 'nebula'].find((s) => location.pathname.includes(s)) || 'youtube';
+  const S = SITES[site];
+  const api = '/api/' + site;
+  document.title = S.name + ' sign-in';
+  document.querySelectorAll('.site').forEach((e) => (e.textContent = S.name));
+  document.querySelectorAll('.domain').forEach((e) => (e.textContent = S.domain));
+  $('what').textContent = S.what;
+  $('kept').textContent = S.kept;
+
   function show(s) {
     $('state').textContent = s.signedIn ? 'Signed in' : 'Not signed in';
     $('state').className = 'state' + (s.signedIn ? ' on' : '');
@@ -124,13 +152,13 @@
     $('signout').hidden = !s.signedIn;
     if (!s.ready) {
       $('how').textContent = '— install yt-dlp first, in the panel’s ' +
-          'Settings → Music → YouTube';
+          'Settings → Music → Videos → Video player';
     }
   }
 
   async function load() {
     try {
-      const r = await fetch('/api/youtube');
+      const r = await fetch(api);
       show(await r.json());
     } catch (_) {
       $('state').textContent = 'Could not reach the panel';
@@ -148,9 +176,9 @@
     if (f) text = await f.text();
     if (!text) return result('Choose the cookies.txt file, or paste it.', false);
     $('send').disabled = true;
-    result('Checking with YouTube…', true);
+    result('Checking with ' + S.name + '…', true);
     try {
-      const r = await fetch('/api/youtube', {
+      const r = await fetch(api, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
         body: text,
@@ -161,7 +189,7 @@
       if (s.error) {
         result(s.error, false);
       } else {
-        result('Signed in. The YouTube tile shows your subscriptions shortly.', true);
+        result(S.done, true);
         $('paste').value = '';
         $('file').value = '';
       }
@@ -173,8 +201,8 @@
   });
 
   $('signout').addEventListener('click', async () => {
-    if (!confirm('Sign the panel out of YouTube?')) return;
-    const r = await fetch('/api/youtube', { method: 'DELETE' });
+    if (!confirm('Sign the panel out of ' + S.name + '?')) return;
+    const r = await fetch(api, { method: 'DELETE' });
     show(await r.json());
     result('Signed out.', true);
   });

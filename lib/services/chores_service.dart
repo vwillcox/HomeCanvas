@@ -187,7 +187,10 @@ class ChoresService extends ChangeNotifier {
         ),
       );
     }
-    final cutoff = weekStart(d).subtract(const Duration(days: 7 * keepWeeks));
+    final start = weekStart(d);
+    // By the calendar: weeks of 24-hour days drift an hour across a change
+    // of the clocks.
+    final cutoff = DateTime(start.year, start.month, start.day - 7 * keepWeeks);
     _log.removeWhere((x) => x.day.isBefore(cutoff));
     notifyListeners();
     unawaited(_save());

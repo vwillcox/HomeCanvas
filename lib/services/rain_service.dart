@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import 'config_service.dart';
+import '../time_format.dart';
 
 /// A quarter of an hour of rain forecast.
 @immutable
@@ -33,9 +34,6 @@ String rainWord(double mmPerHour) {
   return 'heavy';
 }
 
-String _hm(DateTime t) =>
-    '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
-
 /// What the next couple of hours hold, as one sentence and a few words:
 /// "Rain from 14:20" / "light"; "Raining now" / "stops about 15:10";
 /// "Dry for the next 2 hours".
@@ -59,7 +57,7 @@ String _hm(DateTime t) =>
       headline: 'Raining now',
       detail: stop < 0
           ? '${rainWord(peak)} · for the next $span'
-          : '${rainWord(peak)} · stops about ${_hm(ahead[stop].from)}',
+          : '${rainWord(peak)} · stops about ${hhmm(ahead[stop].from)}',
       wet: true,
     );
   }
@@ -72,10 +70,10 @@ String _hm(DateTime t) =>
   final shower = end < 0 ? rest : rest.sublist(0, end);
   final showerPeak = shower.map((s) => s.rate).reduce((a, b) => a > b ? a : b);
   return (
-    headline: 'Rain from ${_hm(ahead[start].from)}',
+    headline: 'Rain from ${hhmm(ahead[start].from)}',
     detail: end < 0
         ? rainWord(showerPeak)
-        : '${rainWord(showerPeak)} · until about ${_hm(rest[end].from)}',
+        : '${rainWord(showerPeak)} · until about ${hhmm(rest[end].from)}',
     wet: true,
   );
 }

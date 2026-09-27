@@ -51,8 +51,6 @@ class LinkViewerScreen extends StatefulWidget {
 }
 
 class _LinkViewerScreenState extends State<LinkViewerScreen> {
-  static const String _kioskAppId = 'info.talktech.homecanvas';
-
   Process? _browser;
   Timer? _timer;
   String? _error;
@@ -108,11 +106,7 @@ class _LinkViewerScreenState extends State<LinkViewerScreen> {
     _timer?.cancel();
     _browser?.kill();
     _browser = null;
-    try {
-      await Process.run('wlrctl', ['toplevel', 'focus', 'app_id:$_kioskAppId']);
-    } catch (_) {
-      // wlrctl missing: killing the window is still enough to get back.
-    }
+    await KioskBrowser.focusKiosk();
     if (mounted) Navigator.of(context).maybePop();
   }
 

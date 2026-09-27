@@ -27,7 +27,7 @@ void main() {
       ),
       run: ran.add,
       setDnd: (m) => dnd = m,
-      playYouTube: (url) {
+      playVideo: (url) {
         if (!url.contains('youtu')) return false;
         played.add(url);
         return true;

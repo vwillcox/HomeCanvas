@@ -31,6 +31,7 @@ import 'trains_widget.dart';
 import 'updates_widget.dart';
 import 'tv_widget.dart';
 import 'unifi_widgets.dart';
+import 'site_feed_widgets.dart';
 import 'weather_widget.dart';
 import 'youtube_widget.dart';
 
@@ -80,6 +81,8 @@ void registerBuiltInWidgets() {
     updatesWidgetType,
     birthdaysWidgetType,
     youtubeWidgetType,
+    floatplaneWidgetType,
+    nebulaWidgetType,
     choresWidgetType,
   ]);
 }

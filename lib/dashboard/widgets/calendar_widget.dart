@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../services/feed_service.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
+import '../../time_format.dart';
 
 /// One calendar feed and the colour its events are drawn in.
 class _Source {
@@ -177,8 +178,7 @@ class _ScheduleView extends StatelessWidget {
     }
 
     if (e.allDay) return '$dayLabel · all day';
-    final time =
-        '${e.start.hour.toString().padLeft(2, '0')}:${e.start.minute.toString().padLeft(2, '0')}';
+    final time = hhmm(e.start);
     final where = e.location == null ? '' : ' · ${e.location}';
     return '$dayLabel $time$where';
   }

@@ -9,9 +9,9 @@ import 'package:provider/provider.dart';
 import '../screens/link_viewer_screen.dart';
 import '../screens/video_player_screen.dart'
     show VideoBottomControls, VideoVolumeColumn;
-import '../services/youtube_service.dart';
+import '../services/video_player_service.dart';
 
-/// The YouTube video sent to the panel: full screen, or floating as a
+/// The video sent to the panel: full screen, or floating as a
 /// picture-in-picture window over whatever else the kiosk is showing.
 ///
 /// Placed once in `main.dart`'s `MaterialApp.builder`, beside the share
@@ -19,26 +19,26 @@ import '../services/youtube_service.dart';
 /// the photos or Settings are used underneath it. That puts it outside the
 /// Navigator — and so outside the Navigator's Overlay, which sliders and
 /// tooltips need — so it brings an Overlay of its own.
-class YouTubeOverlay extends StatefulWidget {
-  const YouTubeOverlay({super.key, required this.navigatorKey});
+class VideoOverlay extends StatefulWidget {
+  const VideoOverlay({super.key, required this.navigatorKey});
 
   /// For opening the browser when a video will not play here — see
   /// [IncomingShareOverlay.navigatorKey] for why a key rather than a context.
   final GlobalKey<NavigatorState> navigatorKey;
 
   @override
-  State<YouTubeOverlay> createState() => _YouTubeOverlayState();
+  State<VideoOverlay> createState() => _VideoOverlayState();
 }
 
-class _YouTubeOverlayState extends State<YouTubeOverlay> {
+class _VideoOverlayState extends State<VideoOverlay> {
   late final OverlayEntry _entry = OverlayEntry(
     builder: (_) => _Body(navigatorKey: widget.navigatorKey),
   );
 
   @override
   Widget build(BuildContext context) {
-    final closed = context.select<YouTubeService, bool>(
-        (y) => y.view == YouTubeView.closed);
+    final closed = context.select<VideoPlayerService, bool>(
+        (y) => y.view == VideoView.closed);
     if (closed) return const SizedBox.shrink();
     return Positioned.fill(
       child: Material(
@@ -75,7 +75,7 @@ class _BodyState extends State<_Body> {
   // The picture-in-picture window's size while a pinch is under way.
   double _pinchStartWidth = 0;
 
-  YouTubeView? _shown;
+  VideoView? _shown;
 
   static const double _aspect = 16 / 9;
   static const double _margin = 24;
@@ -109,7 +109,15 @@ class _BodyState extends State<_Body> {
     _playing = player.state.playing;
     _rate = player.state.rate;
     _subs.add(player.stream.position.listen((p) {
-      if (!_seeking && mounted) setState(() => _position = p);
+      if (_seeking || !mounted) return;
+      // Many times a second. Only the full screen's controls show it, so
+      // the picture-in-picture window and a bare picture are not rebuilt
+      // for it; the next rebuild picks it up.
+      if (_shown == VideoView.full && _controls) {
+        setState(() => _position = p);
+      } else {
+        _position = p;
+      }
     }));
     _subs.add(player.stream.duration.listen((d) {
       if (mounted) setState(() => _duration = d);
@@ -152,26 +160,20 @@ class _BodyState extends State<_Body> {
     _showHud('${seconds > 0 ? '+' : ''}${seconds}s');
   }
 
-  String _fmt(Duration d) {
-    String two(int n) => n.toString().padLeft(2, '0');
-    final h = d.inHours;
-    final m = d.inMinutes.remainder(60);
-    final s = d.inSeconds.remainder(60);
-    return h > 0 ? '$h:${two(m)}:${two(s)}' : '${two(m)}:${two(s)}';
-  }
-
   /// Hands the video to the browser, signed in if the kiosk is, for the
   /// videos yt-dlp cannot get at.
-  void _openInBrowser(YouTubeService yt) {
-    final link = yt.link;
+  void _openInBrowser(VideoPlayerService video) {
+    final link = video.link;
     if (link == null) return;
-    final title = yt.stream?.title;
-    unawaited(yt.close());
+    final title = video.stream?.title;
+    unawaited(video.close());
     widget.navigatorKey.currentState?.push(MaterialPageRoute(
       builder: (_) => LinkViewerScreen(
-        url: link.watchUrl,
-        title: title ?? 'YouTube',
-        profile: YouTubeService.loginProfile,
+        url: link.url,
+        title: title ?? 'Video',
+        // The site's own signed-in profile — named after the site, as
+        // VideoSite.loginProfile is.
+        profile: link.site,
         keepProfile: true,
         timeout: const Duration(hours: 1),
       ),
@@ -180,29 +182,29 @@ class _BodyState extends State<_Body> {
 
   @override
   Widget build(BuildContext context) {
-    final yt = context.watch<YouTubeService>();
-    _watch(yt.player);
+    final video = context.watch<VideoPlayerService>();
+    _watch(video.player);
     // Each change of view starts with the controls up, then fades them.
-    if (yt.view != _shown) {
-      _shown = yt.view;
+    if (video.view != _shown) {
+      _shown = video.view;
       _controls = true;
       _scheduleHide();
     }
     return LayoutBuilder(builder: (context, c) {
       final screen = c.biggest;
-      return switch (yt.view) {
-        YouTubeView.closed => const SizedBox.shrink(),
-        YouTubeView.full => _full(yt),
-        YouTubeView.pip => Stack(children: [_pip(yt, screen)]),
+      return switch (video.view) {
+        VideoView.closed => const SizedBox.shrink(),
+        VideoView.full => _full(video),
+        VideoView.pip => Stack(children: [_pip(video, screen)]),
       };
     });
   }
 
   // --- Full screen ----------------------------------------------------------
 
-  Widget _full(YouTubeService yt) {
-    final player = yt.player;
-    final ready = !yt.loading && yt.error == null && player != null;
+  Widget _full(VideoPlayerService video) {
+    final player = video.player;
+    final ready = !video.loading && video.error == null && player != null;
     final total = _duration.inMilliseconds.toDouble();
     final pos =
         _position.inMilliseconds.clamp(0, total <= 0 ? 0 : total).toDouble();
@@ -228,21 +230,21 @@ class _BodyState extends State<_Body> {
         onDoubleTap: ready ? () {} : null,
         child: Stack(
           children: [
-            if (yt.controller != null && ready)
+            if (video.controller != null && ready)
               Positioned.fill(
                 child: Video(
-                  controller: yt.controller!,
+                  controller: video.controller!,
                   controls: NoVideoControls,
                   fit: BoxFit.contain,
                 ),
               ),
-            if (yt.loading) _loadingView(yt),
-            if (yt.error != null) _errorView(yt),
+            if (video.loading) _loadingView(video),
+            if (video.error != null) _errorView(video),
             _fade(
               visible: _controls || !ready,
               child: Align(
                 alignment: Alignment.topCenter,
-                child: _topBar(yt, ready),
+                child: _topBar(video, ready),
               ),
             ),
             if (ready) ...[
@@ -257,7 +259,6 @@ class _BodyState extends State<_Body> {
                     posValue: pos,
                     totalValue: total,
                     rate: _rate,
-                    fmt: _fmt,
                     onPlayPause: () {
                       player.playOrPause();
                       _scheduleHide();
@@ -288,13 +289,13 @@ class _BodyState extends State<_Body> {
                   child: _fade(
                     visible: _controls,
                     child: VideoVolumeColumn(
-                      volume: yt.settings.volume,
-                      muted: yt.settings.muted,
+                      volume: video.settings.volume,
+                      muted: video.settings.muted,
                       onChanged: (v) {
                         _scheduleHide();
-                        unawaited(yt.setVolume(v));
+                        unawaited(video.setVolume(v));
                       },
-                      onToggleMute: yt.toggleMute,
+                      onToggleMute: video.toggleMute,
                     ),
                   ),
                 ),
@@ -329,8 +330,8 @@ class _BodyState extends State<_Body> {
         child: IgnorePointer(ignoring: !visible, child: child),
       );
 
-  Widget _topBar(YouTubeService yt, bool ready) {
-    final stream = yt.stream;
+  Widget _topBar(VideoPlayerService video, bool ready) {
+    final stream = video.stream;
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
       decoration: const BoxDecoration(
@@ -343,7 +344,7 @@ class _BodyState extends State<_Body> {
       child: Row(
         children: [
           FilledButton.icon(
-            onPressed: yt.close,
+            onPressed: video.close,
             icon: const Icon(Icons.close, size: 30),
             label: const Text('Close', style: TextStyle(fontSize: 22)),
             style: FilledButton.styleFrom(
@@ -359,7 +360,7 @@ class _BodyState extends State<_Body> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  stream?.title ?? 'YouTube',
+                  stream?.title ?? 'Video',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -379,7 +380,7 @@ class _BodyState extends State<_Body> {
           const SizedBox(width: 20),
           if (ready)
             FilledButton.tonalIcon(
-              onPressed: yt.showPip,
+              onPressed: video.showPip,
               icon: const Icon(Icons.picture_in_picture_alt, size: 30),
               label: const Text('Picture in picture',
                   style: TextStyle(fontSize: 20)),
@@ -393,29 +394,28 @@ class _BodyState extends State<_Body> {
     );
   }
 
-  Widget _loadingView(YouTubeService yt) {
-    final link = yt.link;
+  Widget _loadingView(VideoPlayerService video) {
+    final link = video.link;
     return Stack(
       fit: StackFit.expand,
       children: [
-        if (link != null)
-          Opacity(
-            opacity: 0.35,
-            child: Image.network(link.thumbnailUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => const SizedBox.shrink()),
-          ),
-        const Center(
+        if (link?.thumbnailUrl != null)
+          Image.network(link!.thumbnailUrl!,
+              fit: BoxFit.cover,
+              // Faded by the image itself, without an Opacity's extra layer.
+              opacity: const AlwaysStoppedAnimation(0.35),
+              errorBuilder: (_, _, _) => const SizedBox.shrink()),
+        Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              SizedBox(
+              const SizedBox(
                   width: 64,
                   height: 64,
                   child: CircularProgressIndicator(strokeWidth: 5)),
-              SizedBox(height: 24),
-              Text('Fetching the video from YouTube…',
-                  style: TextStyle(color: Colors.white70, fontSize: 22)),
+              const SizedBox(height: 24),
+              Text('Fetching the video from ${link?.siteName ?? 'the site'}…',
+                  style: const TextStyle(color: Colors.white70, fontSize: 22)),
             ],
           ),
         ),
@@ -423,7 +423,7 @@ class _BodyState extends State<_Body> {
     );
   }
 
-  Widget _errorView(YouTubeService yt) {
+  Widget _errorView(VideoPlayerService video) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 80),
@@ -433,7 +433,7 @@ class _BodyState extends State<_Body> {
             const Icon(Icons.error_outline, color: Colors.white54, size: 64),
             const SizedBox(height: 18),
             Text(
-              yt.error!,
+              video.error!,
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.white, fontSize: 22),
             ),
@@ -444,7 +444,7 @@ class _BodyState extends State<_Body> {
               alignment: WrapAlignment.center,
               children: [
                 FilledButton.icon(
-                  onPressed: () => _openInBrowser(yt),
+                  onPressed: () => _openInBrowser(video),
                   icon: const Icon(Icons.open_in_browser, size: 28),
                   label: const Text('Open in the browser',
                       style: TextStyle(fontSize: 20)),
@@ -454,7 +454,7 @@ class _BodyState extends State<_Body> {
                   ),
                 ),
                 OutlinedButton.icon(
-                  onPressed: () => yt.play(yt.link!),
+                  onPressed: () => video.play(video.link!),
                   icon: const Icon(Icons.refresh, size: 28),
                   label:
                       const Text('Try again', style: TextStyle(fontSize: 20)),
@@ -494,12 +494,12 @@ class _BodyState extends State<_Body> {
     return Rect.fromLTWH(left, top, w, h);
   }
 
-  void _setPip(YouTubeService yt, Rect r, Size screen) =>
-      setState(() => yt.pipRect = _fit(r, screen));
+  void _setPip(VideoPlayerService video, Rect r, Size screen) =>
+      setState(() => video.pipRect = _fit(r, screen));
 
-  Widget _pip(YouTubeService yt, Size screen) {
-    final rect = _fit(yt.pipRect ?? _defaultPip(screen), screen);
-    final player = yt.player;
+  Widget _pip(VideoPlayerService video, Size screen) {
+    final rect = _fit(video.pipRect ?? _defaultPip(screen), screen);
+    final player = video.player;
 
     // The handle sits on the corner facing the middle of the screen, which is
     // the direction there is room to grow in; the opposite corner stays put.
@@ -511,20 +511,20 @@ class _BodyState extends State<_Body> {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: _toggleControls,
-        onDoubleTap: yt.showFull,
+        onDoubleTap: video.showFull,
         // One finger moves it; two pinch it bigger or smaller about the
         // point between them.
         onScaleStart: (_) => _pinchStartWidth = rect.width,
         onScaleUpdate: (d) {
-          final current = yt.pipRect ?? rect;
+          final current = video.pipRect ?? rect;
           if (d.pointerCount < 2) {
-            _setPip(yt, current.shift(d.focalPointDelta), screen);
+            _setPip(video, current.shift(d.focalPointDelta), screen);
             return;
           }
           final w = _pinchStartWidth * d.scale;
           final h = w / _aspect;
           final c = current.center + d.focalPointDelta;
-          _setPip(yt, Rect.fromCenter(center: c, width: w, height: h), screen);
+          _setPip(video, Rect.fromCenter(center: c, width: w, height: h), screen);
         },
         child: DecoratedBox(
           decoration: BoxDecoration(
@@ -539,9 +539,9 @@ class _BodyState extends State<_Body> {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                if (yt.controller != null)
+                if (video.controller != null)
                   Video(
-                    controller: yt.controller!,
+                    controller: video.controller!,
                     controls: NoVideoControls,
                     fit: BoxFit.contain,
                   ),
@@ -554,7 +554,7 @@ class _BodyState extends State<_Body> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            _pipButton(Icons.close, yt.close),
+                            _pipButton(Icons.close, video.close),
                             _pipButton(
                               _playing
                                   ? Icons.pause_circle
@@ -565,7 +565,7 @@ class _BodyState extends State<_Body> {
                               },
                               big: true,
                             ),
-                            _pipButton(Icons.fullscreen, yt.showFull),
+                            _pipButton(Icons.fullscreen, video.showFull),
                           ],
                         ),
                       ),
@@ -581,14 +581,14 @@ class _BodyState extends State<_Body> {
                     growLeft: growLeft,
                     growUp: growUp,
                     onDrag: (delta) {
-                      final current = yt.pipRect ?? rect;
+                      final current = video.pipRect ?? rect;
                       // Wider by however far the corner was pulled outwards.
                       final dw = growLeft ? -delta.dx : delta.dx;
                       final w = current.width + dw;
                       final h = w / _aspect;
                       final left = growLeft ? current.right - w : current.left;
                       final top = growUp ? current.bottom - h : current.top;
-                      _setPip(yt, Rect.fromLTWH(left, top, w, h), screen);
+                      _setPip(video, Rect.fromLTWH(left, top, w, h), screen);
                     },
                   ),
                 ),

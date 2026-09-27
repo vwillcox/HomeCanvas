@@ -10,7 +10,7 @@ DashboardWidgetType typeOf({int w = 4, int h = 3}) => DashboardWidgetType(
       glyph: '*',
       defaultWidth: w,
       defaultHeight: h,
-      build: (_, __) => const SizedBox.shrink(),
+      build: (_, _) => const SizedBox.shrink(),
     );
 
 void main() {

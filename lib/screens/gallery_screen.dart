@@ -237,14 +237,14 @@ class _ZoomablePhotoState extends State<ZoomablePhoto>
       final pos = _doubleTapDetails?.localPosition;
       const scale = 2.5;
       if (pos == null) {
-        _animateTo(Matrix4.identity()..scale(scale));
+        _animateTo(Matrix4.identity()..scaleByDouble(scale, scale, scale, 1));
       } else {
         final x = -pos.dx * (scale - 1);
         final y = -pos.dy * (scale - 1);
         _animateTo(
           Matrix4.identity()
-            ..translate(x, y)
-            ..scale(scale),
+            ..translateByDouble(x, y, 0, 1)
+            ..scaleByDouble(scale, scale, scale, 1),
         );
       }
     }
@@ -253,7 +253,7 @@ class _ZoomablePhotoState extends State<ZoomablePhoto>
   void _zoomBy(double factor) {
     final current = _tc.value.getMaxScaleOnAxis();
     final target = (current * factor).clamp(_minScale, _maxScale);
-    _animateTo(Matrix4.identity()..scale(target));
+    _animateTo(Matrix4.identity()..scaleByDouble(target, target, target, 1));
   }
 
   @override
@@ -279,7 +279,7 @@ class _ZoomablePhotoState extends State<ZoomablePhoto>
                 fit: BoxFit.contain,
                 width: double.infinity,
                 height: double.infinity,
-                errorBuilder: (_, __, ___) {
+                errorBuilder: (_, _, _) {
                   if (!_useFallback && widget.fallbackProvider != null) {
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (mounted) setState(() => _useFallback = true);

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'programs.dart';
 
 /// Which part of the test is running.
 enum SpeedtestPhase { idle, starting, ping, download, upload, done, failed }
@@ -130,14 +131,8 @@ class SpeedtestService extends ChangeNotifier {
     // Last resort: whatever is on PATH, which may be the Debian-packaged
     // `speedtest-cli` rather than Ookla's — different output entirely, so it
     // is deliberately not treated as equivalent above.
-    try {
-      final which = await Process.run('which', ['speedtest']);
-      if (which.exitCode == 0) {
-        final path = (which.stdout as String).trim();
-        if (path.isNotEmpty) return _binary = path;
-      }
-    } catch (_) {}
-    return null;
+    final path = await findOnPath('speedtest');
+    return path == null ? null : _binary = path;
   }
 
   void _emit(SpeedtestState s) {

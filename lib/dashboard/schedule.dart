@@ -56,7 +56,11 @@ class Schedule {
     // Past midnight: the evening part belongs to today, the early-morning
     // part to the day before.
     if (t >= s) return _onDay(now.weekday);
-    if (t < e) return _onDay(now.subtract(const Duration(days: 1)).weekday);
+    // The day before by the calendar: 24 hours back from just after
+    // midnight, the day after the clocks go forward, is two days back.
+    if (t < e) {
+      return _onDay(DateTime(now.year, now.month, now.day - 1).weekday);
+    }
     return false;
   }
 

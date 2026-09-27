@@ -90,7 +90,7 @@ class HomeCanvasCache {
   }
 }
 
-/// Stores cached files under ~/.cache/homecanvas/<subdir> on the NVMe.
+/// Stores cached files under `~/.cache/homecanvas/<subdir>` on the NVMe.
 class _NvmeFileSystem implements FileSystem {
   final Future<io.Directory> _dir;
   final String _subdir;

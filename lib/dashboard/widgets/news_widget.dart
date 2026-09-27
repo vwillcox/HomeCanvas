@@ -7,8 +7,8 @@ import '../../screens/link_viewer_screen.dart';
 import '../../services/article_reader.dart';
 import '../../services/kiosk_browser.dart' show ReaderStyle;
 import '../../services/feed_service.dart';
-import '../../services/youtube_link.dart';
-import '../../services/youtube_service.dart';
+import '../../services/video_link.dart';
+import '../../services/video_player_service.dart';
 import '../widget_registry.dart';
 
 /// Headlines from an RSS or Atom feed.
@@ -228,10 +228,11 @@ class DashboardNewsWidget extends StatelessWidget {
   }
 
   void _openPage(BuildContext context, FeedItem item) {
-    // A news item that is a YouTube clip plays on the panel itself.
-    final video = YouTubeLink.parse(item.link!);
+    // A news item that is a YouTube, Floatplane or Nebula video plays on
+    // the panel.
+    final video = VideoLink.parse(item.link!);
     if (video != null) {
-      unawaited(context.read<YouTubeService>().play(video));
+      unawaited(context.read<VideoPlayerService>().play(video));
       return;
     }
     Navigator.of(context).push(MaterialPageRoute(

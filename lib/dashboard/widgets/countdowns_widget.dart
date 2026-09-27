@@ -4,6 +4,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 import '../../services/bin_schedule.dart' show Bin, dateOnly, daysBetween;
+import '../../widgets/pause_when_hidden.dart';
+import '../../widgets/rebuild_every_minute.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
@@ -125,9 +127,8 @@ class CountdownsWidget extends StatefulWidget {
   State<CountdownsWidget> createState() => _CountdownsWidgetState();
 }
 
-class _CountdownsWidgetState extends State<CountdownsWidget> {
-  Timer? _timer;
-
+class _CountdownsWidgetState extends State<CountdownsWidget>
+    with PauseWhenHidden, RebuildEveryMinute {
   String get _region => '${widget.w.config.options['bankHolidays'] ?? ''}';
 
   Future<void> _loadHolidays() async {
@@ -146,17 +147,6 @@ class _CountdownsWidgetState extends State<CountdownsWidget> {
   void initState() {
     super.initState();
     unawaited(_loadHolidays());
-    // Days only change at midnight, but a minute is cheap and needs no
-    // arithmetic about when midnight is.
-    _timer = Timer.periodic(const Duration(minutes: 1), (_) {
-      if (mounted) setState(() {});
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
   }
 
   @override

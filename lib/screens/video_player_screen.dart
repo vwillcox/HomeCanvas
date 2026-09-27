@@ -11,6 +11,7 @@ import '../services/config_service.dart';
 import '../services/media_source.dart';
 import '../services/mpv_tuning.dart';
 import '../widgets/big_back_button.dart';
+import '../time_format.dart';
 
 const List<double> kPlaybackSpeeds = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
 
@@ -93,6 +94,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   /// this hardware, and `mute` silences the output regardless of how the
   /// volume scale is being applied.
   Future<void> _applyVolume() async {
+    // Read before the awaits: the screen may be closed by the time they end.
+    final config = context.read<ConfigService>();
     await _player.setVolume(_muted ? 0 : _volume);
     final platform = _player.platform;
     if (platform is NativePlayer) {
@@ -103,7 +106,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       }
     }
     // Remember the level for the next video.
-    unawaited(context.read<ConfigService>().setVideoAudio(_volume, _muted));
+    unawaited(config.setVideoAudio(_volume, _muted));
   }
   Duration _dragStartPosition = Duration.zero;
   bool _zoomed = false;
@@ -179,14 +182,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     setState(() => _rate = r);
   }
 
-  String _fmt(Duration d) {
-    String two(int n) => n.toString().padLeft(2, '0');
-    final h = d.inHours;
-    final m = d.inMinutes.remainder(60);
-    final s = d.inSeconds.remainder(60);
-    return h > 0 ? '${two(h)}:${two(m)}:${two(s)}' : '${two(m)}:${two(s)}';
-  }
-
   @override
   Widget build(BuildContext context) {
     final total = _duration.inMilliseconds.toDouble();
@@ -225,7 +220,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             _seeking = true;
             _position = target;
           });
-          _showHud(_fmt(target));
+          _showHud(playTime(target));
         },
         onHorizontalDragEnd: _zoomed ? null : (_) async {
           await _player.seek(_position);
@@ -313,14 +308,13 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                     posValue: pos,
                     totalValue: total,
                     rate: _rate,
-                    fmt: _fmt,
                     onPlayPause: _player.playOrPause,
                     onSeekStart: () => setState(() => _seeking = true),
                     onSeekChanged: (v) => setState(
                         () => _position = Duration(milliseconds: v.toInt())),
                     onSeekEnd: (v) async {
                       await _player.seek(Duration(milliseconds: v.toInt()));
-                      setState(() => _seeking = false);
+                      if (mounted) setState(() => _seeking = false);
                     },
                     onRate: _setRate,
                   ),
@@ -394,7 +388,6 @@ class VideoBottomControls extends StatelessWidget {
   final double posValue;
   final double totalValue;
   final double rate;
-  final String Function(Duration) fmt;
   final VoidCallback onPlayPause;
   final VoidCallback onSeekStart;
   final ValueChanged<double> onSeekChanged;
@@ -409,7 +402,6 @@ class VideoBottomControls extends StatelessWidget {
     required this.posValue,
     required this.totalValue,
     required this.rate,
-    required this.fmt,
     required this.onPlayPause,
     required this.onSeekStart,
     required this.onSeekChanged,
@@ -463,7 +455,7 @@ class VideoBottomControls extends StatelessWidget {
                     color: Colors.white),
                 onPressed: onPlayPause,
               ),
-              Text(fmt(position), style: const TextStyle(color: Colors.white)),
+              Text(playTime(position), style: const TextStyle(color: Colors.white)),
               Expanded(
                 child: Slider(
                   min: 0,
@@ -474,7 +466,7 @@ class VideoBottomControls extends StatelessWidget {
                   onChangeEnd: onSeekEnd,
                 ),
               ),
-              Text(fmt(duration), style: const TextStyle(color: Colors.white)),
+              Text(playTime(duration), style: const TextStyle(color: Colors.white)),
             ],
           ),
         ],
