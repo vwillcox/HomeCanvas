@@ -66,6 +66,33 @@ into the kiosk".
 - **Shorter lists in the editor.** Rows of a list (feeds, entities, chores)
   fold to one line each; **Edit** opens one.
 
+### Stocks and Crypto tiles
+
+- **Prices without a key.** Shares and indices from Yahoo Finance (`VOD.L`,
+  `^FTSE`, `AAPL`); coins from CoinGecko by name or symbol (`bitcoin`,
+  `BTC`). A symbol without its exchange, or a company's name, is looked up:
+  "RPI" finds Raspberry Pi Holdings (`RPI.L`).
+- **Three views.** A list, cards two to a tile, or one card filling the
+  tile. Cards grow with the tile — made half the screen, they read across
+  the room — with a large chart, its high and low, and figures: day and
+  52-week ranges, volume, market cap, all-time high.
+- **Daily to yearly charts.** A daily chart before the market opens shows
+  the last day it was open, against the close before it.
+- **What you hold.** Each row takes an optional price paid, quantity,
+  purchase date and fees. The chart draws the price paid as a line and
+  marks the purchase date; the tile shows what each holding is worth, what
+  it has made or lost, and how long it has been held, with a total at the
+  top. London prices are in pence: a bare "5.98" is read as whichever of
+  pence or pounds is nearer today's price.
+
+### The editor
+
+- **Panels remember being folded** — the sidebar's panels, the palette's
+  groups and list rows — on the panel itself, so every browser and address
+  finds the editor as it was left.
+- **The sidebar is one panel**, its sections set into it.
+- **Dates** in widget settings use the browser's date picker.
+
 ### Smaller additions
 
 - A **Locked Folder** left untouched for 10 minutes locks itself and closes.

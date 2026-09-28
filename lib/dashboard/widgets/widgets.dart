@@ -18,6 +18,7 @@ import 'immich_library_widget.dart';
 import 'immich_widget.dart';
 import 'lan_speedtest_widget.dart';
 import 'lights_widget.dart';
+import 'markets_widgets.dart';
 import 'meals_widget.dart';
 import 'memories_widget.dart';
 import 'notes_widget.dart';
@@ -48,6 +49,8 @@ void registerBuiltInWidgets() {
     spotifyWidgetType,
     calendarWidgetType,
     newsWidgetType,
+    stocksWidgetType,
+    cryptoWidgetType,
     tvWidgetType,
     speedtestWidgetType,
     lanSpeedtestWidgetType,

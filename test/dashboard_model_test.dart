@@ -53,4 +53,26 @@ void main() {
     final s = DashboardSettings.fromJson({})..pagesPaused = true;
     expect(DashboardSettings.fromJson(s.toJson()).pagesPaused, isTrue);
   });
+
+  test('the editor\'s folded panels are kept, within limits', () {
+    final s = DashboardSettings.fromJson({
+      'editorPanels': ['sound', 'palette:Network', 'row:w1:sources:0'],
+    });
+    expect(DashboardSettings.fromJson(s.toJson()).editorPanels, [
+      'sound',
+      'palette:Network',
+      'row:w1:sources:0',
+    ]);
+    expect(DashboardSettings.fromJson({}).editorPanels, isEmpty);
+    // Only short strings, and not too many of them.
+    expect(
+      DashboardSettings.cleanPanels([1, '', 'x' * 201, 'ok', null]),
+      ['ok'],
+    );
+    expect(
+      DashboardSettings.cleanPanels([for (var i = 0; i < 900; i++) 'p$i']),
+      hasLength(500),
+    );
+    expect(DashboardSettings.cleanPanels('sound'), isEmpty);
+  });
 }

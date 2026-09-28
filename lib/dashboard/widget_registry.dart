@@ -15,7 +15,20 @@ import 'dashboard_theme.dart';
 /// [secret] is text the editor shows as dots — an API key or token — so it is
 /// not on show to whoever is looking at the screen while the dashboard is set
 /// up. It is stored like any other option.
-enum OptionKind { text, number, boolean, choice, multiline, colour, list, secret }
+///
+/// [date] is a day, picked from the browser's calendar and stored as
+/// `YYYY-MM-DD`.
+enum OptionKind {
+  text,
+  number,
+  boolean,
+  choice,
+  multiline,
+  colour,
+  list,
+  secret,
+  date,
+}
 
 /// One setting a widget type accepts.
 ///

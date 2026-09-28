@@ -15,6 +15,7 @@ import 'services/air_quality_service.dart';
 import 'services/brightness_service.dart';
 import 'services/bins_service.dart';
 import 'services/carbon_service.dart';
+import 'services/markets_service.dart';
 import 'services/chores_service.dart';
 import 'services/govee_service.dart';
 import 'services/home_assistant_service.dart';
@@ -349,6 +350,8 @@ void main() async {
         ChangeNotifierProvider(create: (_) => AirQualityService(config)),
         ChangeNotifierProvider(create: (_) => CarbonService(config)),
         ChangeNotifierProvider(create: (_) => RainService(config)),
+        // Made when a Stocks or Crypto widget first asks.
+        ChangeNotifierProvider(create: (_) => MarketsService()),
         ChangeNotifierProvider.value(value: homeAssistant),
         // Made when a Lights widget first asks; it then listens for Govee
         // devices on the home network.
