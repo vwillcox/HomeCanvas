@@ -1,48 +1,70 @@
 import 'dart:async';
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart' show NumberFormat;
 
+import '../../l10n/l10n.dart';
+import '../../services/github_api.dart';
+import '../../widgets/pause_when_hidden.dart';
+import '../../widgets/shown_timers.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
+import 'tile_bits.dart';
 
-/// Repository overview fetched from GitHub's public REST API.
+/// One or more GitHub repositories: stars, issues, pull requests, releases,
+/// a weekly commit chart and — with a token — who is visiting. Several
+/// repositories get a tab each along the bottom.
 class GithubWidget extends StatelessWidget {
   const GithubWidget({super.key, required this.w});
   final DashboardWidgetContext w;
 
-  List<({String repository, String label})> get _repositories {
-    final unique = <String, ({String repository, String label})>{};
+  /// Each repository once, as `owner/name`, with its tab's name. What can't
+  /// be read as a repository is kept as typed, so the tile can say so.
+  List<({String repository, String label, bool valid})> get _repositories {
+    final unique = <String, ({String repository, String label, bool valid})>{};
     void add(String value, {String label = ''}) {
-      final repository = _normaliseRepository(value.trim());
-      if (repository.isEmpty) return;
+      final typed = value.trim();
+      if (typed.isEmpty) return;
+      final parsed = parseRepository(typed);
+      final repository = parsed ?? typed;
       final key = repository.toLowerCase();
       final previous = unique[key];
       unique[key] = (
         repository: repository,
         label: label.trim().isNotEmpty ? label.trim() : previous?.label ?? '',
+        valid: parsed != null,
       );
     }
 
-    // Read the original single-repository setting for existing dashboards;
-    // new entries are managed together in the repeatable list below.
+    // The original single-repository setting, for dashboards saved before
+    // the list; new ones are managed in the list.
     add(w.option('repository', ''));
     for (final row in w.rows('repositories')) {
       add('${row['repository'] ?? ''}', label: '${row['name'] ?? ''}');
     }
-    return unique.isEmpty
-        ? [(repository: '', label: '')]
-        : unique.values.toList();
+    return unique.values.toList();
   }
 
   @override
   Widget build(BuildContext context) {
     final repositories = _repositories;
-    if (repositories.length <= 1) {
+    if (repositories.isEmpty) {
+      return TileMessage(
+        tr(
+          'widget.github.addRepository',
+          'Add a repository in the widget settings — its address, or '
+              'owner/name.',
+        ),
+        theme: w.theme,
+      );
+    }
+    if (repositories.length == 1) {
+      final only = repositories.first;
       return _GithubRepositoryTile(
-        key: ValueKey(repositories.first.repository),
+        key: ValueKey(only.repository),
         w: w,
-        repository: repositories.first.repository,
+        repository: only.repository,
+        valid: only.valid,
       );
     }
     return LayoutBuilder(
@@ -55,12 +77,16 @@ class GithubWidget extends StatelessWidget {
             children: [
               Expanded(
                 child: TabBarView(
+                  // Tabs change on a tap only: a swipe here belongs to the
+                  // dashboard, which turns its pages that way.
+                  physics: const NeverScrollableScrollPhysics(),
                   children: [
                     for (final entry in repositories)
                       _GithubRepositoryTile(
                         key: ValueKey(entry.repository),
                         w: w,
                         repository: entry.repository,
+                        valid: entry.valid,
                       ),
                   ],
                 ),
@@ -98,46 +124,64 @@ class GithubWidget extends StatelessWidget {
   }
 }
 
-String _normaliseRepository(String value) => value
-    .replaceAll(RegExp(r'^https?://github\.com/'), '')
-    .replaceAll(RegExp(r'/$'), '');
+typedef _Metric = ({String key, String label, String value, IconData icon});
 
 class _GithubRepositoryTile extends StatefulWidget {
   const _GithubRepositoryTile({
     super.key,
     required this.w,
     required this.repository,
+    required this.valid,
   });
   final DashboardWidgetContext w;
   final String repository;
+
+  /// Whether [repository] could be read as owner/name at all.
+  final bool valid;
 
   @override
   State<_GithubRepositoryTile> createState() => _GithubRepositoryTileState();
 }
 
-class _GithubRepositoryTileState extends State<_GithubRepositoryTile> {
-  static final Dio _dio = Dio(
-    BaseOptions(
-      connectTimeout: const Duration(seconds: 8),
-      receiveTimeout: const Duration(seconds: 8),
-      headers: {'Accept': 'application/vnd.github+json'},
-    ),
-  );
-  Map<String, dynamic>? _repo;
-  int? _pulls;
-  int? _contributors;
-  Map<String, dynamic>? _release;
-  List<int> _weeklyCommits = const [];
-  Map<String, dynamic>? _cloneTraffic;
-  Map<String, dynamic>? _viewTraffic;
-  List<Map<String, dynamic>> _referrers = const [];
-  bool _trafficDenied = false;
-  String? _error;
+class _GithubRepositoryTileState extends State<_GithubRepositoryTile>
+    with PauseWhenHidden, ShownTimers {
+  static final _api = GithubApi();
+
+  GithubSnapshot? _data;
+  GithubFailure? _failure;
   bool _busy = false;
   Timer? _timer;
 
-  String get _repository => widget.repository;
+  /// Bumped whenever what is asked for changes, so an answer to an older
+  /// question — another repository, another token — is thrown away when it
+  /// lands rather than shown.
+  int _generation = 0;
+
   String get _token => widget.w.option('token', '').trim();
+
+  GithubWanted get _wanted {
+    final w = widget.w;
+    return GithubWanted(
+      pulls: w.option('showPulls', true) || w.option('showIssues', true),
+      contributors: w.option('showContributors', true),
+      release: w.option('showRelease', false),
+      commits: w.option('showCommitChart', true),
+      clones: w.option('showClones', true),
+      views: w.option('showVisitors', true),
+      referrers: w.option('showReferrers', true),
+    );
+  }
+
+  static const _fetchOptions = [
+    'showPulls',
+    'showIssues',
+    'showContributors',
+    'showRelease',
+    'showCommitChart',
+    'showClones',
+    'showVisitors',
+    'showReferrers',
+  ];
 
   @override
   void initState() {
@@ -147,32 +191,24 @@ class _GithubRepositoryTileState extends State<_GithubRepositoryTile> {
   }
 
   @override
-  void didUpdateWidget(covariant _GithubRepositoryTile oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (_repository != oldWidget.repository ||
-        _token != oldWidget.w.option('token', '').trim()) {
-      _repo = null;
-      unawaited(_load());
+  void didUpdateWidget(covariant _GithubRepositoryTile old) {
+    super.didUpdateWidget(old);
+    final asked = widget.repository != old.repository ||
+        _token != old.w.option('token', '').trim();
+    if (asked) {
+      _data = null;
+      _failure = null;
+    }
+    if (asked ||
+        _fetchOptions.any(
+          (o) => widget.w.config.options[o] != old.w.config.options[o],
+        )) {
+      _generation++;
+      unawaited(_load(force: true));
     }
     if (widget.w.config.options['refreshMinutes'] !=
-        oldWidget.w.config.options['refreshMinutes']) {
+        old.w.config.options['refreshMinutes']) {
       _schedule();
-    }
-    for (final option in [
-      'showPulls',
-      'showIssues',
-      'showContributors',
-      'showRelease',
-      'showCommitChart',
-      'showClones',
-      'showVisitors',
-      'showReferrers',
-    ]) {
-      if (widget.w.config.options[option] !=
-          oldWidget.w.config.options[option]) {
-        unawaited(_load());
-        break;
-      }
     }
   }
 
@@ -182,10 +218,11 @@ class _GithubRepositoryTileState extends State<_GithubRepositoryTile> {
         (int.tryParse('${widget.w.config.options['refreshMinutes'] ?? 30}') ??
                 30)
             .clamp(5, 240);
-    _timer = Timer.periodic(
-      Duration(minutes: minutes),
-      (_) => unawaited(_load()),
-    );
+    // Paused while the tile is off screen or the screen is dark, and caught
+    // up once it's shown again.
+    _timer = everyWhileShown(Duration(minutes: minutes), () {
+      unawaited(_load());
+    });
   }
 
   @override
@@ -194,372 +231,155 @@ class _GithubRepositoryTileState extends State<_GithubRepositoryTile> {
     super.dispose();
   }
 
-  Future<void> _load() async {
-    final repo = _repository;
-    if (_busy) {
-      return;
-    }
-    if (!RegExp(r'^[^/\s]+/[^/\s]+$').hasMatch(repo)) {
-      if (mounted) {
-        setState(
-          () => _error = repo.isEmpty
-              ? 'Set a repository as owner/name in widget settings.'
-              : 'Enter a repository as owner/name.',
-        );
-      }
-      return;
-    }
-    _busy = true;
+  /// With [force], runs even while another fetch is out — that one's answer
+  /// will be to an older question and is dropped.
+  Future<void> _load({bool force = false}) async {
+    if (!widget.valid || (_busy && !force)) return;
+    final generation = _generation;
+    setState(() => _busy = true);
     try {
-      final headers = <String, dynamic>{
-        if (_token.isNotEmpty) 'Authorization': 'Bearer $_token',
-      };
-      final response = await _dio.get<Map<String, dynamic>>(
-        'https://api.github.com/repos/$repo',
-        options: Options(headers: headers),
+      final data = await _api.fetch(
+        widget.repository,
+        token: _token,
+        want: _wanted,
       );
-      final raw = response.data!;
-      int? pulls, contributors;
-      Map<String, dynamic>? release;
-      List<int> weeklyCommits = const [];
-      Map<String, dynamic>? cloneTraffic;
-      Map<String, dynamic>? viewTraffic;
-      List<Map<String, dynamic>> referrers = const [];
-      var trafficDenied = false;
-      final extras = <Future<void>>[];
-      if (widget.w.option('showPulls', true) ||
-          widget.w.option('showIssues', true)) {
-        extras.add(
-          _dio
-              .get(
-                'https://api.github.com/repos/$repo/pulls',
-                queryParameters: {'state': 'open', 'per_page': 1},
-                options: Options(headers: headers),
-              )
-              .then((r) {
-                pulls = _countFromResponse(r);
-              })
-              .catchError((_) {}),
-        );
-      }
-      if (widget.w.option('showContributors', true)) {
-        extras.add(
-          _dio
-              .get(
-                'https://api.github.com/repos/$repo/contributors',
-                queryParameters: {'per_page': 1},
-                options: Options(headers: headers),
-              )
-              .then((r) {
-                contributors = _countFromResponse(r);
-              })
-              .catchError((_) {}),
-        );
-      }
-      if (widget.w.option('showRelease', false)) {
-        extras.add(
-          _dio
-              .get<Map<String, dynamic>>(
-                'https://api.github.com/repos/$repo/releases/latest',
-                options: Options(headers: headers),
-              )
-              .then((r) {
-                release = r.data;
-              })
-              .catchError((_) {}),
-        );
-      }
-      if (widget.w.option('showCommitChart', true)) {
-        extras.add(
-          _dio
-              .get<List<dynamic>>(
-                'https://api.github.com/repos/$repo/stats/commit_activity',
-                options: Options(headers: headers),
-              )
-              .then((r) {
-                weeklyCommits = (r.data ?? const [])
-                    .whereType<Map>()
-                    .map((week) => (week['total'] as num?)?.toInt() ?? 0)
-                    .toList();
-              })
-              .catchError((_) {}),
-        );
-      }
-      if (widget.w.option('showClones', true)) {
-        extras.add(
-          _dio
-              .get<Map<String, dynamic>>(
-                'https://api.github.com/repos/$repo/traffic/clones',
-                options: Options(headers: headers),
-              )
-              .then((r) {
-                cloneTraffic = r.data;
-              })
-              .catchError((e) {
-                if (e is DioException && e.response?.statusCode == 403) {
-                  trafficDenied = true;
-                }
-              }),
-        );
-      }
-      if (widget.w.option('showVisitors', true)) {
-        extras.add(
-          _dio
-              .get<Map<String, dynamic>>(
-                'https://api.github.com/repos/$repo/traffic/views',
-                options: Options(headers: headers),
-              )
-              .then((r) {
-                viewTraffic = r.data;
-              })
-              .catchError((e) {
-                if (e is DioException && e.response?.statusCode == 403) {
-                  trafficDenied = true;
-                }
-              }),
-        );
-      }
-      if (widget.w.option('showReferrers', true)) {
-        extras.add(
-          _dio
-              .get<List<dynamic>>(
-                'https://api.github.com/repos/$repo/traffic/popular/referrers',
-                options: Options(headers: headers),
-              )
-              .then((r) {
-                referrers = (r.data ?? const [])
-                    .whereType<Map>()
-                    .map((item) => item.cast<String, dynamic>())
-                    .toList();
-              })
-              .catchError((e) {
-                if (e is DioException && e.response?.statusCode == 403) {
-                  trafficDenied = true;
-                }
-              }),
-        );
-      }
-      await Future.wait(extras);
-      if (mounted) {
-        setState(() {
-          _repo = raw;
-          _pulls = pulls;
-          _contributors = contributors;
-          _release = release;
-          _weeklyCommits = weeklyCommits;
-          _cloneTraffic = cloneTraffic;
-          _viewTraffic = viewTraffic;
-          _referrers = referrers;
-          _trafficDenied = trafficDenied;
-          _error = null;
-        });
-      }
-    } on DioException catch (e) {
-      if (mounted) {
-        setState(
-          () => _error = e.response?.statusCode == 404
-              ? 'Repository not found or private.'
-              : e.response?.statusCode == 403
-              ? 'GitHub rate limit reached. Add a token in settings.'
-              : 'Could not reach GitHub. ${e.message ?? ''}',
-        );
-      }
+      if (!mounted || generation != _generation) return;
+      setState(() {
+        _data = data;
+        _failure = null;
+      });
+    } on GithubException catch (e) {
+      if (!mounted || generation != _generation) return;
+      setState(() => _failure = e.failure);
     } catch (e) {
-      if (mounted) setState(() => _error = 'Could not load repository: $e');
+      debugPrint('GitHub ${widget.repository}: $e');
+      if (!mounted || generation != _generation) return;
+      setState(() => _failure = GithubFailure.unexpected);
     } finally {
-      _busy = false;
+      if (mounted && generation == _generation) {
+        setState(() => _busy = false);
+      }
     }
   }
+
+  String _failureText(GithubFailure f) => switch (f) {
+    GithubFailure.notFound => tr(
+      'widget.github.notFound',
+      'No repository {repository} — or it is private, and needs a token.',
+      {'repository': widget.repository},
+    ),
+    GithubFailure.badToken => tr(
+      'widget.github.badToken',
+      'GitHub did not accept the token. Check it in the widget settings.',
+    ),
+    GithubFailure.rateLimited => tr(
+      'widget.github.rateLimited',
+      'GitHub’s hourly limit is used up. A token raises it — add one in '
+          'the widget settings.',
+    ),
+    GithubFailure.forbidden => tr(
+      'widget.github.forbidden',
+      'The token can’t see {repository}.',
+      {'repository': widget.repository},
+    ),
+    GithubFailure.unreachable => tr(
+      'widget.github.unreachable',
+      'Could not reach GitHub',
+    ),
+    GithubFailure.unexpected => tr(
+      'widget.github.unexpected',
+      'GitHub gave an answer the tile didn’t understand',
+    ),
+  };
 
   @override
   Widget build(BuildContext context) {
     final theme = widget.w.theme;
-    final repo = _repo;
-    if (repo == null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Text(
-            _error ?? 'Loading GitHub…',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: theme.textSecondary),
-          ),
+    if (!widget.valid) {
+      return TileMessage(
+        tr(
+          'widget.github.notARepository',
+          '“{typed}” isn’t a repository. Use its address, or owner/name.',
+          {'typed': widget.repository},
         ),
+        theme: theme,
       );
     }
-    final metrics = <({String key, String label, String value, IconData icon})>[
-      if (widget.w.option('showStars', true))
-        (
-          key: 'stars',
-          label: 'Stars',
-          value: _number(repo['stargazers_count']),
-          icon: Icons.star_outline,
-        ),
-      if (widget.w.option('showForks', true))
-        (
-          key: 'forks',
-          label: 'Forks',
-          value: _number(repo['forks_count']),
-          icon: Icons.fork_right,
-        ),
-      if (widget.w.option('showWatchers', true))
-        (
-          key: 'watchers',
-          label: 'Watchers',
-          value: _number(repo['subscribers_count'] ?? repo['watchers_count']),
-          icon: Icons.visibility_outlined,
-        ),
-      if (widget.w.option('showIssues', true))
-        (
-          key: 'issues',
-          label: 'Open issues',
-          value: _number(
-            (((repo['open_issues_count'] as num?)?.toInt() ?? 0) -
-                    (_pulls ?? 0))
-                .clamp(0, 0x7fffffff),
-          ),
-          icon: Icons.error_outline,
-        ),
-      if (widget.w.option('showPulls', true) && _pulls != null)
-        (
-          key: 'pulls',
-          label: 'Open PRs',
-          value: _number(_pulls),
-          icon: Icons.merge_type,
-        ),
-      if (widget.w.option('showContributors', true) && _contributors != null)
-        (
-          key: 'contributors',
-          label: 'Contributors',
-          value: _number(_contributors),
-          icon: Icons.people_outline,
-        ),
-      if (widget.w.option('showLanguage', true) && repo['language'] != null)
-        (
-          key: 'language',
-          label: 'Language',
-          value: '${repo['language']}',
-          icon: Icons.code,
-        ),
-      if (widget.w.option('showRelease', false) && _release != null)
-        (
-          key: 'release',
-          label: 'Latest release',
-          value: '${_release!['tag_name'] ?? '—'}',
-          icon: Icons.new_releases_outlined,
-        ),
-      if (widget.w.option('showUpdated', true))
-        (
-          key: 'updated',
-          label: 'Last push',
-          value: _relative(repo['pushed_at']),
-          icon: Icons.update,
-        ),
-      if (widget.w.option('showLicense', false) &&
-          repo['license']?['spdx_id'] != null)
-        (
-          key: 'license',
-          label: 'Licence',
-          value: '${repo['license']['spdx_id']}',
-          icon: Icons.policy_outlined,
-        ),
-      if (widget.w.option('showSize', false))
-        (
-          key: 'size',
-          label: 'Size',
-          value:
-              '${((repo['size'] as num? ?? 0) / 1024).toStringAsFixed(1)} MB',
-          icon: Icons.storage_outlined,
-        ),
-      if (widget.w.option('showBranch', false))
-        (
-          key: 'branch',
-          label: 'Default branch',
-          value: '${repo['default_branch'] ?? '—'}',
-          icon: Icons.account_tree_outlined,
-        ),
-      if (widget.w.option('showClones', true) && _cloneTraffic != null) ...[
-        (
-          key: 'clones',
-          label: 'Clones · 14d',
-          value: _number(_cloneTraffic!['count']),
-          icon: Icons.download_outlined,
-        ),
-        (
-          key: 'unique-clones',
-          label: 'Unique clones',
-          value: _number(_cloneTraffic!['uniques']),
-          icon: Icons.person_outline,
-        ),
-      ],
-      if (widget.w.option('showVisitors', true) && _viewTraffic != null) ...[
-        (
-          key: 'views',
-          label: 'Views · 14d',
-          value: _number(_viewTraffic!['count']),
-          icon: Icons.visibility_outlined,
-        ),
-        (
-          key: 'unique-visitors',
-          label: 'Unique visitors',
-          value: _number(_viewTraffic!['uniques']),
-          icon: Icons.person_outline,
-        ),
-      ],
-      if (widget.w.option('showReferrers', true))
-        for (var i = 0; i < _referrers.take(3).length; i++)
-          (
-            key: 'referrer-$i',
-            label: 'Referrer · ${_referrers[i]['referrer'] ?? 'Unknown'}',
-            value:
-                '${_number(_referrers[i]['count'])} / ${_number(_referrers[i]['uniques'])} unique',
-            icon: Icons.open_in_new,
-          ),
+    final data = _data;
+    if (data == null) {
+      return TileMessage(
+        _failure != null
+            ? _failureText(_failure!)
+            : tr('widget.github.loading', 'Asking GitHub…'),
+        theme: theme,
+      );
+    }
+    final repo = data.repo;
+    final metrics = _metrics(data);
+    final status = StatusColours.of(theme);
+    final badges = [
+      if (repo['archived'] == true)
+        (tr('widget.github.archived', 'Archived'), status.warn),
+      if (repo['private'] == true)
+        (tr('widget.github.private', 'Private'), theme.textSecondary),
+      if (repo['fork'] == true)
+        (tr('widget.github.fork', 'Fork'), theme.textSecondary),
     ];
     return LayoutBuilder(
       builder: (context, c) {
         final tiny = c.maxWidth < 100 || c.maxHeight < 100;
-        final cols = c.maxWidth < 150
-            ? 1
-            : c.maxWidth < 280
-            ? 2
-            : c.maxWidth < 500
-            ? 3
-            : 4;
-        final title = '${repo['full_name'] ?? _repository}';
+        final title = '${repo['full_name'] ?? widget.repository}';
+        final headSize = tiny ? 11.0 : (c.maxHeight * .05).clamp(13.0, 26.0);
         final showChart =
             widget.w.option('showCommitChart', true) &&
-            _weeklyCommits.isNotEmpty &&
+            data.weeklyCommits.isNotEmpty &&
             c.maxWidth >= 220 &&
             c.maxHeight >= 190;
-        final description = repo['description'] != null && c.maxHeight > 170;
-        final chart = _CommitChart(weeks: _weeklyCommits, theme: theme);
+        final description =
+            '${repo['description'] ?? ''}'.trim().isNotEmpty &&
+            c.maxHeight > 170;
+        final chart = _CommitChart(weeks: data.weeklyCommits, theme: theme);
         final stats = LayoutBuilder(
           builder: (context, grid) {
-            final rows = (metrics.length / cols).ceil().clamp(1, 99);
-            final cellWidth = grid.maxWidth / cols;
-            final cellHeight = grid.maxHeight / rows;
+            // From the room the figures actually get — beside the chart
+            // that is about half the tile — so labels aren't cut short.
+            final cols = grid.maxWidth < 150
+                ? 1
+                : grid.maxWidth < 280
+                ? 2
+                : grid.maxWidth < 500
+                ? 3
+                : 4;
+            // As many figures as can be read, in the order they are listed,
+            // rather than all of them shrunk past reading.
+            final fit = (grid.maxHeight / 44).floor().clamp(1, 99);
+            final shown = metrics.take(cols * fit).toList();
+            final rows = (shown.length / cols).ceil().clamp(1, 99);
             return GridView.builder(
               padding: EdgeInsets.zero,
               physics: const NeverScrollableScrollPhysics(),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: cols,
-                childAspectRatio: cellWidth / cellHeight,
+                childAspectRatio:
+                    (grid.maxWidth / cols) / (grid.maxHeight / rows),
                 crossAxisSpacing: 5,
                 mainAxisSpacing: 4,
               ),
-              itemCount: metrics.length,
+              itemCount: shown.length,
               itemBuilder: (context, i) =>
-                  _Metric(metric: metrics[i], theme: theme),
+                  _MetricCell(metric: shown[i], theme: theme),
             );
           },
         );
+        final wantsTraffic = widget.w.option('showClones', true) ||
+            widget.w.option('showVisitors', true) ||
+            widget.w.option('showReferrers', true);
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Row(
               children: [
-                Icon(Icons.code, color: theme.accent, size: tiny ? 16 : 22),
+                Icon(Icons.hub_outlined, color: theme.accent, size: headSize * 1.2),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -569,13 +389,30 @@ class _GithubRepositoryTileState extends State<_GithubRepositoryTile> {
                     style: TextStyle(
                       color: theme.textPrimary,
                       fontWeight: FontWeight.w600,
-                      fontSize: tiny
-                          ? 11
-                          : (c.maxHeight * .05).clamp(13.0, 26.0),
+                      fontSize: headSize,
                     ),
                   ),
                 ),
-                if (_busy)
+                // Beside the name only where there's room for both.
+                if (!tiny && c.maxWidth >= 260)
+                  for (final (text, colour) in badges) ...[
+                    const SizedBox(width: 6),
+                    StatusChip(text: text, colour: colour, size: headSize * .6),
+                  ],
+                // Older figures on show: the last refresh failed.
+                if (_failure != null && !_busy) ...[
+                  const SizedBox(width: 6),
+                  Tooltip(
+                    message: _failureText(_failure!),
+                    child: Icon(
+                      Icons.cloud_off_outlined,
+                      size: headSize * .9,
+                      color: status.warn,
+                    ),
+                  ),
+                ],
+                if (_busy) ...[
+                  const SizedBox(width: 6),
                   SizedBox(
                     width: 12,
                     height: 12,
@@ -584,6 +421,7 @@ class _GithubRepositoryTileState extends State<_GithubRepositoryTile> {
                       color: theme.accent,
                     ),
                   ),
+                ],
               ],
             ),
             if (tiny)
@@ -592,7 +430,9 @@ class _GithubRepositoryTileState extends State<_GithubRepositoryTile> {
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
-                      '${metrics.isEmpty ? '—' : metrics.first.value} ${metrics.isEmpty ? '' : metrics.first.label}',
+                      metrics.isEmpty
+                          ? '—'
+                          : '${metrics.first.value} ${metrics.first.label}',
                       style: TextStyle(
                         color: theme.accent,
                         fontSize: 24,
@@ -616,17 +456,18 @@ class _GithubRepositoryTileState extends State<_GithubRepositoryTile> {
                     ),
                   ),
                 ),
-              if (_trafficDenied &&
-                  (widget.w.option('showClones', true) ||
-                      widget.w.option('showVisitors', true) ||
-                      widget.w.option('showReferrers', true)))
+              if (data.trafficDenied && wantsTraffic)
                 Padding(
                   padding: const EdgeInsets.only(top: 3),
                   child: Text(
-                    'Traffic needs a token with repository Administration read access.',
+                    tr(
+                      'widget.github.trafficNeedsAccess',
+                      'Traffic needs a token with the repository’s '
+                          'Administration read access.',
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: theme.textSecondary, fontSize: 9),
+                    style: TextStyle(color: theme.textSecondary, fontSize: 11),
                   ),
                 ),
               if (!showChart)
@@ -667,48 +508,210 @@ class _GithubRepositoryTileState extends State<_GithubRepositoryTile> {
     );
   }
 
-  static String _number(Object? n) {
-    final value = (n as num?)?.toInt() ?? 0;
-    if (value >= 1000000) return '${(value / 1000000).toStringAsFixed(1)}m';
-    if (value >= 1000) return '${(value / 1000).toStringAsFixed(1)}k';
-    return '$value';
+  List<_Metric> _metrics(GithubSnapshot data) {
+    final w = widget.w;
+    final repo = data.repo;
+    // GitHub counts pull requests as issues. With the PR count known, the
+    // issues shown are issues alone; without it, the figure says so.
+    final openAll = (repo['open_issues_count'] as num?)?.toInt() ?? 0;
+    final pulls = data.pulls;
+    final license = '${(repo['license'] as Map?)?['spdx_id'] ?? ''}';
+    return [
+      if (w.option('showStars', true))
+        (
+          key: 'stars',
+          label: tr('widget.github.stars', 'Stars'),
+          value: _count(repo['stargazers_count']),
+          icon: Icons.star_outline,
+        ),
+      if (w.option('showForks', true))
+        (
+          key: 'forks',
+          label: tr('widget.github.forks', 'Forks'),
+          value: _count(repo['forks_count']),
+          icon: Icons.fork_right,
+        ),
+      if (w.option('showWatchers', true))
+        (
+          key: 'watchers',
+          label: tr('widget.github.watchers', 'Watchers'),
+          value: _count(repo['subscribers_count'] ?? repo['watchers_count']),
+          icon: Icons.visibility_outlined,
+        ),
+      if (w.option('showIssues', true))
+        pulls == null
+            ? (
+                key: 'issues',
+                label: tr('widget.github.issuesAndPulls', 'Issues and PRs'),
+                value: _count(openAll),
+                icon: Icons.error_outline,
+              )
+            : (
+                key: 'issues',
+                label: tr('widget.github.openIssues', 'Open issues'),
+                value: _count((openAll - pulls).clamp(0, openAll)),
+                icon: Icons.error_outline,
+              ),
+      if (w.option('showPulls', true) && pulls != null)
+        (
+          key: 'pulls',
+          label: tr('widget.github.openPulls', 'Open PRs'),
+          value: _count(pulls),
+          icon: Icons.merge_type,
+        ),
+      if (w.option('showContributors', true) && data.contributors != null)
+        (
+          key: 'contributors',
+          label: tr('widget.github.contributors', 'Contributors'),
+          value: _count(data.contributors),
+          icon: Icons.people_outline,
+        ),
+      if (w.option('showLanguage', true) && repo['language'] != null)
+        (
+          key: 'language',
+          label: tr('widget.github.language', 'Language'),
+          value: '${repo['language']}',
+          icon: Icons.code,
+        ),
+      if (w.option('showRelease', false) && data.release != null)
+        (
+          key: 'release',
+          label: tr('widget.github.latestRelease', 'Latest release'),
+          value: '${data.release!['tag_name'] ?? '—'}',
+          icon: Icons.new_releases_outlined,
+        ),
+      if (w.option('showUpdated', true))
+        (
+          key: 'updated',
+          label: tr('widget.github.lastPush', 'Last push'),
+          value: _ago(repo['pushed_at']),
+          icon: Icons.update,
+        ),
+      // "NOASSERTION" is GitHub's way of saying it couldn't tell.
+      if (w.option('showLicense', false) &&
+          license.isNotEmpty &&
+          license != 'NOASSERTION')
+        (
+          key: 'license',
+          label: tr('widget.github.licence', 'Licence'),
+          value: license,
+          icon: Icons.policy_outlined,
+        ),
+      if (w.option('showSize', false))
+        (
+          key: 'size',
+          label: tr('widget.github.size', 'Size'),
+          // GitHub gives it in kilobytes.
+          value: tr('widget.github.megabytes', '{size} MB', {
+            'size': ((repo['size'] as num? ?? 0) / 1024).toStringAsFixed(1),
+          }),
+          icon: Icons.storage_outlined,
+        ),
+      if (w.option('showBranch', false))
+        (
+          key: 'branch',
+          label: tr('widget.github.defaultBranch', 'Default branch'),
+          value: '${repo['default_branch'] ?? '—'}',
+          icon: Icons.account_tree_outlined,
+        ),
+      if (w.option('showClones', true) && data.clones != null) ...[
+        (
+          key: 'clones',
+          label: tr('widget.github.clones', 'Clones · 14 days'),
+          value: _count(data.clones!['count']),
+          icon: Icons.download_outlined,
+        ),
+        (
+          key: 'unique-clones',
+          label: tr('widget.github.uniqueClones', 'Unique cloners'),
+          value: _count(data.clones!['uniques']),
+          icon: Icons.person_outline,
+        ),
+      ],
+      if (w.option('showVisitors', true) && data.views != null) ...[
+        (
+          key: 'views',
+          label: tr('widget.github.views', 'Views · 14 days'),
+          value: _count(data.views!['count']),
+          icon: Icons.visibility_outlined,
+        ),
+        (
+          key: 'unique-visitors',
+          label: tr('widget.github.uniqueVisitors', 'Unique visitors'),
+          value: _count(data.views!['uniques']),
+          icon: Icons.person_outline,
+        ),
+      ],
+      if (w.option('showReferrers', true))
+        for (final (i, r) in data.referrers.take(3).indexed)
+          (
+            key: 'referrer-$i',
+            label: tr('widget.github.referrer', 'From {site}', {
+              'site': '${r['referrer'] ?? '?'}',
+            }),
+            value: tr('widget.github.referrerCounts', '{count} · {uniques} unique', {
+              'count': _count(r['count']),
+              'uniques': _count(r['uniques']),
+            }),
+            icon: Icons.open_in_new,
+          ),
+    ];
   }
 
-  static int _countFromResponse(Response<dynamic> response) {
-    final link = response.headers.value('link') ?? '';
-    final last = RegExp(
-      r'<[^>]*[?&]page=(\d+)[^>]*>;\s*rel="last"',
-    ).firstMatch(link);
-    if (last != null) return int.tryParse(last.group(1)!) ?? 0;
-    return response.data is List ? (response.data as List).length : 0;
+  /// "1.2K", "34", "2.1M" — shortened in the panel's language's style.
+  static String _count(Object? n) {
+    final value = (n as num?) ?? 0;
+    if (value < 1000) return '${value.toInt()}';
+    try {
+      return NumberFormat.compact(
+        locale: L10n.instance.language.intlCode,
+      ).format(value);
+    } catch (_) {
+      return NumberFormat.compact(locale: 'en_GB').format(value);
+    }
   }
 
-  static String _relative(Object? raw) {
+  /// "3y ago", "5mo ago", "2d ago", "4h ago", "Just now" — short enough for
+  /// a cell.
+  static String _ago(Object? raw) {
     final d = DateTime.tryParse('$raw')?.toLocal();
     if (d == null) return '—';
     final age = DateTime.now().difference(d);
-    if (age.inDays > 365) return '${age.inDays ~/ 365}y ago';
-    if (age.inDays > 30) return '${age.inDays ~/ 30}mo ago';
-    if (age.inDays > 0) return '${age.inDays}d ago';
-    if (age.inHours > 0) return '${age.inHours}h ago';
-    return 'Today';
+    if (age.inDays >= 365) {
+      return tr('widget.github.yearsAgo', '{n}y ago', {'n': age.inDays ~/ 365});
+    }
+    if (age.inDays >= 30) {
+      return tr('widget.github.monthsAgo', '{n}mo ago', {'n': age.inDays ~/ 30});
+    }
+    if (age.inDays > 0) {
+      return tr('widget.github.daysAgo', '{n}d ago', {'n': age.inDays});
+    }
+    if (age.inHours > 0) {
+      return tr('widget.github.hoursAgo', '{n}h ago', {'n': age.inHours});
+    }
+    return tr('widget.github.justNow', 'Just now');
   }
 }
 
-class _Metric extends StatelessWidget {
-  const _Metric({required this.metric, required this.theme});
-  final ({String key, String label, String value, IconData icon}) metric;
+class _MetricCell extends StatelessWidget {
+  const _MetricCell({required this.metric, required this.theme});
+  final _Metric metric;
   final DashboardTheme theme;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, c) {
-      // Size each label and figure from the actual grid cell. The old fixed
-      // 10/17 px sizes were then shrunk by FittedBox to fit the grid's overly
-      // tall cells, making a large dashboard tile look like a small one.
+      // Sized from the actual grid cell, so a large tile reads as large.
       final labelSize = (c.maxHeight * .19).clamp(11.0, 18.0);
       final valueSize = (c.maxHeight * .40).clamp(18.0, 44.0);
-      return Column(
+      // Shrinks whole in a cell too short for its smallest type.
+      return FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: SizedBox(
+          width: c.maxWidth,
+          child: Column(
+        mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -739,17 +742,20 @@ class _Metric extends StatelessWidget {
                 color: theme.textPrimary,
                 fontSize: valueSize,
                 fontWeight: FontWeight.w300,
+                fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
           ),
         ],
+          ),
+        ),
       );
     },
   );
 }
 
-/// Recent weekly commit counts. GitHub's commit activity endpoint returns up
-/// to 52 weeks; this chart keeps the last 12 so its labels remain readable.
+/// The last twelve weeks of commits. GitHub keeps a year; twelve bars stay
+/// readable on a tile.
 class _CommitChart extends StatelessWidget {
   const _CommitChart({required this.weeks, required this.theme});
 
@@ -770,7 +776,7 @@ class _CommitChart extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    'Weekly commits',
+                    tr('widget.github.weeklyCommits', 'Weekly commits'),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -780,11 +786,22 @@ class _CommitChart extends StatelessWidget {
                     ),
                   ),
                 ),
-                Text(
-                  '$total · 12w',
-                  style: TextStyle(
-                    color: theme.textSecondary,
-                    fontSize: (titleSize * .72).clamp(10.0, 16.0),
+                const SizedBox(width: 6),
+                // Gives way to the heading on a narrow chart.
+                Flexible(
+                  child: Text(
+                    tr(
+                      'widget.github.commitsTotal',
+                      '{n, plural, one{# commit} other{# commits}} · 12 weeks',
+                      {'n': total},
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.end,
+                    style: TextStyle(
+                      color: theme.textSecondary,
+                      fontSize: (titleSize * .72).clamp(10.0, 16.0),
+                    ),
                   ),
                 ),
               ],
@@ -792,7 +809,12 @@ class _CommitChart extends StatelessWidget {
             const SizedBox(height: 3),
             Expanded(
               child: CustomPaint(
-                painter: _CommitChartPainter(values: recent, theme: theme),
+                painter: _CommitChartPainter(
+                  values: recent,
+                  theme: theme,
+                  start: tr('widget.github.twelveWeeksAgo', '12 weeks ago'),
+                  end: tr('widget.github.thisWeek', 'This week'),
+                ),
                 child: const SizedBox.expand(),
               ),
             ),
@@ -804,9 +826,18 @@ class _CommitChart extends StatelessWidget {
 }
 
 class _CommitChartPainter extends CustomPainter {
-  const _CommitChartPainter({required this.values, required this.theme});
+  const _CommitChartPainter({
+    required this.values,
+    required this.theme,
+    required this.start,
+    required this.end,
+  });
   final List<int> values;
   final DashboardTheme theme;
+
+  /// The labels under its first and last bars.
+  final String start;
+  final String end;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -814,7 +845,7 @@ class _CommitChartPainter extends CustomPainter {
     final fontSize = (size.shortestSide * .05).clamp(11.0, 17.0);
     final left = fontSize * 2.6;
     const top = 4.0;
-    const bottom = 18.0;
+    final bottom = fontSize + 6;
     final chartWidth = size.width - left - 3;
     final chartHeight = size.height - top - bottom;
     if (chartWidth <= 0 || chartHeight <= 0) return;
@@ -826,6 +857,7 @@ class _CommitChartPainter extends CustomPainter {
     final barPaint = Paint()
       ..color = theme.accent.withValues(alpha: .78)
       ..style = PaintingStyle.fill;
+    // This week, still filling up, in full colour.
     final lastBarPaint = Paint()
       ..color = theme.accent
       ..style = PaintingStyle.fill;
@@ -833,13 +865,11 @@ class _CommitChartPainter extends CustomPainter {
     for (var tick = 0; tick <= 2; tick++) {
       final y = top + chartHeight * tick / 2;
       canvas.drawLine(Offset(left, y), Offset(size.width, y), gridPaint);
-      final label = (ceiling * (1 - tick / 2)).round().toString();
-      _drawLabel(
+      _label(
         canvas,
-        label,
+        (ceiling * (1 - tick / 2)).round().toString(),
         Offset(0, y - fontSize / 2),
         fontSize,
-        theme.textSecondary,
         maxWidth: left - 4,
       );
     }
@@ -849,62 +879,63 @@ class _CommitChartPainter extends CustomPainter {
     for (var i = 0; i < values.length; i++) {
       final barHeight = chartHeight * values[i] / ceiling;
       final x = left + slot * i + (slot - barWidth) / 2;
-      final rect = Rect.fromLTWH(
-        x,
-        top + chartHeight - barHeight,
-        barWidth,
-        barHeight,
-      );
       canvas.drawRRect(
-        RRect.fromRectAndRadius(rect, const Radius.circular(2)),
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(x, top + chartHeight - barHeight, barWidth, barHeight),
+          const Radius.circular(2),
+        ),
         i == values.length - 1 ? lastBarPaint : barPaint,
       );
     }
-    _drawLabel(
-      canvas,
-      '12w ago',
-      Offset(left, size.height - bottom + 3),
-      fontSize,
-      theme.textSecondary,
-    );
-    _drawLabel(
-      canvas,
-      'Now',
-      Offset(size.width - fontSize * 2.4, size.height - bottom + 3),
-      fontSize,
-      theme.textSecondary,
-    );
+    final y = size.height - bottom + 3;
+    final startWidth = _label(canvas, start, Offset(left, y), fontSize);
+    // Right-aligned, and only where it clears the first label.
+    final endPainter = _painter(end, fontSize);
+    final endX = size.width - endPainter.width;
+    if (endX > left + startWidth + 8) {
+      endPainter.paint(canvas, Offset(endX, y));
+    }
   }
 
-  void _drawLabel(
+  TextPainter _painter(String text, double fontSize, {double? maxWidth}) =>
+      TextPainter(
+        text: TextSpan(
+          text: text,
+          style: TextStyle(fontSize: fontSize, color: theme.textSecondary),
+        ),
+        textDirection: TextDirection.ltr,
+        maxLines: 1,
+      )..layout(maxWidth: maxWidth ?? double.infinity);
+
+  /// Paints [text] at [offset]; returns its width.
+  double _label(
     Canvas canvas,
     String text,
     Offset offset,
-    double fontSize,
-    Color color, {
+    double fontSize, {
     double? maxWidth,
   }) {
-    final painter = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: TextStyle(fontSize: fontSize, color: color),
-      ),
-      textDirection: TextDirection.ltr,
-      maxLines: 1,
-    )..layout(maxWidth: maxWidth ?? double.infinity);
-    painter.paint(canvas, offset);
+    final p = _painter(text, fontSize, maxWidth: maxWidth);
+    p.paint(canvas, offset);
+    return p.width;
   }
 
   @override
-  bool shouldRepaint(covariant _CommitChartPainter oldDelegate) =>
-      oldDelegate.values != values || oldDelegate.theme != theme;
+  bool shouldRepaint(covariant _CommitChartPainter old) =>
+      old.values != values ||
+      old.theme != theme ||
+      old.start != start ||
+      old.end != end;
 }
 
 final githubWidgetType = DashboardWidgetType(
   type: 'github',
   category: WidgetCategory.homeLab,
   name: 'GitHub repository',
-  description: 'Repository activity and stats from GitHub.',
+  description:
+      'Stars, issues, pull requests, releases and a weekly commit chart for '
+      'your GitHub repositories — a tab each — and, with a token, who has '
+      'been visiting. No token needed for public ones.',
   glyph: '🐙',
   defaultWidth: 4,
   defaultHeight: 3,
@@ -918,7 +949,9 @@ final githubWidgetType = DashboardWidgetType(
       kind: OptionKind.list,
       addLabel: 'Add repository',
       help:
-          'Add one row per repository tab. Every repository uses the same token and display settings.',
+          'One row per repository, each a tab along the bottom. Its address '
+          '(github.com/owner/name) or just owner/name. They all share the '
+          'token and the settings below.',
       fields: [
         WidgetOption(
           key: 'name',
@@ -947,7 +980,10 @@ final githubWidgetType = DashboardWidgetType(
       kind: OptionKind.secret,
       defaultValue: '',
       help:
-          'Optional. Needed for private repositories. Traffic stats require repository Administration read access.',
+          'Optional. Needed for private repositories and traffic, and it '
+          'raises GitHub’s limit from 60 requests an hour. A fine-grained '
+          'token with read-only access is enough: Metadata, plus '
+          'Administration for traffic. Sent only to api.github.com.',
     ),
     WidgetOption(
       key: 'refreshMinutes',
@@ -1074,8 +1110,9 @@ final githubWidgetType = DashboardWidgetType(
     ),
   ],
   preview: const [
-    PreviewLine('🐙 owner/repository', scale: .16, accent: true),
-    PreviewLine('★ 1.2k ⑂ 84  Issues 12', scale: .12, muted: true),
+    PreviewLine('owner/repository', scale: .14, accent: true),
+    PreviewLine('Stars 1.2K   Forks 84   Issues 12', scale: .11),
+    PreviewLine('▁▂▄▃▅▆▄▇', scale: .16, centre: true),
   ],
   build: (context, w) => GithubWidget(w: w),
 );
