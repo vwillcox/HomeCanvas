@@ -353,13 +353,25 @@
 
   /* ---------- sidebar ---------- */
   aside {
-    display: flex; flex-direction: column; gap: 14px;
+    display: flex; flex-direction: column; gap: 10px;
     /* Sticky and scrollable, so the settings for the widget being edited
        stay reachable however long the canvas is. */
     position: sticky; top: 96px; max-height: calc(100vh - 110px);
     overflow-y: auto; overscroll-behavior: contain;
     scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.2) transparent;
-    padding-bottom: 4px;
+    /* One panel holding the others, so the sidebar reads as a group
+       beside the canvas rather than a stack of loose cards. */
+    padding: 10px;
+    background: var(--glass); border: 1px solid var(--line);
+    border-radius: calc(var(--radius) + 8px);
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(18px) saturate(1.2);
+    -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  }
+  /* Set into the outer panel rather than floating on it. */
+  aside .card {
+    background: rgba(0, 0, 0, .18);
+    box-shadow: none;
   }
   @media (max-width: 1000px) { aside { position: static; max-height: none; overflow: visible; } }
   .card {
@@ -1277,11 +1289,7 @@ function renderPalette() {
       group.classList.toggle("collapsed", fold);
       head.setAttribute("aria-expanded", String(!fold));
       if (fold) now.add(key); else now.delete(key);
-      try {
-        localStorage.setItem(PANEL_KEY, JSON.stringify([...now]));
-      } catch {
-        // Not remembered this time; folding still works.
-      }
+      savePanels(now);
     };
     const grid = document.createElement("div");
     grid.className = "palette";
@@ -1505,9 +1513,28 @@ function normaliseColour(v) {
   return "#7dd3fc";
 }
 
-/* The list rows opened for editing, by the row itself: they are edited in
-   place, so the same object survives every redraw. */
-const openRows = new WeakSet();
+/* The list rows opened for editing, kept with the folded panels (see
+   savePanels) so a row left open is open next time too. */
+function rowKey(w, o, index) {
+  return "row:" + w.id + ":" + o.key + ":" + index;
+}
+
+function setRowOpen(w, o, index, open) {
+  const now = collapsedPanels();
+  if (open) now.add(rowKey(w, o, index)); else now.delete(rowKey(w, o, index));
+  savePanels(now);
+}
+
+/* Removing a row moves the ones after it up, and whether each is open moves
+   with it. */
+function removeRowKey(w, o, index, count) {
+  const now = collapsedPanels();
+  for (let i = index; i < count; i++) {
+    if (i + 1 < count && now.has(rowKey(w, o, i + 1))) now.add(rowKey(w, o, i));
+    else now.delete(rowKey(w, o, i));
+  }
+  savePanels(now);
+}
 
 /* What a folded row shows: its first two filled-in fields, choices by their
    name. Secrets are never among them. */
@@ -1548,12 +1575,13 @@ function listField(w, o) {
     remove.className = "danger";
     remove.textContent = "Remove";
     remove.onclick = () => {
+      removeRowKey(w, o, index, rows.length);
       rows.splice(index, 1);
       markDirty();
       render();
     };
 
-    if (foldable && !openRows.has(row)) {
+    if (foldable && !panelState.has(rowKey(w, o, index))) {
       card.classList.add("folded");
       const summary = document.createElement("div");
       summary.className = "summary";
@@ -1568,7 +1596,7 @@ function listField(w, o) {
       }
       const edit = document.createElement("button");
       edit.textContent = "Edit";
-      summary.onclick = edit.onclick = () => { openRows.add(row); render(); };
+      summary.onclick = edit.onclick = () => { setRowOpen(w, o, index, true); render(); };
       card.append(summary, edit, remove);
       host.appendChild(card);
       return;
@@ -1605,7 +1633,12 @@ function listField(w, o) {
         input.style.height = "40px";
         input.value = normaliseColour(row[f.key] != null ? row[f.key] : f.default);
       } else {
-        input.type = f.kind === "number" ? "number" : f.kind === "secret" ? "password" : "text";
+        input.type = f.kind === "number" ? "number"
+          : f.kind === "secret" ? "password"
+          : f.kind === "date" ? "date"
+          : "text";
+        // Fractions allowed: half a share, or 0.05 of a coin.
+        if (f.kind === "number") input.step = "any";
         input.value = row[f.key] != null ? String(row[f.key]) : "";
       }
       // The canvas only: redrawing the form as well replaced this very box
@@ -1623,7 +1656,7 @@ function listField(w, o) {
     if (foldable) {
       const done = document.createElement("button");
       done.textContent = "Done";
-      done.onclick = () => { openRows.delete(row); render(); };
+      done.onclick = () => { setRowOpen(w, o, index, false); render(); };
       actions.appendChild(done);
     }
     actions.appendChild(remove);
@@ -1639,7 +1672,7 @@ function listField(w, o) {
     for (const f of o.fields || []) {
       if (f.default !== null && f.default !== undefined) row[f.key] = f.default;
     }
-    openRows.add(row);
+    setRowOpen(w, o, rows.length, true);
     rows.push(row);
     markDirty();
     render();
@@ -1717,7 +1750,10 @@ function field(w, o) {
       input.oninput = () => { w.options[o.key] = input.value; markDirty(); };
     } else {
       input = document.createElement("input");
-      input.type = o.kind === "number" ? "number" : o.kind === "secret" ? "password" : "text";
+      input.type = o.kind === "number" ? "number"
+        : o.kind === "secret" ? "password"
+        : o.kind === "date" ? "date"
+        : "text";
       if (o.kind === "secret") {
         // Not the browser's saved passwords: this is a key for a service,
         // not a login to this page.
@@ -2026,27 +2062,78 @@ function renderPageBar() {
   };
 }
 
-/* Collapsing the sidebar panels.
+/* What is folded: the sidebar panels by name, the palette's groups as
+   "palette:<group>", and the list rows opened for editing as
+   "row:<widget>:<option>:<index>".
 
-   Which are open is remembered in localStorage rather than in the dashboard
-   config: it is a preference of whoever is looking at this browser, not part
-   of what the panel displays, and it should not make the config dirty or
-   travel to the kiosk. */
+   Kept on the panel, so the editor opens as it was left from any device and
+   at any address the panel answers to — and in this browser as well, so it
+   does before the panel has answered, or when it can't. Never part of the
+   layout: folding doesn't make the dashboard need saving. */
 const PANEL_KEY = "kiosk.editor.collapsed";
 
-function collapsedPanels() {
+let panelState = (() => {
   try {
     return new Set(JSON.parse(localStorage.getItem(PANEL_KEY) || "[]"));
   } catch {
     return new Set();
   }
+})();
+
+function collapsedPanels() {
+  return new Set(panelState);
+}
+
+let panelSaveTimer = null;
+
+function savePanels(set) {
+  panelState = new Set(set);
+  try {
+    localStorage.setItem(PANEL_KEY, JSON.stringify([...panelState]));
+  } catch {
+    // Private browsing, or storage full; the panel's copy still stands.
+  }
+  // A burst of clicks is one save.
+  clearTimeout(panelSaveTimer);
+  panelSaveTimer = setTimeout(() => {
+    api.put("/api/editor-state", { panels: [...panelState] }).catch(() => {});
+  }, 400);
+}
+
+async function loadPanels() {
+  try {
+    const r = await api.get("/api/editor-state");
+    if (!Array.isArray(r.panels)) return;
+    // The first visit since this was kept on the panel: this browser's copy
+    // is the best there is, so it becomes the panel's.
+    if (!r.panels.length && panelState.size) {
+      savePanels(panelState);
+      return;
+    }
+    panelState = new Set(r.panels);
+    try {
+      localStorage.setItem(PANEL_KEY, JSON.stringify([...panelState]));
+    } catch {}
+  } catch {
+    // Unreachable: this browser's copy stands.
+  }
+}
+
+/* The open rows of widgets that no longer exist, which would otherwise
+   pile up. */
+function pruneRows() {
+  const prefixes = state.dashboard.widgets.map(w => "row:" + w.id + ":");
+  const kept = [...panelState].filter(k =>
+    !k.startsWith("row:") || prefixes.some(p => k.startsWith(p)));
+  if (kept.length !== panelState.size) savePanels(kept);
 }
 
 function installPanels() {
   const collapsed = collapsedPanels();
   for (const card of document.querySelectorAll("aside .card[data-panel]")) {
     const name = card.dataset.panel;
-    if (collapsed.has(name)) card.classList.add("collapsed");
+    // Set either way: a reload can find a panel folded elsewhere since.
+    card.classList.toggle("collapsed", collapsed.has(name));
     const head = card.querySelector(".panelHead");
     if (!head) continue;
     head.onclick = () => {
@@ -2054,12 +2141,7 @@ function installPanels() {
       const now = collapsedPanels();
       if (card.classList.contains("collapsed")) now.add(name);
       else now.delete(name);
-      try {
-        localStorage.setItem(PANEL_KEY, JSON.stringify([...now]));
-      } catch {
-        // Private browsing, or storage full. Collapsing still works for this
-        // visit; it just will not be remembered.
-      }
+      savePanels(now);
       // The canvas does not change size, but a panel opening can change the
       // sidebar's scroll height — refit so nothing is left measured wrong.
       fitAllPreviews();
@@ -2232,6 +2314,7 @@ async function load(quiet) {
     const [schema, dashboard] = await Promise.all([
       api.get("/api/schema"),
       api.get("/api/dashboard"),
+      loadPanels(),
     ]);
     state.schema = schema;
     state.dashboard = dashboard;
@@ -2244,6 +2327,7 @@ async function load(quiet) {
     );
     installFonts();
     fitStage();
+    pruneRows();
     installPanels();
     renderPalette();
     renderThemes();

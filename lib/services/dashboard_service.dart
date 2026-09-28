@@ -384,6 +384,24 @@ class DashboardService extends ChangeNotifier {
         }
         return await _save(request);
       }
+      // Which panels are folded: saved as they are clicked, like the
+      // backlight, and never part of the layout's Save.
+      if (path == '/api/editor-state') {
+        if (request.method == 'PUT') {
+          if (!_fromThisSite(request)) {
+            return await _status(request, HttpStatus.forbidden);
+          }
+          final data = jsonDecode(await _body(request));
+          if (data is! Map || data['panels'] is! List) {
+            return await _status(request, HttpStatus.badRequest);
+          }
+          settings.editorPanels = DashboardSettings.cleanPanels(data['panels']);
+          await _config.save();
+        } else if (request.method != 'GET') {
+          return await _status(request, HttpStatus.methodNotAllowed);
+        }
+        return await _json(request, {'panels': settings.editorPanels});
+      }
       // The backlight: live, not part of the layout's Save, since you judge
       // it by looking at the panel as you drag.
       if (path == '/api/brightness') {

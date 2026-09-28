@@ -207,6 +207,13 @@ class DashboardSettings {
 
   List<DashboardWidgetConfig> widgets;
 
+  /// Which of the web editor's panels, palette groups and list rows are
+  /// folded or opened, as the editor names them. Kept here rather than in
+  /// the browser so every device, and every address the panel answers to,
+  /// finds the editor as it was left. Not part of the layout: the editor's
+  /// Save leaves it alone.
+  List<String> editorPanels;
+
   DashboardSettings({
     this.enabled = false,
     this.themeId = 'midnight',
@@ -226,8 +233,19 @@ class DashboardSettings {
     this.photoDim = 0.5,
     this.photoSeconds = 90,
     List<DashboardWidgetConfig>? widgets,
+    List<String>? editorPanels,
   }) : pages = pages ?? [],
-       widgets = widgets ?? [];
+       widgets = widgets ?? [],
+       editorPanels = editorPanels ?? [];
+
+  /// At most 500 names of at most 200 characters: it is only ever a list of
+  /// headings and rows, and nothing sent to the editor's endpoint should be
+  /// able to grow the config without bound.
+  static List<String> cleanPanels(Object? v) => [
+    if (v is List)
+      for (final s in v.whereType<String>().take(500))
+        if (s.isNotEmpty && s.length <= 200) s,
+  ];
 
   factory DashboardSettings.fromJson(Map<String, dynamic> j) =>
       DashboardSettings(
@@ -269,6 +287,7 @@ class DashboardSettings {
             .map(DashboardWidgetConfig.fromJson)
             .where((w) => w.id.isNotEmpty && w.type.isNotEmpty)
             .toList(),
+        editorPanels: cleanPanels(j['editorPanels']),
       );
 
   Map<String, dynamic> toJson() => {
@@ -290,6 +309,7 @@ class DashboardSettings {
     'photoDim': photoDim,
     'photoSeconds': photoSeconds,
     'widgets': widgets.map((w) => w.toJson()).toList(),
+    'editorPanels': editorPanels,
   };
 
   /// The corner radius to draw with, given what the theme asked for.
