@@ -90,6 +90,7 @@
   }
   button.primary:hover { background: #eef3ff; }
   button.danger { color: var(--danger); }
+  input:invalid { border-color: var(--danger); }
   button.danger:hover { background: rgba(255,138,138,.10); border-color: rgba(255,138,138,.3); }
   button:disabled { opacity: .4; cursor: default; transform: none; }
   button.icon { width: 42px; padding: 0; display: inline-grid; place-items: center; font-size: 18px; }
@@ -1668,6 +1669,102 @@ function removeRowKey(w, o, index, count) {
   savePanels(now);
 }
 
+/* A date box in the panel's language's order — 28/09/2026 in British
+   English, 09/28/2026 in American, 28.09.2026 in German — with a button
+   for the browser's calendar. The browser's own date box can't do this: it
+   shows the order of the browser's language, whatever the panel's is.
+   Stored as 2026-09-28 either way; onChange gets that, or "" when cleared. */
+function dateOrder() {
+  const parts = new Intl.DateTimeFormat(LANGUAGE, {
+    day: "2-digit", month: "2-digit", year: "numeric",
+  }).formatToParts(new Date(2026, 8, 28));
+  const order = parts.filter(p => p.type !== "literal").map(p => p.type);
+  const sep = (parts.find(p => p.type === "literal") || { value: "/" }).value.trim() || "/";
+  return { order, sep };
+}
+
+function showDate(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
+  if (!m) return iso || "";
+  const { order, sep } = dateOrder();
+  const by = { year: m[1], month: m[2], day: m[3] };
+  return order.map(k => by[k]).join(sep);
+}
+
+/* What was typed, as 2026-09-28, or null if it isn't a date. Any of / . -
+   between the numbers, and 2026-09-28 itself, are understood. */
+function readDate(text) {
+  const s = text.trim();
+  if (!s) return "";
+  let y, mo, d;
+  const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(s);
+  if (iso) {
+    [y, mo, d] = [iso[1], iso[2], iso[3]].map(Number);
+  } else {
+    const nums = s.split(/[\/.\-\s]+/).map(Number);
+    if (nums.length !== 3 || nums.some(isNaN)) return null;
+    const { order } = dateOrder();
+    const by = {};
+    order.forEach((k, i) => { by[k] = nums[i]; });
+    [y, mo, d] = [by.year, by.month, by.day];
+    if (y < 100) y += 2000;
+  }
+  const t = new Date(y, mo - 1, d);
+  if (t.getFullYear() !== y || t.getMonth() !== mo - 1 || t.getDate() !== d) return null;
+  return y + "-" + String(mo).padStart(2, "0") + "-" + String(d).padStart(2, "0");
+}
+
+function dateField(value, onChange) {
+  const wrap = document.createElement("div");
+  wrap.style.cssText = "display:flex;gap:8px;align-items:center";
+  const text = document.createElement("input");
+  text.type = "text";
+  text.inputMode = "numeric";
+  text.style.flex = "1";
+  const { order, sep } = dateOrder();
+  const letters = { day: "DD", month: "MM", year: "YYYY" };
+  text.placeholder = order.map(k => letters[k]).join(sep);
+  text.value = showDate(value);
+  const picker = document.createElement("input");
+  picker.type = "date";
+  picker.tabIndex = -1;
+  picker.setAttribute("aria-hidden", "true");
+  // Kept in the page so the browser can anchor its calendar to it, but
+  // never seen: the box beside it is what shows the date.
+  picker.style.cssText = "position:absolute;width:1px;height:1px;opacity:0;pointer-events:none";
+  picker.value = /^\d{4}-\d{2}-\d{2}$/.test(value || "") ? value : "";
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "icon";
+  button.textContent = "📅";
+  button.title = t("web.editor.pickDate", "Pick from a calendar");
+  button.onclick = () => {
+    try { picker.showPicker(); } catch { picker.focus(); picker.click(); }
+  };
+  picker.onchange = () => {
+    text.value = showDate(picker.value);
+    text.setCustomValidity("");
+    onChange(picker.value);
+  };
+  text.oninput = () => {
+    const iso = readDate(text.value);
+    if (iso === null) {
+      // Half-typed, or not a day there is: nothing saved until it is.
+      text.setCustomValidity(t("web.editor.badDate", "Not a date"));
+      return;
+    }
+    text.setCustomValidity("");
+    picker.value = iso;
+    onChange(iso);
+  };
+  text.onblur = () => {
+    const iso = readDate(text.value);
+    if (iso) text.value = showDate(iso);
+  };
+  wrap.append(text, button, picker);
+  return wrap;
+}
+
 /* What a folded row shows: its first two filled-in fields, choices by their
    name. Secrets are never among them. */
 function rowSummary(o, row) {
@@ -1678,7 +1775,7 @@ function rowSummary(o, row) {
     if (!v) continue;
     const dynamic = f.choicesFrom ? (state.schema.lists || {})[f.choicesFrom] : null;
     const names = dynamic || f.choices || {};
-    out.push(names[v] || v);
+    out.push(f.kind === "date" ? showDate(v) : (names[v] || v));
     if (out.length === 2) break;
   }
   return out;
@@ -1759,6 +1856,14 @@ function listField(w, o) {
         card.appendChild(select);
         continue;
       }
+      if (f.kind === "date") {
+        card.appendChild(dateField(row[f.key], iso => {
+          row[f.key] = iso;
+          markDirty();
+          render(true);
+        }));
+        continue;
+      }
       const input = document.createElement("input");
       if (f.kind === "colour") {
         input.type = "color";
@@ -1767,7 +1872,6 @@ function listField(w, o) {
       } else {
         input.type = f.kind === "number" ? "number"
           : f.kind === "secret" ? "password"
-          : f.kind === "date" ? "date"
           : "text";
         // Fractions allowed: half a share, or 0.05 of a coin.
         if (f.kind === "number") input.step = "any";
@@ -1884,7 +1988,6 @@ function field(w, o) {
       input = document.createElement("input");
       input.type = o.kind === "number" ? "number"
         : o.kind === "secret" ? "password"
-        : o.kind === "date" ? "date"
         : "text";
       if (o.kind === "secret") {
         // Not the browser's saved passwords: this is a key for a service,
