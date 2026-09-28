@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 import '../config/app_config.dart';
+import '../l10n/l10n.dart';
 import 'private_file.dart';
 
 /// Loads/saves [AppConfig] to ~/.config/homecanvas/config.json and notifies
@@ -60,6 +61,15 @@ class ConfigService extends ChangeNotifier {
       } catch (_) {}
     }
     notifyListeners();
+  }
+
+  /// Changes the panel's language: saved, its pack loaded, and every screen
+  /// drawn again in it without being closed.
+  Future<void> setLanguage(String code) async {
+    _config.language = code;
+    await L10n.instance.use(code);
+    rebuildEverything();
+    await save();
   }
 
   /// The save under way, so the next waits for it: saves are started from

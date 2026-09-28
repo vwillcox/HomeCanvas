@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:provider/provider.dart';
 
@@ -72,6 +73,7 @@ import 'widgets/reading_bar.dart';
 import 'widgets/now_playing_overlay.dart';
 import 'widgets/video_overlay.dart';
 import 'app_paths.dart';
+import 'l10n/l10n.dart';
 import 'theme.dart';
 import 'dashboard/dashboard_theme.dart';
 import 'look.dart';
@@ -88,6 +90,8 @@ void main() async {
 
   final config = ConfigService();
   await config.load();
+  // Before anything is drawn, so the first frame is in the right language.
+  await L10n.instance.use(config.config.language);
 
   final weather = WeatherService(config);
   unawaited(weather.refresh());
@@ -439,18 +443,32 @@ class HomeCanvasApp extends StatelessWidget {
     final look = context.select<DashboardService, DashboardTheme>(
       (d) => d.themes.byId(themeId),
     );
+    // Read so the app is rebuilt with Flutter's own widgets (date pickers,
+    // tooltips) in the new language when it changes.
+    final language = context.select<ConfigService, String>(
+      (c) => c.config.language,
+    );
     return KioskLook(
       theme: look,
-      child: _app(context, look),
+      child: _app(context, look, language),
     );
   }
 
-  Widget _app(BuildContext context, DashboardTheme look) {
+  Widget _app(BuildContext context, DashboardTheme look, String language) {
     return MaterialApp(
       navigatorKey: rootNavigatorKey,
       title: 'HomeCanvas',
       debugShowCheckedModeBanner: false,
       theme: buildTheme(look),
+      // Flutter's own widgets in the panel's language where Flutter has it,
+      // and in British English where it doesn't.
+      locale: materialLocale(language),
+      supportedLocales: [
+        for (final l in kLanguages)
+          if (GlobalMaterialLocalizations.delegate.isSupported(l.locale))
+            l.locale,
+      ],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       // The DSI touchscreen is delivered as mouse/unknown pointer events on
       // Flutter's Linux embedder, so enable drag-scrolling for every pointer
       // kind (otherwise touch drag doesn't scroll lists/grids).

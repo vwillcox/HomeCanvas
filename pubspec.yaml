@@ -51,6 +51,13 @@ dependencies:
   # X25519, HKDF and ChaCha20-Poly1305 for end-to-end encrypted shares
   cryptography: ^2.7.0
 
+  # Languages: Flutter's own translations for its built-in widgets, and
+  # intl's plural rules for ours (Polish, Welsh and Irish have more than
+  # "one" and "other").
+  flutter_localizations:
+    sdk: flutter
+  intl: any
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -66,6 +73,8 @@ flutter:
     - assets/dashboard/notes.html
     - assets/dashboard/list.html
     - assets/dashboard/sign_in.html
+    # Language packs: one ARB file each, keyed by string id.
+    - assets/l10n/
     # Also listed as assets so the browser editor can be served the same
     # files, and its preview shows the typeface the panel will actually use.
     - assets/fonts/

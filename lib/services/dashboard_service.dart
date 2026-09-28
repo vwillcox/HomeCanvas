@@ -15,6 +15,7 @@ import '../dashboard/live_preview.dart';
 import '../dashboard/tile_renderer.dart';
 import '../config/app_config.dart' show SenderToken;
 import '../dashboard/widget_registry.dart';
+import '../l10n/l10n.dart';
 import 'brightness_service.dart';
 import 'config_service.dart';
 import 'hue_relay.dart';
@@ -383,6 +384,35 @@ class DashboardService extends ChangeNotifier {
           return await _status(request, HttpStatus.forbidden);
         }
         return await _save(request);
+      }
+      // The editor's own words in the panel's language, and the languages
+      // it can be switched to. The widgets' settings come already
+      // translated in the schema.
+      if (path == '/api/strings' && request.method == 'GET') {
+        final l10n = L10n.instance;
+        return await _json(request, {
+          'language': l10n.code,
+          'aiCreated': l10n.language.aiCreated,
+          'languages': [for (final l in kLanguages) l.toJson()],
+          'strings': {
+            for (final e in l10n.strings.entries)
+              if (e.key.startsWith('web.') || e.key.startsWith('category.'))
+                e.key: e.value,
+          },
+        });
+      }
+      // Changes the language of the panel and the editor together.
+      if (path == '/api/language' && request.method == 'PUT') {
+        if (!_fromThisSite(request)) {
+          return await _status(request, HttpStatus.forbidden);
+        }
+        final data = jsonDecode(await _body(request));
+        final code = data is Map ? data['code'] : null;
+        if (code is! String || !kLanguages.any((l) => l.code == code)) {
+          return await _status(request, HttpStatus.badRequest);
+        }
+        await _config.setLanguage(code);
+        return await _json(request, {'language': code});
       }
       // Which panels are folded: saved as they are clicked, like the
       // backlight, and never part of the layout's Save.
