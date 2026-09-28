@@ -20,6 +20,7 @@
   "widget.chores.option.people.field.colour.label": "Color",
   "widget.countdowns.description": "Days until the things you are looking forward to — birthdays, vacations, trips. The soonest first.",
   "widget.countdowns.option.bankHolidays.label": "UK bank holidays",
+  "widget.github.option.showLicense.label": "License",
   "widget.lights.description": "Govee lights and plugs. Tap one to switch it, drag along its bar for brightness, tap a color. Works over the home network for devices with LAN Control turned on in the Govee app, or through Govee with an API key.",
   "widget.lights.option.swatches.label": "Colors to offer",
   "widget.news.option.readerTheme.label": "Reader colors",

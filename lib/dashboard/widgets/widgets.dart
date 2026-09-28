@@ -9,6 +9,7 @@ import 'calendar_widget.dart';
 import 'clock_widget.dart';
 import 'countdowns_widget.dart';
 import 'history_widget.dart';
+import 'github_widget.dart';
 import 'home_assistant_widget.dart';
 import 'news_widget.dart';
 import 'omarchy_widget.dart';
@@ -79,6 +80,7 @@ void registerBuiltInWidgets() {
     homeAssistantWidgetType,
     immichLibraryWidgetType,
     historyWidgetType,
+    githubWidgetType,
     mealsWidgetType,
     certsWidgetType,
     updatesWidgetType,
