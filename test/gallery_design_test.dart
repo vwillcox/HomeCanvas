@@ -297,9 +297,9 @@ void main() {
       expect(grouped(1204), '1,204');
       expect(grouped(1000000), '1,000,000');
       expect(grouped(12), '12');
-      expect(plural(1, 'item'), '1 item');
-      expect(plural(1204, 'item'), '1,204 items');
-      expect(plural(2, 'photo'), '2 photos');
+      expect(itemCount(1), '1 item');
+      expect(itemCount(1204), '1,204 items');
+      expect(photoCount(2), '2 photos');
     });
   });
 }

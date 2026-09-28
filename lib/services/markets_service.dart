@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import '../l10n/l10n.dart';
 
 /// A price, how it has moved, and the recent path it took to get there.
 @immutable
@@ -210,14 +211,14 @@ class MarketsService extends ChangeNotifier {
         }
       }
       if (quote == null) {
-        _errors[key] = 'Not found';
+        _errors[key] = tr('widget.markets.notFound', 'Not found');
       } else {
         _quotes[key] = quote;
         _errors.remove(key);
       }
       _done(key, maxAge, ok: true);
     } catch (e) {
-      _errors[key] = 'Unreachable';
+      _errors[key] = tr('widget.markets.unreachable', 'Unreachable');
       _done(key, maxAge, ok: false);
       debugPrint('Markets: $symbol: $e');
     } finally {
@@ -506,7 +507,7 @@ class MarketsService extends ChangeNotifier {
         final key = _coinKey(c, currency, period);
         final q = found[c]?.quote;
         if (q == null) {
-          _errors[key] = 'Not found';
+          _errors[key] = tr('widget.markets.notFound', 'Not found');
         } else {
           _quotes[key] = q;
           _errors.remove(key);
@@ -515,7 +516,7 @@ class MarketsService extends ChangeNotifier {
       }
     } catch (e) {
       for (final key in keys) {
-        _errors[key] = 'Unreachable';
+        _errors[key] = tr('widget.markets.unreachable', 'Unreachable');
         _done(key, maxAge, ok: false);
       }
       debugPrint('Markets: coins: $e');

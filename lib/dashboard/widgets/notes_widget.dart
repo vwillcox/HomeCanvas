@@ -10,6 +10,7 @@ import 'fit_canvas.dart';
 import 'tile_bits.dart';
 import '../../time_format.dart';
 import '../../l10n/dates.dart';
+import '../../l10n/l10n.dart';
 
 /// Sticky notes for the household, sent from a phone.
 ///
@@ -48,8 +49,8 @@ class _NotesWidgetState extends State<NotesWidget> {
 
   static String ago(DateTime at, DateTime now) {
     final d = now.difference(at);
-    if (d.inMinutes < 1) return 'just now';
-    if (d.inHours < 1) return '${d.inMinutes} min ago';
+    if (d.inMinutes < 1) return tr('widget.notes.justNow', 'just now');
+    if (d.inHours < 1) return tr('widget.notes.minAgo', '{inMinutes} min ago', {'inMinutes': d.inMinutes});
     if (d.inDays < 1) {
       return hhmm(at);
     }
@@ -64,8 +65,11 @@ class _NotesWidgetState extends State<NotesWidget> {
     if (notes.isEmpty) {
       final address = context.read<DashboardService>().editorAddress;
       return TileMessage(
-        'No notes. Share some text from the phone app, or add one at '
-        '$address/notes',
+        tr(
+          'widget.notes.noNotesShareSomeText',
+          'No notes. Share some text from the phone app, or add one at {address}/notes',
+          {'address': address},
+        ),
         theme: t,
       );
     }
@@ -119,7 +123,7 @@ class _NotesWidgetState extends State<NotesWidget> {
                 right: 0,
                 bottom: 0,
                 child: StatusChip(
-                  text: '+${notes.length - count} more',
+                  text: tr('widget.notes.more', '+{count} more', {'count': notes.length - count}),
                   colour: t.textSecondary,
                   size: 12,
                 ),
@@ -231,7 +235,7 @@ class _Note extends StatelessWidget {
                               borderRadius: BorderRadius.circular(size),
                             ),
                             child: Text(
-                              'Done ✓',
+                              tr('widget.notes.done', 'Done ✓'),
                               style: TextStyle(
                                 color: _ink,
                                 fontSize: size * 0.13,

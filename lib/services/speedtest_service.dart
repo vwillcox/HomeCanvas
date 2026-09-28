@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'programs.dart';
+import '../l10n/l10n.dart';
 
 /// Which part of the test is running.
 enum SpeedtestPhase { idle, starting, ping, download, upload, done, failed }
@@ -146,9 +147,9 @@ class SpeedtestService extends ChangeNotifier {
 
     final binary = await findBinary();
     if (binary == null) {
-      _emit(const SpeedtestState(
+      _emit(SpeedtestState(
         phase: SpeedtestPhase.failed,
-        error: 'speedtest is not installed — see INSTALL.md',
+        error: tr('widget.speedtest.speedtestIsNotInstalledSee', 'speedtest is not installed — see INSTALL.md'),
       ));
       return;
     }
@@ -172,7 +173,7 @@ class SpeedtestService extends ChangeNotifier {
       ]);
     } catch (e) {
       _emit(_state.copyWith(
-          phase: SpeedtestPhase.failed, error: 'could not start speedtest: $e'));
+          phase: SpeedtestPhase.failed, error: tr('widget.speedtest.couldNotStartSpeedtest', 'could not start speedtest: {e}', {'e': e})));
       return;
     }
 
@@ -185,7 +186,7 @@ class SpeedtestService extends ChangeNotifier {
         .transform(const LineSplitter())
         .listen(_handleLine, onError: (Object e) {
       _emit(_state.copyWith(
-          phase: SpeedtestPhase.failed, error: 'speedtest failed: $e'));
+          phase: SpeedtestPhase.failed, error: tr('widget.speedtest.speedtestFailed2', 'speedtest failed: {e}', {'e': e})));
     });
 
     final code = await _process!.exitCode;
@@ -196,7 +197,7 @@ class SpeedtestService extends ChangeNotifier {
     if (code != 0 && _state.phase != SpeedtestPhase.done) {
       _emit(_state.copyWith(
         phase: SpeedtestPhase.failed,
-        error: 'speedtest exited with code $code',
+        error: tr('widget.speedtest.speedtestExitedWithCode', 'speedtest exited with code {code}', {'code': code}),
       ));
     }
   }

@@ -5,17 +5,18 @@ import 'package:flutter/foundation.dart';
 
 import 'config_service.dart';
 import 'retry_schedule.dart';
+import '../l10n/l10n.dart';
 
 /// How much of something there is, in the words a forecast would use.
 enum Level { none, low, moderate, high, veryHigh }
 
 extension LevelWords on Level {
   String get word => switch (this) {
-    Level.none => 'None',
-    Level.low => 'Low',
-    Level.moderate => 'Moderate',
-    Level.high => 'High',
-    Level.veryHigh => 'Very high',
+    Level.none => tr('widget.air_quality.none', 'None'),
+    Level.low => tr('widget.air_quality.low', 'Low'),
+    Level.moderate => tr('widget.air_quality.moderate', 'Moderate'),
+    Level.high => tr('widget.air_quality.high', 'High'),
+    Level.veryHigh => tr('widget.air_quality.veryHigh', 'Very high'),
   };
 
   /// Filled segments on a four-segment meter.
@@ -62,13 +63,13 @@ class AirQuality {
 
   String get aqiWord {
     final a = aqi;
-    if (a == null) return 'No reading';
-    if (a <= 20) return 'Good';
-    if (a <= 40) return 'Fair';
-    if (a <= 60) return 'Moderate';
-    if (a <= 80) return 'Poor';
-    if (a <= 100) return 'Very poor';
-    return 'Extremely poor';
+    if (a == null) return tr('widget.air_quality.noReading', 'No reading');
+    if (a <= 20) return tr('widget.air_quality.good', 'Good');
+    if (a <= 40) return tr('widget.air_quality.fair', 'Fair');
+    if (a <= 60) return tr('widget.air_quality.moderate', 'Moderate');
+    if (a <= 80) return tr('widget.air_quality.poor', 'Poor');
+    if (a <= 100) return tr('widget.air_quality.veryPoor', 'Very poor');
+    return tr('widget.air_quality.extremelyPoor', 'Extremely poor');
   }
 
   /// 0 good to 3 bad, for colouring.
@@ -83,11 +84,11 @@ class AirQuality {
   String get uvWord {
     final u = uv;
     if (u == null) return '';
-    if (u < 3) return 'low';
-    if (u < 6) return 'moderate';
-    if (u < 8) return 'high';
-    if (u < 11) return 'very high';
-    return 'extreme';
+    if (u < 3) return tr('widget.air_quality.uvLow', 'low');
+    if (u < 6) return tr('widget.air_quality.uvModerate', 'moderate');
+    if (u < 8) return tr('widget.air_quality.uvHigh', 'high');
+    if (u < 11) return tr('widget.air_quality.uvVeryHigh', 'very high');
+    return tr('widget.air_quality.uvExtreme', 'extreme');
   }
 
   /// Built from Open-Meteo's `current` block.
@@ -109,13 +110,13 @@ class AirQuality {
       aqi: n('european_aqi')?.round(),
       uv: n('uv_index'),
       pollen: [
-        PollenReading('Grass', n('grass_pollen'), (30, 50, 150)),
+        PollenReading(tr('widget.air_quality.grass', 'Grass'), n('grass_pollen'), (30, 50, 150)),
         PollenReading(
-          'Trees',
+          tr('widget.air_quality.trees', 'Trees'),
           worst(['alder_pollen', 'birch_pollen', 'olive_pollen']),
           (40, 80, 200),
         ),
-        PollenReading('Weeds', worst(['mugwort_pollen', 'ragweed_pollen']), (
+        PollenReading(tr('widget.air_quality.weeds', 'Weeds'), worst(['mugwort_pollen', 'ragweed_pollen']), (
           10,
           30,
           100,
@@ -172,7 +173,7 @@ class AirQualityService extends ChangeNotifier {
     // The weather service resolves the place; until it has, there is nowhere
     // to ask about. The retry schedule comes back shortly.
     if (w.latitude == null || w.longitude == null) {
-      _error = 'Waiting for the weather location';
+      _error = tr('widget.air_quality.waitingForTheWeatherLocation', 'Waiting for the weather location');
       if (!_disposed) notifyListeners();
       return;
     }
@@ -194,7 +195,7 @@ class AirQualityService extends ChangeNotifier {
       );
       _error = null;
     } catch (e) {
-      _error = 'Could not reach the air-quality forecast';
+      _error = tr('widget.air_quality.couldNotReachTheAir', 'Could not reach the air-quality forecast');
       debugPrint('AirQuality: $e');
     }
     if (!_disposed) notifyListeners();

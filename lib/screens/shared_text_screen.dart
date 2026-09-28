@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../look.dart';
 
 import '../widgets/big_back_button.dart';
+import '../l10n/l10n.dart';
 
 /// Full-screen display for a shared plain-text note (not a link — those
 /// open in Chromium instead, see [IncomingShareOverlay]).
@@ -82,7 +83,11 @@ class SharedTextScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 32),
                         Text(
-                          'From $sender',
+                          tr(
+                            'share.from',
+                            'From {sender}',
+                            {'sender': sender},
+                          ),
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: context.look.textSecondary,
@@ -150,7 +155,7 @@ class _DismissButton extends StatelessWidget {
                 Icon(Icons.check, color: context.look.textPrimary, size: 34),
                 SizedBox(width: 14),
                 Text(
-                  'OK',
+                  tr('share.ok', 'OK'),
                   style: TextStyle(
                     color: context.look.textPrimary,
                     fontSize: 30,

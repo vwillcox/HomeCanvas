@@ -16,6 +16,7 @@ import 'gallery_screen.dart';
 import 'slideshow_screen.dart';
 import '../time_format.dart';
 import '../l10n/dates.dart';
+import '../l10n/l10n.dart';
 
 class AlbumScreen extends StatefulWidget {
   final Album album;
@@ -114,8 +115,8 @@ class _AlbumScreenState extends State<AlbumScreen> {
     final images = _assets!.where((a) => a.isImage).toList();
     if (images.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No photos in this album for a slideshow'),
+        SnackBar(
+          content: Text(tr('album.noPhotosInThisAlbum', 'No photos in this album for a slideshow')),
         ),
       );
       return;
@@ -141,10 +142,10 @@ class _AlbumScreenState extends State<AlbumScreen> {
         onBack: () => Navigator.of(context).maybePop(),
         title: widget.album.name,
         subtitle: assets == null
-            ? plural(widget.album.assetCount, 'item')
+            ? itemCount(widget.album.assetCount)
             : [
-                if (photos > 0) plural(photos, 'photo'),
-                if (videos > 0) plural(videos, 'video'),
+                if (photos > 0) photoCount(photos),
+                if (videos > 0) videoCount(videos),
                 ?dateSpan(assets),
               ].join('  ·  '),
         padding: const EdgeInsets.fromLTRB(28, 20, 40, 16),
@@ -152,7 +153,7 @@ class _AlbumScreenState extends State<AlbumScreen> {
             ? FilledButton.icon(
                 onPressed: _startSlideshow,
                 icon: const Icon(Icons.play_arrow_rounded, size: 30),
-                label: const Text('Slideshow'),
+                label: Text(tr('album.slideshow', 'Slideshow')),
                 style: whitePillButton(context),
               )
             : null,
@@ -171,7 +172,7 @@ class _AlbumScreenState extends State<AlbumScreen> {
     if (assets.isEmpty) {
       return Center(
         child: Text(
-          'This album is empty',
+          tr('album.thisAlbumIsEmpty', 'This album is empty'),
           style: TextStyle(fontSize: 24, color: context.look.textSecondary),
         ),
       );
@@ -207,7 +208,7 @@ class _AlbumScreenState extends State<AlbumScreen> {
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      plural(g.end - g.start, 'item'),
+                      itemCount(g.end - g.start),
                       style: TextStyle(
                         fontSize: 18,
                         color: context.look.textSecondary,
@@ -442,7 +443,7 @@ class _ErrorState extends StatelessWidget {
             FilledButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+              label: Text(tr('album.retry', 'Retry')),
             ),
           ],
         ),

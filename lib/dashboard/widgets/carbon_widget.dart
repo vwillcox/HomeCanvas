@@ -11,6 +11,7 @@ import 'tile_bits.dart';
 import '../../time_format.dart';
 import '../../widgets/pause_when_hidden.dart';
 import '../../widgets/shown_timers.dart';
+import '../../l10n/l10n.dart';
 
 /// How clean the grid's electricity is now, the next day as bars, and the
 /// greenest three hours to run the washing machine or the dishwasher.
@@ -69,15 +70,17 @@ class _CarbonWidgetState extends State<CarbonWidget>
     final code = _outcode;
     if (code == null) {
       return TileMessage(
-        'Give a postcode in the widget settings, or set a postcode as the '
-        'place in Settings → Weather.',
+        tr(
+          'widget.grid_carbon.giveAPostcodeInThe',
+          'Give a postcode in the widget settings, or set a postcode as the place in Settings → Weather.',
+        ),
         theme: t,
       );
     }
     final forecast = service.forecast(code);
     if (forecast == null) {
       return TileMessage(
-        service.error(code) ?? 'Fetching the grid forecast…',
+        service.error(code) ?? tr('widget.grid_carbon.fetchingTheGridForecast', 'Fetching the grid forecast…'),
         theme: t,
       );
     }
@@ -105,8 +108,8 @@ class _CarbonWidgetState extends State<CarbonWidget>
               TileLabel(
                 icon: Icons.bolt_rounded,
                 text: forecast.region.isEmpty
-                    ? 'Grid'
-                    : 'Grid · ${forecast.region}',
+                    ? tr('widget.grid_carbon.grid2', 'Grid')
+                    : tr('widget.grid_carbon.grid', 'Grid · {region}', {'region': forecast.region}),
                 theme: t,
                 size: 11,
               ),
@@ -127,7 +130,7 @@ class _CarbonWidgetState extends State<CarbonWidget>
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      'g CO₂\nper kWh',
+                      tr('widget.grid_carbon.gCoPerKwh', 'g CO₂\nper kWh'),
                       style: TextStyle(
                         color: t.textSecondary,
                         fontSize: 9,
@@ -185,7 +188,7 @@ class _CarbonWidgetState extends State<CarbonWidget>
                   TextSpan(
                     children: [
                       TextSpan(
-                        text: 'Greenest ${hhmm(best.from)}–${hhmm(best.to)}',
+                        text: tr('widget.grid_carbon.greenest', 'Greenest {from}–{to}', {'from': hhmm(best.from), 'to': hhmm(best.to)}),
                         style: TextStyle(
                           color: status.good,
                           fontSize: 12,

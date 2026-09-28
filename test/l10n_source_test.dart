@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:home_canvas/dashboard/dashboard_fonts.dart';
 import 'package:home_canvas/dashboard/widget_registry.dart';
 import 'package:home_canvas/dashboard/widgets/widgets.dart';
 import 'package:home_canvas/l10n/l10n.dart';
@@ -82,6 +83,11 @@ Map<String, String> sourceStrings() {
       add(key, english, 'widget ${t.type}');
     }
   }
+  for (final f in kDashboardFonts) {
+    for (final (key, english) in f.texts()) {
+      add(key, english, 'font ${f.family}');
+    }
+  }
   for (final c in WidgetCategory.order) {
     add('category.${c.toLowerCase()}', c, 'WidgetCategory');
   }
@@ -111,15 +117,41 @@ Map<String, String> sourceStrings() {
 
   // The web pages: data-t="key">British< and t("key", "British").
   final marked = RegExp(r'<\w[^<>]*\sdata-t="([\w.\-]+)"[^<>]*>([^<]*)<');
-  final scripted = RegExp(r'''\bt\(\s*"([\w.\-]+)"\s*,\s*"((?:[^"\\]|\\.)*)"''');
+  // In either quote: t("key", "British") or t('key', 'British').
+  final scripted = RegExp(
+    r'''\bt\(\s*(["'])([\w.\-]+)\1\s*,\s*(["'])((?:(?!\3)[^\\]|\\.)*)\3''',
+  );
   for (final f in Directory('assets/dashboard').listSync().whereType<File>()) {
     if (!f.path.endsWith('.html')) continue;
     final html = f.readAsStringSync();
     for (final m in marked.allMatches(html)) {
-      add(m[1]!, m[2]!.trim(), f.path);
+      add(m[1]!, m[2]!.replaceAll(RegExp(r'\s+'), ' ').trim(), f.path);
+    }
+    // Sentences with markup: data-t-html="key" on an element, its inner HTML
+    // the British text, spaces run together as a browser shows them.
+    final withMarkup = RegExp(
+      r'<(\w+)\b[^<>]*\sdata-t-html="([\w.\-]+)"[^<>]*>(.*?)</\1>',
+      dotAll: true,
+    );
+    for (final m in withMarkup.allMatches(html)) {
+      add(m[2]!, m[3]!.replaceAll(RegExp(r'\s+'), ' ').trim(), f.path);
+    }
+    // Words in attributes: data-t-placeholder="key" beside placeholder="…",
+    // and the same for title and aria-label.
+    for (final tag in RegExp(r'<\w[^<>]*>').allMatches(html)) {
+      final t = tag[0]!;
+      for (final (marker, attr) in [
+        ('data-t-placeholder', 'placeholder'),
+        ('data-t-title', 'title'),
+        ('data-t-aria', 'aria-label'),
+      ]) {
+        final key = RegExp('$marker="([\\w.\\-]+)"').firstMatch(t);
+        final english = RegExp('\\s$attr="([^"]*)"').firstMatch(t);
+        if (key != null && english != null) add(key[1]!, english[1]!, f.path);
+      }
     }
     for (final m in scripted.allMatches(html)) {
-      add(m[1]!, _unescape(m[2]!), f.path);
+      add(m[2]!, _unescape(m[4]!), f.path);
     }
   }
   return Map.fromEntries(

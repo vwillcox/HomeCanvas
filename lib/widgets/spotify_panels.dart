@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../look.dart';
 
 import '../services/spotify_service.dart';
+import '../l10n/l10n.dart';
 
 /// The panels reachable from the expanded now-playing player when Spotify is
 /// the active source: which device is playing, what's coming up next, and
@@ -142,7 +143,7 @@ class _SpotifyDevicesDialogState extends State<SpotifyDevicesDialog> {
     final accent = Theme.of(context).colorScheme.primary;
     return _panelShell(
       context: context,
-      title: 'Play on',
+      title: tr('spotify.playOn', 'Play on'),
       child: FutureBuilder<List<SpotifyDevice>>(
         future: _future,
         builder: (context, snapshot) {
@@ -152,7 +153,10 @@ class _SpotifyDevicesDialogState extends State<SpotifyDevicesDialog> {
           final devices = snapshot.data ?? const [];
           if (devices.isEmpty) {
             return _emptyNote(
-                'No Spotify devices found.\nOpen Spotify somewhere to wake one up.');
+                tr(
+                  'spotify.noSpotifyDevicesFoundOpen',
+                  'No Spotify devices found.\nOpen Spotify somewhere to wake one up.',
+                ));
           }
           return ListView.separated(
             shrinkWrap: true,
@@ -175,7 +179,7 @@ class _SpotifyDevicesDialogState extends State<SpotifyDevicesDialog> {
                   ),
                 ),
                 subtitle: d.isActive
-                    ? Text('Playing here',
+                    ? Text(tr('spotify.playingHere', 'Playing here'),
                         style: TextStyle(color: accent, fontSize: 14))
                     : null,
                 trailing: d.isActive
@@ -214,7 +218,7 @@ class _SpotifyQueueDialogState extends State<SpotifyQueueDialog> {
   Widget build(BuildContext context) {
     return _panelShell(
       context: context,
-      title: 'Up next',
+      title: tr('spotify.upNext', 'Up next'),
       child: FutureBuilder<List<SpotifyItem>>(
         future: _future,
         builder: (context, snapshot) {
@@ -222,7 +226,7 @@ class _SpotifyQueueDialogState extends State<SpotifyQueueDialog> {
             return _loading();
           }
           final items = snapshot.data ?? const [];
-          if (items.isEmpty) return _emptyNote('Nothing queued up');
+          if (items.isEmpty) return _emptyNote(tr('spotify.nothingQueuedUp', 'Nothing queued up'));
           return ListView.separated(
             shrinkWrap: true,
             itemCount: items.length,
@@ -266,7 +270,7 @@ class SpotifyBrowseDialog extends StatelessWidget {
       length: 3,
       child: _panelShell(
         context: context,
-        title: 'Play something',
+        title: tr('spotify.playSomething', 'Play something'),
         maxHeight: 720,
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -275,9 +279,9 @@ class SpotifyBrowseDialog extends StatelessWidget {
               labelColor: context.look.textPrimary,
               unselectedLabelColor: context.look.textSecondary,
               tabs: [
-                Tab(text: 'Playlists'),
-                Tab(text: 'Recent'),
-                Tab(text: 'Top'),
+                Tab(text: tr('spotify.playlists', 'Playlists')),
+                Tab(text: tr('spotify.recent', 'Recent')),
+                Tab(text: tr('spotify.top', 'Top')),
               ],
             ),
             Flexible(
@@ -286,21 +290,17 @@ class SpotifyBrowseDialog extends StatelessWidget {
                   _ItemList(
                     service: service,
                     load: service.loadPlaylistItems,
-                    empty: 'No playlists',
+                    empty: tr('spotify.noPlaylists', 'No playlists'),
                   ),
                   _ItemList(
                     service: service,
                     load: service.loadRecentlyPlayed,
-                    empty: 'Nothing played recently.\n'
-                        'If this stays empty, reconnect Spotify in Settings '
-                        'to grant the extra permission.',
+                    empty: tr('spotify.nothingPlayedRecentlyIfThis', 'Nothing played recently.\nIf this stays empty, reconnect Spotify in Settings to grant the extra permission.'),
                   ),
                   _ItemList(
                     service: service,
                     load: service.loadTopTracks,
-                    empty: 'No top tracks yet.\n'
-                        'If this stays empty, reconnect Spotify in Settings '
-                        'to grant the extra permission.',
+                    empty: tr('spotify.noTopTracksYetIf', 'No top tracks yet.\nIf this stays empty, reconnect Spotify in Settings to grant the extra permission.'),
                   ),
                 ],
               ),
@@ -371,13 +371,13 @@ class _ItemListState extends State<_ItemList>
                   ? null
                   : IconButton(
                       iconSize: 28,
-                      tooltip: 'Add to queue',
+                      tooltip: tr('spotify.addToQueue', 'Add to queue'),
                       icon: Icon(Icons.queue_music,
                           color: context.look.textSecondary),
                       onPressed: () {
                         widget.service.queue(item);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Queued ${item.title}')),
+                          SnackBar(content: Text(tr('spotify.queued', 'Queued {title}', {'title': item.title}))),
                         );
                       },
                     ),

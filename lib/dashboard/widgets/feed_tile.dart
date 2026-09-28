@@ -8,6 +8,7 @@ import '../../services/video_site.dart';
 import '../widget_registry.dart';
 import 'tile_bits.dart';
 import 'video_grid.dart';
+import '../../l10n/l10n.dart';
 
 /// The latest videos from a signed-in [VideoSite] — [T] — with a refresh
 /// button. Touch one to watch it on the panel.
@@ -28,9 +29,11 @@ class SiteFeedTile<T extends VideoSite> extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         onTap: () => signInOnPanel(context, site),
         child: TileMessage(
-          'Tap to sign in to ${site.name} and show your subscriptions here — '
-          'or sign in from a computer at '
-          '${context.read<DashboardService>().editorAddress}/${site.id}',
+          tr(
+            'widget.videos.tapToSignInTo',
+            'Tap to sign in to {name} and show your subscriptions here — or sign in from a computer at {editorAddress}/{id}',
+            {'name': site.name, 'editorAddress': context.read<DashboardService>().editorAddress, 'id': site.id},
+          ),
           theme: t,
         ),
       );
@@ -46,11 +49,10 @@ class SiteFeedTile<T extends VideoSite> extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           if (videos == null)
-            TileMessage(site.error ?? 'Fetching from ${site.name}…', theme: t)
+            TileMessage(site.error ?? tr('widget.videos.fetchingFrom', 'Fetching from {name}…', {'name': site.name}), theme: t)
           else if (videos.isEmpty)
             TileMessage(
-                site.error ?? 'Nothing new from your ${site.name} '
-                    'subscriptions.',
+                site.error ?? tr('widget.videos.nothingNewFromYourSubscriptions', 'Nothing new from your {name} subscriptions.', {'name': site.name}),
                 theme: t)
           else
             VideoGrid(

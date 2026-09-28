@@ -12,6 +12,7 @@ import '../services/media_source.dart';
 import '../services/mpv_tuning.dart';
 import '../widgets/big_back_button.dart';
 import '../time_format.dart';
+import '../l10n/l10n.dart';
 
 const List<double> kPlaybackSpeeds = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
 
@@ -72,7 +73,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       }
     });
     await _applyVolume();
-    _showHud(_muted ? 'Muted' : 'Volume ${_volume.round()}%');
+    _showHud(_muted ? tr('video.muted', 'Muted') : tr('video.volume2', 'Volume {_volume}%', {'_volume': _volume.round()}));
   }
 
   /// Change the level from the slider. Moving it off zero also unmutes.
@@ -232,7 +233,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           final next = (_volume - (d.delta.dy / h) * 200).clamp(0.0, 100.0);
           if ((next - _volume).abs() < 0.5) return;
           unawaited(_setVolume(next));
-          _showHud(next <= 0 ? 'Muted' : 'Volume ${next.round()}%');
+          _showHud(next <= 0 ? tr('video.muted', 'Muted') : tr('video.volume', 'Volume {next}%', {'next': next.round()}));
         },
         onVerticalDragEnd: _zoomed ? null : (d) {
           if ((d.primaryVelocity ?? 0) > 700) Navigator.of(context).maybePop();
@@ -276,7 +277,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                       const SizedBox(width: 64 + 8), // room for the fixed back button
                       Expanded(
                         child: Text(
-                          widget.asset.fileName ?? 'Video',
+                          widget.asset.fileName ?? tr('video.video', 'Video'),
                           style: const TextStyle(color: Colors.white, fontSize: 18),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -537,7 +538,7 @@ class VideoVolumeColumn extends StatelessWidget {
           const SizedBox(height: 6),
           IconButton(
             iconSize: 34,
-            tooltip: muted ? 'Unmute' : 'Mute',
+            tooltip: muted ? tr('video.unmute', 'Unmute') : tr('video.mute', 'Mute'),
             icon: Icon(
               muted
                   ? Icons.volume_off

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../services/config_service.dart';
 import '../services/immich_service.dart';
 import '../widgets/glass.dart';
+import '../l10n/l10n.dart';
 
 /// First-run / edit connection screen for Immich URL + API key.
 class SetupScreen extends StatefulWidget {
@@ -42,7 +43,7 @@ class _SetupScreenState extends State<SetupScreen> {
     final config = context.read<ConfigService>();
     setState(() {
       _busy = true;
-      _status = 'Testing connection…';
+      _status = tr('setup.testingConnection', 'Testing connection…');
       _ok = false;
     });
     final ok = await immich.testConnectionWith(_url.text, _key.text);
@@ -52,7 +53,7 @@ class _SetupScreenState extends State<SetupScreen> {
       if (!mounted) return;
       setState(() {
         _busy = false;
-        _status = 'Connected!';
+        _status = tr('setup.connected', 'Connected!');
         _ok = true;
       });
       await Future.delayed(const Duration(milliseconds: 500));
@@ -60,7 +61,7 @@ class _SetupScreenState extends State<SetupScreen> {
     } else {
       setState(() {
         _busy = false;
-        _status = 'Could not connect. Check the URL and API key.';
+        _status = tr('setup.couldNotConnectCheckThe', 'Could not connect. Check the URL and API key.');
       });
     }
   }
@@ -69,9 +70,9 @@ class _SetupScreenState extends State<SetupScreen> {
   Widget build(BuildContext context) {
     final canSave = _url.text.trim().isNotEmpty && _key.text.trim().isNotEmpty;
     return ModernScaffold(
-      header: const ScreenHeader(
-        title: 'Connect to Immich',
-        subtitle: 'Your server address and an API key',
+      header: ScreenHeader(
+        title: tr('setup.connectToImmich', 'Connect to Immich'),
+        subtitle: tr('setup.yourServerAddressAndAn', 'Your server address and an API key'),
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -82,7 +83,7 @@ class _SetupScreenState extends State<SetupScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Immich server URL',
+                  tr('setup.immichServerUrl', 'Immich server URL'),
                   style: TextStyle(fontSize: 16, color: context.look.textSecondary),
                 ),
                 const SizedBox(height: 8),
@@ -99,7 +100,7 @@ class _SetupScreenState extends State<SetupScreen> {
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  'API key',
+                  tr('setup.apiKey', 'API key'),
                   style: TextStyle(fontSize: 16, color: context.look.textSecondary),
                 ),
                 const SizedBox(height: 8),
@@ -109,7 +110,7 @@ class _SetupScreenState extends State<SetupScreen> {
                   style: const TextStyle(fontSize: 20),
                   decoration: InputDecoration(
                     border: const OutlineInputBorder(),
-                    hintText: 'Immich → Account → API Keys',
+                    hintText: tr('setup.immichAccountApiKeys', 'Immich → Account → API Keys'),
                     prefixIcon: const Icon(Icons.key),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -130,7 +131,7 @@ class _SetupScreenState extends State<SetupScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2.5),
                         )
                       : const Icon(Icons.check_circle_outline),
-                  label: const Text('Test & Save'),
+                  label: Text(tr('setup.testSave', 'Test & Save')),
                 ),
                 const SizedBox(height: 16),
                 if (_status != null)

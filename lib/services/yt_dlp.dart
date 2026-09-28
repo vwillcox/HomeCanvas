@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 
 import '../app_paths.dart';
 import 'programs.dart';
+import '../l10n/l10n.dart';
 
 /// Something a video site or yt-dlp said no to, worded for the screen.
 class VideoException implements Exception {
@@ -136,8 +137,11 @@ class YtDlp extends ChangeNotifier {
       Duration timeout = const Duration(seconds: 60)}) async {
     final exe = await _ytDlp();
     if (exe == null) {
-      throw const VideoException(
-          'Videos need yt-dlp. Install it in Settings → Music → Videos.');
+      throw VideoException(
+          tr(
+            'video.videosNeedYtDlpInstall',
+            'Videos need yt-dlp. Install it in Settings → Music → Videos.',
+          ));
     }
     _version ??= await _versionOf(exe);
     final deno = takesJsRuntimes(_version) ? await _deno() : null;
@@ -148,7 +152,7 @@ class YtDlp extends ChangeNotifier {
               stdoutEncoding: utf8, stderrEncoding: utf8)
           .timeout(timeout);
     } on TimeoutException {
-      throw const VideoException('The site took too long to answer.');
+      throw VideoException(tr('video.theSiteTookTooLong', 'The site took too long to answer.'));
     }
     if (r.exitCode != 0) {
       throw VideoException(explain(r.stderr as String));
@@ -157,7 +161,7 @@ class YtDlp extends ChangeNotifier {
     // another isolate, so a video already playing does not drop frames.
     final out = await compute(jsonDecode, r.stdout as String);
     if (out is! Map<String, dynamic>) {
-      throw const VideoException('The site sent back nothing playable.');
+      throw VideoException(tr('video.theSiteSentBackNothing', 'The site sent back nothing playable.'));
     }
     return out;
   }
@@ -179,7 +183,7 @@ class YtDlp extends ChangeNotifier {
         .where((l) => l.startsWith('ERROR:'))
         .map((l) => l.substring(6).trim())
         .toList();
-    if (errors.isEmpty) return 'That video would not play.';
+    if (errors.isEmpty) return tr('video.thatVideoWouldNotPlay', 'That video would not play.');
     final last = errors.last
         .replaceFirst(RegExp(r'^\[[^\]]+\]\s*[A-Za-z0-9_-]*:\s*'), '')
         .trim();
@@ -187,8 +191,7 @@ class YtDlp extends ChangeNotifier {
         last.contains('members-only') ||
         last.contains('only available when logged in') ||
         last.contains('Private video')) {
-      return '$last Signing in, in Settings → Music → Videos, may let it '
-          'play.';
+      return tr('video.signingInInSettingsMusic', '{last} Signing in, in Settings → Music → Videos, may let it play.', {'last': last});
     }
     return last;
   }
@@ -225,7 +228,7 @@ class YtDlp extends ChangeNotifier {
   Future<void> install() async {
     if (_installing) return;
     _installing = true;
-    status = 'Downloading yt-dlp…';
+    status = tr('video.downloadingYtDlp', 'Downloading yt-dlp…');
     notifyListeners();
     try {
       final arm = Platform.version.contains('arm64');
@@ -237,7 +240,7 @@ class YtDlp extends ChangeNotifier {
       );
       await Process.run('chmod', ['+x', _managedYtDlp]);
 
-      status = 'Downloading deno…';
+      status = tr('video.downloadingDeno', 'Downloading deno…');
       notifyListeners();
       final zip = p.join(AppPaths.bin, 'deno.zip');
       await _download(
@@ -253,7 +256,7 @@ class YtDlp extends ChangeNotifier {
       _version = await _versionOf(_managedYtDlp);
       status = null;
     } catch (e) {
-      status = 'Could not install: $e';
+      status = tr('video.couldNotInstall', 'Could not install: {e}', {'e': e});
       debugPrint('yt-dlp: install failed: $e');
     } finally {
       _installing = false;

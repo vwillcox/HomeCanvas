@@ -9,6 +9,7 @@ import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
+import '../../l10n/l10n.dart';
 
 /// Kitchen timers: tap a preset to start one, tap its ring to pause it, hold
 /// it to cancel. When one is done the panel says so, and a tap on the ring
@@ -41,7 +42,7 @@ class TimersWidget extends StatelessWidget {
         final chips = <Widget>[
           if (latest != null)
             _Chip(
-              label: '+1 min',
+              label: tr('widget.timers.1Min', '+1 min'),
               height: chipH,
               theme: t,
               onTap: () =>
@@ -83,7 +84,10 @@ class TimersWidget extends StatelessWidget {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                'Tap a time to start',
+                                tr(
+                                  'widget.timers.tapATimeToStart',
+                                  'Tap a time to start',
+                                ),
                                 style: TextStyle(
                                   color: t.textSecondary,
                                   fontSize: 15,
@@ -212,8 +216,8 @@ class _Ring extends StatelessWidget {
     return Semantics(
       button: true,
       label: done
-          ? '${timer.label} timer done. Tap to dismiss.'
-          : '${timer.label} timer, ${clock(timer.remaining(now))} left.',
+          ? tr('widget.timers.timerDoneTapToDismiss', '{label} timer done. Tap to dismiss.', {'label': timer.label})
+          : tr('widget.timers.timerLeft', '{label} timer, {now} left.', {'label': timer.label, 'now': clock(timer.remaining(now))}),
       child: GestureDetector(
         onTap: onTap,
         onLongPress: onLongPress,
@@ -235,7 +239,7 @@ class _Ring extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      done ? 'Done' : clock(timer.remaining(now)),
+                      done ? tr('widget.timers.done', 'Done') : clock(timer.remaining(now)),
                       style: TextStyle(
                         color: done ? colour : theme.textPrimary,
                         fontSize: 34,
@@ -244,7 +248,7 @@ class _Ring extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      timer.paused ? 'Paused' : timer.label,
+                      timer.paused ? tr('widget.timers.paused', 'Paused') : timer.label,
                       maxLines: 1,
                       style: TextStyle(
                         color: theme.textSecondary,

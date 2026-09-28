@@ -17,6 +17,7 @@ import '../widgets/now_playing_overlay.dart';
 import '../widgets/remote_image.dart';
 import 'album_screen.dart';
 import 'slideshow_screen.dart';
+import '../l10n/l10n.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -131,7 +132,11 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       if (mounted) {
         Navigator.of(context).pop();
-        _snack('Could not load the selected albums: $e');
+        _snack(tr(
+          'home.couldNotLoadTheSelected',
+          'Could not load the selected albums: {e}',
+          {'e': e},
+        ));
       }
       return;
     }
@@ -140,7 +145,10 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.of(context).pop(); // dismiss loading
 
     if (images.isEmpty) {
-      _snack('No photos in the selected albums');
+      _snack(tr(
+        'home.noPhotosInTheSelected',
+        'No photos in the selected albums',
+      ));
       return;
     }
     final count = ids.length;
@@ -191,7 +199,7 @@ class _HomeScreenState extends State<HomeScreen> {
       titleWidget: GreetingTitle(
         detail: albums.isEmpty
             ? null
-            : '${plural(albums.length, 'album')} · ${plural(photos, 'item')}',
+            : '${albumCount(albums.length)} · ${itemCount(photos)}',
       ),
       trailing: ModuleBar(
         current: KioskModule.photos,
@@ -204,13 +212,16 @@ class _HomeScreenState extends State<HomeScreen> {
     return ScreenHeader(
       onBack: _clearSelection,
       backIcon: Icons.close,
-      backTooltip: 'Cancel selection',
+      backTooltip: tr('home.cancelSelection', 'Cancel selection'),
       title: '${_selected.length} selected',
-      subtitle: 'Tap more albums to add them to one slideshow',
+      subtitle: tr(
+        'home.tapMoreAlbumsToAdd',
+        'Tap more albums to add them to one slideshow',
+      ),
       trailing: FilledButton.icon(
         onPressed: _slideshowFromSelection,
         icon: const Icon(Icons.play_arrow_rounded, size: 30),
-        label: const Text('Slideshow'),
+        label: Text(tr('home.slideshow', 'Slideshow')),
         style: whitePillButton(context),
       ),
     );
@@ -230,8 +241,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: context.look.wash(0.38),
               ),
               const SizedBox(height: 16),
-              const Text(
-                'Could not reach Immich',
+              Text(
+                tr('home.couldNotReachImmich', 'Could not reach Immich'),
                 style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 8),
@@ -244,7 +255,7 @@ class _HomeScreenState extends State<HomeScreen> {
               FilledButton.icon(
                 onPressed: () => _load(force: true),
                 icon: const Icon(Icons.refresh),
-                label: const Text('Try again'),
+                label: Text(tr('home.tryAgain', 'Try again')),
                 style: whitePillButton(context),
               ),
             ],
@@ -260,7 +271,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (albums.isEmpty) {
       return Center(
         child: Text(
-          'No albums yet',
+          tr('home.noAlbumsYet', 'No albums yet'),
           style: TextStyle(fontSize: 24, color: context.look.textSecondary),
         ),
       );
@@ -270,7 +281,10 @@ class _HomeScreenState extends State<HomeScreen> {
     if (shown.isEmpty) {
       return Center(
         child: Text(
-          'No albums with anything in them yet',
+          tr(
+            'home.noAlbumsWithAnythingIn',
+            'No albums with anything in them yet',
+          ),
           style: TextStyle(fontSize: 24, color: context.look.textSecondary),
         ),
       );
@@ -298,8 +312,8 @@ class _HomeScreenState extends State<HomeScreen> {
             sliver: SliverToBoxAdapter(
               child: Row(
                 children: [
-                  const Text(
-                    'Albums',
+                  Text(
+                    tr('home.albums', 'Albums'),
                     style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.w700,
@@ -355,12 +369,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
 /// How the album grid is ordered.
 enum AlbumSort {
-  recent('Recent'),
-  name('A–Z'),
-  size('Most items');
+  recent,
+  name,
+  size;
 
-  const AlbumSort(this.label);
-  final String label;
+  /// What the sort button says, in the panel's language.
+  String get label => switch (this) {
+    recent => tr('home.recent', 'Recent'),
+    name => tr('home.aToZ', 'A–Z'),
+    size => tr('home.mostItems', 'Most items'),
+  };
 }
 
 /// [albums] in [sort] order. Stable, so equal albums keep Immich's order.
@@ -438,7 +456,11 @@ class _MiniPlayer extends StatelessWidget {
     final accent = Theme.of(context).colorScheme.primary;
     return Semantics(
       button: true,
-      label: 'Now playing: ${n.title}, ${n.artist}. Open the player.',
+      label: tr(
+        'home.nowPlayingOpenThePlayer',
+        'Now playing: {title}, {artist}. Open the player.',
+        {'title': n.title, 'artist': n.artist},
+      ),
       child: PressScale(
         scale: 0.99,
         child: GestureDetector(
@@ -490,7 +512,7 @@ class _MiniPlayer extends StatelessWidget {
                             Expanded(
                               child: Text(
                                 n.deviceName.isEmpty
-                                    ? 'Now playing'
+                                    ? tr('home.nowPlaying', 'Now playing')
                                     : n.deviceName,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -552,7 +574,7 @@ class _MiniPlayer extends StatelessWidget {
                   ],
                   _TransportButton(
                     icon: Icons.skip_previous_rounded,
-                    label: 'Previous',
+                    label: tr('home.previous', 'Previous'),
                     onPressed: source.previous,
                   ),
                   const SizedBox(width: 8),
@@ -560,14 +582,14 @@ class _MiniPlayer extends StatelessWidget {
                     icon: n.isPlaying
                         ? Icons.pause_rounded
                         : Icons.play_arrow_rounded,
-                    label: n.isPlaying ? 'Pause' : 'Play',
+                    label: n.isPlaying ? tr('home.pause', 'Pause') : tr('home.play', 'Play'),
                     onPressed: source.playPause,
                     primary: true,
                   ),
                   const SizedBox(width: 8),
                   _TransportButton(
                     icon: Icons.skip_next_rounded,
-                    label: 'Next',
+                    label: tr('home.next', 'Next'),
                     onPressed: source.next,
                   ),
                   const SizedBox(width: 6),
@@ -597,7 +619,13 @@ class _LikeButton extends StatelessWidget {
     return Semantics(
       button: true,
       toggled: liked,
-      label: liked ? 'Remove from Liked Songs' : 'Add to Liked Songs',
+      label: liked ? tr(
+        'home.removeFromLikedSongs',
+        'Remove from Liked Songs',
+      ) : tr(
+        'home.addToLikedSongs',
+        'Add to Liked Songs',
+      ),
       child: Material(
         color: liked
             ? _pink.withValues(alpha: 0.16)
@@ -763,7 +791,7 @@ class _AlbumTile extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        plural(album.assetCount, 'item'),
+                        itemCount(album.assetCount),
                         style: TextStyle(
                           color: Colors.white70,
                           fontSize: 16,

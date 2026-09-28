@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../look.dart';
 import '../services/article_reader.dart';
 import 'glass.dart';
+import '../l10n/l10n.dart';
 
 /// What is being read aloud, along the bottom of whatever screen is up:
 /// the headline, how far through, and pause, next paragraph and stop.
@@ -57,8 +58,8 @@ class ReadingBar extends StatelessWidget {
                               ? Icons.play_arrow_rounded
                               : Icons.pause_rounded,
                           tooltip: reader.status == ReaderStatus.paused
-                              ? 'Carry on reading'
-                              : 'Pause',
+                              ? tr('reader.carryOnReading', 'Carry on reading')
+                              : tr('reader.pause', 'Pause'),
                           colour: look.textPrimary,
                           onPressed: reader.status == ReaderStatus.fetching
                               ? null
@@ -68,7 +69,7 @@ class ReadingBar extends StatelessWidget {
                         ),
                         PillIconButton(
                           icon: Icons.skip_next_rounded,
-                          tooltip: 'Next paragraph',
+                          tooltip: tr('reader.nextParagraph', 'Next paragraph'),
                           colour: look.textPrimary,
                           onPressed: reader.status == ReaderStatus.fetching
                               ? null
@@ -76,7 +77,7 @@ class ReadingBar extends StatelessWidget {
                         ),
                         PillIconButton(
                           icon: Icons.stop_rounded,
-                          tooltip: 'Stop reading',
+                          tooltip: tr('reader.stopReading', 'Stop reading'),
                           colour: look.textPrimary,
                           onPressed: reader.stop,
                         ),
@@ -102,14 +103,14 @@ class _Words extends StatelessWidget {
   Widget build(BuildContext context) {
     final look = context.look;
     final detail = switch (reader.status) {
-      ReaderStatus.fetching => 'Getting the article…',
-      ReaderStatus.paused => 'Paused',
-      _ when reader.summaryOnly => 'Reading the summary',
+      ReaderStatus.fetching => tr('reader.gettingTheArticle', 'Getting the article…'),
+      ReaderStatus.paused => tr('reader.paused', 'Paused'),
+      _ when reader.summaryOnly => tr('reader.readingTheSummary', 'Reading the summary'),
       _ when reader.total > 0 => [
           if (reader.author != null) 'by ${reader.author}',
           '${reader.position + 1} of ${reader.total}',
         ].join(' · '),
-      _ => 'Reading aloud',
+      _ => tr('reader.readingAloud', 'Reading aloud'),
     };
     return Column(
       mainAxisSize: MainAxisSize.min,

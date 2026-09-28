@@ -12,6 +12,7 @@ import '../../widgets/shown_timers.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'tile_bits.dart';
+import '../../l10n/l10n.dart';
 
 /// One thing with an update waiting.
 @immutable
@@ -134,7 +135,7 @@ class _UpdatesWidgetState extends State<UpdatesWidget>
       out.add(
         PendingUpdate(
           'Immich',
-          'Immich server',
+          tr('widget.updates.immichServer', 'Immich server'),
           from: running,
           to: latest.replaceFirst('v', ''),
         ),
@@ -184,12 +185,12 @@ class _UpdatesWidgetState extends State<UpdatesWidget>
           height: labelH,
           child: TileLabel(
             icon: Icons.system_update_alt_rounded,
-            text: 'Updates',
+            text: tr('widget.updates.updates', 'Updates'),
             theme: t,
             size: labelH * 0.6,
             trailing: StatusChip(
               text: pending.isEmpty
-                  ? 'Up to date'
+                  ? tr('widget.updates.upToDate', 'Up to date')
                   : '${pending.length} waiting',
               colour: pending.isEmpty ? status.good : status.warn,
               size: labelH * 0.5,
@@ -215,7 +216,10 @@ class _UpdatesWidgetState extends State<UpdatesWidget>
                         ),
                         SizedBox(width: labelH * 0.4),
                         Text(
-                          'Everything is up to date',
+                          tr(
+                            'widget.updates.everythingIsUpToDate',
+                            'Everything is up to date',
+                          ),
                           style: TextStyle(
                             color: t.textSecondary,
                             fontSize: labelH * 0.7,

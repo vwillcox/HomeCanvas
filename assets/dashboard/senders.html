@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Kiosk senders</title>
+<title data-t="web.senders.kioskSenders">Kiosk senders</title>
 <style>
   :root {
     --bg: #0e1016; --panel: #171a22; --line: #262b36;
@@ -57,34 +57,32 @@
 </head>
 <body>
 <header>
-  <h1>Who can share to the kiosk</h1>
-  <p>One token per device, so a single phone can be revoked without disturbing
+  <h1 data-t="web.senders.whoCanShareToThe">Who can share to the kiosk</h1>
+  <p data-t="web.senders.intro">One token per device, so a single phone can be revoked without disturbing
      anyone else. This page is served to the local network only.</p>
 </header>
 
 <main>
   <div class="card">
-    <h2>Add a sender</h2>
+    <h2 data-t="web.senders.addASender">Add a sender</h2>
     <div class="row">
-      <input id="name" placeholder="Name — e.g. Jo's phone" autocomplete="off">
-      <button class="primary" id="add">Add</button>
+      <input id="name" placeholder="Name — e.g. Jo's phone" data-t-placeholder="web.senders.namePlaceholder" autocomplete="off">
+      <button data-t="web.senders.add" class="primary" id="add">Add</button>
     </div>
     <p id="status"></p>
   </div>
 
   <div class="card">
-    <h2>Senders</h2>
-    <div id="list"><p class="empty">Loading…</p></div>
+    <h2 data-t="web.senders.senders">Senders</h2>
+    <div id="list"><p data-t="web.senders.loading" class="empty">Loading…</p></div>
   </div>
 
   <div class="card">
-    <h2>Setting up a phone</h2>
-    <p class="note">
-      Install Kiosk Share, open its settings, and enter the kiosk address
+    <h2 data-t="web.senders.settingUpAPhone">Setting up a phone</h2>
+    <p class="note" data-t-html="web.senders.setup">Install Kiosk Share, open its settings, and enter the kiosk address
       followed by that person's token. The address is
-      <code id="addr">…</code> on this network.
-    </p>
-    <p class="note warn">
+      <code id="addr">…</code> on this network.</p>
+    <p class="note warn" data-t="web.senders.tokenIsAPassword">
       A token is a password: anyone holding one can put a photo, video or note
       on the screen. Hand them over in person or over something private, and
       remove a sender the moment a device is lost or lent on.
@@ -92,6 +90,7 @@
   </div>
 </main>
 
+<script src="/i18n.js"></script>
 <script>
 "use strict";
 
@@ -119,7 +118,10 @@ function render(data) {
   const list = $("list");
   list.innerHTML = "";
   if (!data.senders.length) {
-    list.innerHTML = '<p class="empty">Nobody yet. Add a sender above.</p>';
+    const empty = document.createElement("p");
+    empty.className = "empty";
+    empty.textContent = t("web.senders.nobodyYet", "Nobody yet. Add a sender above.");
+    list.appendChild(empty);
     return;
   }
   for (const s of data.senders) {
@@ -141,34 +143,34 @@ function render(data) {
     actions.className = "actions";
 
     const reveal = document.createElement("button");
-    reveal.textContent = shown ? "Hide" : "Show";
+    reveal.textContent = shown ? t("web.senders.hide", "Hide") : t("web.senders.show", "Show");
     reveal.onclick = () => {
       if (shown) revealed.delete(s.name); else revealed.add(s.name);
       load();
     };
 
     const copy = document.createElement("button");
-    copy.textContent = "Copy";
+    copy.textContent = t("web.senders.copy", "Copy");
     copy.onclick = async () => {
       try {
         await navigator.clipboard.writeText(s.token);
-        setStatus("Copied " + s.name + "'s token.");
+        setStatus(t("web.senders.copied", "Copied {name}’s token.", { name: s.name }));
       } catch {
         // Clipboard access needs a secure context, which plain http on a LAN
         // is not. Showing it is the fallback.
         revealed.add(s.name);
         load();
-        setStatus("Copying needs https — the token is shown instead.", true);
+        setStatus(t("web.senders.needsHttps", "Copying needs https — the token is shown instead."), true);
       }
     };
 
     const remove = document.createElement("button");
     remove.className = "danger";
-    remove.textContent = "Remove";
+    remove.textContent = t("web.senders.remove", "Remove");
     remove.onclick = async () => {
-      if (!confirm("Remove " + s.name + "? That device can no longer share.")) return;
+      if (!confirm(t("web.senders.confirmRemove", "Remove {name}? That device can no longer share.", { name: s.name }))) return;
       await api("DELETE", "/api/senders?name=" + encodeURIComponent(s.name));
-      setStatus(s.name + " removed.");
+      setStatus(t("web.senders.removed", "{name} removed.", { name: s.name }));
       load();
     };
 
@@ -182,23 +184,26 @@ async function load() {
   try {
     render(await api("GET", "/api/senders"));
   } catch (e) {
-    $("list").innerHTML = '<p class="empty warn">Could not reach the kiosk.</p>';
+    const p = document.createElement("p");
+    p.className = "empty warn";
+    p.textContent = t("web.senders.unreachable", "Could not reach the kiosk.");
+    $("list").replaceChildren(p);
   }
 }
 
 $("add").onclick = async () => {
   const name = $("name").value.trim();
-  if (!name) return setStatus("Give the device a name first.", true);
+  if (!name) return setStatus(t("web.senders.nameFirst", "Give the device a name first."), true);
   try {
     const made = await api("POST", "/api/senders", { name });
     $("name").value = "";
     revealed.add(made.name);
-    setStatus("Added " + made.name + ". Their token is shown below.");
+    setStatus(t("web.senders.added", "Added {name}. Their token is shown below.", { name: made.name }));
     load();
   } catch (e) {
     setStatus(e.message === "409"
-      ? "There is already a sender with that name."
-      : "Could not add that sender.", true);
+      ? t("web.senders.duplicate", "There is already a sender with that name.")
+      : t("web.senders.addFailed", "Could not add that sender."), true);
   }
 };
 
@@ -206,7 +211,8 @@ $("name").addEventListener("keydown", (e) => {
   if (e.key === "Enter") $("add").click();
 });
 
-load();
+// Words first, so the list is drawn in the panel's language.
+loadWords().then(load);
 </script>
 </body>
 </html>

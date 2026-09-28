@@ -10,6 +10,7 @@ import '../screens/link_viewer_screen.dart';
 import '../screens/video_player_screen.dart'
     show VideoBottomControls, VideoVolumeColumn;
 import '../services/video_player_service.dart';
+import '../l10n/l10n.dart';
 
 /// The video sent to the panel: full screen, or floating as a
 /// picture-in-picture window over whatever else the kiosk is showing.
@@ -170,7 +171,7 @@ class _BodyState extends State<_Body> {
     widget.navigatorKey.currentState?.push(MaterialPageRoute(
       builder: (_) => LinkViewerScreen(
         url: link.url,
-        title: title ?? 'Video',
+        title: title ?? tr('video.video', 'Video'),
         // The site's own signed-in profile — named after the site, as
         // VideoSite.loginProfile is.
         profile: link.site,
@@ -346,7 +347,7 @@ class _BodyState extends State<_Body> {
           FilledButton.icon(
             onPressed: video.close,
             icon: const Icon(Icons.close, size: 30),
-            label: const Text('Close', style: TextStyle(fontSize: 22)),
+            label: Text(tr('video.close', 'Close'), style: TextStyle(fontSize: 22)),
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFFB3261E),
               foregroundColor: Colors.white,
@@ -360,7 +361,7 @@ class _BodyState extends State<_Body> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  stream?.title ?? 'Video',
+                  stream?.title ?? tr('video.video', 'Video'),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -382,7 +383,7 @@ class _BodyState extends State<_Body> {
             FilledButton.tonalIcon(
               onPressed: video.showPip,
               icon: const Icon(Icons.picture_in_picture_alt, size: 30),
-              label: const Text('Picture in picture',
+              label: Text(tr('video.pictureInPicture', 'Picture in picture'),
                   style: TextStyle(fontSize: 20)),
               style: FilledButton.styleFrom(
                 padding:
@@ -446,7 +447,7 @@ class _BodyState extends State<_Body> {
                 FilledButton.icon(
                   onPressed: () => _openInBrowser(video),
                   icon: const Icon(Icons.open_in_browser, size: 28),
-                  label: const Text('Open in the browser',
+                  label: Text(tr('video.openInTheBrowser', 'Open in the browser'),
                       style: TextStyle(fontSize: 20)),
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
@@ -457,7 +458,7 @@ class _BodyState extends State<_Body> {
                   onPressed: () => video.play(video.link!),
                   icon: const Icon(Icons.refresh, size: 28),
                   label:
-                      const Text('Try again', style: TextStyle(fontSize: 20)),
+                      Text(tr('video.tryAgain', 'Try again'), style: TextStyle(fontSize: 20)),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(

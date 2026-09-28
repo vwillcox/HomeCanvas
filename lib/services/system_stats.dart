@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import '../l10n/l10n.dart';
 
 /// A container on a machine, and whether it is running.
 @immutable
@@ -183,7 +184,7 @@ class DiskUse {
       size >= 2 * 1000 * 1000 * 1000;
 
   static String labelFor(String mount) {
-    if (mount == '/') return 'System';
+    if (mount == '/') return tr('widget.servers.system', 'System');
     final parts = mount.split('/').where((p) => p.isNotEmpty);
     return parts.isEmpty ? mount : parts.last;
   }
@@ -296,7 +297,7 @@ class MachineStats {
 String shortUptime(Duration d) {
   if (d.inDays >= 1) return '${d.inDays} d';
   if (d.inHours >= 1) return '${d.inHours} h';
-  return '${d.inMinutes} min';
+  return tr('common.min', '{n} min', {'n': d.inMinutes});
 }
 
 /// Reads the machine the kiosk runs on, straight from the kernel.
@@ -577,7 +578,7 @@ class GlancesClient {
         smart: results[4],
       );
     } catch (e) {
-      return MachineStats(name: name, error: 'Not answering');
+      return MachineStats(name: name, error: tr('widget.servers.notAnswering2', 'Not answering'));
     }
   }
 

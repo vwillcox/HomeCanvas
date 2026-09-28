@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b0c10">
-<title>Notes</title>
+<title data-t="web.notes.notes">Notes</title>
 <style>
   /* The kiosk's glass look, as on the dashboard editor. */
   :root {
@@ -54,23 +54,24 @@
 <body>
 <main>
   <header>
-    <h1>Notes</h1>
-    <p class="sub">Stick a note on the panel.</p>
+    <h1 data-t="web.notes.notes">Notes</h1>
+    <p data-t="web.notes.stickANoteOnThe" class="sub">Stick a note on the panel.</p>
   </header>
 
   <form id="form">
-    <textarea id="text" maxlength="280" placeholder="Dentist moved to Thursday 4pm" required></textarea>
+    <textarea id="text" maxlength="280" placeholder="Dentist moved to Thursday 4pm" data-t-placeholder="web.notes.examplePlaceholder" required></textarea>
     <div class="count"><span id="left">280</span> left</div>
     <div class="row">
-      <input id="from" maxlength="40" placeholder="From (your name)" autocomplete="name">
-      <button id="post" type="submit">Post</button>
+      <input id="from" maxlength="40" placeholder="From (your name)" data-t-placeholder="web.notes.fromPlaceholder" autocomplete="name">
+      <button data-t="web.notes.post" id="post" type="submit">Post</button>
     </div>
     <div id="status" role="status"></div>
   </form>
 
-  <h2>On the panel</h2>
+  <h2 data-t="web.notes.onThePanel">On the panel</h2>
   <ul id="notes"></ul>
 </main>
+<script src="/i18n.js"></script>
 <script>
 "use strict";
 const papers = ["#ffe7a3", "#cfe6ff", "#d9f5de", "#ffd6e0", "#e8dcff"];
@@ -82,17 +83,22 @@ try { $("from").value = localStorage.getItem("notes.from") || ""; } catch {}
 
 function ago(iso) {
   const d = (Date.now() - Date.parse(iso)) / 60000;
-  if (d < 1) return "just now";
-  if (d < 60) return Math.round(d) + " min ago";
-  if (d < 60 * 24) return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  return new Date(iso).toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" });
+  if (d < 1) return t("web.notes.justNow", "just now");
+  if (d < 60) return t("web.notes.minAgo", "{n} min ago", { n: Math.round(d) });
+  // In the panel's language, not the browser's.
+  if (d < 60 * 24) return new Date(iso).toLocaleTimeString(LANGUAGE, { hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleDateString(LANGUAGE, { weekday: "short", day: "numeric", month: "short" });
 }
 
 function show(notes) {
   const list = $("notes");
   list.innerHTML = "";
   if (!notes.length) {
-    list.innerHTML = '<li class="empty" style="background:none;box-shadow:none;color:var(--muted);display:block">No notes on the panel.</li>';
+    const empty = document.createElement("li");
+    empty.className = "empty";
+    empty.style.cssText = "background:none;box-shadow:none;color:var(--muted);display:block";
+    empty.textContent = t("web.notes.noNotes", "No notes on the panel.");
+    list.appendChild(empty);
     return;
   }
   for (const n of notes) {
@@ -106,7 +112,7 @@ function show(notes) {
     text.appendChild(meta);
     const del = document.createElement("button");
     del.type = "button";
-    del.textContent = "Take down";
+    del.textContent = t("web.notes.takeDown", "Take down");
     del.onclick = async () => {
       del.disabled = true;
       await call("DELETE", "/api/notes?id=" + encodeURIComponent(n.id));
@@ -131,7 +137,7 @@ async function call(method, path, body) {
     return true;
   } catch (e) {
     status.className = "error";
-    status.textContent = "Couldn't reach the panel. Check you're on the home Wi-Fi and try again.";
+    status.textContent = t("web.common.unreachable", "Couldn’t reach the panel. Check you’re on the home Wi-Fi and try again.");
     return false;
   }
 }
@@ -150,12 +156,13 @@ $("form").addEventListener("submit", async (e) => {
   if (await call("POST", "/api/notes", { text, from })) {
     $("text").value = "";
     $("left").textContent = "280";
-    $("status").textContent = "Posted. It's on the panel now.";
+    $("status").textContent = t("web.notes.posted", "Posted. It’s on the panel now.");
   }
   $("post").disabled = false;
 });
 
-call("GET", "/api/notes");
+// Words first, so the notes are drawn in the panel's language.
+loadWords().then(() => call("GET", "/api/notes"));
 setInterval(() => { if (!document.hidden) call("GET", "/api/notes"); }, 30000);
 </script>
 </body>

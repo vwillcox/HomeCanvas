@@ -16,6 +16,7 @@ import '../widget_registry.dart';
 import 'feed_tile.dart';
 import 'tile_bits.dart';
 import 'video_grid.dart';
+import '../../l10n/l10n.dart';
 
 /// The latest from the account's subscriptions, to pick one and watch it on
 /// the panel — or, if chosen, one video playing in the tile. Touching either
@@ -180,8 +181,10 @@ class _VideoTileState extends State<_VideoTile> with PauseWhenHidden {
     final link = _link;
     if (link == null) {
       return TileMessage(
-        'Paste a YouTube, Floatplane or Nebula link into this widget’s '
-        'settings in the editor.',
+        tr(
+          'widget.youtube.pasteAYoutubeFloatplaneOr',
+          'Paste a YouTube, Floatplane or Nebula link into this widget’s settings in the editor.',
+        ),
         theme: t,
       );
     }

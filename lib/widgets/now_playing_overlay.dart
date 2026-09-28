@@ -16,6 +16,7 @@ import '../services/now_playing_service.dart';
 import '../services/playback_source.dart';
 import '../services/spotify_service.dart';
 import 'spotify_panels.dart';
+import '../l10n/l10n.dart';
 
 String _fmt(Duration d) {
   String two(int n) => n.toString().padLeft(2, '0');
@@ -585,7 +586,7 @@ class _DetailContent extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  n.deviceName.isEmpty ? 'Now playing' : n.deviceName,
+                  n.deviceName.isEmpty ? tr('player.nowPlaying', 'Now playing') : n.deviceName,
                   style: TextStyle(
                     color: context.look.textSecondary,
                     fontSize: 22,
@@ -599,7 +600,7 @@ class _DetailContent extends StatelessWidget {
               if (service is SpotifyService) ...[
                 _HeaderButton(
                   icon: Icons.speaker_group,
-                  tooltip: 'Play on…',
+                  tooltip: tr('player.playOn', 'Play on…'),
                   onTap: () => showDialog(
                     context: context,
                     builder: (_) => SpotifyDevicesDialog(
@@ -610,7 +611,7 @@ class _DetailContent extends StatelessWidget {
                 const SizedBox(width: 10),
                 _HeaderButton(
                   icon: Icons.queue_music,
-                  tooltip: 'Up next',
+                  tooltip: tr('player.upNext', 'Up next'),
                   onTap: () => showDialog(
                     context: context,
                     builder: (_) =>
@@ -620,7 +621,7 @@ class _DetailContent extends StatelessWidget {
                 const SizedBox(width: 10),
                 _HeaderButton(
                   icon: Icons.library_music,
-                  tooltip: 'Play something',
+                  tooltip: tr('player.playSomething', 'Play something'),
                   onTap: () => showDialog(
                     context: context,
                     builder: (_) =>
@@ -920,7 +921,7 @@ class _PlaylistPickerDialogState extends State<_PlaylistPickerDialog> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Add to playlist',
+                      tr('player.addToPlaylist', 'Add to playlist'),
                       style: TextStyle(
                         color: context.look.textPrimary,
                         fontSize: 22,
@@ -956,7 +957,10 @@ class _PlaylistPickerDialogState extends State<_PlaylistPickerDialog> {
                         padding: EdgeInsets.symmetric(vertical: 48),
                         child: Center(
                           child: Text(
-                            'No playlists found',
+                            tr(
+                              'player.noPlaylistsFound',
+                              'No playlists found',
+                            ),
                             style: TextStyle(
                               color: context.look.textSecondary,
                               fontSize: 16,

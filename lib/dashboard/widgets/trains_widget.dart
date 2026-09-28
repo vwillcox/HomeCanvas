@@ -10,6 +10,7 @@ import 'tile_bits.dart';
 import '../../time_format.dart';
 import '../../widgets/pause_when_hidden.dart';
 import '../../widgets/shown_timers.dart';
+import '../../l10n/l10n.dart';
 
 /// The next trains from your station, as a station board shows them: time,
 /// where to, platform, and whether it is on time, late or cancelled.
@@ -99,14 +100,16 @@ class _TrainsWidgetState extends State<TrainsWidget>
     final t = widget.w.theme;
     if (_opt('from').isEmpty) {
       return TileMessage(
-        'Set your station in the widget settings — its three-letter code, '
-        'like MDE for Maidstone East — and your Realtime Trains token.',
+        tr(
+          'widget.trains.setYourStationInThe',
+          'Set your station in the widget settings — its three-letter code, like MDE for Maidstone East — and your Realtime Trains token.',
+        ),
         theme: t,
       );
     }
     final board = _board;
     if (board == null) {
-      return TileMessage(_error ?? 'Asking Realtime Trains…', theme: t);
+      return TileMessage(_error ?? tr('widget.trains.askingRealtimeTrains', 'Asking Realtime Trains…'), theme: t);
     }
     final now = DateTime.now();
     final walk = int.tryParse(_opt('walkMinutes')) ?? 0;
@@ -146,7 +149,7 @@ class _TrainsWidgetState extends State<TrainsWidget>
                     ? null
                     : Text(
                         _error != null
-                            ? 'last at ${hhmm(_updated!)}'
+                            ? tr('widget.trains.lastAt', 'last at {_updated}', {'_updated': hhmm(_updated!)})
                             : hhmm(_updated!),
                         style: TextStyle(
                           color: _error != null ? status.warn : t.textSecondary,
@@ -159,7 +162,10 @@ class _TrainsWidgetState extends State<TrainsWidget>
                 Expanded(
                   child: Center(
                     child: Text(
-                      'No more trains in the next two hours',
+                      tr(
+                        'widget.trains.noMoreTrainsInThe',
+                        'No more trains in the next two hours',
+                      ),
                       style: TextStyle(color: t.textSecondary, fontSize: 13),
                     ),
                   ),
@@ -187,15 +193,15 @@ class _Row extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (String text, Color colour) = d.cancelled
-        ? ('Cancelled', status.bad)
+        ? (tr('widget.trains.cancelled', 'Cancelled'), status.bad)
         : d.late
-        ? ('${d.lateMinutes} min late', status.warn)
+        ? (tr('widget.trains.minLate', '{lateMinutes} min late', {'lateMinutes': d.lateMinutes}), status.warn)
         : d.atPlatform
-        ? ('At platform', theme.accent)
-        : ('On time', status.good);
+        ? (tr('widget.trains.atPlatform', 'At platform'), theme.accent)
+        : (tr('widget.trains.onTime', 'On time'), status.good);
     final sub = [
       if (d.late && d.expected != null) 'expected ${hhmm(d.expected!)}',
-      if (d.bus) 'replacement bus',
+      if (d.bus) tr('widget.trains.replacementBus', 'replacement bus'),
       if ((d.cancelled || d.late) && d.reason != null) d.reason!,
     ].join(' · ');
 
@@ -247,7 +253,7 @@ class _Row extends StatelessWidget {
               children: [
                 if (d.platform != null && !d.cancelled) ...[
                   StatusChip(
-                    text: 'Plat ${d.platform}',
+                    text: tr('widget.trains.plat', 'Plat {platform}', {'platform': d.platform}),
                     colour: theme.accent,
                     size: 10,
                   ),

@@ -15,6 +15,7 @@ import '../widgets/big_back_button.dart';
 import '../widgets/now_playing_overlay.dart';
 import '../widgets/weather_overlay.dart';
 import '../widgets/pause_when_hidden.dart';
+import '../l10n/l10n.dart';
 
 class SlideshowScreen extends StatefulWidget {
   final List<Asset> images;
@@ -160,10 +161,10 @@ class _SlideshowScreenState extends State<SlideshowScreen>
   @override
   Widget build(BuildContext context) {
     if (_order.isEmpty) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: Colors.black,
         body: Center(
-          child: Text('No photos to show',
+          child: Text(tr('slideshow.noPhotosToShow', 'No photos to show'),
               style: TextStyle(color: Colors.white70, fontSize: 20)),
         ),
       );

@@ -10,6 +10,7 @@ import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
+import '../../l10n/l10n.dart';
 
 /// CPU, memory, disk and temperature for this Pi and any other machine
 /// running Glances, with whether their containers are all up.
@@ -116,12 +117,14 @@ class _ServersWidgetState extends State<ServersWidget>
     final t = widget.w.theme;
     if (!_showThisPi && _machines.isEmpty) {
       return TileMessage(
-        'Add a machine in the widget settings. It needs Glances running — '
-        'on CasaOS, from its app store.',
+        tr(
+          'widget.servers.addAMachineInThe',
+          'Add a machine in the widget settings. It needs Glances running — on CasaOS, from its app store.',
+        ),
         theme: t,
       );
     }
-    if (_stats.isEmpty) return TileMessage('Reading…', theme: t);
+    if (_stats.isEmpty) return TileMessage(tr('widget.servers.reading', 'Reading…'), theme: t);
 
     final status = StatusColours.of(t);
     final down = _stats.where((s) => !s.reachable).length;
@@ -133,14 +136,14 @@ class _ServersWidgetState extends State<ServersWidget>
         .where((s) => s.worstDisk == DiskState.warning)
         .length;
     final chip = down > 0
-        ? (text: '$down not answering', colour: status.bad)
+        ? (text: tr('widget.servers.notAnswering', '{down} not answering', {'down': down}), colour: status.bad)
         : failing > 0
-        ? (text: 'Disk failing', colour: status.bad)
+        ? (text: tr('widget.servers.diskFailing', 'Disk failing'), colour: status.bad)
         : warning > 0
-        ? (text: 'Disk warning', colour: status.warn)
+        ? (text: tr('widget.servers.diskWarning', 'Disk warning'), colour: status.warn)
         : stopped > 0
         ? (text: '$stopped stopped', colour: status.warn)
-        : (text: 'All up', colour: status.good);
+        : (text: tr('widget.servers.allUp', 'All up'), colour: status.good);
 
     return LayoutBuilder(
       builder: (context, c) {
@@ -162,7 +165,7 @@ class _ServersWidgetState extends State<ServersWidget>
               height: labelH,
               child: TileLabel(
                 icon: Icons.dns_rounded,
-                text: 'Servers',
+                text: tr('widget.servers.servers', 'Servers'),
                 theme: t,
                 size: labelH * 0.6,
                 trailing: StatusChip(
@@ -246,17 +249,17 @@ class _Machine extends StatelessWidget {
           ),
           if (s.reachable) ...[
             const Spacer(),
-            _Bar(label: 'CPU', value: s.cpu, theme: theme, status: status),
+            _Bar(label: tr('widget.servers.cpu', 'CPU'), value: s.cpu, theme: theme, status: status),
             const Spacer(),
             _Bar(
-              label: 'Memory',
+              label: tr('widget.servers.memory', 'Memory'),
               value: s.memory,
               theme: theme,
               status: status,
             ),
             const Spacer(),
             if (disks.isEmpty)
-              _Bar(label: 'Disk', value: s.disk, theme: theme, status: status)
+              _Bar(label: tr('widget.servers.disk', 'Disk'), value: s.disk, theme: theme, status: status)
             else
               for (var i = 0; i < disks.length; i++) ...[
                 if (i > 0) const Spacer(),
@@ -303,7 +306,7 @@ extension on _Machine {
         '${h!.temperature!.round()}°C',
     ].join(' · ');
     return _Bar(
-      label: single && d.mount == '/' ? 'Disk' : d.label,
+      label: single && d.mount == '/' ? tr('widget.servers.disk', 'Disk') : d.label,
       value: d.percent,
       theme: theme,
       status: status,

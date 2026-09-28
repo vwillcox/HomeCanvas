@@ -8,6 +8,7 @@ import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
+import '../../l10n/l10n.dart';
 
 /// Chores and rewards: a column per person with today's chores to tap off,
 /// stars for each, and the week's total towards a reward.
@@ -34,8 +35,10 @@ class ChoresWidget extends StatelessWidget {
     final chores = _chores;
     if (people.isEmpty || chores.isEmpty) {
       return TileMessage(
-        'Add the people and their chores in the widget settings — and a '
-        'weekly star goal with a reward, if you like.',
+        tr(
+          'widget.chores.addThePeopleAndTheir',
+          'Add the people and their chores in the widget settings — and a weekly star goal with a reward, if you like.',
+        ),
         theme: t,
       );
     }
@@ -209,10 +212,10 @@ class _Column extends StatelessWidget {
                     else
                       Text(
                         chores.isEmpty
-                            ? 'Nothing today'
+                            ? tr('widget.chores.nothingToday', 'Nothing today')
                             : left == 0
-                            ? 'All done today!'
-                            : '$left to do today',
+                            ? tr('widget.chores.allDoneToday', 'All done today!')
+                            : tr('widget.chores.toDoToday', '{left} to do today', {'left': left}),
                         maxLines: 1,
                         style: TextStyle(
                           color: theme.textSecondary,

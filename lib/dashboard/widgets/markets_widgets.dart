@@ -11,6 +11,7 @@ import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'tile_bits.dart';
 import '../../l10n/dates.dart';
+import '../../l10n/l10n.dart';
 
 /// One row a tile was asked for: what to look up, what to call it, and —
 /// as typed — what was paid for it, how many are held, when they were
@@ -304,7 +305,7 @@ class _Total extends StatelessWidget {
       children: [
         Flexible(
           child: Text(
-            'Holdings',
+            tr('widget.markets.holdings', 'Holdings'),
             maxLines: 1,
             overflow: TextOverflow.clip,
             style: TextStyle(color: t.textSecondary, fontSize: 12 * k),
@@ -620,7 +621,11 @@ class _Card extends StatelessWidget {
                 // compares with what you paid.
                 if (held != null) ...[
                   (
-                    'Your ${_howMany(held.quantity, coins)}',
+                    tr(
+                      'widget.markets.your',
+                      'Your {coins}',
+                      {'coins': _howMany(held.quantity, coins)},
+                    ),
                     formatPrice(held.value, held.currency),
                     null,
                   ),
@@ -634,13 +639,17 @@ class _Card extends StatelessWidget {
                     ),
                   if (held.bought != null)
                     (
-                      'Held',
+                      tr('widget.markets.held', 'Held'),
                       heldFor(held.bought!, now),
                       null,
                     ),
                 ] else if (since != null)
                   (
-                    'Since you paid ${money(since.paid)}',
+                    tr(
+                      'widget.markets.sinceYouPaid',
+                      'Since you paid {paid}',
+                      {'paid': money(since.paid)},
+                    ),
                     formatChange(since.percent),
                     since.percent < 0 ? status.bad : status.good,
                   ),
@@ -838,22 +847,22 @@ class _Card extends StatelessWidget {
         '${money(lo!)} – ${money(hi!)}';
     return [
       if (!coins && q.previousClose != null)
-        ('Previous close', money(q.previousClose!), null),
+        (tr('widget.markets.previousClose', 'Previous close'), money(q.previousClose!), null),
       if (q.low != null && q.high != null)
-        (coins ? '24h range' : 'Day range', range(q.low, q.high), null),
+        (coins ? tr('widget.markets.24hRange', '24h range') : tr('widget.markets.dayRange', 'Day range'), range(q.low, q.high), null),
       if (q.marketCap != null)
-        ('Market cap', formatCompactPrice(q.marketCap!, q.currency), null),
+        (tr('widget.markets.marketCap', 'Market cap'), formatCompactPrice(q.marketCap!, q.currency), null),
       if (q.yearLow != null && q.yearHigh != null)
-        ('52-week range', range(q.yearLow, q.yearHigh), null),
+        (tr('widget.markets.52WeekRange', '52-week range'), range(q.yearLow, q.yearHigh), null),
       if (q.volume != null)
         (
-          coins ? 'Volume (24h)' : 'Volume',
+          coins ? tr('widget.markets.volume24h', 'Volume (24h)') : tr('widget.markets.volume', 'Volume'),
           coins
               ? formatCompactPrice(q.volume!, q.currency)
               : formatCompact(q.volume!),
           null,
         ),
-      if (q.allTimeHigh != null) ('All-time high', money(q.allTimeHigh!), null),
+      if (q.allTimeHigh != null) (tr('widget.markets.allTimeHigh', 'All-time high'), money(q.allTimeHigh!), null),
     ];
   }
 }
@@ -1081,7 +1090,7 @@ class _Chart extends CustomPainter {
       }
       final note = TextPainter(
         text: TextSpan(
-          text: 'Bought',
+          text: tr('widget.markets.bought', 'Bought'),
           style: TextStyle(
             color: c,
             fontSize: 10 * scale,
@@ -1195,7 +1204,7 @@ class StocksWidget extends StatelessWidget {
     return _MarketsTile(
       w: w,
       picks: picks,
-      empty: 'Add the shares or indices to follow in this widget’s settings.',
+      empty: tr('widget.markets.addTheSharesOrIndices', 'Add the shares or indices to follow in this widget’s settings.'),
       span: switch (range) {
         '5d' => 'week',
         '1mo' => 'month',
@@ -1340,7 +1349,7 @@ class CryptoWidget extends StatelessWidget {
     return _MarketsTile(
       w: w,
       picks: picks,
-      empty: 'Add the coins to follow in this widget’s settings.',
+      empty: tr('widget.markets.addTheCoinsToFollow', 'Add the coins to follow in this widget’s settings.'),
       span: switch (period) {
         '7d' => 'week',
         '30d' => 'month',

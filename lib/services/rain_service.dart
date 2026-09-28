@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import 'config_service.dart';
 import '../time_format.dart';
+import '../l10n/l10n.dart';
 
 /// A quarter of an hour of rain forecast.
 @immutable
@@ -28,10 +29,10 @@ class RainSlot {
 /// "Light", "moderate", "heavy" for a rate in millimetres an hour, on the
 /// Met Office's scale.
 String rainWord(double mmPerHour) {
-  if (mmPerHour < 0.5) return 'drizzle';
-  if (mmPerHour < 2.5) return 'light';
-  if (mmPerHour < 7.6) return 'moderate';
-  return 'heavy';
+  if (mmPerHour < 0.5) return tr('widget.rain.drizzle', 'drizzle');
+  if (mmPerHour < 2.5) return tr('widget.rain.light', 'light');
+  if (mmPerHour < 7.6) return tr('widget.rain.moderate', 'moderate');
+  return tr('widget.rain.heavy', 'heavy');
 }
 
 /// What the next couple of hours hold, as one sentence and a few words:
@@ -44,36 +45,40 @@ String rainWord(double mmPerHour) {
   final ahead = slots
       .where((s) => s.from.add(const Duration(minutes: 15)).isAfter(now))
       .toList();
-  if (ahead.isEmpty) return (headline: 'No forecast', detail: '', wet: false);
+  if (ahead.isEmpty) return (headline: tr('widget.rain.noForecast', 'No forecast'), detail: '', wet: false);
   final hours = ahead.length / 4;
   final span = hours == hours.roundToDouble()
-      ? '${hours.round()} hour${hours == 1 ? '' : 's'}'
-      : '${(hours * 60).round()} minutes';
+      ? tr('common.hours', '{n, plural, one{# hour} other{# hours}}', {
+          'n': hours.round(),
+        })
+      : tr('common.minutes', '{n, plural, one{# minute} other{# minutes}}', {
+          'n': (hours * 60).round(),
+        });
   final peak = ahead.map((s) => s.rate).reduce((a, b) => a > b ? a : b);
 
   if (ahead.first.wet) {
     final stop = ahead.indexWhere((s) => !s.wet);
     return (
-      headline: 'Raining now',
+      headline: tr('widget.rain.rainingNow', 'Raining now'),
       detail: stop < 0
-          ? '${rainWord(peak)} · for the next $span'
-          : '${rainWord(peak)} · stops about ${hhmm(ahead[stop].from)}',
+          ? tr('widget.rain.forTheNext', '{peak} · for the next {span}', {'peak': rainWord(peak), 'span': span})
+          : tr('widget.rain.stopsAbout', '{peak} · stops about {from}', {'peak': rainWord(peak), 'from': hhmm(ahead[stop].from)}),
       wet: true,
     );
   }
   final start = ahead.indexWhere((s) => s.wet);
   if (start < 0) {
-    return (headline: 'Dry for the next $span', detail: '', wet: false);
+    return (headline: tr('widget.rain.dryForTheNext', 'Dry for the next {span}', {'span': span}), detail: '', wet: false);
   }
   final rest = ahead.sublist(start);
   final end = rest.indexWhere((s) => !s.wet);
   final shower = end < 0 ? rest : rest.sublist(0, end);
   final showerPeak = shower.map((s) => s.rate).reduce((a, b) => a > b ? a : b);
   return (
-    headline: 'Rain from ${hhmm(ahead[start].from)}',
+    headline: tr('widget.rain.rainFrom', 'Rain from {from}', {'from': hhmm(ahead[start].from)}),
     detail: end < 0
         ? rainWord(showerPeak)
-        : '${rainWord(showerPeak)} · until about ${hhmm(rest[end].from)}',
+        : tr('widget.rain.untilAbout', '{showerPeak} · until about {from}', {'showerPeak': rainWord(showerPeak), 'from': hhmm(rest[end].from)}),
     wet: true,
   );
 }
@@ -107,7 +112,7 @@ class RainService extends ChangeNotifier {
   Future<void> refresh() async {
     final w = _config.config.weather;
     if (w.latitude == null || w.longitude == null) {
-      _error = 'Waiting for the weather location';
+      _error = tr('widget.rain.waitingForTheWeatherLocation', 'Waiting for the weather location');
       notifyListeners();
       return;
     }
@@ -125,7 +130,7 @@ class RainService extends ChangeNotifier {
       _slots = parse((r.data as Map).cast<String, dynamic>());
       _error = null;
     } catch (e) {
-      _error = 'Could not reach the rain forecast';
+      _error = tr('widget.rain.couldNotReachTheRain', 'Could not reach the rain forecast');
       debugPrint('Rain: $e');
     }
     notifyListeners();

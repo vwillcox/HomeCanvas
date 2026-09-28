@@ -10,6 +10,7 @@ import '../../services/retry_schedule.dart';
 import '../../widgets/remote_image.dart';
 import '../widget_registry.dart';
 import '../../widgets/pause_when_hidden.dart';
+import '../../l10n/l10n.dart';
 
 /// Photos from Immich, either at random from the whole library or from one
 /// album.
@@ -168,7 +169,7 @@ class _DashboardImmichWidgetState extends State<DashboardImmichWidget>
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Waiting for Immich…',
+              tr('widget.immich.waitingForImmich', 'Waiting for Immich…'),
               textAlign: TextAlign.center,
               style: TextStyle(color: t.textSecondary, fontSize: 15),
             ),
@@ -176,7 +177,7 @@ class _DashboardImmichWidgetState extends State<DashboardImmichWidget>
             // Says it is still trying rather than presenting a dead end. At
                 // boot this is usually a network that is seconds away.
             Text(
-              _retry.failures > 3 ? 'still trying' : 'connecting',
+              _retry.failures > 3 ? tr('widget.immich.stillTrying', 'still trying') : 'connecting',
               style: TextStyle(color: t.textSecondary, fontSize: 12),
             ),
           ],
@@ -188,8 +189,8 @@ class _DashboardImmichWidgetState extends State<DashboardImmichWidget>
       return Center(
         child: Text(
           _source == 'album' && _albumId.isEmpty
-              ? 'Pick an album in the widget settings'
-              : 'No photos to show',
+              ? tr('widget.immich.pickAnAlbumInThe', 'Pick an album in the widget settings')
+              : tr('widget.immich.noPhotosToShow', 'No photos to show'),
           textAlign: TextAlign.center,
           style: TextStyle(color: t.textSecondary, fontSize: 14),
         ),

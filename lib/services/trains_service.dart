@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import '../l10n/l10n.dart';
 
 /// One departure from the station, as a station board shows it.
 @immutable
@@ -155,8 +156,11 @@ class TrainsClient {
     int windowMinutes = 120,
   }) async {
     if (token.trim().isEmpty) {
-      throw const TrainsError(
-        'Add your Realtime Trains token in the widget settings',
+      throw TrainsError(
+        tr(
+          'widget.trains.addYourRealtimeTrainsToken',
+          'Add your Realtime Trains token in the widget settings',
+        ),
       );
     }
     final params = {
@@ -191,7 +195,7 @@ class TrainsClient {
     );
     final data = r.data;
     if (data is! Map) {
-      throw const TrainsError('Unexpected answer from Realtime Trains');
+      throw TrainsError(tr('widget.trains.unexpectedAnswerFromRealtimeTrains', 'Unexpected answer from Realtime Trains'));
     }
     return parseBoard(data.cast<String, dynamic>());
   }
@@ -208,14 +212,14 @@ class TrainsClient {
           DateTime.tryParse('${data['validUntil'] ?? ''}') ??
           DateTime.now().add(const Duration(minutes: 30));
       if (token.isEmpty) {
-        throw const TrainsError('Realtime Trains gave no access token');
+        throw TrainsError(tr('widget.trains.realtimeTrainsGaveNoAccess', 'Realtime Trains gave no access token'));
       }
       _access[refresh] = (token: token, until: until);
       return token;
     } on DioException catch (e) {
       final code = e.response?.statusCode;
       if (code == 401 || code == 403) {
-        throw const TrainsError('Realtime Trains did not accept the token');
+        throw TrainsError(tr('widget.trains.realtimeTrainsDidNotAccept', 'Realtime Trains did not accept the token'));
       }
       throw _explain(e);
     }
@@ -224,17 +228,23 @@ class TrainsClient {
   TrainsError _explain(DioException e) {
     switch (e.response?.statusCode) {
       case 401 || 403:
-        return const TrainsError('Realtime Trains did not accept the token');
+        return TrainsError(tr('widget.trains.realtimeTrainsDidNotAccept', 'Realtime Trains did not accept the token'));
       case 404 || 400:
-        return const TrainsError(
-          'Check the station codes — three letters, like MDE',
+        return TrainsError(
+          tr(
+            'widget.trains.checkTheStationCodesThree',
+            'Check the station codes — three letters, like MDE',
+          ),
         );
       case 429:
-        return const TrainsError(
-          'Asked Realtime Trains too often; trying again shortly',
+        return TrainsError(
+          tr(
+            'widget.trains.askedRealtimeTrainsTooOften',
+            'Asked Realtime Trains too often; trying again shortly',
+          ),
         );
     }
-    return const TrainsError('Could not reach Realtime Trains');
+    return TrainsError(tr('widget.trains.couldNotReachRealtimeTrains', 'Could not reach Realtime Trains'));
   }
 
   @visibleForTesting

@@ -111,7 +111,7 @@ class DashboardService extends ChangeNotifier {
   ///
   /// Its mDNS name (homecanvas.local) when Avahi is announcing one — that
   /// survives the router handing out a new lease — otherwise the IP address.
-  String _host = 'this device';
+  String _host = tr('settings.thisDevice', 'this device');
   String? _ip;
   String get editorAddress => 'http://$_host$_portSuffix';
 
@@ -235,15 +235,17 @@ class DashboardService extends ChangeNotifier {
     const setup = 'bash scripts/setup-port-80.sh';
     final code = error is SocketException ? error.osError?.errorCode : null;
     if (code == 13) {
-      return 'Not on port $port yet: the Pi needs setting up for it. '
-          'Run $setup on the Pi.';
+      return tr('settings.notOnPortYetThe', 'Not on port {port} yet: the Pi needs setting up for it. Run {setup} on the Pi.', {'port': port, 'setup': setup});
     }
     if (code == 98 && await _hueBridgeOn(port)) {
-      return "Port $port is Home Assistant's Alexa bridge. Run $setup on "
-          'the Pi to share it — Alexa keeps working.';
+      return tr(
+        'settings.portIsAlexaBridge',
+        'Port {port} is Home Assistant’s Alexa bridge. Run {setup} on the Pi '
+            'to share it — Alexa keeps working.',
+        {'port': port, 'setup': setup},
+      );
     }
-    return 'Port $port is in use by something else, so the editor has its '
-        'own port.';
+    return tr('settings.portIsInUseBy', 'Port {port} is in use by something else, so the editor has its own port.', {'port': port});
   }
 
   /// Whether a Hue bridge answers on [port] — at this machine's address,
@@ -301,7 +303,7 @@ class DashboardService extends ChangeNotifier {
     } catch (e) {
       debugPrint('Dashboard: could not resolve local address: $e');
     }
-    return 'this device';
+    return tr('settings.thisDevice', 'this device');
   }
 
   Future<void> _handle(HttpRequest request) async {
@@ -465,6 +467,14 @@ class DashboardService extends ChangeNotifier {
       // The notes board: a page for posting from any phone in the house,
       // and its API. Local network only, like the senders page — a note
       // goes straight onto the wall.
+      // The web pages' shared translation code.
+      if (path == '/i18n.js' && request.method == 'GET') {
+        return await _serveAsset(
+          request,
+          'assets/dashboard/i18n.js',
+          ContentType('text', 'javascript', charset: 'utf-8'),
+        );
+      }
       if (path == '/notes' || path == '/notes/') {
         if (!_requireLocal(request)) return;
         return await _serveAsset(

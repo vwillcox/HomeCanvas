@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../widgets/big_back_button.dart';
 import 'gallery_screen.dart' show ZoomablePhoto;
+import '../l10n/l10n.dart';
 
 /// Full-screen viewer for a shared image or GIF, reusing the same pinch/zoom
 /// widget the photo gallery already uses — it only needs an [ImageProvider],
@@ -35,7 +36,7 @@ class SharedImageScreen extends StatelessWidget {
             top: 36,
             left: 96,
             child: Text(
-              'From $sender',
+              tr('share.from', 'From {sender}', {'sender': sender}),
               style: const TextStyle(color: Colors.white70, fontSize: 18),
             ),
           ),

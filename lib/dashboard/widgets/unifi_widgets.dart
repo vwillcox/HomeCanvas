@@ -9,6 +9,7 @@ import '../../services/unifi_service.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
+import '../../l10n/l10n.dart';
 
 /// Five views onto a UniFi console, sharing one service and one poll.
 ///
@@ -28,12 +29,12 @@ class _Waiting extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = service.settings;
     final message = !s.enabled
-        ? 'UniFi is switched off in Settings'
+        ? tr('widget.unifi.unifiIsSwitchedOffIn', 'UniFi is switched off in Settings')
         : s.apiKey.isEmpty
-        ? 'No API key set'
+        ? tr('widget.unifi.noApiKeySet', 'No API key set')
         : service.error != null
-        ? 'Waiting for the console…'
-        : 'Reading the network…';
+        ? tr('widget.unifi.waitingForTheConsole', 'Waiting for the console…')
+        : tr('widget.unifi.readingTheNetwork', 'Reading the network…');
     return Center(
       child: Text(
         message,
@@ -136,17 +137,17 @@ class UnifiHealthWidget extends StatelessWidget {
     final wanUp = stats.txRateBps != null || stats.rxRateBps != null;
     final good = wanUp && offline.isEmpty;
     final statusText = good
-        ? 'Network healthy'
-        : (!wanUp ? 'WAN down' : '${offline.length} device(s) offline');
+        ? tr('widget.unifi.networkHealthy', 'Network healthy')
+        : (!wanUp ? tr('widget.unifi.wanDown', 'WAN down') : tr('widget.unifi.deviceSOffline', '{offline} device(s) offline', {'offline': offline.length}));
     final statusColour = good ? const Color(0xFF4ADE80) : Colors.orangeAccent;
 
     String pct(double? v) => v == null ? '—' : '${v.toStringAsFixed(0)}%';
-    final down = ('Down', formatBps(stats.rxRateBps), t.accent);
-    final up = ('Up', formatBps(stats.txRateBps), null);
+    final down = (tr('widget.unifi.down', 'Down'), formatBps(stats.rxRateBps), t.accent);
+    final up = (tr('widget.unifi.up', 'Up'), formatBps(stats.txRateBps), null);
     final small = [
-      ('Clients', '${unifi.clients.length}', null),
-      ('CPU', pct(stats.cpuPct), null),
-      ('Memory', pct(stats.memoryPct), null),
+      (tr('widget.unifi.clients', 'Clients'), '${unifi.clients.length}', null),
+      (tr('widget.unifi.cpu', 'CPU'), pct(stats.cpuPct), null),
+      (tr('widget.unifi.memory', 'Memory'), pct(stats.memoryPct), null),
     ];
 
     return FitCanvas(
@@ -173,7 +174,11 @@ class UnifiHealthWidget extends StatelessWidget {
         Widget updatesLine(double _) => LayoutBuilder(
           builder: (context, c) => _Fit(
             Text(
-              '${updates.length} firmware update(s) available',
+              tr(
+                'widget.unifi.firmwareUpdateSAvailable',
+                '{updates} firmware update(s) available',
+                {'updates': updates.length},
+              ),
               style: TextStyle(
                 color: t.textSecondary,
                 fontSize: c.maxHeight * 0.7,
@@ -461,7 +466,7 @@ class UnifiPresenceWidget extends StatelessWidget {
     if (list.isEmpty) {
       return Center(
         child: Text(
-          watch.isEmpty ? 'Nobody connected' : 'None of those are here',
+          watch.isEmpty ? tr('widget.unifi.nobodyConnected', 'Nobody connected') : tr('widget.unifi.noneOfThoseAreHere', 'None of those are here'),
           style: TextStyle(color: t.textSecondary, fontSize: 14),
         ),
       );
@@ -581,7 +586,7 @@ class UnifiDevicesWidget extends StatelessWidget {
     if (devices.isEmpty) {
       return Center(
         child: Text(
-          'No devices',
+          tr('widget.unifi.noDevices', 'No devices'),
           style: TextStyle(color: t.textSecondary, fontSize: 16),
         ),
       );
@@ -823,7 +828,7 @@ class UnifiThroughputWidget extends StatelessWidget {
                 Expanded(
                   child: _Stat(
                     theme: t,
-                    label: 'Down',
+                    label: tr('widget.unifi.down', 'Down'),
                     value: formatBps(latest?.rx),
                     colour: t.accent,
                   ),
@@ -831,7 +836,7 @@ class UnifiThroughputWidget extends StatelessWidget {
                 Expanded(
                   child: _Stat(
                     theme: t,
-                    label: 'Up',
+                    label: tr('widget.unifi.up', 'Up'),
                     value: formatBps(latest?.tx),
                     colour: up,
                   ),
@@ -851,7 +856,7 @@ class UnifiThroughputWidget extends StatelessWidget {
                   if (points.length < 2) {
                     return Center(
                       child: Text(
-                        'Collecting…',
+                        tr('widget.unifi.collecting', 'Collecting…'),
                         style: TextStyle(color: t.textSecondary, fontSize: 13),
                       ),
                     );
@@ -876,7 +881,7 @@ class UnifiThroughputWidget extends StatelessWidget {
                   // panel up ten minutes cannot show a day, and saying so
                   // beats a graph that looks mysteriously short.
                   h.span < window
-                      ? '${_label(window)} · ${formatUptime(h.span)} so far'
+                      ? tr('widget.unifi.soFar', '{window} · {span} so far', {'window': _label(window), 'span': formatUptime(h.span)})
                       : _label(window),
                   style: TextStyle(color: t.textSecondary, fontSize: 11),
                 ),
@@ -905,7 +910,7 @@ class UnifiThroughputWidget extends StatelessWidget {
   };
 
   static String _label(Duration d) =>
-      d.inHours >= 1 ? 'last ${d.inHours}h' : 'last ${d.inMinutes}m';
+      d.inHours >= 1 ? tr('widget.unifi.lastH', 'last {inHours}h', {'inHours': d.inHours}) : tr('widget.unifi.lastM', 'last {inMinutes}m', {'inMinutes': d.inMinutes});
 
   static Color _uploadColour(DashboardTheme t) {
     final hsl = HSLColor.fromColor(t.accent);
@@ -985,8 +990,11 @@ class _ThroughputPainter extends CustomPainter {
 // Registration
 // ---------------------------------------------------------------------------
 
-const _needsKey =
-    'Needs a UniFi API key — Network → Settings → Control Plane → Integrations.';
+final _needsKey =
+    tr(
+      'widget.unifi.needsAUnifiApiKey',
+      'Needs a UniFi API key — Network → Settings → Control Plane → Integrations.',
+    );
 
 final unifiHealthWidgetType = DashboardWidgetType(
   type: 'unifi_health',
@@ -1163,8 +1171,8 @@ class UnifiIspWidget extends StatelessWidget {
       return Center(
         child: Text(
           unifi.hasContent
-              ? 'The router has not run a speed test yet'
-              : 'Reading the network…',
+              ? tr('widget.unifi.theRouterHasNotRun', 'The router has not run a speed test yet')
+              : tr('widget.unifi.readingTheNetwork', 'Reading the network…'),
           textAlign: TextAlign.center,
           style: TextStyle(color: t.textSecondary, fontSize: 14),
         ),
@@ -1186,7 +1194,7 @@ class UnifiIspWidget extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'ISP speed test',
+                tr('widget.unifi.ispSpeedTest', 'ISP speed test'),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -1204,20 +1212,20 @@ class UnifiIspWidget extends StatelessWidget {
             Expanded(
               child: _Stat(
                 theme: t,
-                label: 'Down',
+                label: tr('widget.unifi.down', 'Down'),
                 value: isp.downMbps == null
                     ? '—'
-                    : '${isp.downMbps!.toStringAsFixed(0)} Mb/s',
+                    : tr('widget.unifi.mbS2', '{downMbps} Mb/s', {'downMbps': isp.downMbps!.toStringAsFixed(0)}),
                 colour: t.accent,
               ),
             ),
             Expanded(
               child: _Stat(
                 theme: t,
-                label: 'Up',
+                label: tr('widget.unifi.up', 'Up'),
                 value: isp.upMbps == null
                     ? '—'
-                    : '${isp.upMbps!.toStringAsFixed(0)} Mb/s',
+                    : tr('widget.unifi.mbS', '{upMbps} Mb/s', {'upMbps': isp.upMbps!.toStringAsFixed(0)}),
               ),
             ),
           ],
@@ -1228,7 +1236,7 @@ class UnifiIspWidget extends StatelessWidget {
             Expanded(
               child: _Stat(
                 theme: t,
-                label: 'Ping',
+                label: tr('widget.unifi.ping', 'Ping'),
                 value: isp.pingMs == null
                     ? '—'
                     : '${isp.pingMs!.toStringAsFixed(0)} ms',
@@ -1238,7 +1246,7 @@ class UnifiIspWidget extends StatelessWidget {
             Expanded(
               child: _Stat(
                 theme: t,
-                label: 'Tested',
+                label: tr('widget.unifi.tested', 'Tested'),
                 // Age rather than a timestamp: "3h ago" answers the question
                 // "is this still true", which a clock time does not.
                 value: age == null ? '—' : '${formatUptime(age)} ago',

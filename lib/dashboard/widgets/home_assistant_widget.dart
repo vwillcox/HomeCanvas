@@ -11,6 +11,7 @@ import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
+import '../../l10n/l10n.dart';
 
 /// Home Assistant entities you pick — temperatures, who is home, what is
 /// playing, switches — each as a small card. Switches and lights change with
@@ -59,19 +60,24 @@ class _HomeAssistantWidgetState extends State<HomeAssistantWidget>
     final picked = _picked;
     if (!ha.configured) {
       return TileMessage(
-        'Connect Home Assistant in Settings first — its address and a '
-        'long-lived access token.',
+        tr(
+          'widget.home_assistant.connectHomeAssistantInSettings',
+          'Connect Home Assistant in Settings first — its address and a long-lived access token.',
+        ),
         theme: t,
       );
     }
     if (picked.isEmpty) {
       return TileMessage(
-        'Pick entities to show in the widget settings.',
+        tr(
+          'widget.home_assistant.pickEntitiesToShowIn',
+          'Pick entities to show in the widget settings.',
+        ),
         theme: t,
       );
     }
     if (ha.all.isEmpty) {
-      return TileMessage(ha.error ?? 'Asking Home Assistant…', theme: t);
+      return TileMessage(ha.error ?? tr('widget.home_assistant.askingHomeAssistant', 'Asking Home Assistant…'), theme: t);
     }
 
     return LayoutBuilder(
@@ -180,7 +186,7 @@ class _Card extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      e == null ? 'Not found' : e.display,
+                      e == null ? tr('widget.home_assistant.notFound', 'Not found') : e.display,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(

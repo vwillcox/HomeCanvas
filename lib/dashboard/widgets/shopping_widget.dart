@@ -6,6 +6,7 @@ import '../../services/shopping_service.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'tile_bits.dart';
+import '../../l10n/l10n.dart';
 
 /// The household shopping list. Tap an item to tick it off; add to it from
 /// any phone at the editor's address followed by /list.
@@ -22,7 +23,11 @@ class ShoppingWidget extends StatelessWidget {
     if (items.isEmpty) {
       final address = context.read<DashboardService>().editorAddress;
       return TileMessage(
-        'Nothing to get. Add things from your phone at $address/list',
+        tr(
+          'widget.shopping.nothingToGetAddThings',
+          'Nothing to get. Add things from your phone at {address}/list',
+          {'address': address},
+        ),
         theme: t,
       );
     }
@@ -43,11 +48,11 @@ class ShoppingWidget extends StatelessWidget {
               height: labelH,
               child: TileLabel(
                 icon: Icons.shopping_basket_outlined,
-                text: 'Shopping',
+                text: tr('widget.shopping.shopping', 'Shopping'),
                 theme: t,
                 size: labelH * 0.6,
                 trailing: StatusChip(
-                  text: list.toGet == 0 ? 'All got' : '${list.toGet} to get',
+                  text: list.toGet == 0 ? tr('widget.shopping.allGot', 'All got') : tr('widget.shopping.toGet', '{toGet} to get', {'toGet': list.toGet}),
                   colour: list.toGet == 0 ? status.good : t.accent,
                   size: labelH * 0.5,
                 ),

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import '../l10n/l10n.dart';
 
 /// What a site's certificate says about itself.
 @immutable
@@ -60,7 +61,7 @@ class CertChecker {
       );
       final cert = socket.peerCertificate;
       socket.destroy();
-      if (cert == null) return CertInfo(host: t, error: 'No certificate');
+      if (cert == null) return CertInfo(host: t, error: tr('widget.certs.noCertificate', 'No certificate'));
       return CertInfo(
         host: t,
         expires: cert.endValidity,
@@ -68,13 +69,13 @@ class CertChecker {
         trusted: trusted,
       );
     } on SocketException {
-      return CertInfo(host: t, error: 'Not answering');
+      return CertInfo(host: t, error: tr('widget.certs.notAnswering', 'Not answering'));
     } on HandshakeException {
-      return CertInfo(host: t, error: 'No HTTPS');
+      return CertInfo(host: t, error: tr('widget.certs.noHttps', 'No HTTPS'));
     } on TimeoutException {
-      return CertInfo(host: t, error: 'Not answering');
+      return CertInfo(host: t, error: tr('widget.certs.notAnswering', 'Not answering'));
     } catch (_) {
-      return CertInfo(host: t, error: 'Could not check');
+      return CertInfo(host: t, error: tr('widget.certs.couldNotCheck', 'Could not check'));
     }
   }
 

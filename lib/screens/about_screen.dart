@@ -3,6 +3,7 @@ import '../look.dart';
 
 import '../config/credits.dart';
 import '../widgets/glass.dart';
+import '../l10n/l10n.dart';
 
 /// Version shown on the About screen. Keep in step with pubspec.yaml.
 const String kAppVersion = '1.0.0';
@@ -18,42 +19,53 @@ class AboutScreen extends StatelessWidget {
     return ModernScaffold(
       header: ScreenHeader(
         onBack: () => Navigator.of(context).maybePop(),
-        title: 'About',
-        subtitle: 'Version, libraries, licences and credits',
+        title: tr('about.about', 'About'),
+        subtitle: tr('about.versionLibrariesLicencesAndCredits', 'Version, libraries, licences and credits'),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(40, 8, 40, 40),
         children: [
           const _Header(),
 
-          _SectionTitle('Dart packages', accent),
+          _SectionTitle(tr('about.dartPackages', 'Dart packages'), accent),
           Text(
-            'Open-source packages this app depends on directly.',
+            tr(
+              'about.openSourcePackagesThisApp',
+              'Open-source packages this app depends on directly.',
+            ),
             style: TextStyle(color: context.look.textSecondary, fontSize: 16),
           ),
           const SizedBox(height: 8),
           ...kDartPackages.map((c) => _CreditTile(credit: c)),
 
-          _SectionTitle('System libraries', accent),
+          _SectionTitle(tr('about.systemLibraries', 'System libraries'), accent),
           Text(
-            'Provided by the operating system.',
+            tr(
+              'about.providedByTheOperatingSystem',
+              'Provided by the operating system.',
+            ),
             style: TextStyle(color: context.look.textSecondary, fontSize: 16),
           ),
           const SizedBox(height: 8),
           ...kSystemLibraries.map((c) => _CreditTile(credit: c)),
 
-          _SectionTitle('Services', accent),
+          _SectionTitle(tr('about.services', 'Services'), accent),
           Text(
-            'Network services this app talks to.',
+            tr(
+              'about.networkServicesThisAppTalks',
+              'Network services this app talks to.',
+            ),
             style: TextStyle(color: context.look.textSecondary, fontSize: 16),
           ),
           const SizedBox(height: 8),
           ...kServices.map((c) => _CreditTile(credit: c)),
 
-          _SectionTitle('Credits and sources', accent),
+          _SectionTitle(tr('about.creditsAndSources', 'Credits and sources'), accent),
           Text(
-            'Almost all of the code here was written for this project. These '
-            'parts came from, or were adapted from, elsewhere.',
+            tr(
+              'about.almostAllOfTheCode',
+              'Almost all of the code here was written for this project. These parts came from, or were adapted from, elsewhere.',
+            ),
             style: TextStyle(color: context.look.textSecondary, fontSize: 16),
           ),
           const SizedBox(height: 8),
@@ -94,7 +106,11 @@ class _Header extends StatelessWidget {
                     style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
                   ),
                   Text(
-                    'Version $kAppVersion',
+                    tr(
+                      'about.version',
+                      'Version {kAppVersion}',
+                      {'kAppVersion': kAppVersion},
+                    ),
                     style: TextStyle(color: context.look.textSecondary, fontSize: 17),
                   ),
                 ],
@@ -103,8 +119,10 @@ class _Header extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            'A touchscreen photo frame and media browser for a self-hosted '
-            'Immich server, built for a Raspberry Pi with a DSI touch display.',
+            tr(
+              'about.aTouchscreenPhotoFrameAnd',
+              'A touchscreen photo frame and media browser for a self-hosted Immich server, built for a Raspberry Pi with a DSI touch display.',
+            ),
             style: TextStyle(fontSize: 17, color: context.look.textSecondary, height: 1.35),
           ),
           const SizedBox(height: 10),
@@ -265,14 +283,15 @@ class _Licence extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Licence',
+            tr('about.licence', 'Licence'),
             style: TextStyle(fontSize: 19, fontWeight: FontWeight.w600),
           ),
           SizedBox(height: 6),
           Text(
-            'HomeCanvas is released under the MIT Licence. It talks only to '
-            'your own Immich server and to Open-Meteo for the weather — there '
-            'is no analytics and no third-party tracking.',
+            tr(
+              'about.homecanvasIsReleasedUnderThe',
+              'HomeCanvas is released under the MIT Licence. It talks only to your own Immich server and to Open-Meteo for the weather — there is no analytics and no third-party tracking.',
+            ),
             style: TextStyle(fontSize: 16, color: context.look.textSecondary, height: 1.35),
           ),
         ],

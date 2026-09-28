@@ -11,6 +11,7 @@ import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
 import '../../l10n/dates.dart';
+import '../../l10n/l10n.dart';
 
 /// Which bins go out next, and when. From the evening before it says to put
 /// them out; a tap says they are out, and it quietens down.
@@ -33,8 +34,10 @@ class _BinsWidgetState extends State<BinsWidget>
     final bins = BinsService.binsOf(w.config);
     if (bins.isEmpty) {
       return TileMessage(
-        'Add your bins in the widget settings: a name, a colour, the date of '
-        'one collection and how often they go.',
+        tr(
+          'widget.bins.addYourBinsInThe',
+          'Add your bins in the widget settings: a name, a colour, the date of one collection and how often they go.',
+        ),
         theme: t,
       );
     }
@@ -52,25 +55,25 @@ class _BinsWidgetState extends State<BinsWidget>
     final (String headline, Widget chip) = switch (next.stage) {
       _ when out => (
         next.stage == BinStage.today
-            ? 'Collection today'
-            : 'Put out for tomorrow',
-        StatusChip(text: 'Out ✓', colour: status.good, size: 11),
+            ? tr('widget.bins.collectionToday', 'Collection today')
+            : tr('widget.bins.putOutForTomorrow', 'Put out for tomorrow'),
+        StatusChip(text: tr('widget.bins.out', 'Out ✓'), colour: status.good, size: 11),
       ),
       BinStage.today => (
-        'Collection today',
-        StatusChip(text: 'Today', colour: t.accent, size: 11),
+        tr('widget.bins.collectionToday', 'Collection today'),
+        StatusChip(text: tr('widget.bins.today', 'Today'), colour: t.accent, size: 11),
       ),
       BinStage.tonight => (
-        'Put out tonight',
-        StatusChip(text: 'Tonight', colour: status.warn, size: 11),
+        tr('widget.bins.putOutTonight', 'Put out tonight'),
+        StatusChip(text: tr('widget.bins.tonight', 'Tonight'), colour: status.warn, size: 11),
       ),
       BinStage.later => (
         gap == 1
-            ? 'Tomorrow'
+            ? tr('widget.bins.tomorrow', 'Tomorrow')
             : gap < 7
             ? weekdayName(next.day)
             : weekdayDayMonth(next.day),
-        StatusChip(text: 'in $gap days', colour: t.textSecondary, size: 11),
+        StatusChip(text: tr('widget.bins.inDays', 'in {gap} days', {'gap': gap}), colour: t.textSecondary, size: 11),
       ),
     };
 
@@ -88,7 +91,7 @@ class _BinsWidgetState extends State<BinsWidget>
           children: [
             TileLabel(
               icon: Icons.delete_outline_rounded,
-              text: 'Bins',
+              text: tr('widget.bins.bins', 'Bins'),
               theme: t,
               size: 11,
               trailing: chip,

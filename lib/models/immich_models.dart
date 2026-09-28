@@ -1,6 +1,9 @@
 /// Data models for the subset of the Immich API this app uses.
 library;
 
+import '../l10n/l10n.dart';
+
+
 class Album {
   final String id;
   final String name;
@@ -21,7 +24,7 @@ class Album {
       id: j['id'] as String,
       name: (j['albumName'] as String?)?.trim().isNotEmpty == true
           ? j['albumName'] as String
-          : 'Untitled Album',
+          : tr('home.untitledAlbum', 'Untitled Album'),
       assetCount: (j['assetCount'] as num?)?.toInt() ?? 0,
       thumbnailAssetId: j['albumThumbnailAssetId'] as String?,
       updatedAt: DateTime.tryParse(j['updatedAt']?.toString() ?? ''),

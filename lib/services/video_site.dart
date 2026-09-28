@@ -11,6 +11,7 @@ import 'kiosk_browser.dart';
 import 'retry_schedule.dart';
 import 'video_link.dart';
 import 'yt_dlp.dart';
+import '../l10n/l10n.dart';
 
 /// One video in a site's feed of the latest from the account.
 @immutable
@@ -166,9 +167,7 @@ abstract class VideoSite extends ChangeNotifier {
     if (accepted == null) storedSignedIn = true;
     await _accountChanged();
     if (accepted == false) {
-      return '$name did not accept those cookies — they may have been '
-          'signed out. Sign in again in a private window and export from '
-          'there.';
+      return tr('video.didNotAcceptThoseCookies', '{name} did not accept those cookies — they may have been signed out. Sign in again in a private window and export from there.', {'name': name});
     }
     return null;
   }
@@ -284,7 +283,7 @@ abstract class VideoSite extends ChangeNotifier {
     } on VideoException catch (e) {
       error = e.message;
     } catch (e) {
-      error = 'Could not reach $name.';
+      error = tr('video.couldNotReach', 'Could not reach {name}.', {'name': name});
       debugPrint('$name: feed: $e');
     } finally {
       final wait = _retry.next(hasContent: _videos != null);

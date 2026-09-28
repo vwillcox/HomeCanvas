@@ -3,6 +3,7 @@ import '../look.dart';
 
 import '../widgets/numeric_keypad.dart';
 import '../widgets/glass.dart';
+import '../l10n/l10n.dart';
 
 /// Numeric PIN entry. Returns the entered PIN string via [onSubmit]-style
 /// Navigator.pop(pin), or pop(null) on cancel. Use [title]/[subtitle] to
@@ -46,7 +47,7 @@ class _PinScreenState extends State<PinScreen> {
 
   void _submit() {
     if (_pin.length < 4) {
-      setState(() => _error = 'PIN must be at least 4 digits');
+      setState(() => _error = tr('pin.pinMustBeAtLeast', 'PIN must be at least 4 digits'));
       return;
     }
     final err = widget.validator?.call(_pin);
@@ -66,7 +67,7 @@ class _PinScreenState extends State<PinScreen> {
       header: ScreenHeader(
         onBack: () => Navigator.of(context).pop(null),
         backIcon: Icons.close,
-        backTooltip: 'Cancel',
+        backTooltip: tr('pin.cancel', 'Cancel'),
         title: widget.title,
       ),
       body: Center(

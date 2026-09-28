@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../services/tv_service.dart';
 import '../../services/vidaa_client.dart' show TvSource;
 import '../dashboard_theme.dart';
+import '../../l10n/l10n.dart';
 
 /// Pops up the television's inputs to pick from.
 ///
@@ -25,7 +26,7 @@ Future<void> showTvInputs(
   return showGeneralDialog<void>(
     context: context,
     barrierDismissible: true,
-    barrierLabel: 'Close the inputs',
+    barrierLabel: tr('widget.tv.closeTheInputs', 'Close the inputs'),
     barrierColor: Colors.black.withValues(alpha: 0.45),
     transitionDuration: const Duration(milliseconds: 240),
     pageBuilder: (context, _, _) =>
@@ -136,7 +137,7 @@ class _TvInputsSheetState extends State<TvInputsSheet> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Switch input',
+                          tr('widget.tv.switchInput', 'Switch input'),
                           style: TextStyle(
                             color: t.textPrimary,
                             fontSize: 30,
@@ -151,7 +152,7 @@ class _TvInputsSheetState extends State<TvInputsSheet> {
                         _RoundButton(
                           theme: t,
                           icon: Icons.refresh,
-                          label: 'Refresh',
+                          label: tr('widget.tv.refresh', 'Refresh'),
                           onPressed: tv.refreshSources,
                         ),
                         const SizedBox(width: 12),
@@ -159,7 +160,7 @@ class _TvInputsSheetState extends State<TvInputsSheet> {
                       _RoundButton(
                         theme: t,
                         icon: Icons.close,
-                        label: 'Close',
+                        label: tr('widget.tv.close', 'Close'),
                         onPressed: _close,
                       ),
                     ],
@@ -309,7 +310,7 @@ class _InputTile extends StatelessWidget {
                           Expanded(
                             child: Text(
                               active
-                                  ? 'Showing now'
+                                  ? tr('widget.tv.showingNow', 'Showing now')
                                   : inputSubtitle(s),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -350,12 +351,10 @@ class _Empty extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = theme;
     final text = !connected
-        ? 'The remote is not connected to the television, so it cannot list '
-            'the inputs yet.'
+        ? tr('widget.tv.theRemoteIsNotConnected', 'The remote is not connected to the television, so it cannot list the inputs yet.')
         : asked
-            ? 'Asked — the list will appear here as soon as the television '
-                'answers.'
-            : 'The television has not listed its inputs yet.';
+            ? tr('widget.tv.askedTheListWillAppear', 'Asked — the list will appear here as soon as the television answers.')
+            : tr('widget.tv.theTelevisionHasNotListed', 'The television has not listed its inputs yet.');
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 24),
       child: Column(
@@ -370,7 +369,7 @@ class _Empty extends StatelessWidget {
             FilledButton.icon(
               onPressed: onAsk,
               icon: const Icon(Icons.refresh, size: 26),
-              label: const Text('Ask the television',
+              label: Text(tr('widget.tv.askTheTelevision', 'Ask the television'),
                   style: TextStyle(fontSize: 22)),
               style: FilledButton.styleFrom(
                 backgroundColor: t.accent,
@@ -382,8 +381,10 @@ class _Empty extends StatelessWidget {
             Text(
               // Said up front because it looks like a fault otherwise: the
               // set runs its pairing check whenever it is asked for inputs.
-              'It may flash a pairing code on screen while it answers — '
-              'nothing needs entering.',
+              tr(
+                'widget.tv.itMayFlashAPairing',
+                'It may flash a pairing code on screen while it answers — nothing needs entering.',
+              ),
               textAlign: TextAlign.center,
               style: TextStyle(
                   color: t.textSecondary.withValues(alpha: 0.8), fontSize: 17),
@@ -456,11 +457,11 @@ String inputSubtitle(TvSource s) {
   final device = s.deviceName.trim();
   switch (inputStatus(s)) {
     case InputStatus.live:
-      return device.isEmpty ? 'Signal' : device;
+      return device.isEmpty ? tr('widget.tv.signal', 'Signal') : device;
     case InputStatus.asleep:
-      return '$device · off';
+      return tr('widget.tv.off', '{device} · off', {'device': device});
     case InputStatus.empty:
-      return 'Nothing connected';
+      return tr('widget.tv.nothingConnected', 'Nothing connected');
   }
 }
 

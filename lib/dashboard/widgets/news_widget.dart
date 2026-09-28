@@ -12,6 +12,7 @@ import '../../services/video_link.dart';
 import '../../services/video_player_service.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
+import '../../l10n/l10n.dart';
 
 /// Headlines from an RSS or Atom feed.
 class DashboardNewsWidget extends StatelessWidget {
@@ -28,7 +29,10 @@ class DashboardNewsWidget extends StatelessWidget {
     if (urls.isEmpty) {
       return Center(
         child: Text(
-          'Add a feed address in this widget’s settings.',
+          tr(
+            'widget.news.addAFeedAddressIn',
+            'Add a feed address in this widget’s settings.',
+          ),
           textAlign: TextAlign.center,
           style: TextStyle(color: t.textSecondary, fontSize: 15),
         ),
@@ -175,7 +179,7 @@ class DashboardNewsWidget extends StatelessWidget {
       return Center(
         key: key,
         child: Text(
-          error ?? 'Fetching headlines…',
+          error ?? tr('widget.news.fetchingHeadlines', 'Fetching headlines…'),
           style: TextStyle(color: t.textSecondary, fontSize: 15),
         ),
       );
@@ -306,7 +310,7 @@ class DashboardNewsWidget extends StatelessWidget {
           width: 720,
           child: SingleChildScrollView(
             child: Text(
-              summary.isEmpty ? 'The feed gives no summary of this one.' : summary,
+              summary.isEmpty ? tr('widget.news.theFeedGivesNoSummary', 'The feed gives no summary of this one.') : summary,
               style: const TextStyle(fontSize: 18, height: 1.4),
             ),
           ),
@@ -329,7 +333,7 @@ class DashboardNewsWidget extends StatelessWidget {
                 );
               },
               icon: const Icon(Icons.record_voice_over_rounded, size: 26),
-              label: const Text('Read aloud', style: TextStyle(fontSize: 20)),
+              label: Text(tr('widget.news.readAloud', 'Read aloud'), style: TextStyle(fontSize: 20)),
               style: OutlinedButton.styleFrom(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 26, vertical: 18),
@@ -342,7 +346,7 @@ class DashboardNewsWidget extends StatelessWidget {
                 _openPage(context, item);
               },
               icon: const Icon(Icons.open_in_browser, size: 26),
-              label: const Text('Read the page',
+              label: Text(tr('widget.news.readThePage', 'Read the page'),
                   style: TextStyle(fontSize: 20)),
               style: FilledButton.styleFrom(
                 padding:
@@ -355,7 +359,7 @@ class DashboardNewsWidget extends StatelessWidget {
               padding:
                   const EdgeInsets.symmetric(horizontal: 26, vertical: 18),
             ),
-            child: const Text('Close', style: TextStyle(fontSize: 20)),
+            child: Text(tr('widget.news.close', 'Close'), style: TextStyle(fontSize: 20)),
           ),
         ],
       ),
@@ -427,10 +431,10 @@ class DashboardNewsWidget extends StatelessWidget {
 
   static String ago(DateTime when) {
     final d = DateTime.now().difference(when);
-    if (d.inMinutes < 1) return 'just now';
-    if (d.inMinutes < 60) return '${d.inMinutes}m ago';
-    if (d.inHours < 24) return '${d.inHours}h ago';
-    return '${d.inDays}d ago';
+    if (d.inMinutes < 1) return tr('widget.news.justNow', 'just now');
+    if (d.inMinutes < 60) return tr('widget.news.mAgo', '{inMinutes}m ago', {'inMinutes': d.inMinutes});
+    if (d.inHours < 24) return tr('widget.news.hAgo', '{inHours}h ago', {'inHours': d.inHours});
+    return tr('widget.news.dAgo', '{inDays}d ago', {'inDays': d.inDays});
   }
 }
 

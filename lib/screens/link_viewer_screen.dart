@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../services/kiosk_browser.dart';
 import '../widgets/incoming_share_overlay.dart' show kBrowserCloseGutter;
+import '../l10n/l10n.dart';
 
 /// Opens a web page in a browser window on top of the kiosk, with a close
 /// button the kiosk itself owns.
@@ -74,7 +75,7 @@ class _LinkViewerScreenState extends State<LinkViewerScreen> {
 
     if (await KioskBrowser.resolve() == null) {
       if (mounted) {
-        setState(() => _error = 'No browser is installed on this device.');
+        setState(() => _error = tr('browser.noBrowserIsInstalledOn', 'No browser is installed on this device.'));
       }
       return;
     }
@@ -89,7 +90,7 @@ class _LinkViewerScreenState extends State<LinkViewerScreen> {
       reader: widget.reader,
     );
     if (proc == null) {
-      if (mounted) setState(() => _error = 'Could not open the page.');
+      if (mounted) setState(() => _error = tr('browser.couldNotOpenThePage', 'Could not open the page.'));
       return;
     }
     if (!mounted) {
@@ -134,7 +135,7 @@ class _LinkViewerScreenState extends State<LinkViewerScreen> {
                   FilledButton.icon(
                     onPressed: _close,
                     icon: const Icon(Icons.close, size: 30),
-                    label: const Text('Close', style: TextStyle(fontSize: 22)),
+                    label: Text(tr('browser.close', 'Close'), style: TextStyle(fontSize: 22)),
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 30, vertical: 22),
@@ -149,8 +150,11 @@ class _LinkViewerScreenState extends State<LinkViewerScreen> {
                     ? Text(_error!,
                         style: const TextStyle(
                             color: Colors.white70, fontSize: 18))
-                    : const Text(
-                        'The page is open in front of this window.',
+                    : Text(
+                        tr(
+                          'browser.thePageIsOpenIn',
+                          'The page is open in front of this window.',
+                        ),
                         style:
                             TextStyle(color: Colors.white24, fontSize: 16),
                       ),

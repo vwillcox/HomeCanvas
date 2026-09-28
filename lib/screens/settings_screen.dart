@@ -50,14 +50,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   /// Grouped by what a person comes to change rather than by which part of
   /// the code owns it — fifteen sections in one scroll meant hunting for the
   /// one you wanted every time.
-  static const List<(String, IconData)> tabs = [
-    ('Photos', Icons.photo_library_outlined),
-    ('Music', Icons.music_note_outlined),
-    ('Home', Icons.home_outlined),
-    ('Display', Icons.tv_outlined),
-    ('Volumes', Icons.volume_up_outlined),
-    ('Sharing', Icons.ios_share),
-    ('System', Icons.settings_suggest_outlined),
+  // A getter, not a constant, so the names follow a change of language.
+  static List<(String, IconData)> get tabs => [
+    (tr('settings.photos', 'Photos'), Icons.photo_library_outlined),
+    (tr('settings.music', 'Music'), Icons.music_note_outlined),
+    (tr('settings.home', 'Home'), Icons.home_outlined),
+    (tr('settings.display', 'Display'), Icons.tv_outlined),
+    (tr('settings.volumes', 'Volumes'), Icons.volume_up_outlined),
+    (tr('settings.sharing', 'Sharing'), Icons.ios_share),
+    (tr('settings.system', 'System'), Icons.settings_suggest_outlined),
   ];
 
   /// Remembered while the kiosk runs, so Settings opens where it was left.
@@ -77,83 +78,81 @@ class _SettingsScreenState extends State<SettingsScreen> {
       case 0: // Photos
         return [
           GlassSection(
-            title: 'Connection',
+            title: tr('settings.connection', 'Connection'),
             children: [
               ListTile(
                 leading: const Icon(Icons.dns),
-                title: const Text('Immich server'),
+                title: Text(tr('settings.immichServer', 'Immich server')),
                 subtitle: Text(
-                  config.immichUrl.isEmpty ? 'Not set' : config.immichUrl,
+                  config.immichUrl.isEmpty ? tr('settings.notSet', 'Not set') : config.immichUrl,
                 ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: _editConnection,
               ),
               ListTile(
                 leading: const Icon(Icons.key),
-                title: const Text('API key'),
+                title: Text(tr('settings.apiKey', 'API key')),
                 subtitle: Text(maskedKey),
                 onTap: _editConnection,
               ),
             ],
           ),
           GlassSection(
-            title: 'Locked Folder',
+            title: tr('settings.lockedFolder', 'Locked Folder'),
             children: [
               ListTile(
                 leading: Icon(
                   locked.canUse ? Icons.lock : Icons.lock_open,
                   color: locked.canUse ? null : const Color(0xFFFFC46B),
                 ),
-                title: const Text('Immich account login'),
+                title: Text(tr('settings.immichAccountLogin', 'Immich account login')),
                 subtitle: Text(
                   locked.canUse
-                      ? 'Signed in as ${config.immichEmail} — open the Locked Folder '
-                            'tile on the home screen and enter your PIN.'
-                      : 'Not configured. Run set-immich-login.sh on the Pi to store '
-                            'your Immich email + password (required to open the '
-                            'server-side Locked Folder).',
+                      ? tr('settings.signedInAsOpenThe', 'Signed in as {immichEmail} — open the Locked Folder tile on the home screen and enter your PIN.', {'immichEmail': config.immichEmail})
+                      : tr('settings.notConfiguredRunSetImmich', 'Not configured. Run set-immich-login.sh on the Pi to store your Immich email + password (required to open the server-side Locked Folder).'),
                 ),
                 isThreeLine: true,
               ),
             ],
           ),
           GlassSection(
-            title: 'Slideshow',
+            title: tr('settings.slideshow', 'Slideshow'),
             children: [const _SlideshowSettingsTile()],
           ),
-          GlassSection(title: 'Storage', children: [const _CacheTile()]),
+          GlassSection(title: tr('settings.storage', 'Storage'), children: [const _CacheTile()]),
         ];
       case 1: // Music
         return [
           GlassSection(
-            title: 'Now playing',
+            title: tr('settings.nowPlaying', 'Now playing'),
             children: [const _NowPlayingSettingsTile()],
           ),
           GlassSection(
-            title: 'Spotify',
+            title: tr('settings.spotify', 'Spotify'),
             children: [const _SpotifySettingsTile()],
           ),
           GlassSection(
-            title: 'Videos',
+            title: tr('settings.videos', 'Videos'),
             children: [
               const _VideoPlayerTile(),
               _SiteSignInTile<YouTubeSite>(
                 icon: Icons.smart_display,
                 colour: const Color(0xFFFF0033),
-                signedInText: 'Signed in — Premium, your subscriptions and '
-                    'members-only videos',
+                signedInText: tr('settings.signedInPremiumYourSubscriptions', 'Signed in — Premium, your subscriptions and members-only videos'),
               ),
               _SiteSignInTile<FloatplaneSite>(
                 icon: Icons.live_tv,
                 colour: const Color(0xFF00AFEC),
                 signedInText:
-                    'Signed in — your creators’ latest videos on the dashboard',
+                    tr(
+                      'settings.signedInYourCreatorsLatest',
+                      'Signed in — your creators’ latest videos on the dashboard',
+                    ),
               ),
               _SiteSignInTile<NebulaSite>(
                 icon: Icons.auto_awesome,
                 colour: const Color(0xFF6C7CFF),
-                signedInText: 'Signed in — the creators you follow on the '
-                    'dashboard',
+                signedInText: tr('settings.signedInTheCreatorsYou', 'Signed in — the creators you follow on the dashboard'),
               ),
             ],
           ),
@@ -161,44 +160,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
       case 2: // Home
         return [
           GlassSection(
-            title: 'Weather',
+            title: tr('settings.weather', 'Weather'),
             children: [const _WeatherSettingsTile()],
           ),
           GlassSection(
-            title: 'Home Assistant',
+            title: tr('settings.homeAssistant', 'Home Assistant'),
             children: [const _HomeAssistantSettingsTile()],
           ),
           GlassSection(
-            title: 'Television',
+            title: tr('settings.television', 'Television'),
             children: [const _TvSettingsTile()],
           ),
           GlassSection(
-            title: 'Camera',
+            title: tr('settings.camera', 'Camera'),
             children: [const _CameraSettingsTile()],
           ),
         ];
       case 3: // Display
         return [
           GlassSection(
-            title: 'Screen',
+            title: tr('settings.screen', 'Screen'),
             children: [const _ScreenSettingsTile()],
           ),
           GlassSection(
-            title: 'Dashboard',
+            title: tr('settings.dashboard', 'Dashboard'),
             children: [const _DashboardSettingsTile()],
           ),
         ];
       case 4: // Volumes
         return [
           GlassSection(
-            title: 'Volumes',
+            title: tr('settings.volumes', 'Volumes'),
             children: [const _SoundSettingsTile()],
           ),
         ];
       case 5: // Sharing
         return [
           GlassSection(
-            title: 'Share Inbox',
+            title: tr('settings.shareInbox', 'Share Inbox'),
             children: [const _ShareInboxSettingsTile()],
           ),
         ];
@@ -209,15 +208,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: const [LanguageTile()],
           ),
           GlassSection(
-            title: 'Device',
+            title: tr('settings.device', 'Device'),
             children: [
               ListTile(
                 leading: const Icon(Icons.restart_alt),
-                title: const Text('Restart'),
+                title: Text(tr('settings.restart', 'Restart')),
                 onTap: () => _confirmPower(
-                  title: 'Restart',
+                  title: tr('settings.restart', 'Restart'),
                   action: 'reboot',
-                  verb: 'Restart',
+                  verb: tr('settings.restart', 'Restart'),
                 ),
               ),
               ListTile(
@@ -225,26 +224,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Icons.power_settings_new,
                   color: Color(0xFFFF6B6B),
                 ),
-                title: const Text(
-                  'Power off',
+                title: Text(
+                  tr('settings.powerOff', 'Power off'),
                   style: TextStyle(color: Color(0xFFFF8A8A)),
                 ),
                 onTap: () => _confirmPower(
-                  title: 'Power off',
+                  title: tr('settings.powerOff', 'Power off'),
                   action: 'poweroff',
-                  verb: 'Power off',
+                  verb: tr('settings.powerOff', 'Power off'),
                 ),
               ),
             ],
           ),
           GlassSection(
-            title: 'About',
+            title: tr('settings.about', 'About'),
             children: [
               ListTile(
                 leading: const Icon(Icons.info_outline),
-                title: const Text('About HomeCanvas'),
-                subtitle: const Text(
-                  'Version, open-source libraries, licences and credits',
+                title: Text(tr('settings.aboutHomecanvas', 'About HomeCanvas')),
+                subtitle: Text(
+                  tr(
+                    'settings.versionOpenSourceLibrariesLicences',
+                    'Version, open-source libraries, licences and credits',
+                  ),
                 ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(
@@ -296,11 +298,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(title),
-        content: Text('$verb the device now?'),
+        content: Text(tr('settings.theDeviceNow', '{verb} the device now?', {'verb': verb})),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
+            child: Text(tr('settings.cancel', 'Cancel')),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
@@ -316,8 +318,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Could not $verb (${r.stderr.toString().trim()}). '
-              'Run deploy/enable-poweroff.sh on the Pi.',
+              tr(
+                'settings.couldNotRunDeployEnable',
+                'Could not {verb} ({trim}). Run deploy/enable-poweroff.sh on the Pi.',
+                {'trim': r.stderr.toString().trim(), 'verb': verb},
+              ),
             ),
           ),
         );
@@ -326,7 +331,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Could not $verb: $e')));
+        ).showSnackBar(SnackBar(content: Text(tr('settings.couldNot', 'Could not {verb}: {e}', {'verb': verb, 'e': e}))));
       }
     }
   }
@@ -343,10 +348,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       header: ScreenHeader(
         onBack: () => Navigator.of(context).maybePop(),
         trailing: _tabBar(),
-        title: 'Settings',
+        title: tr('settings.title', 'Settings'),
         subtitle: config.immichUrl.isEmpty
-            ? 'Not connected to Immich yet'
-            : 'Connected to ${Uri.tryParse(config.immichUrl)?.host ?? config.immichUrl}',
+            ? tr('settings.notConnectedToImmichYet', 'Not connected to Immich yet')
+            : tr('settings.connectedTo3', 'Connected to {immichUrl}', {'immichUrl': Uri.tryParse(config.immichUrl)?.host ?? config.immichUrl}),
       ),
       // A readable column rather than rows stretched across 1,920 pixels, and
       // larger type throughout — every piece of it, section headings and help
@@ -416,13 +421,16 @@ class _WeatherSettingsTile extends StatelessWidget {
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Weather location'),
+        title: Text(tr('settings.weatherLocation', 'Weather location')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'UK postcode (e.g. CO1 1ZY) or a place name (e.g. Colchester).',
+              tr(
+                'settings.ukPostcodeEGCo1',
+                'UK postcode (e.g. CO1 1ZY) or a place name (e.g. Colchester).',
+              ),
               style: TextStyle(color: context.look.textSecondary, fontSize: 14),
             ),
             const SizedBox(height: 12),
@@ -438,11 +446,11 @@ class _WeatherSettingsTile extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
+            child: Text(tr('settings.cancel', 'Cancel')),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(controller.text),
-            child: const Text('Save'),
+            child: Text(tr('settings.save', 'Save')),
           ),
         ],
       ),
@@ -466,12 +474,12 @@ class _WeatherSettingsTile extends StatelessWidget {
           secondary: Icon(
             w != null ? weatherIcon(w.weatherCode, w.isDay) : Icons.cloud,
           ),
-          title: const Text('Show weather in slideshow'),
+          title: Text(tr('settings.showWeatherInSlideshow', 'Show weather in slideshow')),
           subtitle: Text(
             service.error ??
                 (w != null
                     ? '${w.temperature.round()}${w.unit} · ${w.description} · ${w.label}'
-                    : 'Loading…'),
+                    : tr('settings.loading', 'Loading…')),
           ),
           value: s.enabled,
           onChanged: (v) {
@@ -482,7 +490,7 @@ class _WeatherSettingsTile extends StatelessWidget {
         ListTile(
           enabled: s.enabled,
           leading: const Icon(Icons.place_outlined),
-          title: const Text('Location'),
+          title: Text(tr('settings.location', 'Location')),
           subtitle: Text(s.location),
           trailing: const Icon(Icons.edit),
           onTap: s.enabled ? () => _editLocation(context) : null,
@@ -490,7 +498,7 @@ class _WeatherSettingsTile extends StatelessWidget {
         ListTile(
           enabled: s.enabled,
           leading: const Icon(Icons.picture_in_picture_alt_outlined),
-          title: const Text('Position'),
+          title: Text(tr('settings.position', 'Position')),
           subtitle: Text(cornerLabel(s.corner)),
         ),
         Padding(
@@ -514,13 +522,13 @@ class _WeatherSettingsTile extends StatelessWidget {
                 Icons.home_outlined,
                 color: sensor.available ? const Color(0xFFFF8A65) : null,
               ),
-              title: const Text('Show indoor temperature'),
+              title: Text(tr('settings.showIndoorTemperature', 'Show indoor temperature')),
               subtitle: Text(
                 sensor.available
                     ? '${sensor.temperatureC!.toStringAsFixed(1)}°C · '
                           '${sensor.humidity?.round() ?? '—'}% · '
                           'battery ${sensor.battery ?? '—'}%'
-                    : 'Not reading — check the Home Assistant section below',
+                    : tr('settings.notReadingCheckTheHome', 'Not reading — check the Home Assistant section below'),
               ),
               value: s.showIndoor,
               onChanged: (v) {
@@ -532,7 +540,7 @@ class _WeatherSettingsTile extends StatelessWidget {
         ),
         SwitchListTile(
           secondary: const Icon(Icons.thermostat),
-          title: const Text('Use Celsius'),
+          title: Text(tr('settings.useCelsius', 'Use Celsius')),
           subtitle: Text(s.metric ? '°C' : '°F'),
           value: s.metric,
           onChanged: s.enabled
@@ -545,7 +553,7 @@ class _WeatherSettingsTile extends StatelessWidget {
         ListTile(
           enabled: s.enabled,
           leading: const Icon(Icons.refresh),
-          title: const Text('Refresh now'),
+          title: Text(tr('settings.refreshNow', 'Refresh now')),
           onTap: s.enabled ? () => service.refresh(force: true) : null,
         ),
       ],
@@ -645,7 +653,7 @@ class _SlideshowSettingsTile extends StatelessWidget {
       children: [
         ListTile(
           leading: const Icon(Icons.timer_outlined),
-          title: const Text('Time per photo'),
+          title: Text(tr('settings.timePerPhoto', 'Time per photo')),
           trailing: Text(
             '${s.intervalSeconds}s',
             style: const TextStyle(fontSize: 18),
@@ -667,26 +675,26 @@ class _SlideshowSettingsTile extends StatelessWidget {
         ),
         ListTile(
           leading: const Icon(Icons.animation),
-          title: const Text('Transition'),
+          title: Text(tr('settings.transition', 'Transition')),
           trailing: DropdownButton<SlideshowTransition>(
             value: s.transition,
             underline: const SizedBox.shrink(),
-            items: const [
+            items: [
               DropdownMenuItem(
                 value: SlideshowTransition.fade,
-                child: Text('Fade'),
+                child: Text(tr('settings.fade', 'Fade')),
               ),
               DropdownMenuItem(
                 value: SlideshowTransition.slide,
-                child: Text('Slide'),
+                child: Text(tr('settings.slide', 'Slide')),
               ),
               DropdownMenuItem(
                 value: SlideshowTransition.kenBurns,
-                child: Text('Ken Burns'),
+                child: Text(tr('settings.kenBurns', 'Ken Burns')),
               ),
               DropdownMenuItem(
                 value: SlideshowTransition.pageTurn,
-                child: Text('Page turn'),
+                child: Text(tr('settings.pageTurn', 'Page turn')),
               ),
             ],
             onChanged: (v) {
@@ -699,7 +707,7 @@ class _SlideshowSettingsTile extends StatelessWidget {
         ),
         SwitchListTile(
           secondary: const Icon(Icons.shuffle),
-          title: const Text('Shuffle'),
+          title: Text(tr('settings.shuffle', 'Shuffle')),
           value: s.shuffle,
           onChanged: (v) {
             s.shuffle = v;
@@ -751,7 +759,7 @@ class _CacheTileState extends State<_CacheTile> {
       setState(() => _busy = false);
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Cache cleared')));
+      ).showSnackBar(SnackBar(content: Text(tr('settings.cacheCleared', 'Cache cleared'))));
     }
   }
 
@@ -759,11 +767,11 @@ class _CacheTileState extends State<_CacheTile> {
   Widget build(BuildContext context) {
     return ListTile(
       leading: const Icon(Icons.sd_storage_outlined),
-      title: const Text('Photo cache'),
+      title: Text(tr('settings.photoCache', 'Photo cache')),
       subtitle: Text(
         _bytes == null
-            ? 'Measuring…'
-            : '${_human(_bytes!)} on disk  •  ~/.cache/homecanvas',
+            ? tr('settings.measuring', 'Measuring…')
+            : tr('settings.onDiskCacheHomecanvas', '{_bytes} on disk  •  ~/.cache/homecanvas', {'_bytes': _human(_bytes!)}),
       ),
       trailing: _busy
           ? const SizedBox(
@@ -771,7 +779,7 @@ class _CacheTileState extends State<_CacheTile> {
               height: 24,
               child: CircularProgressIndicator(strokeWidth: 2.5),
             )
-          : TextButton(onPressed: _clear, child: const Text('Clear')),
+          : TextButton(onPressed: _clear, child: Text(tr('settings.clear', 'Clear'))),
     );
   }
 }
@@ -794,14 +802,13 @@ class _NowPlayingSettingsTile extends StatelessWidget {
             s.enabled ? Icons.music_note : Icons.music_off,
             color: s.enabled ? null : context.look.wash(0.38),
           ),
-          title: const Text('Show what my phone is playing'),
+          title: Text(tr('settings.showWhatMyPhoneIs', 'Show what my phone is playing')),
           subtitle: Text(
             service.available
                 ? (n.hasTrack
-                      ? 'Connected to ${n.deviceName.isEmpty ? "phone" : n.deviceName} — ${n.title}'
-                      : 'Connected to ${n.deviceName.isEmpty ? "phone" : n.deviceName} — nothing playing')
-                : 'No phone connected. Pair one over Bluetooth and play '
-                      'something with media audio routed to this device.',
+                      ? tr('settings.connectedTo2', 'Connected to {deviceName} — {title}', {'deviceName': n.deviceName.isEmpty ? "phone" : n.deviceName, 'title': n.title})
+                      : tr('settings.connectedToNothingPlaying', 'Connected to {deviceName} — nothing playing', {'deviceName': n.deviceName.isEmpty ? "phone" : n.deviceName}))
+                : tr('settings.noPhoneConnectedPairOne', 'No phone connected. Pair one over Bluetooth and play something with media audio routed to this device.'),
           ),
           isThreeLine: !service.available,
           value: s.enabled,
@@ -816,12 +823,11 @@ class _NowPlayingSettingsTile extends StatelessWidget {
               s.playAudioHere ? Icons.speaker : Icons.headphones,
               color: s.playAudioHere ? null : const Color(0xFF7FE3A1),
             ),
-            title: const Text('Play the audio on this device'),
+            title: Text(tr('settings.playTheAudioOnThis', 'Play the audio on this device')),
             subtitle: Text(
               s.playAudioHere
-                  ? 'Music plays through the Pi\'s speaker.'
-                  : 'Music stays on the phone (e.g. your headphones) and this '
-                        'screen is just a remote control.',
+                  ? tr('settings.musicPlaysThroughThePi', 'Music plays through the Pi\'s speaker.')
+                  : tr('settings.musicStaysOnThePhone', 'Music stays on the phone (e.g. your headphones) and this screen is just a remote control.'),
             ),
             isThreeLine: !s.playAudioHere,
             value: s.playAudioHere,
@@ -834,13 +840,11 @@ class _NowPlayingSettingsTile extends StatelessWidget {
         if (s.enabled)
           ListTile(
             leading: const Icon(Icons.graphic_eq),
-            title: const Text('Visualiser'),
+            title: Text(tr('settings.visualiser', 'Visualiser')),
             subtitle: Text(
               s.playAudioHere
-                  ? 'Drawn in the full-screen player, between the scrubber '
-                        'and the transport controls.'
-                  : 'Needs the audio playing on this device — with it staying '
-                        'on the phone there is no sound here to draw.',
+                  ? tr('settings.drawnInTheFullScreen', 'Drawn in the full-screen player, between the scrubber and the transport controls.')
+                  : tr('settings.needsTheAudioPlayingOn', 'Needs the audio playing on this device — with it staying on the phone there is no sound here to draw.'),
             ),
             isThreeLine: !s.playAudioHere,
             trailing: DropdownButton<VisualiserStyle>(
@@ -865,8 +869,8 @@ class _NowPlayingSettingsTile extends StatelessWidget {
         if (s.enabled)
           ListTile(
             leading: const Icon(Icons.picture_in_picture_alt),
-            title: const Text('Position'),
-            subtitle: const Text('Which corner the player sits in'),
+            title: Text(tr('settings.position', 'Position')),
+            subtitle: Text(tr('settings.whichCornerThePlayerSits', 'Which corner the player sits in')),
             trailing: DropdownButton<OverlayCorner>(
               value: s.corner,
               underline: const SizedBox.shrink(),
@@ -921,7 +925,7 @@ class _HomeAssistantSettingsTile extends StatelessWidget {
     final saved = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Home Assistant'),
+        title: Text(tr('settings.homeAssistant', 'Home Assistant')),
         content: SizedBox(
           width: 640,
           child: SingleChildScrollView(
@@ -930,9 +934,10 @@ class _HomeAssistantSettingsTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'The indoor reading comes from Home Assistant. Create a token '
-                  'under your Home Assistant profile → Security → Long-lived '
-                  'access tokens.',
+                  tr(
+                    'settings.theIndoorReadingComesFrom',
+                    'The indoor reading comes from Home Assistant. Create a token under your Home Assistant profile → Security → Long-lived access tokens.',
+                  ),
                   style: TextStyle(color: context.look.textSecondary, fontSize: 14),
                 ),
                 const SizedBox(height: 14),
@@ -942,13 +947,18 @@ class _HomeAssistantSettingsTile extends StatelessWidget {
                 StatefulBuilder(
                   builder: (context, setLocal) => SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text(
-                      'Read the indoor sensor',
+                    title: Text(
+                      tr(
+                        'settings.readTheIndoorSensor',
+                        'Read the indoor sensor',
+                      ),
                       style: TextStyle(fontSize: 18),
                     ),
                     subtitle: Text(
-                      'Off stops polling Home Assistant and hides the indoor '
-                      'reading, keeping these settings for later.',
+                      tr(
+                        'settings.offStopsPollingHomeAssistant',
+                        'Off stops polling Home Assistant and hides the indoor reading, keeping these settings for later.',
+                      ),
                       style: TextStyle(color: context.look.textSecondary, fontSize: 13),
                     ),
                     value: enabled,
@@ -956,15 +966,15 @@ class _HomeAssistantSettingsTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 6),
-                field('Server', url, hint: 'http://localhost:8123'),
-                field('Long-lived access token', token),
+                field(tr('settings.server', 'Server'), url, hint: 'http://localhost:8123'),
+                field(tr('settings.longLivedAccessToken', 'Long-lived access token'), token),
                 field(
-                  'Temperature entity',
+                  tr('settings.temperatureEntity', 'Temperature entity'),
                   temp,
                   hint: 'sensor.h5104_145e_temperature',
                 ),
-                field('Humidity entity', hum),
-                field('Battery entity', batt),
+                field(tr('settings.humidityEntity', 'Humidity entity'), hum),
+                field(tr('settings.batteryEntity', 'Battery entity'), batt),
               ],
             ),
           ),
@@ -972,11 +982,11 @@ class _HomeAssistantSettingsTile extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
+            child: Text(tr('settings.cancel', 'Cancel')),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Save'),
+            child: Text(tr('settings.save', 'Save')),
           ),
         ],
       ),
@@ -1003,13 +1013,13 @@ class _HomeAssistantSettingsTile extends StatelessWidget {
         Icons.home_outlined,
         color: sensor.available ? const Color(0xFFFF8A65) : null,
       ),
-      title: const Text('Home Assistant'),
+      title: Text(tr('settings.homeAssistant', 'Home Assistant')),
       subtitle: Text(
         !s.isConfigured
-            ? 'Not configured — no indoor temperature'
+            ? tr('settings.notConfiguredNoIndoorTemperature', 'Not configured — no indoor temperature')
             : sensor.available
-            ? '${s.baseUrl} — reading ${sensor.temperatureC!.toStringAsFixed(1)}°C'
-            : '${s.baseUrl} — configured, but no reading yet',
+            ? tr('settings.readingC', '{baseUrl} — reading {temperatureC}°C', {'baseUrl': s.baseUrl, 'temperatureC': sensor.temperatureC!.toStringAsFixed(1)})
+            : tr('settings.configuredButNoReadingYet', '{baseUrl} — configured, but no reading yet', {'baseUrl': s.baseUrl}),
       ),
       trailing: const Icon(Icons.chevron_right),
       onTap: () => _edit(context),
@@ -1028,14 +1038,13 @@ class _VideoPlayerTile extends StatelessWidget {
     final ytDlp = context.watch<YtDlp>();
     return ListTile(
       leading: const Icon(Icons.play_circle_outline),
-      title: const Text('Video player'),
+      title: Text(tr('settings.videoPlayer', 'Video player')),
       subtitle: Text(ytDlp.installing
-          ? ytDlp.status ?? 'Installing…'
+          ? ytDlp.status ?? tr('settings.installing', 'Installing…')
           : ytDlp.status ??
               (ytDlp.ready
-                  ? 'yt-dlp ${ytDlp.version}, updated daily — '
-                      'YouTube, Floatplane and Nebula play here'
-                  : 'Not set up — needs yt-dlp to play videos here')),
+                  ? tr('settings.ytDlpUpdatedDailyYoutube', 'yt-dlp {version}, updated daily — YouTube, Floatplane and Nebula play here', {'version': ytDlp.version})
+                  : tr('settings.notSetUpNeedsYt', 'Not set up — needs yt-dlp to play videos here'))),
       trailing: const Icon(Icons.chevron_right),
       onTap: () => showDialog<void>(
         context: context,
@@ -1053,7 +1062,7 @@ class _VideoPlayerDialog extends StatelessWidget {
     final ytDlp = context.watch<YtDlp>();
     final player = context.watch<VideoPlayerService>();
     return AlertDialog(
-      title: const Text('Video player'),
+      title: Text(tr('settings.videoPlayer', 'Video player')),
       content: SizedBox(
         width: 620,
         child: SingleChildScrollView(
@@ -1061,10 +1070,11 @@ class _VideoPlayerDialog extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'Videos shared from the phone app, opened from the news, or '
-                'put on the dashboard play here, full screen or as a '
-                'picture-in-picture window you can drag, pinch and resize.',
+              Text(
+                tr(
+                  'settings.videosSharedFromThePhone',
+                  'Videos shared from the phone app, opened from the news, or put on the dashboard play here, full screen or as a picture-in-picture window you can drag, pinch and resize.',
+                ),
               ),
               const SizedBox(height: 20),
               ListTile(
@@ -1072,13 +1082,11 @@ class _VideoPlayerDialog extends StatelessWidget {
                 leading: const Icon(Icons.download),
                 title: const Text('yt-dlp'),
                 subtitle: Text(ytDlp.installing
-                    ? ytDlp.status ?? 'Installing…'
+                    ? ytDlp.status ?? tr('settings.installing', 'Installing…')
                     : ytDlp.status ??
                         (ytDlp.ready
-                            ? 'Version ${ytDlp.version} — updated daily'
-                            : 'Not installed. It fetches the video from the '
-                                'site; kept up to date automatically once '
-                                'installed.')),
+                            ? tr('settings.versionUpdatedDaily', 'Version {version} — updated daily', {'version': ytDlp.version})
+                            : tr('settings.notInstalledItFetchesThe', 'Not installed. It fetches the video from the site; kept up to date automatically once installed.'))),
                 trailing: ytDlp.installing
                     ? const SizedBox(
                         width: 28,
@@ -1086,12 +1094,12 @@ class _VideoPlayerDialog extends StatelessWidget {
                         child: CircularProgressIndicator(strokeWidth: 3))
                     : FilledButton.tonal(
                         onPressed: ytDlp.install,
-                        child: Text(ytDlp.ready ? 'Reinstall' : 'Install'),
+                        child: Text(ytDlp.ready ? tr('settings.reinstall', 'Reinstall') : tr('settings.install', 'Install')),
                       ),
               ),
               const Divider(),
               const SizedBox(height: 8),
-              const Text('Picture quality'),
+              Text(tr('settings.pictureQuality', 'Picture quality')),
               const SizedBox(height: 8),
               SegmentedButton<int>(
                 segments: const [
@@ -1102,9 +1110,11 @@ class _VideoPlayerDialog extends StatelessWidget {
                 onSelectionChanged: (v) => player.setMaxHeight(v.first),
               ),
               const SizedBox(height: 6),
-              const Text(
-                '1080p is sharper and works the Pi harder. Dashboard tiles '
-                'use 720p either way.',
+              Text(
+                tr(
+                  'settings.1080pIsSharperAndWorks',
+                  '1080p is sharper and works the Pi harder. Dashboard tiles use 720p either way.',
+                ),
                 style: TextStyle(fontSize: 13),
               ),
             ],
@@ -1114,7 +1124,7 @@ class _VideoPlayerDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Done'),
+          child: Text(tr('settings.done', 'Done')),
         ),
       ],
     );
@@ -1144,20 +1154,18 @@ class _SiteSignInTile<T extends VideoSite> extends StatelessWidget {
       subtitle: Text(site.signedIn
           ? signedInText
           : !site.ready
-              ? 'Needs yt-dlp — install it under Video player, above'
-              : 'Not signed in. Sign in here, or — rather than typing a '
-                  'password on the panel — on a computer at '
-                  '$address/${site.id}'),
+              ? tr('settings.needsYtDlpInstallIt', 'Needs yt-dlp — install it under Video player, above')
+              : tr('settings.notSignedInSignIn', 'Not signed in. Sign in here, or — rather than typing a password on the panel — on a computer at {address}/{id}', {'id': site.id, 'address': address})),
       isThreeLine: !site.signedIn,
       trailing: site.signedIn
           ? OutlinedButton(
               onPressed: site.signOut,
-              child: const Text('Sign out'),
+              child: Text(tr('settings.signOut', 'Sign out')),
             )
           : FilledButton(
               onPressed:
                   site.ready ? () => signInOnPanel(context, site) : null,
-              child: const Text('Sign in'),
+              child: Text(tr('settings.signIn', 'Sign in')),
             ),
     );
   }
@@ -1188,13 +1196,13 @@ class _SpotifySettingsTile extends StatelessWidget {
         Icons.podcasts,
         color: spotify.available ? const Color(0xFF1ED760) : null,
       ),
-      title: const Text('Spotify'),
+      title: Text(tr('settings.spotify', 'Spotify')),
       subtitle: Text(
         !s.isConfigured
-            ? 'Not connected — full playback control alongside the phone'
+            ? tr('settings.notConnectedFullPlaybackControl', 'Not connected — full playback control alongside the phone')
             : spotify.available
-            ? 'Connected — playing "${spotify.now.title}"'
-            : 'Connected, but nothing playing right now',
+            ? tr('settings.connectedPlaying', 'Connected — playing "{title}"', {'title': spotify.now.title})
+            : tr('settings.connectedButNothingPlayingRight', 'Connected, but nothing playing right now'),
       ),
       trailing: const Icon(Icons.chevron_right),
       onTap: () => _edit(context),
@@ -1227,7 +1235,7 @@ class _SpotifyDialogState extends State<_SpotifyDialog> {
   Future<void> _connect() async {
     final id = _clientId.text.trim();
     if (id.isEmpty) {
-      setState(() => _error = 'Enter the Client ID first.');
+      setState(() => _error = tr('settings.enterTheClientIdFirst', 'Enter the Client ID first.'));
       return;
     }
     setState(() {
@@ -1255,7 +1263,7 @@ class _SpotifyDialogState extends State<_SpotifyDialog> {
   Widget build(BuildContext context) {
     final isConfigured = widget.config.config.spotify.isConfigured;
     return AlertDialog(
-      title: const Text('Spotify'),
+      title: Text(tr('settings.spotify', 'Spotify')),
       content: SizedBox(
         width: 640,
         child: SingleChildScrollView(
@@ -1264,9 +1272,10 @@ class _SpotifyDialogState extends State<_SpotifyDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Create a free app at developer.spotify.com/dashboard, then '
-                'paste its Client ID below. Register this exact Redirect URI '
-                'on that app:',
+                tr(
+                  'settings.createAFreeAppAt',
+                  'Create a free app at developer.spotify.com/dashboard, then paste its Client ID below. Register this exact Redirect URI on that app:',
+                ),
                 style: TextStyle(color: context.look.textSecondary, fontSize: 14),
               ),
               const SizedBox(height: 8),
@@ -1283,8 +1292,8 @@ class _SpotifyDialogState extends State<_SpotifyDialog> {
                 controller: _clientId,
                 enabled: !_connecting,
                 style: const TextStyle(fontSize: 18),
-                decoration: const InputDecoration(
-                  labelText: 'Client ID',
+                decoration: InputDecoration(
+                  labelText: tr('settings.clientId', 'Client ID'),
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -1304,9 +1313,10 @@ class _SpotifyDialogState extends State<_SpotifyDialog> {
                     SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'A browser window opened for you to log into '
-                        'Spotify. Come back here once you have approved '
-                        'access.',
+                        tr(
+                          'settings.aBrowserWindowOpenedFor',
+                          'A browser window opened for you to log into Spotify. Come back here once you have approved access.',
+                        ),
                         style: TextStyle(color: context.look.textSecondary),
                       ),
                     ),
@@ -1321,18 +1331,18 @@ class _SpotifyDialogState extends State<_SpotifyDialog> {
         if (isConfigured)
           TextButton(
             onPressed: _connecting ? null : _disconnect,
-            child: const Text(
-              'Disconnect',
+            child: Text(
+              tr('settings.disconnect', 'Disconnect'),
               style: TextStyle(color: Color(0xFFFF8A8A)),
             ),
           ),
         TextButton(
           onPressed: _connecting ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(tr('settings.cancel', 'Cancel')),
         ),
         FilledButton(
           onPressed: _connecting ? null : _connect,
-          child: Text(isConfigured ? 'Reconnect' : 'Connect'),
+          child: Text(isConfigured ? tr('settings.reconnect', 'Reconnect') : tr('settings.connect', 'Connect')),
         ),
       ],
     );
@@ -1359,10 +1369,10 @@ class _ShareInboxSettingsTile extends StatelessWidget {
     final s = context.watch<ConfigService>().config.shareInbox;
     return ListTile(
       leading: const Icon(Icons.ios_share),
-      title: const Text('Share Inbox'),
+      title: Text(tr('settings.shareInbox', 'Share Inbox')),
       subtitle: Text(
         s.senderTokens.isEmpty
-            ? 'Listening on :${s.listenPort} — no senders added yet'
+            ? tr('settings.listeningOnNoSendersAdded', 'Listening on :{listenPort} — no senders added yet', {'listenPort': s.listenPort})
             : 'Listening on :${s.listenPort} — ${s.senderTokens.length} '
                   '${s.senderTokens.length == 1 ? 'sender' : 'senders'}',
       ),
@@ -1427,14 +1437,14 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
     Clipboard.setData(ClipboardData(text: token));
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('Token copied')));
+    ).showSnackBar(SnackBar(content: Text(tr('settings.tokenCopied', 'Token copied'))));
   }
 
   Future<void> _save() async {
     final port = int.tryParse(_port.text.trim());
     if (port == null || port < 1 || port > 65535) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a port between 1 and 65535')),
+        SnackBar(content: Text(tr('settings.enterAPortBetween1', 'Enter a port between 1 and 65535'))),
       );
       return;
     }
@@ -1451,7 +1461,7 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Share Inbox'),
+      title: Text(tr('settings.shareInbox', 'Share Inbox')),
       content: SizedBox(
         width: 640,
         child: SingleChildScrollView(
@@ -1460,9 +1470,10 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'People with the companion app can share a photo, GIF, video, '
-                'link or note to this kiosk. Add a name below, hand that '
-                'person the generated token to enter in their app.',
+                tr(
+                  'settings.peopleWithTheCompanionApp',
+                  'People with the companion app can share a photo, GIF, video, link or note to this kiosk. Add a name below, hand that person the generated token to enter in their app.',
+                ),
                 style: TextStyle(color: context.look.textSecondary, fontSize: 14),
               ),
               const SizedBox(height: 14),
@@ -1470,8 +1481,8 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
                 controller: _port,
                 keyboardType: TextInputType.number,
                 style: const TextStyle(fontSize: 18),
-                decoration: const InputDecoration(
-                  labelText: 'Listen port',
+                decoration: InputDecoration(
+                  labelText: tr('settings.listenPort', 'Listen port'),
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -1479,12 +1490,14 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text(
-                  'Read notes aloud',
+                  tr('settings.readNotesAloud', 'Read notes aloud'),
                   style: TextStyle(color: context.look.textPrimary),
                 ),
                 subtitle: Text(
-                  'Text notes only. Photos have nothing to read, and a link '
-                  'read out is a stream of letters nobody can follow.',
+                  tr(
+                    'settings.textNotesOnlyPhotosHave',
+                    'Text notes only. Photos have nothing to read, and a link read out is a stream of letters nobody can follow.',
+                  ),
                   style: TextStyle(color: context.look.textSecondary, fontSize: 13),
                 ),
                 value: _speak,
@@ -1494,7 +1507,7 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(
-                    'Say who it is from first',
+                    tr('settings.sayWhoItIsFrom', 'Say who it is from first'),
                     style: TextStyle(color: context.look.textPrimary),
                   ),
                   value: _speakSender,
@@ -1503,7 +1516,7 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
               ],
               const SizedBox(height: 18),
               Text(
-                'Senders',
+                tr('settings.senders', 'Senders'),
                 style: TextStyle(
                   color: context.look.textPrimary,
                   fontWeight: FontWeight.w600,
@@ -1514,7 +1527,7 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
                 Padding(
                   padding: EdgeInsets.symmetric(vertical: 8),
                   child: Text(
-                    'No one added yet',
+                    tr('settings.noOneAddedYet', 'No one added yet'),
                     style: TextStyle(color: context.look.textSecondary),
                   ),
                 ),
@@ -1545,7 +1558,7 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
                       ),
                       IconButton(
                         icon: const Icon(Icons.copy, size: 20),
-                        tooltip: 'Copy token',
+                        tooltip: tr('settings.copyToken', 'Copy token'),
                         onPressed: () => _copy(t.token),
                       ),
                       IconButton(
@@ -1554,7 +1567,7 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
                           size: 20,
                           color: Color(0xFFFF8A8A),
                         ),
-                        tooltip: 'Remove',
+                        tooltip: tr('settings.remove', 'Remove'),
                         onPressed: () => setState(() => _tokens.remove(t)),
                       ),
                     ],
@@ -1567,8 +1580,8 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
                     child: TextField(
                       controller: _newName,
                       style: const TextStyle(fontSize: 16),
-                      decoration: const InputDecoration(
-                        labelText: 'Add sender (name)',
+                      decoration: InputDecoration(
+                        labelText: tr('settings.addSenderName', 'Add sender (name)'),
                         hintText: "Mum's phone",
                         border: OutlineInputBorder(),
                       ),
@@ -1576,7 +1589,7 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  FilledButton(onPressed: _addSender, child: const Text('Add')),
+                  FilledButton(onPressed: _addSender, child: Text(tr('settings.add', 'Add'))),
                 ],
               ),
             ],
@@ -1586,9 +1599,9 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(tr('settings.cancel', 'Cancel')),
         ),
-        FilledButton(onPressed: _save, child: const Text('Save')),
+        FilledButton(onPressed: _save, child: Text(tr('settings.save', 'Save'))),
       ],
     );
   }
@@ -1639,7 +1652,7 @@ class _SoundSettingsTile extends StatelessWidget {
                   service.save();
                 },
               ),
-              trailing: Text(muted ? 'Muted' : '${value.round()}%'),
+              trailing: Text(muted ? tr('settings.muted', 'Muted') : '${value.round()}%'),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(80, 0, 24, 12),
@@ -1661,13 +1674,11 @@ class _SoundSettingsTile extends StatelessWidget {
                 ? Icons.notifications_off_outlined
                 : Icons.notifications_outlined,
           ),
-          title: const Text('Do Not Disturb'),
+          title: Text(tr('settings.doNotDisturb', 'Do Not Disturb')),
           subtitle: Text(
             muted
-                ? 'On — everything below is muted. Turn it off to hear them '
-                      'again at the same levels.'
-                : 'Mutes every sound below at once, and keeps the screen '
-                      'from waking for shares. The same switch as the top bar.',
+                ? tr('settings.onEverythingBelowIsMuted', 'On — everything below is muted. Turn it off to hear them again at the same levels.')
+                : tr('settings.mutesEverySoundBelowAt', 'Mutes every sound below at once, and keeps the screen from waking for shares. The same switch as the top bar.'),
           ),
           value: muted,
           onChanged: (on) {
@@ -1678,28 +1689,28 @@ class _SoundSettingsTile extends StatelessWidget {
         const Divider(height: 1),
         slider(
           icon: Icons.notifications,
-          title: 'Notifications',
-          help: 'The chime when something is shared to the panel.',
+          title: tr('settings.notifications', 'Notifications'),
+          help: tr('settings.theChimeWhenSomethingIs', 'The chime when something is shared to the panel.'),
           value: s.notificationVolume,
           set: (v) => s.notificationVolume = v,
         ),
         slider(
           icon: Icons.record_voice_over,
-          title: 'Speech',
-          help: 'Shared notes read aloud, and bin-day reminders.',
+          title: tr('settings.speech', 'Speech'),
+          help: tr('settings.sharedNotesReadAloudAnd', 'Shared notes read aloud, and bin-day reminders.'),
           value: s.speechVolume,
           set: (v) => s.speechVolume = v,
         ),
         slider(
           icon: Icons.menu_book_outlined,
-          title: 'News reader',
-          help: 'Articles read out from the news widget.',
+          title: tr('settings.newsReader', 'News reader'),
+          help: tr('settings.articlesReadOutFromThe', 'Articles read out from the news widget.'),
           value: s.readerVolume,
           set: (v) => s.readerVolume = v,
         ),
         slider(
           icon: Icons.timer_outlined,
-          title: 'Timers',
+          title: tr('settings.timers', 'Timers'),
           help: "A kitchen timer's sound, and its voice saying which it was.",
           value: s.timerVolume,
           set: (v) => s.timerVolume = v,
@@ -1723,7 +1734,7 @@ class _ScreenSettingsTile extends StatelessWidget {
       children: [
         ListTile(
           leading: const Icon(Icons.brightness_6),
-          title: const Text('Brightness'),
+          title: Text(tr('settings.brightness', 'Brightness')),
           subtitle: Slider(
             value: light.level.toDouble(),
             min: BrightnessService.minimum.toDouble(),
@@ -1736,10 +1747,12 @@ class _ScreenSettingsTile extends StatelessWidget {
         ),
         SwitchListTile(
           secondary: const Icon(Icons.brightness_4),
-          title: const Text('Turn the screen off when idle'),
-          subtitle: const Text(
-            'Once nothing is playing, no slideshow is running and nobody '
-            'has touched it. A touch brings it straight back.',
+          title: Text(tr('settings.turnTheScreenOffWhen', 'Turn the screen off when idle')),
+          subtitle: Text(
+            tr(
+              'settings.onceNothingIsPlayingNo',
+              'Once nothing is playing, no slideshow is running and nobody has touched it. A touch brings it straight back.',
+            ),
           ),
           isThreeLine: true,
           value: s.autoOffEnabled,
@@ -1751,7 +1764,7 @@ class _ScreenSettingsTile extends StatelessWidget {
         if (s.autoOffEnabled) ...[
           ListTile(
             leading: const Icon(Icons.timer_outlined),
-            title: const Text('Wait for'),
+            title: Text(tr('settings.waitFor', 'Wait for')),
             trailing: DropdownButton<int>(
               value: _choices.contains(s.idleMinutes) ? s.idleMinutes : 15,
               underline: const SizedBox.shrink(),
@@ -1759,7 +1772,7 @@ class _ScreenSettingsTile extends StatelessWidget {
                 for (final m in _choices)
                   DropdownMenuItem(
                     value: m,
-                    child: Text(m == 60 ? '1 hour' : '$m minutes'),
+                    child: Text(m == 60 ? tr('settings.1Hour', '1 hour') : '$m minutes'),
                   ),
               ],
               onChanged: (v) {
@@ -1771,10 +1784,12 @@ class _ScreenSettingsTile extends StatelessWidget {
           ),
           SwitchListTile(
             secondary: const Icon(Icons.music_note),
-            title: const Text('Wake when music starts'),
-            subtitle: const Text(
-              'Only undoes a switch-off this setting made — it leaves the '
-              'screen alone if you turned it off by voice.',
+            title: Text(tr('settings.wakeWhenMusicStarts', 'Wake when music starts')),
+            subtitle: Text(
+              tr(
+                'settings.onlyUndoesASwitchOff',
+                'Only undoes a switch-off this setting made — it leaves the screen alone if you turned it off by voice.',
+              ),
             ),
             isThreeLine: true,
             value: s.wakeOnMusic,
@@ -1830,7 +1845,7 @@ class _CameraSettingsTile extends StatelessWidget {
     final saved = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Camera'),
+        title: Text(tr('settings.camera', 'Camera')),
         content: SizedBox(
           width: 640,
           child: SingleChildScrollView(
@@ -1839,27 +1854,36 @@ class _CameraSettingsTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'A phone running android-ip-camera, on the same network. '
-                  'Take the address and credentials from the app on the phone; '
-                  'turn its HTTPS off, since it uses a self-signed certificate.',
+                  tr(
+                    'settings.aPhoneRunningAndroidIp',
+                    'A phone running android-ip-camera, on the same network. Take the address and credentials from the app on the phone; turn its HTTPS off, since it uses a self-signed certificate.',
+                  ),
                   style: TextStyle(color: context.look.textSecondary, fontSize: 14),
                 ),
                 const SizedBox(height: 14),
-                field('Address', address, hint: '192.168.1.52:4444'),
-                field('Username', user),
-                field('Password', pass, obscure: true),
-                field('Stream size', resolution, hint: '1920x1080'),
+                field(tr('settings.address', 'Address'), address, hint: '192.168.1.52:4444'),
+                field(tr('settings.username', 'Username'), user),
+                field(tr('settings.password', 'Password'), pass, obscure: true),
+                field(tr('settings.streamSize', 'Stream size'), resolution, hint: '1920x1080'),
                 field(
-                  'Rotate on the phone (degrees)',
+                  tr(
+                    'settings.rotateOnThePhoneDegrees',
+                    'Rotate on the phone (degrees)',
+                  ),
                   rotate,
-                  hint: '0, 90, 180 or 270 — MJPEG only',
+                  hint: tr('settings.090180Or270', '0, 90, 180 or 270 — MJPEG only'),
                 ),
                 field(
-                  'Turn the picture here (quarter turns)',
+                  tr(
+                    'settings.turnThePictureHereQuarter',
+                    'Turn the picture here (quarter turns)',
+                  ),
                   turns,
                   hint:
-                      '0-3, for when the phone gets its own orientation '
-                      'wrong',
+                      tr(
+                        'settings.03ForWhenThe',
+                        '0-3, for when the phone gets its own orientation wrong',
+                      ),
                 ),
               ],
             ),
@@ -1868,11 +1892,11 @@ class _CameraSettingsTile extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
+            child: Text(tr('settings.cancel', 'Cancel')),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Save'),
+            child: Text(tr('settings.save', 'Save')),
           ),
         ],
       ),
@@ -1899,10 +1923,12 @@ class _CameraSettingsTile extends StatelessWidget {
       children: [
         SwitchListTile(
           secondary: const Icon(Icons.videocam),
-          title: const Text('Phone camera'),
-          subtitle: const Text(
-            'Shows a live view from a phone running android-ip-camera, '
-            'from a button in the top bar.',
+          title: Text(tr('settings.phoneCamera', 'Phone camera')),
+          subtitle: Text(
+            tr(
+              'settings.showsALiveViewFrom',
+              'Shows a live view from a phone running android-ip-camera, from a button in the top bar.',
+            ),
           ),
           isThreeLine: true,
           value: s.enabled,
@@ -1914,7 +1940,7 @@ class _CameraSettingsTile extends StatelessWidget {
         if (s.enabled) ...[
           ListTile(
             leading: const Icon(Icons.picture_in_picture_alt_outlined),
-            title: const Text('Position'),
+            title: Text(tr('settings.position', 'Position')),
             subtitle: Text(cornerLabel(s.corner)),
           ),
           Padding(
@@ -1930,10 +1956,10 @@ class _CameraSettingsTile extends StatelessWidget {
           ),
           ListTile(
             leading: const Icon(Icons.videocam_outlined),
-            title: const Text('Camera phone'),
+            title: Text(tr('settings.cameraPhone', 'Camera phone')),
             subtitle: Text(
               s.address.isEmpty
-                  ? 'Not configured'
+                  ? tr('settings.notConfigured', 'Not configured')
                   : status == null
                   ? '${s.address} — ${camera.lastError ?? 'not reached yet'}'
                   : '${s.address} — ${status.lenses.length} lens'
@@ -1962,7 +1988,7 @@ class _DashboardSettingsTile extends StatelessWidget {
     final saved = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Editor port'),
+        title: Text(tr('settings.editorPort', 'Editor port')),
         content: SizedBox(
           width: 420,
           child: Column(
@@ -1970,9 +1996,10 @@ class _DashboardSettingsTile extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'The port the dashboard editor is served on. Separate from '
-                'the Share Inbox, so one can be exposed beyond your network '
-                'without the other.',
+                tr(
+                  'settings.thePortTheDashboardEditor',
+                  'The port the dashboard editor is served on. Separate from the Share Inbox, so one can be exposed beyond your network without the other.',
+                ),
                 style: TextStyle(color: context.look.textSecondary, fontSize: 14),
               ),
               const SizedBox(height: 14),
@@ -1980,8 +2007,8 @@ class _DashboardSettingsTile extends StatelessWidget {
                 controller: port,
                 keyboardType: TextInputType.number,
                 style: const TextStyle(fontSize: 18),
-                decoration: const InputDecoration(
-                  labelText: 'Port',
+                decoration: InputDecoration(
+                  labelText: tr('settings.port', 'Port'),
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -1991,11 +2018,11 @@ class _DashboardSettingsTile extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
+            child: Text(tr('settings.cancel', 'Cancel')),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Save'),
+            child: Text(tr('settings.save', 'Save')),
           ),
         ],
       ),
@@ -2017,10 +2044,12 @@ class _DashboardSettingsTile extends StatelessWidget {
       children: [
         SwitchListTile(
           secondary: const Icon(Icons.dashboard_outlined),
-          title: const Text('Widget dashboard'),
-          subtitle: const Text(
-            'A screen of widgets — clock, weather, calendar, news, now '
-            'playing — arranged from a browser. Adds a button to the top bar.',
+          title: Text(tr('settings.widgetDashboard', 'Widget dashboard')),
+          subtitle: Text(
+            tr(
+              'settings.aScreenOfWidgetsClock',
+              'A screen of widgets — clock, weather, calendar, news, now playing — arranged from a browser. Adds a button to the top bar.',
+            ),
           ),
           isThreeLine: true,
           value: s.enabled,
@@ -2033,7 +2062,7 @@ class _DashboardSettingsTile extends StatelessWidget {
         if (s.enabled) ...[
           ListTile(
             leading: const Icon(Icons.open_in_browser),
-            title: const Text('Arrange it in a browser'),
+            title: Text(tr('settings.arrangeItInABrowser', 'Arrange it in a browser')),
             isThreeLine: dashboard.editorIpAddress != null ||
                 dashboard.webPortNote != null,
             subtitle: Text([
@@ -2047,9 +2076,9 @@ class _DashboardSettingsTile extends StatelessWidget {
           ),
           ListTile(
             leading: const Icon(Icons.palette_outlined),
-            title: const Text('Theme'),
+            title: Text(tr('settings.theme', 'Theme')),
             // It dresses every screen now, not just the dashboard.
-            subtitle: Text('${theme.name} · the whole kiosk\'s look'),
+            subtitle: Text(tr('settings.theWholeKioskSLook', '{name} · the whole kiosk\'s look', {'name': theme.name})),
             trailing: DropdownButton<String>(
               value: dashboard.themes.all.any((t) => t.id == s.themeId)
                   ? s.themeId
@@ -2086,7 +2115,7 @@ class _TvSettingsTile extends StatelessWidget {
     final saved = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Television'),
+        title: Text(tr('settings.television', 'Television')),
         content: SizedBox(
           width: 600,
           child: Column(
@@ -2094,18 +2123,18 @@ class _TvSettingsTile extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'The set must be on the same network. Only one controller may '
-                'hold a session at a time — the connection identity comes from '
-                'this UUID, so two controllers sharing one will displace each '
-                'other. Changing the UUID means pairing again.',
+                tr(
+                  'settings.theSetMustBeOn',
+                  'The set must be on the same network. Only one controller may hold a session at a time — the connection identity comes from this UUID, so two controllers sharing one will displace each other. Changing the UUID means pairing again.',
+                ),
                 style: TextStyle(color: context.look.textSecondary, fontSize: 14),
               ),
               const SizedBox(height: 14),
               TextField(
                 controller: host,
                 style: const TextStyle(fontSize: 18),
-                decoration: const InputDecoration(
-                  labelText: 'Address',
+                decoration: InputDecoration(
+                  labelText: tr('settings.address', 'Address'),
                   hintText: '192.168.1.156',
                   border: OutlineInputBorder(),
                 ),
@@ -2114,8 +2143,8 @@ class _TvSettingsTile extends StatelessWidget {
               TextField(
                 controller: uuid,
                 style: const TextStyle(fontSize: 18),
-                decoration: const InputDecoration(
-                  labelText: 'Controller UUID',
+                decoration: InputDecoration(
+                  labelText: tr('settings.controllerUuid', 'Controller UUID'),
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -2125,11 +2154,11 @@ class _TvSettingsTile extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
+            child: Text(tr('settings.cancel', 'Cancel')),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Save'),
+            child: Text(tr('settings.save', 'Save')),
           ),
         ],
       ),
@@ -2147,21 +2176,23 @@ class _TvSettingsTile extends StatelessWidget {
     final tv = context.watch<TvService>();
 
     final status = switch (tv.conn) {
-      ConnState.connected => 'Connected to ${s.host}',
-      ConnState.connecting => 'Connecting to ${s.host}…',
-      ConnState.needsPairing => 'Needs pairing — open the TV widget',
-      ConnState.error => tv.lastError ?? 'Could not reach ${s.host}',
-      ConnState.disconnected => 'Connects when the TV widget is on screen',
+      ConnState.connected => tr('settings.connectedTo', 'Connected to {host}', {'host': s.host}),
+      ConnState.connecting => tr('settings.connectingTo', 'Connecting to {host}…', {'host': s.host}),
+      ConnState.needsPairing => tr('settings.needsPairingOpenTheTv', 'Needs pairing — open the TV widget'),
+      ConnState.error => tv.lastError ?? tr('settings.couldNotReach', 'Could not reach {host}', {'host': s.host}),
+      ConnState.disconnected => tr('settings.connectsWhenTheTvWidget', 'Connects when the TV widget is on screen'),
     };
 
     return Column(
       children: [
         SwitchListTile(
           secondary: const Icon(Icons.tv),
-          title: const Text('Television remote'),
-          subtitle: const Text(
-            'Adds a TV remote to the dashboard widgets — power, volume and '
-            'a direction pad for a Hisense VIDAA set.',
+          title: Text(tr('settings.televisionRemote', 'Television remote')),
+          subtitle: Text(
+            tr(
+              'settings.addsATvRemoteTo',
+              'Adds a TV remote to the dashboard widgets — power, volume and a direction pad for a Hisense VIDAA set.',
+            ),
           ),
           isThreeLine: true,
           value: s.enabled,
@@ -2176,7 +2207,7 @@ class _TvSettingsTile extends StatelessWidget {
               Icons.settings_remote,
               color: tv.conn == ConnState.connected ? Colors.greenAccent : null,
             ),
-            title: const Text('Address and pairing'),
+            title: Text(tr('settings.addressAndPairing', 'Address and pairing')),
             subtitle: Text(status),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _edit(context),
@@ -2184,16 +2215,17 @@ class _TvSettingsTile extends StatelessWidget {
         if (s.enabled)
           ListTile(
             leading: const Icon(Icons.pin),
-            title: const Text('Pair again'),
-            subtitle: const Text(
-              'Only if the remote has stopped working. The saved pairing is '
-              'kept across restarts, so the TV no longer shows its code each '
-              'time the panel starts.',
+            title: Text(tr('settings.pairAgain', 'Pair again')),
+            subtitle: Text(
+              tr(
+                'settings.onlyIfTheRemoteHas',
+                'Only if the remote has stopped working. The saved pairing is kept across restarts, so the TV no longer shows its code each time the panel starts.',
+              ),
             ),
             isThreeLine: true,
             trailing: OutlinedButton(
               onPressed: () => _pairAgain(context),
-              child: const Text('Show code on TV'),
+              child: Text(tr('settings.showCodeOnTv', 'Show code on TV')),
             ),
           ),
       ],
@@ -2208,7 +2240,7 @@ class _TvSettingsTile extends StatelessWidget {
     final entered = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Enter the code on the TV'),
+        title: Text(tr('settings.enterTheCodeOnThe', 'Enter the code on the TV')),
         content: TextField(
           controller: pin,
           autofocus: true,
@@ -2220,11 +2252,11 @@ class _TvSettingsTile extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
+            child: Text(tr('settings.cancel', 'Cancel')),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(pin.text),
-            child: const Text('Pair'),
+            child: Text(tr('settings.pair', 'Pair')),
           ),
         ],
       ),
@@ -2239,7 +2271,7 @@ class _TvSettingsTile extends StatelessWidget {
     final ok = await tv.submitPin(code);
     if (context.mounted) {
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
-        content: Text(ok ? 'Paired with the TV.' : 'The TV did not accept that code.'),
+        content: Text(ok ? tr('settings.pairedWithTheTv', 'Paired with the TV.') : tr('settings.theTvDidNotAccept', 'The TV did not accept that code.')),
       ));
     }
   }

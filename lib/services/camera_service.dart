@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import '../config/app_config.dart' show CameraSettings;
 import 'config_service.dart';
+import '../l10n/l10n.dart';
 
 /// One lens the phone is willing to open, as reported by `/info.json`.
 class PhoneLens {
@@ -210,7 +211,7 @@ class CameraService extends ChangeNotifier {
       );
       _lastError = null;
     } catch (e) {
-      _lastError = 'Camera unreachable';
+      _lastError = tr('camera.cameraUnreachable', 'Camera unreachable');
       debugPrint('CameraService: /info.json failed: $e');
     }
     notifyListeners();
@@ -279,7 +280,7 @@ class CameraService extends ChangeNotifier {
       );
       _lastError = null;
     } catch (e) {
-      _lastError = 'Camera unreachable';
+      _lastError = tr('camera.cameraUnreachable', 'Camera unreachable');
       debugPrint('CameraService: $path failed: $e');
       notifyListeners();
     }
