@@ -15,6 +15,7 @@ import '../widgets/remote_image.dart';
 import 'gallery_screen.dart';
 import 'slideshow_screen.dart';
 import '../time_format.dart';
+import '../l10n/dates.dart';
 
 class AlbumScreen extends StatefulWidget {
   final Album album;
@@ -310,7 +311,7 @@ List<MonthGroup> groupAssets(List<Asset> assets, {int minPerGroup = 8}) {
 List<MonthGroup> groupByMonth(List<Asset> assets) => _runs(
   assets,
   (t) => t.year * 12 + t.month - 1,
-  (t) => '${monthNames[t.month - 1]} ${t.year}',
+  monthYear,
 );
 
 List<MonthGroup> _runs(
@@ -343,8 +344,8 @@ String? dateSpan(List<Asset> assets) {
   }
   if (lo == null || hi == null) return null;
   if (lo.year != hi.year) return '${lo.year} – ${hi.year}';
-  if (lo.month == hi.month) return '${monthNames[lo.month - 1]} ${lo.year}';
-  return '${monthNames[lo.month - 1]} – ${monthNames[hi.month - 1]} ${lo.year}';
+  if (lo.month == hi.month) return monthYear(lo);
+  return '${monthName(lo)} – ${monthName(hi)} ${lo.year}';
 }
 
 class _AssetTile extends StatelessWidget {

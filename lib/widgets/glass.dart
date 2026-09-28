@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 import '../look.dart';
 import 'pause_when_hidden.dart';
 import 'shown_timers.dart';
+import '../l10n/l10n.dart';
+import '../l10n/dates.dart' show longDate;
+export '../l10n/dates.dart' show longDate;
 
 /// Small pieces of the photo browser's look, shared by the home screen and the
 /// album view so the two read as one app.
@@ -526,44 +529,15 @@ class ModernScaffold extends StatelessWidget {
   }
 }
 
-// --- words for dates, without pulling in intl for two lists -----------------
-
-const _weekdays = [
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-  'Sunday',
-];
-const monthNames = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
-];
 
 /// "Good morning" and so on, by the hour.
 String greetingFor(DateTime t) {
   final h = t.hour;
-  if (h >= 5 && h < 12) return 'Good morning';
-  if (h >= 12 && h < 17) return 'Good afternoon';
-  if (h >= 17 && h < 22) return 'Good evening';
-  return 'Good night';
+  if (h >= 5 && h < 12) return tr('greeting.morning', 'Good morning');
+  if (h >= 12 && h < 17) return tr('greeting.afternoon', 'Good afternoon');
+  if (h >= 17 && h < 22) return tr('greeting.evening', 'Good evening');
+  return tr('greeting.night', 'Good night');
 }
-
-/// "Thursday 24 September".
-String longDate(DateTime t) =>
-    '${_weekdays[t.weekday - 1]} ${t.day} ${monthNames[t.month - 1]}';
 
 /// "1,204" — thousands grouped, for counts that can run large.
 String grouped(int n) {

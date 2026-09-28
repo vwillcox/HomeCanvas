@@ -9,6 +9,7 @@ import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
 import '../../time_format.dart';
+import '../../l10n/dates.dart';
 
 /// Sticky notes for the household, sent from a phone.
 ///
@@ -53,8 +54,7 @@ class _NotesWidgetState extends State<NotesWidget> {
       return hhmm(at);
     }
     if (d.inDays == 1) return 'yesterday';
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    return d.inDays < 7 ? days[at.weekday - 1] : '${at.day}/${at.month}';
+    return d.inDays < 7 ? weekdayShort(at) : numericDayMonth(at);
   }
 
   @override

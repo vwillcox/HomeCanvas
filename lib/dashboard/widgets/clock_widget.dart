@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../widget_registry.dart';
+import '../../l10n/dates.dart';
 
 /// Time and date.
 class ClockWidget extends StatefulWidget {
@@ -109,17 +110,8 @@ class _ClockWidgetState extends State<ClockWidget> {
 
   static String _two(int v) => v.toString().padLeft(2, '0');
 
-  static const _days = [
-    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
-    'Sunday'
-  ];
-  static const _months = [
-    'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August',
-    'September', 'October', 'November', 'December'
-  ];
-
-  static String _dateLine(DateTime d) =>
-      '${_days[d.weekday - 1]} ${d.day} ${_months[d.month - 1]}';
+  /// "Monday 28 September", or "Monday, September 28" in US English.
+  static String _dateLine(DateTime d) => longDate(d);
 }
 
 final clockWidgetType = DashboardWidgetType(
