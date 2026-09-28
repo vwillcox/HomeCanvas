@@ -7,6 +7,22 @@ import 'package:home_canvas/dashboard/dashboard_model.dart';
 import 'package:home_canvas/services/hue_relay.dart';
 
 void main() {
+  test('every /api path the editor answers is kept from the Hue relay', () {
+    // A path added to the editor but not to the relay's list works on the
+    // editor's own port and goes to Hue on port 80 — which is how the
+    // language picker once came up empty.
+    final served = {
+      for (final m in RegExp(r"(?:path == |startsWith\()'(/api/[\w.\-]+)")
+          .allMatches(File('lib/services/dashboard_service.dart')
+              .readAsStringSync()))
+        m[1]!,
+    };
+    expect(served, contains('/api/strings'));
+    for (final path in served) {
+      expect(HueRelay.handles(path), isFalse, reason: path);
+    }
+  });
+
   test('Alexa\'s Hue requests go on; the editor\'s own stay', () {
     for (final hue in [
       '/description.xml',
