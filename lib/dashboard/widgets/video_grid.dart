@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../dashboard_theme.dart';
 import 'fit_canvas.dart';
+import '../../l10n/dates.dart';
 
 /// One video in a [VideoGrid].
 class VideoGridItem {
@@ -166,9 +167,5 @@ String releasedAgo(DateTime at, DateTime now) {
   if (d.inMinutes < 60) return '${math.max(1, d.inMinutes)} min ago';
   if (d.inHours < 24) return '${d.inHours} h ago';
   if (d.inDays < 7) return '${d.inDays} d ago';
-  const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-  ];
-  return '${at.day} ${months[at.month - 1]}';
+  return dayMonth(at);
 }

@@ -10,6 +10,7 @@ import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
+import '../../l10n/dates.dart';
 
 /// Which bins go out next, and when. From the evening before it says to put
 /// them out; a tap says they are out, and it quietens down.
@@ -24,30 +25,6 @@ class BinsWidget extends StatefulWidget {
 
 class _BinsWidgetState extends State<BinsWidget>
     with PauseWhenHidden, ShownTimers, RebuildEveryMinute {
-  static const _days = [
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-    'Sunday',
-  ];
-  static const _months = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
-
   @override
   Widget build(BuildContext context) {
     final w = widget.w;
@@ -91,8 +68,8 @@ class _BinsWidgetState extends State<BinsWidget>
         gap == 1
             ? 'Tomorrow'
             : gap < 7
-            ? _days[next.day.weekday - 1]
-            : '${_days[next.day.weekday - 1].substring(0, 3)} ${next.day.day} ${_months[next.day.month - 1]}',
+            ? weekdayName(next.day)
+            : weekdayDayMonth(next.day),
         StatusChip(text: 'in $gap days', colour: t.textSecondary, size: 11),
       ),
     };

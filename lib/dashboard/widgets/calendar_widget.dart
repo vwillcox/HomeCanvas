@@ -5,6 +5,8 @@ import '../../services/feed_service.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import '../../time_format.dart';
+import '../../l10n/dates.dart';
+import '../../l10n/l10n.dart';
 
 /// One calendar feed and the colour its events are drawn in.
 class _Source {
@@ -158,8 +160,6 @@ class _ScheduleView extends StatelessWidget {
     );
   }
 
-  static const _days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
   static String _when(CalendarEvent e) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -168,13 +168,14 @@ class _ScheduleView extends StatelessWidget {
 
     final String dayLabel;
     if (diff == 0) {
-      dayLabel = 'Today';
+      dayLabel = tr('widget.calendar.today', 'Today');
     } else if (diff == 1) {
-      dayLabel = 'Tomorrow';
+      dayLabel = tr('widget.calendar.tomorrow', 'Tomorrow');
     } else if (diff < 7) {
-      dayLabel = _days[e.start.weekday - 1];
+      dayLabel = weekdayShort(e.start);
     } else {
-      dayLabel = '${_days[e.start.weekday - 1]} ${e.start.day}/${e.start.month}';
+      // 28/09 in Britain, 09/28 in America.
+      dayLabel = '${weekdayShort(e.start)} ${numericDayMonth(e.start)}';
     }
 
     if (e.allDay) return '$dayLabel · all day';
@@ -194,12 +195,6 @@ class _MonthView extends StatelessWidget {
 
   final DashboardWidgetContext w;
   final List<_Entry> entries;
-
-  static const _weekdays = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-  static const _months = [
-    'January', 'February', 'March', 'April', 'May', 'June', 'July',
-    'August', 'September', 'October', 'November', 'December'
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -224,7 +219,7 @@ class _MonthView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          '${_months[now.month - 1]} ${now.year}',
+          monthYear(now),
           style: TextStyle(
             color: t.textPrimary,
             fontSize: 16,
@@ -234,7 +229,7 @@ class _MonthView extends StatelessWidget {
         const SizedBox(height: 6),
         Row(
           children: [
-            for (final d in _weekdays)
+            for (final d in weekdayLetters())
               Expanded(
                 child: Text(
                   d,

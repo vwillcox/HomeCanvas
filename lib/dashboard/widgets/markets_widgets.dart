@@ -10,6 +10,7 @@ import '../../widgets/shown_timers.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'tile_bits.dart';
+import '../../l10n/dates.dart';
 
 /// One row a tile was asked for: what to look up, what to call it, and —
 /// as typed — what was paid for it, how many are held, when they were
@@ -894,21 +895,15 @@ class _Chart extends CustomPainter {
   final String span;
   final String Function(double) label;
 
-  static const _days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  static const _months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-  ];
-
   String _when(DateTime t) => switch (span) {
     'day' =>
       '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}',
-    'week' => _days[t.weekday - 1],
+    'week' => weekdayShort(t),
     // "Oct 25": a year's labels are months, and the year matters at its
     // start.
     'year' =>
-      '${_months[t.month - 1]} ${(t.year % 100).toString().padLeft(2, '0')}',
-    _ => '${t.day} ${_months[t.month - 1]}',
+      monthShortYear(t),
+    _ => dayMonth(t),
   };
 
   TextPainter _text(String s, double size) => TextPainter(

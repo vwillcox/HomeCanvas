@@ -12,6 +12,7 @@ import '../../widgets/shown_timers.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
+import '../../l10n/dates.dart';
 
 /// Someone's next birthday.
 @immutable
@@ -46,28 +47,12 @@ class NextBirthday {
   }
 }
 
-const _dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const _monthNames = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
-];
-
 /// "Today 🎂", "Tomorrow", "Sat", "14 Oct" — how far off a birthday is.
 String birthdayWhen(int days, DateTime d) => switch (days) {
   0 => 'Today 🎂',
   1 => 'Tomorrow',
-  < 7 => _dayNames[d.weekday - 1],
-  _ => '${d.day} ${_monthNames[d.month - 1]}',
+  < 7 => weekdayShort(d),
+  _ => dayMonth(d),
 };
 
 /// Birthdays coming up, from the people Immich recognises in your photos —

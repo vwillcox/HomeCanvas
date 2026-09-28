@@ -11,6 +11,7 @@ import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
 import '../../widgets/pause_when_hidden.dart';
+import '../../l10n/dates.dart';
 
 /// Your photos from this date in past years, from Immich's own memories.
 ///
@@ -142,21 +143,6 @@ class _MemoriesWidgetState extends State<MemoriesWidget>
     if (mounted) setState(() => _places[id] = place);
   }
 
-  static const _months = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
-  ];
-
   @override
   Widget build(BuildContext context) {
     final t = widget.w.theme;
@@ -190,7 +176,7 @@ class _MemoriesWidgetState extends State<MemoriesWidget>
         : '$years years ago';
     final detail = [
       if (taken != null)
-        '${taken.day} ${_months[taken.month - 1]} ${taken.year}',
+        fullDate(taken),
       ?place,
     ].join(' · ');
 
