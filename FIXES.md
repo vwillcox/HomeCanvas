@@ -1,7 +1,7 @@
 # What changed on `youtube-playback`
 
-Everything on this branch that is not on `main`: four commits, from
-`7698404` to `20af02d`. New features first, then the security fixes, the
+Everything on this branch that is not on `main`: the commits from `7698404`
+onwards. New features first, then the security fixes, the
 bugs fixed, the work on power and speed, and what to do after updating.
 
 On the dashboard with its pages held, the kiosk now uses about 2% of one CPU
@@ -53,6 +53,18 @@ kiosk and what it needs, instead of the full Raspberry Pi desktop. The
 desktop's taskbar alone uses about 370 MB. To go back to the desktop, run
 `bash scripts/kiosk-session.sh remove`. See INSTALL.md, "Booting straight
 into the kiosk".
+
+### News tiles
+
+- **Scroll and pull to refresh.** A News tile lists every headline its feeds
+  carry and scrolls through them. Pulling down from the top fetches the feeds
+  again straight away.
+- **Where each headline is from.** A small icon — the site's own, found on
+  its home page, or the feed name's first letter — sits beside each headline.
+- **Tabs.** **Layout → A tab for each feed** puts one feed per tab along the
+  bottom, showing the site's icon, the feed's name, or both.
+- **Shorter lists in the editor.** Rows of a list (feeds, entities, chores)
+  fold to one line each; **Edit** opens one.
 
 ### Smaller additions
 
@@ -204,6 +216,8 @@ was off. It now wakes about twice a second.
 - The TV-remote button can take up to 10 seconds to appear after the remote
   starts.
 - The video player shows `1:02:09`, not `01:02:09`.
+- News tiles no longer have a **Headlines to show** setting; they scroll
+  instead.
 - The editor refuses to load from an address outside the home network (a
   public domain name, or a reverse proxy in front of it).
 

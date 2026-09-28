@@ -444,6 +444,14 @@
   .widgetHead small { display: block; color: var(--muted); font-size: 12.5px; }
   .divider { border: none; border-top: 1px solid var(--line); margin: 18px 0 2px; }
   .subcard { border: 1px solid var(--line); border-radius: 16px; padding: 4px 12px 12px; margin-top: 8px; background: rgba(0,0,0,.15); }
+  /* A row folded to one line: what it is, and the two things to do to it. */
+  .subcard.folded { display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 14px; margin-top: 6px; }
+  .subcard.folded .summary { flex: 1; min-width: 0; cursor: pointer; }
+  .subcard.folded .summary b,
+  .subcard.folded .summary span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .subcard.folded .summary b { font-weight: 600; font-size: 14px; }
+  .subcard.folded .summary span { font-size: 12px; color: var(--muted); }
+  .subcard.folded button { min-height: 34px; padding: 0 12px; font-size: 13px; }
 </style>
 </head>
 <body>
@@ -1497,6 +1505,26 @@ function normaliseColour(v) {
   return "#7dd3fc";
 }
 
+/* The list rows opened for editing, by the row itself: they are edited in
+   place, so the same object survives every redraw. */
+const openRows = new WeakSet();
+
+/* What a folded row shows: its first two filled-in fields, choices by their
+   name. Secrets are never among them. */
+function rowSummary(o, row) {
+  const out = [];
+  for (const f of o.fields || []) {
+    if (f.kind === "secret" || f.kind === "colour" || f.kind === "boolean") continue;
+    const v = row[f.key] != null ? String(row[f.key]).trim() : "";
+    if (!v) continue;
+    const dynamic = f.choicesFrom ? (state.schema.lists || {})[f.choicesFrom] : null;
+    const names = dynamic || f.choices || {};
+    out.push(names[v] || v);
+    if (out.length === 2) break;
+  }
+  return out;
+}
+
 /* A repeating group: rows of fields, a plus to add one, a cross to remove.
    Driven entirely by the option's declared fields, so any widget can have a
    list of anything without the editor knowing what it is. */
@@ -1508,10 +1536,43 @@ function listField(w, o) {
     ? w.options[o.key]
     : (Array.isArray(o.default) ? JSON.parse(JSON.stringify(o.default)) : []);
   w.options[o.key] = rows;
+  // Rows of more than one field fold to a line each, so a long list of feeds
+  // is a list rather than a page of boxes.
+  const foldable = (o.fields || []).length > 1;
 
   rows.forEach((row, index) => {
     const card = document.createElement("div");
     card.className = "subcard";
+
+    const remove = document.createElement("button");
+    remove.className = "danger";
+    remove.textContent = "Remove";
+    remove.onclick = () => {
+      rows.splice(index, 1);
+      markDirty();
+      render();
+    };
+
+    if (foldable && !openRows.has(row)) {
+      card.classList.add("folded");
+      const summary = document.createElement("div");
+      summary.className = "summary";
+      const [first, second] = rowSummary(o, row);
+      const title = document.createElement("b");
+      title.textContent = first || "Not filled in yet";
+      summary.appendChild(title);
+      if (second) {
+        const sub = document.createElement("span");
+        sub.textContent = second;
+        summary.appendChild(sub);
+      }
+      const edit = document.createElement("button");
+      edit.textContent = "Edit";
+      summary.onclick = edit.onclick = () => { openRows.add(row); render(); };
+      card.append(summary, edit, remove);
+      host.appendChild(card);
+      return;
+    }
 
     for (const f of o.fields || []) {
       const label = document.createElement("label");
@@ -1557,16 +1618,16 @@ function listField(w, o) {
       card.appendChild(input);
     }
 
-    const remove = document.createElement("button");
-    remove.className = "danger";
-    remove.textContent = "Remove";
-    remove.style.marginTop = "10px";
-    remove.onclick = () => {
-      rows.splice(index, 1);
-      markDirty();
-      render();
-    };
-    card.appendChild(remove);
+    const actions = document.createElement("div");
+    actions.style.cssText = "display:flex;gap:8px;margin-top:10px";
+    if (foldable) {
+      const done = document.createElement("button");
+      done.textContent = "Done";
+      done.onclick = () => { openRows.delete(row); render(); };
+      actions.appendChild(done);
+    }
+    actions.appendChild(remove);
+    card.appendChild(actions);
     host.appendChild(card);
   });
 
@@ -1578,6 +1639,7 @@ function listField(w, o) {
     for (const f of o.fields || []) {
       if (f.default !== null && f.default !== undefined) row[f.key] = f.default;
     }
+    openRows.add(row);
     rows.push(row);
     markDirty();
     render();

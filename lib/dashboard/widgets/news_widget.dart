@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -9,6 +10,7 @@ import '../../services/kiosk_browser.dart' show ReaderStyle;
 import '../../services/feed_service.dart';
 import '../../services/video_link.dart';
 import '../../services/video_player_service.dart';
+import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 
 /// Headlines from an RSS or Atom feed.
@@ -45,17 +47,133 @@ class DashboardNewsWidget extends StatelessWidget {
             if (!hidePromos || !isPromotional(item)) item,
         ],
     ];
-    final error = urls.map(feeds.errorFor).whereType<String>().firstOrNull;
+    final names = {
+      for (final r in w.rows('sources'))
+        '${r['url'] ?? ''}'.trim(): '${r['name'] ?? ''}'.trim(),
+    };
 
-    final maxItems = w.option('maxItems', 5);
-    // One feed needs no blending, and going through the mixer would only
-    // reorder it away from the order the publisher chose.
-    final items = lists.length == 1
-        ? lists.first.take(maxItems).toList()
-        : FeedService.mix(lists, max: maxItems);
+    // One feed to a tab, each keeping the publisher's own order. The tab
+    // says where a headline is from, so the headlines needn't.
+    if (w.option('layout', 'blended') == 'tabs' && urls.length > 1) {
+      String site(int i) => lists[i].firstOrNull?.link ?? urls[i];
+      return _FeedTabs(
+        count: urls.length,
+        page: (i) => _headlines(
+          context,
+          feeds,
+          reader,
+          key: ValueKey(urls[i]),
+          items: lists[i],
+          error: feeds.errorFor(urls[i]),
+          refresh: [urls[i]],
+        ),
+        tab: (i, selected) => _tab(
+          icon: feeds.siteIcon(site(i)),
+          name: names[urls[i]] ?? '',
+          link: site(i),
+          selected: selected,
+        ),
+      );
+    }
 
+    // Which feed each headline came from, for its icon. Items are the cached
+    // instances themselves, so identity is enough to find them again.
+    final sourceOf = Map<FeedItem, String>.identity();
+    for (var i = 0; i < urls.length; i++) {
+      for (final item in lists[i]) {
+        sourceOf.putIfAbsent(item, () => urls[i]);
+      }
+    }
+
+    // Everything the feeds carry: the tile shows what fits and scrolls for
+    // the rest. One feed needs no blending, and going through the mixer would
+    // only reorder it away from the order the publisher chose.
+    return _headlines(
+      context,
+      feeds,
+      reader,
+      items: lists.length == 1
+          ? lists.first
+          : FeedService.mix(lists,
+              max: lists.fold(0, (n, l) => n + l.length)),
+      error: urls.map(feeds.errorFor).whereType<String>().firstOrNull,
+      refresh: urls,
+      sourceOf: w.option('showSource', true) ? sourceOf : null,
+      names: names,
+    );
+  }
+
+  /// A tab along the bottom: the feed's icon and name.
+  Widget _tab({
+    required String? icon,
+    required String name,
+    required String link,
+    required bool selected,
+  }) {
+    final t = w.theme;
+    final host = (Uri.tryParse(link)?.host ?? '').replaceFirst('www.', '');
+    final label = w.option('tabLabel', 'both');
+    return Container(
+      height: 40,
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(
+            color: selected
+                ? t.accent
+                : t.textSecondary.withValues(alpha: 0.15),
+            width: selected ? 3 : 1,
+          ),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          if (label != 'name')
+            _SourceIcon(
+              icon: icon,
+              name: name,
+              link: link,
+              theme: t,
+              // Alone, it is the whole label, so it can be read as one.
+              side: label == 'icon' ? 24 : 16,
+            ),
+          if (label == 'both') const SizedBox(width: 6),
+          if (label != 'icon')
+            Flexible(
+              child: Text(
+                name.isNotEmpty ? name : host,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: selected ? t.textPrimary : t.textSecondary,
+                  fontSize: 13,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// [items] as a scrolling list that, pulled down from the top, fetches
+  /// [refresh] again. With [sourceOf], each headline carries its feed's icon.
+  Widget _headlines(
+    BuildContext context,
+    FeedService feeds,
+    ArticleReader? reader, {
+    Key? key,
+    required List<FeedItem> items,
+    required String? error,
+    required List<String> refresh,
+    Map<FeedItem, String>? sourceOf,
+    Map<String, String> names = const {},
+  }) {
+    final t = w.theme;
     if (items.isEmpty) {
       return Center(
+        key: key,
         child: Text(
           error ?? 'Fetching headlines…',
           style: TextStyle(color: t.textSecondary, fontSize: 15),
@@ -67,85 +185,102 @@ class DashboardNewsWidget extends StatelessWidget {
     final showTime = w.option('showTime', true);
     final shown = items;
 
-    return ListView.separated(
-      padding: EdgeInsets.zero,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: shown.length,
-      separatorBuilder: (_, _) => Divider(
-        height: 14,
-        thickness: 1,
-        color: t.textSecondary.withValues(alpha: 0.15),
-      ),
-      itemBuilder: (context, i) {
-        final item = shown[i];
-        final tappable = w.option('openOnTap', true) &&
-            (item.link != null || item.summary != null);
-        // The headline being read aloud, marked so you can see which.
-        final beingRead = reader != null &&
-            reader.active &&
-            item.link != null &&
-            reader.link == item.link;
-        return GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: tappable ? () => _open(context, item) : null,
-          child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (beingRead) ...[
-                  Padding(
-                    padding: const EdgeInsets.only(top: 1),
-                    child: Icon(
-                      Icons.volume_up_rounded,
-                      size: 17,
-                      color: t.accent,
+    // Always scrollable, so the pull works even when every headline fits.
+    return RefreshIndicator(
+      key: key,
+      onRefresh: () => feeds.refresh(refresh),
+      child: ListView.separated(
+        padding: EdgeInsets.zero,
+        physics: const AlwaysScrollableScrollPhysics(),
+        itemCount: shown.length,
+        separatorBuilder: (_, _) => Divider(
+          height: 14,
+          thickness: 1,
+          color: t.textSecondary.withValues(alpha: 0.15),
+        ),
+        itemBuilder: (context, i) {
+          final item = shown[i];
+          final tappable = w.option('openOnTap', true) &&
+              (item.link != null || item.summary != null);
+          // The headline being read aloud, marked so you can see which.
+          final beingRead = reader != null &&
+              reader.active &&
+              item.link != null &&
+              reader.link == item.link;
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: tappable ? () => _open(context, item) : null,
+            child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (sourceOf != null) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(top: 1.5),
+                      child: _SourceIcon(
+                        icon: feeds.siteIcon(item.link ?? sourceOf[item]),
+                        name: names[sourceOf[item]] ?? '',
+                        link: item.link ?? sourceOf[item] ?? '',
+                        theme: t,
+                      ),
+                    ),
+                    const SizedBox(width: 7),
+                  ],
+                  if (beingRead) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(top: 1),
+                      child: Icon(
+                        Icons.volume_up_rounded,
+                        size: 17,
+                        color: t.accent,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                  ],
+                  Expanded(
+                    child: Text(
+                      item.title,
+                      maxLines: showSummary ? 2 : 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: beingRead ? t.accent : t.textPrimary,
+                        fontSize: 15,
+                        height: 1.25,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 6),
                 ],
-                Expanded(
+              ),
+              if (showSummary && item.summary != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
                   child: Text(
-                    item.title,
-                    maxLines: showSummary ? 2 : 1,
+                    item.summary!,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: beingRead ? t.accent : t.textPrimary,
-                      fontSize: 15,
-                      height: 1.25,
-                      fontWeight: FontWeight.w500,
+                        color: t.textSecondary, fontSize: 13, height: 1.25),
+                  ),
+                ),
+              if (showTime && item.published != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(
+                    ago(item.published!),
+                    style: TextStyle(
+                      color: t.textSecondary.withValues(alpha: 0.8),
+                      fontSize: 12,
                     ),
                   ),
                 ),
-              ],
-            ),
-            if (showSummary && item.summary != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: Text(
-                  item.summary!,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                      color: t.textSecondary, fontSize: 13, height: 1.25),
-                ),
-              ),
-            if (showTime && item.published != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: Text(
-                  ago(item.published!),
-                  style: TextStyle(
-                    color: t.textSecondary.withValues(alpha: 0.8),
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-          ],
-        ),
-        );
-      },
+            ],
+          ),
+          );
+        },
+      ),
     );
   }
 
@@ -299,6 +434,107 @@ class DashboardNewsWidget extends StatelessWidget {
   }
 }
 
+/// One page at a time, with a row of tabs along the bottom to choose it.
+class _FeedTabs extends StatefulWidget {
+  const _FeedTabs({required this.count, required this.page, required this.tab});
+
+  final int count;
+  final Widget Function(int i) page;
+  final Widget Function(int i, bool selected) tab;
+
+  @override
+  State<_FeedTabs> createState() => _FeedTabsState();
+}
+
+class _FeedTabsState extends State<_FeedTabs> {
+  int _selected = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    // A feed removed in the settings can take the chosen tab with it.
+    final selected = _selected < widget.count ? _selected : 0;
+    return Column(
+      children: [
+        Expanded(child: widget.page(selected)),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            for (var i = 0; i < widget.count; i++)
+              Expanded(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => setState(() => _selected = i),
+                  child: widget.tab(i, i == selected),
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// A headline's source: the site's icon, or a letter where there is none.
+class _SourceIcon extends StatelessWidget {
+  const _SourceIcon({
+    required this.icon,
+    required this.name,
+    required this.link,
+    required this.theme,
+    this.side = 16,
+  });
+
+  final String? icon;
+  final String name;
+  final String link;
+  final DashboardTheme theme;
+  final double side;
+
+  @override
+  Widget build(BuildContext context) {
+    final letter = SizedBox(
+      width: side,
+      height: side,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: theme.accent.withValues(alpha: 0.25),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Center(
+          child: Text(
+            _initial(),
+            style: TextStyle(
+              color: theme.textPrimary,
+              fontSize: side * 0.625,
+              height: 1,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ),
+    );
+    if (icon == null) return letter;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(4),
+      child: CachedNetworkImage(
+        imageUrl: icon!,
+        width: side,
+        height: side,
+        fit: BoxFit.cover,
+        placeholder: (_, _) => letter,
+        errorWidget: (_, _, _) => letter,
+      ),
+    );
+  }
+
+  /// The feed's name if it was given one, or else the site's.
+  String _initial() {
+    final host = (Uri.tryParse(link)?.host ?? '').replaceFirst('www.', '');
+    final from = name.isNotEmpty ? name : host;
+    return from.isEmpty ? '•' : from[0].toUpperCase();
+  }
+}
+
 final newsWidgetType = DashboardWidgetType(
   type: 'news',
   category: WidgetCategory.reference,
@@ -329,6 +565,30 @@ final newsWidgetType = DashboardWidgetType(
       ],
     ),
     WidgetOption(
+      key: 'layout',
+      label: 'Layout',
+      kind: OptionKind.choice,
+      defaultValue: 'blended',
+      choices: {
+        'blended': 'One list, all the feeds blended together',
+        'tabs': 'A tab for each feed, along the bottom',
+      },
+      help: 'Tabs need more than one feed; with just one, it is a plain list.',
+    ),
+    WidgetOption(
+      key: 'tabLabel',
+      label: 'Tabs show',
+      kind: OptionKind.choice,
+      defaultValue: 'both',
+      choices: {
+        'both': 'The site’s icon and the feed’s name',
+        'icon': 'Just the icon',
+        'name': 'Just the name',
+      },
+      help: 'Icons alone fit more tabs across a narrow tile. A feed with no '
+          'name shows its site’s address.',
+    ),
+    WidgetOption(
       key: 'refreshMinutes',
       label: 'Check for new items every (minutes)',
       kind: OptionKind.choice,
@@ -346,16 +606,19 @@ final newsWidgetType = DashboardWidgetType(
           'service twice a day.',
     ),
     WidgetOption(
-      key: 'maxItems',
-      label: 'Headlines to show',
-      kind: OptionKind.number,
-      defaultValue: 5,
-    ),
-    WidgetOption(
       key: 'showSummary',
       label: 'Show a line of summary',
       kind: OptionKind.boolean,
       defaultValue: false,
+    ),
+    WidgetOption(
+      key: 'showSource',
+      label: 'Show which feed each headline is from',
+      kind: OptionKind.boolean,
+      defaultValue: true,
+      help: 'A small icon — the site’s own, or the first letter of the '
+          'feed’s name where it has none. Not needed with tabs, which say '
+          'it already.',
     ),
     WidgetOption(
       key: 'showTime',
@@ -484,7 +747,8 @@ final newsWidgetType = DashboardWidgetType(
     }
     if (urls.isEmpty) return const [];
 
-    final shown = (config.options['maxItems'] as num?)?.toInt() ?? 5;
+    // Enough to fill the tile; the panel scrolls for the rest.
+    const shown = 10;
     final hidePromos = config.options['hidePromotions'] != false;
     final lists = [
       for (final u in urls)

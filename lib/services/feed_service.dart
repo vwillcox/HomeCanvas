@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:html/parser.dart' as html;
 import 'package:xml/xml.dart';
 
 import 'plain_text.dart';
@@ -147,6 +148,9 @@ class FeedService extends ChangeNotifier {
   final Map<String, _Cached<FeedItem>> _feeds = {};
   final Map<String, _Cached<CalendarEvent>> _calendars = {};
   final Set<String> _inFlight = {};
+
+  /// Each site's icon by origin, null where none was found.
+  final Map<String, String?> _icons = {};
   Timer? _timer;
 
   /// Retries quickly until something has been fetched, then settles.
@@ -213,6 +217,86 @@ class FeedService extends ChangeNotifier {
 
   bool _isStale(DateTime at, [Duration? maxAge]) =>
       DateTime.now().difference(at) > (maxAge ?? _refreshInterval);
+
+  /// The icon of the site [link] is on, looked for once per site — so a
+  /// headline can show where it came from. Null until found, or if there is
+  /// none.
+  String? siteIcon(String? link) {
+    final uri = link == null ? null : Uri.tryParse(link);
+    if (uri == null ||
+        (uri.scheme != 'https' && uri.scheme != 'http') ||
+        uri.host.isEmpty) {
+      return null;
+    }
+    final origin = '${uri.scheme}://${uri.host}';
+    if (_icons.containsKey(origin)) return _icons[origin];
+    _findIcon(origin);
+    return null;
+  }
+
+  Future<void> _findIcon(String origin) async {
+    if (!_inFlight.add(origin)) return;
+    try {
+      final body = await _get('$origin/');
+      // Most sites have this one whether or not the page names it; if not,
+      // the headline falls back to a letter.
+      _icons[origin] = (body == null ? null : pickIcon(origin, body)) ??
+          '$origin/apple-touch-icon.png';
+      notifyListeners();
+    } finally {
+      _inFlight.remove(origin);
+    }
+  }
+
+  /// The best icon a page's `<head>` offers: an apple-touch-icon first, as
+  /// the one reliably a PNG of some size, then the largest other icon.
+  /// `.ico` and SVG are skipped — Flutter draws neither.
+  @visibleForTesting
+  static String? pickIcon(String origin, String page) {
+    final end = page.toLowerCase().indexOf('</head>');
+    final head = html.parse(end < 0 ? page : page.substring(0, end));
+    final base = Uri.parse('$origin/');
+    String? best;
+    var bestScore = 0;
+    for (final l in head.querySelectorAll('link')) {
+      final rel = (l.attributes['rel'] ?? '').toLowerCase();
+      final href = (l.attributes['href'] ?? '').trim();
+      if (!rel.contains('icon') || rel.contains('mask') || href.isEmpty) {
+        continue;
+      }
+      final Uri uri;
+      try {
+        uri = base.resolve(href);
+      } catch (_) {
+        continue;
+      }
+      if (uri.scheme != 'https' && uri.scheme != 'http') continue;
+      final type = (l.attributes['type'] ?? '').toLowerCase();
+      final path = uri.path.toLowerCase();
+      if (path.endsWith('.ico') ||
+          path.endsWith('.svg') ||
+          type.contains('svg') ||
+          type.contains('icon')) {
+        continue;
+      }
+      final size = int.tryParse(RegExp(r'(\d+)x\d+')
+                  .firstMatch(l.attributes['sizes'] ?? '')
+                  ?.group(1) ??
+              '') ??
+          16;
+      final score = (rel.contains('apple-touch') ? 10000 : 0) + size;
+      if (score > bestScore) {
+        best = uri.toString();
+        bestScore = score;
+      }
+    }
+    return best;
+  }
+
+  /// Fetch [urls] again now, however fresh they are, finishing when all have
+  /// landed. For a pull-to-refresh, which wants to know when to stop spinning.
+  Future<void> refresh(Iterable<String> urls) =>
+      Future.wait([for (final u in urls) _fetchFeed(u)]);
 
   void refreshAll() {
     for (final url in _feeds.keys.toList()) {
