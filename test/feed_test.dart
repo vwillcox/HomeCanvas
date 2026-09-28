@@ -3,6 +3,7 @@ import 'package:home_canvas/services/feed_service.dart';
 
 void main() {
   _entities();
+  _siteIcons();
   group('RSS and Atom', () {
     test('reads RSS items, newest first', () {
       final items = FeedService.parseFeed('''
@@ -167,6 +168,45 @@ void _entities() {
       expect(titleOf('100&amp;#; off'), '100&#; off');
       // Beyond the Unicode range — decoding this would throw.
       expect(titleOf('&amp;#99999999;'), '&#99999999;');
+    });
+  });
+}
+
+void _siteIcons() {
+  group('site icons', () {
+    const origin = 'https://www.example.com';
+
+    test('prefers an apple-touch-icon, resolved against the site', () {
+      expect(
+        FeedService.pickIcon(origin, '''
+<html><head>
+  <link rel="icon" href="/favicon-32.png" sizes="32x32">
+  <link rel="apple-touch-icon" href="/touch.png">
+</head><body><link rel="icon" href="/not-in-head.png"></body></html>'''),
+        '$origin/touch.png',
+      );
+    });
+
+    test('takes the largest icon Flutter can draw', () {
+      expect(
+        FeedService.pickIcon(origin, '''
+<head>
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="icon" type="image/svg+xml" href="/icon.svg">
+  <link rel="icon" href="//cdn.example.com/i16.png" sizes="16x16">
+  <link rel="icon" href="i192.png" sizes="192x192">
+</head>'''),
+        '$origin/i192.png',
+      );
+    });
+
+    test('finds nothing when there is only .ico or SVG', () {
+      expect(
+        FeedService.pickIcon(origin, '''
+<head><link rel="icon" href="/favicon.ico">
+<link rel="mask-icon" href="/pin.png"></head>'''),
+        isNull,
+      );
     });
   });
 }
