@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
+
 import 'dashboard_model.dart';
 import 'live_preview.dart';
 import 'dashboard_theme.dart';
@@ -74,17 +76,43 @@ class WidgetOption {
     this.addLabel = 'Add',
   });
 
-  Map<String, dynamic> toJson() => {
-    'key': key,
-    'label': label,
-    'kind': kind.name,
-    'default': defaultValue,
-    'choices': choices,
-    'choicesFrom': choicesFrom,
-    'help': help,
-    'fields': fields.map((f) => f.toJson()).toList(),
-    'addLabel': addLabel,
-  };
+  /// For the editor, with the text in the panel's language where its pack
+  /// has it. [at] is the stem of this option's keys —
+  /// `widget.news.option.sources` — or null to leave it in British English.
+  Map<String, dynamic> toJson({String? at}) {
+    String t(String what, String english) =>
+        at == null ? english : (L10n.instance.lookup('$at.$what') ?? english);
+    return {
+      'key': key,
+      'label': t('label', label),
+      'kind': kind.name,
+      'default': defaultValue,
+      'choices': {
+        for (final e in choices.entries) e.key: t('choice.${e.key}', e.value),
+      },
+      'choicesFrom': choicesFrom,
+      'help': help == null ? null : t('help', help!),
+      'fields': [
+        for (final f in fields)
+          f.toJson(at: at == null ? null : '$at.field.${f.key}'),
+      ],
+      'addLabel': t('addLabel', addLabel),
+    };
+  }
+
+  /// Every piece of this option's text, by key, in British English — what a
+  /// language pack translates.
+  Iterable<(String, String)> texts(String at) sync* {
+    yield ('$at.label', label);
+    if (help != null) yield ('$at.help', help!);
+    if (kind == OptionKind.list) yield ('$at.addLabel', addLabel);
+    for (final e in choices.entries) {
+      yield ('$at.choice.${e.key}', e.value);
+    }
+    for (final f in fields) {
+      yield* f.texts('$at.field.${f.key}');
+    }
+  }
 }
 
 /// Everything a widget's builder is handed.
@@ -131,6 +159,11 @@ class WidgetCategory {
   static const network = 'Network';
   static const homeLab = 'Home lab';
   static const other = 'Other';
+
+  /// [category]'s name in the panel's language. The British name is also
+  /// its id — saved in nothing, but the editor groups by it.
+  static String localName(String category) =>
+      L10n.instance.lookup('category.${category.toLowerCase()}') ?? category;
 
   static const order = [
     timeAndDay,
@@ -277,21 +310,39 @@ class DashboardWidgetType {
     return smallest.clamp(0.45, 1.0);
   }
 
+  /// The stem of this type's keys in a language pack: `widget.news`.
+  String get _at => 'widget.$type';
+
+  /// Its name in the panel's language.
+  String get localName => L10n.instance.lookup('$_at.name') ?? name;
+
   Map<String, dynamic> toJson() => {
     'type': type,
-    'name': name,
-    'description': description,
+    'name': localName,
+    'description': L10n.instance.lookup('$_at.description') ?? description,
     'glyph': glyph,
     'category': category,
+    'categoryName': WidgetCategory.localName(category),
     'defaultWidth': defaultWidth,
     'defaultHeight': defaultHeight,
     'minWidth': minWidth,
     'minHeight': minHeight,
     // So the editor's preview skips the shrink the panel skips.
     'fitsItself': fitsItself,
-    'options': options.map((o) => o.toJson()).toList(),
+    'options': [
+      for (final o in options) o.toJson(at: '$_at.option.${o.key}'),
+    ],
     'preview': preview.map((p) => p.toJson()).toList(),
   };
+
+  /// Every piece of this type's text, by key, in British English.
+  Iterable<(String, String)> texts() sync* {
+    yield ('$_at.name', name);
+    yield ('$_at.description', description);
+    for (final o in options) {
+      yield* o.texts('$_at.option.${o.key}');
+    }
+  }
 }
 
 /// Every widget type the build knows about.

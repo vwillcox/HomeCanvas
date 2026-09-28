@@ -791,6 +791,9 @@ class AppConfig {
   double videoVolume;
   bool videoMuted;
 
+  /// The language the panel and its editor are shown in: "en-GB", "fr"…
+  String language;
+
   AppConfig({
     this.immichUrl = '',
     this.apiKey = '',
@@ -812,6 +815,7 @@ class AppConfig {
     VideoSiteSettings? nebula,
     this.videoVolume = 100,
     this.videoMuted = false,
+    this.language = 'en-GB',
   })  : slideshow = slideshow ?? SlideshowSettings(),
         weather = weather ?? WeatherSettings(),
         nowPlaying = nowPlaying ?? NowPlayingSettings(),
@@ -938,6 +942,7 @@ class AppConfig {
           : VideoSiteSettings(),
       videoVolume: (j['videoVolume'] as num?)?.toDouble() ?? 100,
       videoMuted: j['videoMuted'] as bool? ?? false,
+      language: j['language'] as String? ?? 'en-GB',
     );
   }
 
@@ -962,5 +967,6 @@ class AppConfig {
         'nebula': nebula.toJson(),
         'videoVolume': videoVolume,
         'videoMuted': videoMuted,
+        'language': language,
       };
 }

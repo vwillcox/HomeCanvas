@@ -1,0 +1,21 @@
+{
+  "@@locale": "en-US",
+  "@@x-ai-created": true,
+  "@@x-translator": "Claude (AI), from the British source, with scripts/l10n_en_us.py — not yet checked by a person.",
+  "widget.bins.description": "Which trash and recycling go out next and when. From the evening before it says to put them out; tap it once they are out.",
+  "widget.bins.name": "Trash day",
+  "widget.bins.option.bins.addLabel": "Add a collection",
+  "widget.bins.option.bins.field.colour.label": "Color",
+  "widget.bins.option.bins.help": "One row per collection. The date is any one pickup of it — from the city’s schedule — written as 2026-10-01.",
+  "widget.bins.option.bins.label": "Trash and recycling",
+  "widget.bins.option.speakAt.help": "A time the evening before, like 7:00 PM or 19:00, to hear what goes out. Leave empty for no reminder.",
+  "widget.birthdays.description": "Birthdays coming up, with faces, from the people Immich recognizes in your photos. Set a date of birth on a person in Immich and they appear here.",
+  "widget.calendar.option.sources.field.colour.label": "Color",
+  "widget.chores.option.people.field.colour.label": "Color",
+  "widget.countdowns.description": "Days until the things you are looking forward to — birthdays, vacations, trips. The soonest first.",
+  "widget.countdowns.option.bankHolidays.label": "UK bank holidays",
+  "widget.lights.description": "Govee lights and plugs. Tap one to switch it, drag along its bar for brightness, tap a color. Works over the home network for devices with LAN Control turned on in the Govee app, or through Govee with an API key.",
+  "widget.lights.option.swatches.label": "Colors to offer",
+  "widget.news.option.readerTheme.label": "Reader colors",
+  "widget.unifi_presence.option.watch.help": "Part of a device name, or a MAC address. Leave empty to list everything. Anything named here but absent is shown grayed out, so the list keeps its shape."
+}

@@ -504,23 +504,26 @@
          taller than the window once all of them are open, and the settings
          for the widget you are actually editing are the ones at the bottom. -->
     <section class="card" data-panel="settings" id="settingsCard">
-      <h2 class="panelHead">Widget<span class="chev">▾</span></h2>
+      <h2 class="panelHead" data-t="web.editor.panel.settings">Widget<span class="chev">▾</span></h2>
       <div class="panelBody">
         <div id="settings"></div>
       </div>
     </section>
 
     <section class="card" data-panel="palette">
-      <h2 class="panelHead">Add a widget<span class="chev">▾</span></h2>
+      <h2 class="panelHead" data-t="web.editor.panel.palette">Add a widget<span class="chev">▾</span></h2>
       <div class="panelBody">
         <div id="palette"></div>
       </div>
     </section>
 
     <section class="card" data-panel="screen">
-      <h2 class="panelHead">Screen<span class="chev">▾</span></h2>
+      <h2 class="panelHead" data-t="web.editor.panel.screen">Screen<span class="chev">▾</span></h2>
       <div class="panelBody">
-        <label class="field" for="brightness">Brightness</label>
+        <label class="field" for="language" data-t="web.editor.language">Language</label>
+        <select id="language" disabled></select>
+        <p class="help" id="languageNote" hidden data-t="web.editor.aiNote">Translated by AI and not yet checked by a person, so some wording may be off.</p>
+        <label class="field" for="brightness" data-t="web.editor.brightness">Brightness</label>
         <div class="rangeRow">
           <input type="range" id="brightness" min="5" max="100" step="1" disabled>
           <output id="brightnessValue" for="brightness">…</output>
@@ -530,7 +533,7 @@
     </section>
 
     <section class="card" data-panel="sound">
-      <h2 class="panelHead">Sound<span class="chev">▾</span></h2>
+      <h2 class="panelHead" data-t="web.editor.panel.sound">Sound<span class="chev">▾</span></h2>
       <div class="panelBody">
         <label class="field" for="volNotification">Notifications</label>
         <div class="rangeRow">
@@ -558,7 +561,7 @@
     </section>
 
     <section class="card" data-panel="dashboard">
-      <h2 class="panelHead">Look<span class="chev">▾</span></h2>
+      <h2 class="panelHead" data-t="web.editor.panel.dashboard">Look<span class="chev">▾</span></h2>
       <div class="panelBody">
         <div class="themes" id="theme" role="radiogroup" aria-label="Theme"></div>
         <p class="help">The theme dresses the whole kiosk — the photos, the music player and Settings as well as this dashboard.</p>
@@ -654,6 +657,133 @@ const api = {
     return r.json();
   },
 };
+
+/* ---------- words ---------- */
+
+/* The editor's own text in the panel's language, from the same packs the
+   panel reads. Markup marked data-t="key" is translated where it stands;
+   text built by script asks t(key, english). Whatever a pack lacks stays in
+   British English, the language the editor is written in. */
+let WORDS = {};
+let LANGUAGE = "en-GB";
+let LANGUAGES = [];
+
+function t(key, english, args) {
+  const s = WORDS[key] ?? english;
+  return args ? fillIn(s, args) : s;
+}
+
+/* {name} from args, and {n, plural, one{…} other{…}} by the language's own
+   plural rules, # standing for the number — the same forms the panel reads. */
+function fillIn(s, args) {
+  let out = "";
+  let i = 0;
+  while (i < s.length) {
+    const open = s.indexOf("{", i);
+    if (open < 0) { out += s.slice(i); break; }
+    out += s.slice(i, open);
+    let depth = 0, close = -1;
+    for (let j = open; j < s.length; j++) {
+      if (s[j] === "{") depth++;
+      if (s[j] === "}" && --depth === 0) { close = j; break; }
+    }
+    if (close < 0) { out += s.slice(open); break; }
+    const body = s.slice(open + 1, close);
+    const m = body.match(/^\s*(\w+)\s*,\s*plural\s*,([\s\S]*)$/);
+    if (m) {
+      const n = Number(args[m[1]]);
+      const cases = {};
+      const re = /\s*(=?\w+)\s*\{/g;
+      let rest = m[2], k;
+      while ((k = re.exec(rest))) {
+        let d = 1, j = re.lastIndex;
+        for (; j < rest.length && d; j++) { if (rest[j] === "{") d++; if (rest[j] === "}") d--; }
+        cases[k[1]] = rest.slice(re.lastIndex, j - 1);
+        re.lastIndex = j;
+      }
+      const which = cases["=" + n] ?? cases[new Intl.PluralRules(LANGUAGE).select(n)] ?? cases.other ?? "";
+      out += fillIn(which, args).replaceAll("#", String(n));
+    } else {
+      const name = body.trim();
+      out += name in args ? String(args[name]) : "{" + body + "}";
+    }
+    i = close + 1;
+  }
+  return out;
+}
+
+/* Replaces an element's own words and leaves its children — a heading's
+   fold arrow — where they are. */
+function setOwnText(el, text) {
+  const node = [...el.childNodes].find(
+    n => n.nodeType === Node.TEXT_NODE && n.textContent.trim());
+  if (node) node.textContent = text; else el.textContent = text;
+}
+
+function translatePage(root = document) {
+  for (const el of root.querySelectorAll("[data-t]")) {
+    const s = WORDS[el.dataset.t];
+    if (s) setOwnText(el, s);
+  }
+  for (const el of root.querySelectorAll("[data-t-title]")) {
+    const s = WORDS[el.dataset.tTitle];
+    if (s) el.title = s;
+  }
+  for (const el of root.querySelectorAll("[data-t-placeholder]")) {
+    const s = WORDS[el.dataset.tPlaceholder];
+    if (s) el.placeholder = s;
+  }
+}
+
+async function loadWords() {
+  try {
+    const r = await api.get("/api/strings");
+    WORDS = r.strings || {};
+    LANGUAGE = r.language || "en-GB";
+    LANGUAGES = r.languages || [];
+    document.documentElement.lang = LANGUAGE;
+    translatePage();
+  } catch {
+    // An older panel: the editor stays in British English.
+  }
+}
+
+/* The language picker: each language by its own name, what that is in
+   English, and whether an AI translated it. Changing it changes the panel
+   too, and reloads the editor in the new language. */
+function renderLanguage() {
+  const sel = document.getElementById("language");
+  if (!LANGUAGES.length) return;
+  sel.innerHTML = "";
+  for (const l of LANGUAGES) {
+    const o = document.createElement("option");
+    o.value = l.code;
+    o.textContent = l.name +
+      (l.english !== l.name ? " — " + l.english : "") +
+      (l.aiCreated ? " · " + t("web.editor.aiCreated", "AI-created") : "");
+    sel.appendChild(o);
+  }
+  sel.value = LANGUAGE;
+  sel.disabled = false;
+  const current = LANGUAGES.find(l => l.code === LANGUAGE);
+  document.getElementById("languageNote").hidden = !(current && current.aiCreated);
+  sel.onchange = async () => {
+    if (state.dirty && !confirm(t("web.editor.languageUnsaved",
+        "Changing the language reloads the editor, and unsaved changes to the dashboard will be lost. Change it anyway?"))) {
+      sel.value = LANGUAGE;
+      return;
+    }
+    sel.disabled = true;
+    try {
+      await api.put("/api/language", { code: sel.value });
+      location.reload();
+    } catch {
+      sel.disabled = false;
+      sel.value = LANGUAGE;
+      setStatus(t("web.editor.languageFailed", "Couldn’t change the language"), "error");
+    }
+  };
+}
 
 function setStatus(text, tone) {
   statusEl.textContent = text;
@@ -1281,7 +1411,9 @@ function renderPalette() {
     head.type = "button";
     head.className = "phead";
     head.setAttribute("aria-expanded", String(!collapsed.has(key)));
-    head.innerHTML = '<span class="chev">▾</span><span>' + escapeHtml(name) +
+    // Grouped by the British name, shown in the panel's language.
+    const shown = types[0].categoryName || name;
+    head.innerHTML = '<span class="chev">▾</span><span>' + escapeHtml(shown) +
       '</span><span class="count">' + types.length + "</span>";
     head.onclick = () => {
       const now = collapsedPanels();
@@ -2315,6 +2447,7 @@ async function load(quiet) {
       api.get("/api/schema"),
       api.get("/api/dashboard"),
       loadPanels(),
+      loadWords(),
     ]);
     state.schema = schema;
     state.dashboard = dashboard;
@@ -2329,6 +2462,7 @@ async function load(quiet) {
     fitStage();
     pruneRows();
     installPanels();
+    renderLanguage();
     renderPalette();
     renderThemes();
     renderOverrides();

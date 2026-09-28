@@ -32,6 +32,8 @@ import '../services/tv_service.dart';
 import '../services/weather_service.dart';
 import '../widgets/weather_overlay.dart';
 import '../widgets/glass.dart';
+import '../widgets/language_tile.dart';
+import '../l10n/l10n.dart';
 import 'about_screen.dart';
 import 'setup_screen.dart';
 
@@ -202,6 +204,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ];
       case 6: // System
         return [
+          GlassSection(
+            title: tr('settings.language.section', 'Language'),
+            children: const [LanguageTile()],
+          ),
           GlassSection(
             title: 'Device',
             children: [
