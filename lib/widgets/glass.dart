@@ -272,7 +272,7 @@ class ScreenHeader extends StatelessWidget {
     this.subtitle,
     this.onBack,
     this.backIcon = Icons.arrow_back_rounded,
-    this.backTooltip = 'Back',
+    this.backTooltip,
     this.actions = const [],
     this.trailing,
     this.padding,
@@ -286,7 +286,8 @@ class ScreenHeader extends StatelessWidget {
   final String? subtitle;
   final VoidCallback? onBack;
   final IconData backIcon;
-  final String backTooltip;
+  /// Defaults to "Back" in the panel's language.
+  final String? backTooltip;
   final List<Widget> actions;
   final Widget? trailing;
   final EdgeInsetsGeometry? padding;
@@ -304,7 +305,7 @@ class ScreenHeader extends StatelessWidget {
           if (onBack != null) ...[
             GlassIconButton(
               icon: backIcon,
-              tooltip: backTooltip,
+              tooltip: backTooltip ?? tr('common.back', 'Back'),
               onPressed: onBack,
               colour: iconColour,
             ),
@@ -550,6 +551,16 @@ String grouped(int n) {
   return out.toString();
 }
 
-/// "3 items", "1 item".
-String plural(int n, String one, [String? many]) =>
-    '${grouped(n)} ${n == 1 ? one : (many ?? '${one}s')}';
+/// "1 item", "3 items", "5,881 items" — in the panel's language, with its
+/// own plural forms.
+String itemCount(int n) =>
+    tr('count.items', '{n, plural, one{# item} other{# items}}', {'n': n});
+
+String albumCount(int n) =>
+    tr('count.albums', '{n, plural, one{# album} other{# albums}}', {'n': n});
+
+String photoCount(int n) =>
+    tr('count.photos', '{n, plural, one{# photo} other{# photos}}', {'n': n});
+
+String videoCount(int n) =>
+    tr('count.videos', '{n, plural, one{# video} other{# videos}}', {'n': n});

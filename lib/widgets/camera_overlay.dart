@@ -9,6 +9,7 @@ import '../config/app_config.dart' show OverlayCorner;
 import '../screens/camera_screen.dart';
 import '../services/camera_service.dart';
 import 'burn_in_drift.dart';
+import '../l10n/l10n.dart';
 
 /// The live view from the phone acting as a wireless camera.
 ///
@@ -344,7 +345,7 @@ class _Window extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Text(
-                      service.lastError ?? 'Waiting for the camera…',
+                      service.lastError ?? tr('camera.waitingForTheCamera', 'Waiting for the camera…'),
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                           color: Colors.white70, fontSize: 16),
@@ -438,7 +439,7 @@ class CameraControls extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(right: 12),
                   child: _PillButton(
-                    label: lens.facing == 'front' ? 'Front' : 'Back',
+                    label: lens.facing == 'front' ? tr('camera.front', 'Front') : tr('camera.back', 'Back'),
                     selected: lens.id == service.cameraId,
                     onPressed: () => service.selectCamera(lens.id),
                   ),

@@ -12,6 +12,7 @@ import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
+import '../../l10n/l10n.dart';
 
 /// Govee lights and plugs: tap a card to switch it, drag along its bar for
 /// brightness, tap a swatch for a colour.
@@ -88,8 +89,10 @@ class _LightsWidgetState extends State<LightsWidget>
     if (devices.isEmpty) {
       return TileMessage(
         service.error ??
-            'No Govee lights found. Turn on LAN Control for each in the '
-                'Govee app, or add a Govee API key in the widget settings.',
+            tr(
+              'widget.lights.noGoveeLightsFoundTurn',
+              'No Govee lights found. Turn on LAN Control for each in the Govee app, or add a Govee API key in the widget settings.',
+            ),
         theme: t,
       );
     }
@@ -191,10 +194,10 @@ class _Card extends StatelessWidget {
               ),
               Text(
                 !d.online
-                    ? 'Offline'
+                    ? tr('widget.lights.offline', 'Offline')
                     : on
-                    ? (d.brightness != null ? '${d.brightness}%' : 'On')
-                    : 'Off',
+                    ? (d.brightness != null ? '${d.brightness}%' : tr('widget.lights.on', 'On'))
+                    : tr('widget.lights.off', 'Off'),
                 style: TextStyle(color: theme.textSecondary, fontSize: 10),
               ),
               const Spacer(),

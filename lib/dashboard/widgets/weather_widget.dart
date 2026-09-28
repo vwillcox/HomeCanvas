@@ -6,6 +6,8 @@ import '../../widgets/weather_overlay.dart' show weatherIcon;
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'weather_forecast_sheet.dart';
+import '../../l10n/l10n.dart';
+import '../../l10n/dates.dart';
 
 /// Current conditions, and optionally the next few days.
 ///
@@ -26,7 +28,10 @@ class DashboardWeatherWidget extends StatelessWidget {
     if (weather == null) {
       return Center(
         child: Text(
-          service.error ?? 'Waiting for the forecast…',
+          service.error ?? tr(
+            'widget.weather.waitingForTheForecast',
+            'Waiting for the forecast…',
+          ),
           style: TextStyle(color: t.textSecondary, fontSize: 16),
         ),
       );
@@ -74,7 +79,11 @@ class DashboardWeatherWidget extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             showFeels
-                ? '${weather.description} · feels ${weather.feelsLike.round()}${weather.unit}'
+                ? tr(
+                  'widget.weather.feels',
+                  '{description} · feels {feelsLike}{unit}',
+                  {'description': weather.description, 'feelsLike': weather.feelsLike.round(), 'unit': weather.unit},
+                )
                 : weather.description,
             textAlign: TextAlign.center,
             style: TextStyle(color: t.textSecondary, fontSize: 17),
@@ -150,7 +159,10 @@ class DashboardWeatherWidget extends StatelessWidget {
     // columns of days, and they should open the full picture too.
     return Semantics(
       button: true,
-      label: 'Show the full forecast',
+      label: tr(
+        'widget.weather.showTheFullForecast',
+        'Show the full forecast',
+      ),
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => showWeatherForecast(context, t),
@@ -159,8 +171,6 @@ class DashboardWeatherWidget extends StatelessWidget {
     );
   }
 
-  static const _days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
 
   static bool _isToday(DateTime d) {
     final now = DateTime.now();
@@ -168,7 +178,7 @@ class DashboardWeatherWidget extends StatelessWidget {
   }
 
   static String dayLabel(DateTime d) =>
-      _isToday(d) ? 'Today' : _days[d.weekday - 1];
+      _isToday(d) ? tr('common.today', 'Today') : weekdayShort(d);
 }
 
 /// The next few days, as a row of columns or a column of rows.

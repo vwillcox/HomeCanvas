@@ -9,6 +9,7 @@ import 'fit_canvas.dart';
 import 'tile_bits.dart';
 import '../../widgets/pause_when_hidden.dart';
 import '../../widgets/shown_timers.dart';
+import '../../l10n/l10n.dart';
 
 /// Something that happened on this date.
 @immutable
@@ -100,7 +101,7 @@ class _HistoryWidgetState extends State<HistoryWidget>
           ..clear()
           ..[day] = events;
       } catch (e) {
-        if (mounted) setState(() => _error = 'Could not reach Wikipedia');
+        if (mounted) setState(() => _error = tr('widget.history.couldNotReachWikipedia', 'Could not reach Wikipedia'));
         return;
       }
     }
@@ -130,7 +131,7 @@ class _HistoryWidgetState extends State<HistoryWidget>
   Widget build(BuildContext context) {
     final t = widget.w.theme;
     if (_events.isEmpty) {
-      return TileMessage(_error ?? 'Asking Wikipedia…', theme: t);
+      return TileMessage(_error ?? tr('widget.history.askingWikipedia', 'Asking Wikipedia…'), theme: t);
     }
     final e = _events[_index];
     final ago = DateTime.now().year - e.year;
@@ -150,7 +151,7 @@ class _HistoryWidgetState extends State<HistoryWidget>
               TileLabel(
                 icon: Icons.history_edu_rounded,
                 // Not "On this day": that is the photo memories' name.
-                text: 'In history',
+                text: tr('widget.history.inHistory', 'In history'),
                 theme: t,
                 size: 11,
                 trailing: Text(
@@ -171,7 +172,7 @@ class _HistoryWidgetState extends State<HistoryWidget>
                       ),
                     ),
                     TextSpan(
-                      text: ago > 0 ? '  $ago years ago' : '',
+                      text: ago > 0 ? tr('widget.history.yearsAgo', '  {ago} years ago', {'ago': ago}) : '',
                       style: TextStyle(color: t.textSecondary, fontSize: 11),
                     ),
                   ],

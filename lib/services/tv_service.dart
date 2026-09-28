@@ -10,6 +10,7 @@ import 'config_service.dart';
 import 'private_file.dart';
 import 'retry_schedule.dart';
 import 'vidaa_client.dart';
+import '../l10n/l10n.dart';
 
 /// Talks to a Hisense VIDAA television.
 ///
@@ -321,7 +322,7 @@ class TvService extends ChangeNotifier {
       // the thing actually missing.
       // Not retried: no amount of waiting puts a file on the disk.
       _setConn(ConnState.error,
-          err: 'TV client certificate not set up — ${e.message}');
+          err: tr('widget.tv.tvClientCertificateNotSet', 'TV client certificate not set up — {message}', {'message': e.message}));
       return;
     }
     await _loadToken();
@@ -346,7 +347,7 @@ class TvService extends ChangeNotifier {
       return;
     }
     _setConn(ConnState.error,
-        err: 'Could not connect to $host', retry: true);
+        err: tr('widget.tv.couldNotConnectTo', 'Could not connect to {host}', {'host': host}), retry: true);
   }
 
   /// Renew the access token: connect with dynamic creds (restricted ACL still
@@ -385,12 +386,12 @@ class TvService extends ChangeNotifier {
         await _loadAssets();
       } on TvCredentialsMissing catch (e) {
         _setConn(ConnState.error,
-            err: 'TV client certificate not set up — ${e.message}');
+            err: tr('widget.tv.tvClientCertificateNotSet', 'TV client certificate not set up — {message}', {'message': e.message}));
         return;
       }
       if (!await _openAndConnect(null)) {
         _setConn(ConnState.error,
-            err: 'Could not connect to $host', retry: true);
+            err: tr('widget.tv.couldNotConnectTo', 'Could not connect to {host}', {'host': host}), retry: true);
         return;
       }
     }
@@ -441,5 +442,5 @@ class TvCredentialsMissing implements Exception {
   TvCredentialsMissing(this.message);
   final String message;
   @override
-  String toString() => 'TV credentials missing: $message';
+  String toString() => tr('widget.tv.tvCredentialsMissing', 'TV credentials missing: {message}', {'message': message});
 }

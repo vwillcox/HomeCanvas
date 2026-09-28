@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/video_site.dart';
 import 'link_viewer_screen.dart';
+import '../l10n/l10n.dart';
 
 /// Opens [site]'s own sign-in page in the kiosk's browser, then checks it
 /// took. Returns whether the panel is signed in afterwards.
@@ -15,7 +16,7 @@ Future<bool> signInOnPanel(BuildContext context, VideoSite site) async {
   await Navigator.of(context).push(MaterialPageRoute(
     builder: (_) => LinkViewerScreen(
       url: site.signInUrl,
-      title: 'Sign in to ${site.name}, then tap Close',
+      title: tr('video.signInToThenTap', 'Sign in to {name}, then tap Close', {'name': site.name}),
       profile: site.loginProfile,
       keepProfile: true,
       // Long enough for a code from a phone and a second attempt at a
@@ -27,8 +28,8 @@ Future<bool> signInOnPanel(BuildContext context, VideoSite site) async {
   if (context.mounted) {
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
       content: Text(ok
-          ? 'Signed in to ${site.name}.'
-          : 'Not signed in — ${site.name} did not recognise an account.'),
+          ? tr('video.signedInTo', 'Signed in to {name}.', {'name': site.name})
+          : tr('video.notSignedInDidNot', 'Not signed in — {name} did not recognise an account.', {'name': site.name})),
     ));
   }
   return ok;

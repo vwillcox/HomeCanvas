@@ -13,6 +13,7 @@ import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
 import '../../l10n/dates.dart';
+import '../../l10n/l10n.dart';
 
 /// Someone's next birthday.
 @immutable
@@ -49,8 +50,8 @@ class NextBirthday {
 
 /// "Today 🎂", "Tomorrow", "Sat", "14 Oct" — how far off a birthday is.
 String birthdayWhen(int days, DateTime d) => switch (days) {
-  0 => 'Today 🎂',
-  1 => 'Tomorrow',
+  0 => tr('widget.birthdays.today', 'Today 🎂'),
+  1 => tr('widget.birthdays.tomorrow', 'Tomorrow'),
   < 7 => weekdayShort(d),
   _ => dayMonth(d),
 };
@@ -107,7 +108,7 @@ class _BirthdaysWidgetState extends State<BirthdaysWidget>
       _cache = (people, DateTime.now());
       if (mounted) setState(() => _people = people);
     } catch (_) {
-      if (mounted) setState(() => _error = 'Could not reach Immich');
+      if (mounted) setState(() => _error = tr('widget.birthdays.couldNotReachImmich', 'Could not reach Immich'));
     }
   }
 
@@ -116,7 +117,7 @@ class _BirthdaysWidgetState extends State<BirthdaysWidget>
     final t = widget.w.theme;
     final people = _people;
     if (people == null) {
-      return TileMessage(_error ?? 'Asking Immich…', theme: t);
+      return TileMessage(_error ?? tr('widget.birthdays.askingImmich', 'Asking Immich…'), theme: t);
     }
     final now = DateTime.now();
     final max = (int.tryParse('${widget.w.config.options['show'] ?? 4}') ?? 4)
@@ -124,8 +125,10 @@ class _BirthdaysWidgetState extends State<BirthdaysWidget>
     final list = NextBirthday.upcoming(people, now).take(max).toList();
     if (list.isEmpty) {
       return TileMessage(
-        'No birthdays yet. In Immich, open a person and set their date of '
-        'birth — they appear here.',
+        tr(
+          'widget.birthdays.noBirthdaysYetInImmich',
+          'No birthdays yet. In Immich, open a person and set their date of birth — they appear here.',
+        ),
         theme: t,
       );
     }
@@ -143,7 +146,7 @@ class _BirthdaysWidgetState extends State<BirthdaysWidget>
               height: labelH,
               child: TileLabel(
                 icon: Icons.cake_outlined,
-                text: 'Birthdays',
+                text: tr('widget.birthdays.birthdays', 'Birthdays'),
                 theme: t,
                 size: labelH * 0.6,
               ),

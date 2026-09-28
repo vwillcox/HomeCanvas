@@ -14,6 +14,7 @@ import '../services/locked_folder_service.dart';
 import 'glass.dart';
 import 'pause_when_hidden.dart';
 import 'shown_timers.dart';
+import '../l10n/l10n.dart';
 
 /// The kiosk's top-level places.
 enum KioskModule { photos, dashboard }
@@ -127,20 +128,20 @@ class _ModuleBarState extends State<ModuleBar>
           module(
             KioskModule.photos,
             Icons.photo_library_outlined,
-            'Photos',
+            tr('modules.photos', 'Photos'),
             _toPhotos,
           ),
           if (dashboardOn)
             module(
               KioskModule.dashboard,
               Icons.dashboard_outlined,
-              'Dashboard',
+              tr('modules.dashboard', 'Dashboard'),
               _toDashboard,
             ),
           if (_remoteRunning)
             PillIconButton(
               icon: Icons.settings_remote,
-              tooltip: 'TV Remote',
+              tooltip: tr('modules.tvRemote', 'TV Remote'),
               colour: c,
               onPressed: () => Process.run('wlrctl', [
                 'toplevel',
@@ -158,7 +159,7 @@ class _ModuleBarState extends State<ModuleBar>
           if (context.watch<LockedFolderService>().canUse)
             PillIconButton(
               icon: Icons.lock_outline,
-              tooltip: 'Locked Folder',
+              tooltip: tr('modules.lockedFolder', 'Locked Folder'),
               colour: c,
               onPressed: () => openLockedFolder(context),
             ),
@@ -167,7 +168,7 @@ class _ModuleBarState extends State<ModuleBar>
               icon: camera.isOpen
                   ? Icons.videocam_off_outlined
                   : Icons.videocam_outlined,
-              tooltip: 'Camera',
+              tooltip: tr('modules.camera', 'Camera'),
               colour: c,
               onPressed: camera.toggleOpen,
             ),
@@ -175,13 +176,13 @@ class _ModuleBarState extends State<ModuleBar>
           if (widget.onRefresh != null)
             PillIconButton(
               icon: Icons.refresh,
-              tooltip: 'Refresh',
+              tooltip: tr('modules.refresh', 'Refresh'),
               colour: c,
               onPressed: widget.onRefresh,
             ),
           PillIconButton(
             icon: Icons.settings_outlined,
-            tooltip: 'Settings',
+            tooltip: tr('modules.settings', 'Settings'),
             colour: c,
             onPressed: () => Navigator.of(
               context,
@@ -201,9 +202,12 @@ Future<void> openLockedFolder(BuildContext context) async {
   final messenger = ScaffoldMessenger.of(context);
   final pin = await navigator.push<String>(
     MaterialPageRoute(
-      builder: (_) => const PinScreen(
-        title: 'Locked Folder',
-        subtitle: 'Enter your Immich Locked Folder PIN',
+      builder: (_) => PinScreen(
+        title: tr('modules.lockedFolder', 'Locked Folder'),
+        subtitle: tr(
+          'modules.enterYourImmichLockedFolder',
+          'Enter your Immich Locked Folder PIN',
+        ),
       ),
     ),
   );
@@ -224,11 +228,17 @@ Future<void> openLockedFolder(BuildContext context) async {
         MaterialPageRoute(builder: (_) => const LockedFolderScreen()),
       );
     case UnlockResult.wrongPin:
-      say('Incorrect PIN');
+      say(tr('modules.incorrectPin', 'Incorrect PIN'));
     case UnlockResult.notConfigured:
-      say('Locked Folder login is not configured');
+      say(tr(
+        'modules.lockedFolderLoginIsNot',
+        'Locked Folder login is not configured',
+      ));
     case UnlockResult.error:
-      say('Could not sign in to Immich for the Locked Folder');
+      say(tr(
+        'modules.couldNotSignInTo',
+        'Could not sign in to Immich for the Locked Folder',
+      ));
   }
 }
 

@@ -9,6 +9,7 @@ import 'package:xml/xml.dart';
 import 'plain_text.dart';
 
 import 'retry_schedule.dart';
+import '../l10n/l10n.dart';
 
 /// One entry from an RSS or Atom feed.
 class FeedItem {
@@ -337,7 +338,7 @@ class FeedService extends ChangeNotifier {
       final body = await _get(url);
       if (body == null) {
         _feeds[url] = _Cached(
-            _feeds[url]?.items ?? const [], DateTime.now(), 'Feed unreachable');
+            _feeds[url]?.items ?? const [], DateTime.now(), tr('widget.news.feedUnreachable', 'Feed unreachable'));
       } else {
         // Parsed on another isolate: a long feed took long enough on this
         // one to drop frames from whatever was playing.
@@ -359,7 +360,7 @@ class FeedService extends ChangeNotifier {
       final body = await _get(fetchUrl);
       if (body == null) {
         _calendars[url] = _Cached(_calendars[url]?.items ?? const [],
-            DateTime.now(), 'Calendar unreachable');
+            DateTime.now(), tr('widget.news.calendarUnreachable', 'Calendar unreachable'));
       } else {
         _calendars[url] =
             _Cached(await compute(parseIcs, body), DateTime.now(), null);

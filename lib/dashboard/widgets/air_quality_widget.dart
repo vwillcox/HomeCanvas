@@ -6,6 +6,7 @@ import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
+import '../../l10n/l10n.dart';
 
 /// Air quality, pollen by type, and UV, beside the weather.
 class AirQualityWidget extends StatelessWidget {
@@ -20,7 +21,7 @@ class AirQualityWidget extends StatelessWidget {
     final air = service.current;
     if (air == null) {
       return TileMessage(
-        service.error ?? 'Fetching the air quality…',
+        service.error ?? tr('widget.air_quality.fetchingTheAirQuality', 'Fetching the air quality…'),
         theme: t,
       );
     }
@@ -52,7 +53,11 @@ class AirQualityWidget extends StatelessWidget {
         if (air.uv != null) ...[
           const SizedBox(height: 6),
           Text(
-            'UV ${air.uv!.round()} · ${air.uvWord}',
+            tr(
+              'widget.air_quality.uv',
+              'UV {uv} · {uvWord}',
+              {'uv': air.uv!.round(), 'uvWord': air.uvWord},
+            ),
             maxLines: 1,
             style: TextStyle(color: t.textSecondary, fontSize: 11),
           ),
@@ -122,7 +127,7 @@ class AirQualityWidget extends StatelessWidget {
               children: [
                 TileLabel(
                   icon: Icons.eco_rounded,
-                  text: showPollen ? 'Air & pollen' : 'Air quality',
+                  text: showPollen ? tr('widget.air_quality.airPollen', 'Air & pollen') : tr('widget.air_quality.airQuality', 'Air quality'),
                   theme: t,
                   size: 11,
                 ),

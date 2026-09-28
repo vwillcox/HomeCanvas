@@ -7,6 +7,7 @@ import '../../services/tv_service.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'tv_inputs_sheet.dart';
+import '../../l10n/l10n.dart';
 
 /// A remote control for the television.
 ///
@@ -42,7 +43,7 @@ class _DashboardTvWidgetState extends State<DashboardTvWidget> {
 
     switch (tv.conn) {
       case ConnState.connecting:
-        return _Message(theme: t, text: 'Reaching the television…');
+        return _Message(theme: t, text: tr('widget.tv.reachingTheTelevision', 'Reaching the television…'));
       case ConnState.needsPairing:
         return _Pairing(theme: t, tv: tv);
       case ConnState.error:
@@ -52,13 +53,13 @@ class _DashboardTvWidgetState extends State<DashboardTvWidget> {
           // button as the only way back. The button stays for impatience.
           text: '${tv.lastError ?? 'Could not reach the television.'}'
               '${tv.retryPending ? '\nTrying again…' : ''}',
-          action: ('Try now', () => unawaited(tv.connect())),
+          action: (tr('widget.tv.tryNow', 'Try now'), () => unawaited(tv.connect())),
         );
       case ConnState.disconnected:
         return _Message(
           theme: t,
-          text: 'Not connected.',
-          action: ('Connect', () => unawaited(tv.connect())),
+          text: tr('widget.tv.notConnected', 'Not connected.'),
+          action: (tr('widget.tv.connect', 'Connect'), () => unawaited(tv.connect())),
         );
       case ConnState.connected:
         break;
@@ -119,7 +120,7 @@ class _Status extends StatelessWidget {
         const SizedBox(width: 8),
         Expanded(
           child: Text(
-            bits.isEmpty ? 'Television' : bits.join(' · '),
+            bits.isEmpty ? tr('widget.tv.television', 'Television') : bits.join(' · '),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(color: theme.textSecondary, fontSize: 15),
@@ -146,7 +147,7 @@ class _InputButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: 'Switch input',
+      label: tr('widget.tv.switchInput', 'Switch input'),
       child: Material(
         color: theme.accent.withValues(alpha: 0.16),
         shape: StadiumBorder(
@@ -165,7 +166,7 @@ class _InputButton extends StatelessWidget {
                 Icon(Icons.input, color: theme.accent, size: 20),
                 const SizedBox(width: 6),
                 Text(
-                  'Input',
+                  tr('widget.tv.input', 'Input'),
                   style: TextStyle(
                     color: theme.accent,
                     fontSize: 15,
@@ -218,7 +219,7 @@ class _Pad extends StatelessWidget {
                     key(Icons.keyboard_arrow_left, 'KEY_LEFT'),
                     _Key(
                       theme: theme,
-                      label: 'OK',
+                      label: tr('widget.tv.ok', 'OK'),
                       size: unit * 0.94,
                       filled: true,
                       onPressed: () => tv.key('KEY_OK'),
@@ -371,7 +372,7 @@ class _PairingState extends State<_Pairing> {
     if (!mounted) return;
     setState(() {
       _sending = false;
-      if (!ok) _error = 'The television did not accept that PIN.';
+      if (!ok) _error = tr('widget.tv.theTelevisionDidNotAccept', 'The television did not accept that PIN.');
     });
   }
 
@@ -384,7 +385,10 @@ class _PairingState extends State<_Pairing> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Pair with the television',
+              tr(
+                'widget.tv.pairWithTheTelevision',
+                'Pair with the television',
+              ),
               style: TextStyle(
                   color: t.textPrimary,
                   fontSize: 18,
@@ -392,7 +396,7 @@ class _PairingState extends State<_Pairing> {
             ),
             const SizedBox(height: 6),
             Text(
-              _error ?? 'Tap "Show PIN", then type the number on the screen.',
+              _error ?? tr('widget.tv.tapShowPinThenType', 'Tap "Show PIN", then type the number on the screen.'),
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: _error == null ? t.textSecondary : Colors.redAccent,
@@ -405,7 +409,7 @@ class _PairingState extends State<_Pairing> {
               children: [
                 TextButton(
                   onPressed: widget.tv.startPairing,
-                  child: const Text('Show PIN'),
+                  child: Text(tr('widget.tv.showPin', 'Show PIN')),
                 ),
                 SizedBox(
                   width: 120,
@@ -414,8 +418,8 @@ class _PairingState extends State<_Pairing> {
                     keyboardType: TextInputType.number,
                     textAlign: TextAlign.center,
                     style: TextStyle(color: t.textPrimary, fontSize: 20),
-                    decoration: const InputDecoration(
-                      hintText: 'PIN',
+                    decoration: InputDecoration(
+                      hintText: tr('widget.tv.pin', 'PIN'),
                       border: OutlineInputBorder(),
                       isDense: true,
                     ),
@@ -424,7 +428,7 @@ class _PairingState extends State<_Pairing> {
                 const SizedBox(width: 8),
                 FilledButton(
                   onPressed: _sending ? null : _submit,
-                  child: Text(_sending ? '…' : 'Pair'),
+                  child: Text(_sending ? '…' : tr('widget.tv.pair', 'Pair')),
                 ),
               ],
             ),

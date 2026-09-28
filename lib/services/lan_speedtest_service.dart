@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import '../l10n/l10n.dart';
 
 enum LanPhase { idle, download, upload, done, failed }
 
@@ -95,8 +96,8 @@ class LanSpeedtestService extends ChangeNotifier {
     if (_state.running) return;
     final base = baseUrl.trim().replaceAll(RegExp(r'/+$'), '');
     if (base.isEmpty) {
-      _emit(const LanSpeedtestState(
-          phase: LanPhase.failed, error: 'No server address set'));
+      _emit(LanSpeedtestState(
+          phase: LanPhase.failed, error: tr('widget.speedtest.noServerAddressSet', 'No server address set')));
       return;
     }
 
@@ -146,12 +147,12 @@ class LanSpeedtestService extends ChangeNotifier {
   static String _readable(Object e) {
     final s = '$e';
     if (s.contains('Connection refused')) {
-      return 'Nothing answering — is the server running?';
+      return tr('widget.speedtest.nothingAnsweringIsTheServer', 'Nothing answering — is the server running?');
     }
     if (s.contains('No route to host') || s.contains('Network is unreachable')) {
-      return 'Cannot reach that address from here';
+      return tr('widget.speedtest.cannotReachThatAddressFrom', 'Cannot reach that address from here');
     }
-    if (e is TimeoutException) return 'The server stopped responding';
+    if (e is TimeoutException) return tr('widget.speedtest.theServerStoppedResponding', 'The server stopped responding');
     return s.length > 90 ? '${s.substring(0, 90)}…' : s;
   }
 

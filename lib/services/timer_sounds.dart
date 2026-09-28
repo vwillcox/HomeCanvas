@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 
 import '../app_paths.dart';
 import 'media_cache.dart';
+import '../l10n/l10n.dart';
 
 /// The sounds a kitchen timer can make when it is done: a few that come with
 /// the app, and any MP3 somebody has uploaded from the editor.
@@ -37,6 +38,8 @@ class TimerSounds {
   };
 
   /// Every choice there is, built-ins first, for the editor's dropdown.
+  // A widget setting's choices: translated by key from the widget's
+  // description, so it stays a constant.
   static const defaultChoices = {none: 'No sound', ...builtIn};
 
   /// The kinds of file an upload may be. MP3 is what was asked for; WAV and
@@ -125,10 +128,10 @@ class TimerSounds {
   Future<String> save(String name, Uint8List bytes) async {
     final safe = safeName(name);
     if (safe == null) {
-      throw const FormatException('Only MP3, WAV or Ogg files can be used.');
+      throw FormatException(tr('widget.timers.onlyMp3WavOrOgg', 'Only MP3, WAV or Ogg files can be used.'));
     }
     if (bytes.length > maxUploadBytes) {
-      throw const FormatException('That file is over 5 MB.');
+      throw FormatException(tr('widget.timers.thatFileIsOver5', 'That file is over 5 MB.'));
     }
     if (!looksLikeAudio(safe, bytes)) {
       throw const FormatException("That file doesn't look like a sound.");

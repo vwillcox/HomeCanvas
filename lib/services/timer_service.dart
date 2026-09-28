@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import '../l10n/l10n.dart';
 
 /// One kitchen timer.
 class KioskTimer {
@@ -290,7 +291,7 @@ class TimerPreset {
       return '${length.inSeconds}s';
     }
     if (length.inMinutes < 60 || length.inMinutes % 60 != 0) {
-      return '${length.inMinutes} min';
+      return tr('common.min', '{n} min', {'n': length.inMinutes});
     }
     return '${length.inHours}h';
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../l10n/l10n.dart';
 
 /// When something is shown: between two times of day, on some days.
 ///
@@ -71,7 +72,7 @@ class Schedule {
     final time = hasTime
         ? '${_minutes(from) == null ? '00:00' : from.trim()}–${_minutes(to) == null ? '24:00' : to.trim()}'
         : '';
-    if (d.isEmpty && time.isEmpty) return 'Always';
+    if (d.isEmpty && time.isEmpty) return tr('dashboard.always', 'Always');
     return [if (d.isNotEmpty) d, if (time.isNotEmpty) time].join(' ');
   }
 

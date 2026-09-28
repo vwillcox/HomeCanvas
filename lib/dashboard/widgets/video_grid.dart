@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../dashboard_theme.dart';
 import 'fit_canvas.dart';
 import '../../l10n/dates.dart';
+import '../../l10n/l10n.dart';
 
 /// One video in a [VideoGrid].
 class VideoGridItem {
@@ -164,8 +165,8 @@ class TileRefreshButton extends StatelessWidget {
 /// A short "how long ago" for a video's release: 5 min, 3 h, 2 d, 12 Mar.
 String releasedAgo(DateTime at, DateTime now) {
   final d = now.difference(at);
-  if (d.inMinutes < 60) return '${math.max(1, d.inMinutes)} min ago';
-  if (d.inHours < 24) return '${d.inHours} h ago';
-  if (d.inDays < 7) return '${d.inDays} d ago';
+  if (d.inMinutes < 60) return tr('widget.videos.minAgo', '{inMinutes} min ago', {'inMinutes': math.max(1, d.inMinutes)});
+  if (d.inHours < 24) return tr('widget.videos.hAgo', '{inHours} h ago', {'inHours': d.inHours});
+  if (d.inDays < 7) return tr('widget.videos.dAgo', '{inDays} d ago', {'inDays': d.inDays});
   return dayMonth(at);
 }

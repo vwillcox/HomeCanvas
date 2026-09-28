@@ -8,6 +8,7 @@ import '../../widgets/shown_timers.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'tile_bits.dart';
+import '../../l10n/l10n.dart';
 
 /// Days left on your sites' HTTPS certificates, soonest to expire first, so a
 /// renewal that quietly failed is noticed before a browser notices it.
@@ -80,8 +81,10 @@ class _CertsWidgetState extends State<CertsWidget>
     final hosts = _hosts;
     if (hosts.isEmpty) {
       return TileMessage(
-        'Add your sites in the widget settings — talktech.info, or '
-        'host:port for one not on 443.',
+        tr(
+          'widget.certs.addYourSitesInThe',
+          'Add your sites in the widget settings — talktech.info, or host:port for one not on 443.',
+        ),
         theme: t,
       );
     }
@@ -117,17 +120,17 @@ class _CertsWidgetState extends State<CertsWidget>
               height: labelH,
               child: TileLabel(
                 icon: Icons.lock_outline_rounded,
-                text: 'Certificates',
+                text: tr('widget.certs.certificates', 'Certificates'),
                 theme: t,
                 size: labelH * 0.6,
                 trailing: worst == 9999
                     ? null
                     : StatusChip(
                         text: worst < 0
-                            ? 'Needs a look'
+                            ? tr('widget.certs.needsALook', 'Needs a look')
                             : worst < warnDays
-                            ? 'Renew soon'
-                            : 'All valid',
+                            ? tr('widget.certs.renewSoon', 'Renew soon')
+                            : tr('widget.certs.allValid', 'All valid'),
                         colour: worst < 0 || worst < 7
                             ? status.bad
                             : worst < warnDays
@@ -196,11 +199,11 @@ class _Row extends StatelessWidget {
         : i.error != null
         ? (i.error!, status.bad)
         : !i.trusted
-        ? ('not trusted', status.bad)
+        ? (tr('widget.certs.notTrusted', 'not trusted'), status.bad)
         : days! < 0
         ? ('expired', status.bad)
         : (
-            days == 1 ? '1 day' : '$days days',
+            days == 1 ? tr('widget.certs.1Day', '1 day') : '$days days',
             days < 7
                 ? status.bad
                 : days < warnDays

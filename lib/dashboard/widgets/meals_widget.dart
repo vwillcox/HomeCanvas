@@ -6,6 +6,7 @@ import 'tile_bits.dart';
 import '../../widgets/pause_when_hidden.dart';
 import '../../widgets/rebuild_every_minute.dart';
 import '../../widgets/shown_timers.dart';
+import '../../l10n/l10n.dart';
 
 const _days = [
   'monday',
@@ -58,7 +59,10 @@ class _MealsWidgetState extends State<MealsWidget>
     final a = mealOn(options, first), b = mealOn(options, second);
     if (_days.every((d) => '${options[d] ?? ''}'.trim().isEmpty)) {
       return TileMessage(
-        'Fill in the week’s dinners in the widget settings.',
+        tr(
+          'widget.meals.fillInTheWeekS',
+          'Fill in the week’s dinners in the widget settings.',
+        ),
         theme: t,
       );
     }
@@ -72,7 +76,7 @@ class _MealsWidgetState extends State<MealsWidget>
         children: [
           TileLabel(
             icon: Icons.restaurant_rounded,
-            text: isToday ? 'Tonight' : 'Tomorrow · ${_dayName(first)}',
+            text: isToday ? tr('widget.meals.tonight', 'Tonight') : tr('widget.meals.tomorrow2', 'Tomorrow · {first}', {'first': _dayName(first)}),
             theme: t,
             size: 11,
           ),
@@ -84,7 +88,7 @@ class _MealsWidgetState extends State<MealsWidget>
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  a.isEmpty ? 'Nothing planned' : a,
+                  a.isEmpty ? tr('widget.meals.nothingPlanned', 'Nothing planned') : a,
                   maxLines: 2,
                   style: TextStyle(
                     color: a.isEmpty ? t.textSecondary : t.textPrimary,
@@ -100,7 +104,7 @@ class _MealsWidgetState extends State<MealsWidget>
             TextSpan(
               children: [
                 TextSpan(
-                  text: isToday ? 'Tomorrow  ' : '${_dayName(second)}  ',
+                  text: isToday ? tr('widget.meals.tomorrow', 'Tomorrow  ') : '${_dayName(second)}  ',
                   style: TextStyle(color: t.textSecondary, fontSize: 11),
                 ),
                 TextSpan(

@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import '../l10n/l10n.dart';
 
 /// Sunrise, sunset and the moon's phase, worked out on the Pi.
 ///
@@ -118,14 +119,14 @@ class SunMoon {
     // The four principal phases are instants; a day either side of each is
     // given its name, which is how the almanacs and the calendars read.
     const day = 1 / synodicDays;
-    if (phase < day || phase > 1 - day) return 'New moon';
-    if ((phase - 0.25).abs() < day) return 'First quarter';
-    if ((phase - 0.5).abs() < day) return 'Full moon';
-    if ((phase - 0.75).abs() < day) return 'Last quarter';
-    if (phase < 0.25) return 'Waxing crescent';
-    if (phase < 0.5) return 'Waxing gibbous';
-    if (phase < 0.75) return 'Waning gibbous';
-    return 'Waning crescent';
+    if (phase < day || phase > 1 - day) return tr('widget.sun_moon.newMoon', 'New moon');
+    if ((phase - 0.25).abs() < day) return tr('widget.sun_moon.firstQuarter', 'First quarter');
+    if ((phase - 0.5).abs() < day) return tr('widget.sun_moon.fullMoon', 'Full moon');
+    if ((phase - 0.75).abs() < day) return tr('widget.sun_moon.lastQuarter', 'Last quarter');
+    if (phase < 0.25) return tr('widget.sun_moon.waxingCrescent', 'Waxing crescent');
+    if (phase < 0.5) return tr('widget.sun_moon.waxingGibbous', 'Waxing gibbous');
+    if (phase < 0.75) return tr('widget.sun_moon.waningGibbous', 'Waning gibbous');
+    return tr('widget.sun_moon.waningCrescent', 'Waning crescent');
   }
 
   /// When the moon is next at [target] phase (0.5 for full) after [from].

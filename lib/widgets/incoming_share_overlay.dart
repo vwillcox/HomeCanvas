@@ -15,6 +15,7 @@ import '../services/local_file_media_source.dart';
 import '../services/share_inbox_service.dart';
 import '../services/video_link.dart';
 import '../services/video_player_service.dart';
+import '../l10n/l10n.dart';
 
 /// A small corner notification whenever something new has been shared to
 /// the kiosk. Placed once, globally, in `main.dart`'s `MaterialApp.builder`
@@ -251,7 +252,7 @@ class _CloseLinkButton extends StatelessWidget {
               Icon(Icons.close, color: context.look.textPrimary, size: 38),
               SizedBox(width: 16),
               Text(
-                'Close page',
+                tr('share.closePage', 'Close page'),
                 style: TextStyle(
                   color: context.look.textPrimary,
                   fontSize: 30,
@@ -293,11 +294,11 @@ class _Card extends StatelessWidget {
   String get _label => _video == null ? _typeLabel : '${_video!.siteName} video';
 
   String get _typeLabel => switch (item.type) {
-        ShareType.image => 'Photo shared',
-        ShareType.gif => 'GIF shared',
-        ShareType.video => 'Video shared',
-        ShareType.link => 'Link shared',
-        ShareType.text => 'Note shared',
+        ShareType.image => tr('share.photoShared', 'Photo shared'),
+        ShareType.gif => tr('share.gifShared', 'GIF shared'),
+        ShareType.video => tr('share.videoShared', 'Video shared'),
+        ShareType.link => tr('share.linkShared', 'Link shared'),
+        ShareType.text => tr('share.noteShared', 'Note shared'),
       };
 
   @override

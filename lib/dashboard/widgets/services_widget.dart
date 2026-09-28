@@ -8,6 +8,7 @@ import '../../widgets/shown_timers.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'tile_bits.dart';
+import '../../l10n/l10n.dart';
 
 /// A light per thing that should be up: green, amber when slow, red when it
 /// does not answer. Tap one to check it again — or, for a computer that is
@@ -107,8 +108,10 @@ class _ServicesWidgetState extends State<ServicesWidget>
     final targets = _targets;
     if (targets.isEmpty) {
       return TileMessage(
-        'Add what to watch in the widget settings: a web address, a '
-        'host:port, or just a machine’s name to ping.',
+        tr(
+          'widget.services.addWhatToWatchIn',
+          'Add what to watch in the widget settings: a web address, a host:port, or just a machine’s name to ping.',
+        ),
         theme: t,
       );
     }
@@ -133,13 +136,13 @@ class _ServicesWidgetState extends State<ServicesWidget>
               height: labelH,
               child: TileLabel(
                 icon: Icons.monitor_heart_outlined,
-                text: 'Services',
+                text: tr('widget.services.services', 'Services'),
                 theme: t,
                 size: labelH * 0.6,
                 trailing: checked == 0
                     ? null
                     : StatusChip(
-                        text: down == 0 ? 'All up' : '$down down',
+                        text: down == 0 ? tr('widget.services.allUp', 'All up') : '$down down',
                         colour: down == 0 ? status.good : status.bad,
                         size: labelH * 0.5,
                       ),
@@ -209,7 +212,7 @@ class _Row extends StatelessWidget {
         : r == null
         ? 'checking…'
         : r.state == CheckState.down
-        ? (target.mac != null ? 'tap to wake' : (r.detail ?? 'down'))
+        ? (target.mac != null ? tr('widget.services.tapToWake', 'tap to wake') : (r.detail ?? 'down'))
         : (r.latency != null ? formatLatency(r.latency!) : 'up');
 
     return GestureDetector(

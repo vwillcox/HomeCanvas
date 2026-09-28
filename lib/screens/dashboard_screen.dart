@@ -27,6 +27,7 @@ import 'home_screen.dart' show showablePlayback;
 import '../widgets/pause_when_hidden.dart';
 import '../widgets/shown_timers.dart';
 import '../widgets/stepped_timeline.dart';
+import '../l10n/l10n.dart';
 
 /// The dashboard: widgets laid out on a grid, drawn in the chosen theme.
 ///
@@ -466,7 +467,7 @@ class _BackButton extends StatelessWidget {
     // control you cannot see is a control you cannot find.
     return GlassIconButton(
       icon: Icons.arrow_back_rounded,
-      tooltip: 'Back',
+      tooltip: tr('dashboard.back', 'Back'),
       size: 72,
       colour: theme.textPrimary,
       onPressed: () => Navigator.of(context).maybePop(),
@@ -552,7 +553,11 @@ class DashboardTile extends StatelessWidget {
         // leave the configuration alone so it comes back when the widget does.
         ? Center(
             child: Text(
-              'Unknown widget "${config.type}"',
+              tr(
+                'dashboard.unknownWidget',
+                'Unknown widget "{type}"',
+                {'type': config.type},
+              ),
               textAlign: TextAlign.center,
               style: TextStyle(color: theme.textSecondary, fontSize: 14),
             ),
@@ -640,7 +645,7 @@ class _Empty extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           Text(
-            'No widgets yet',
+            tr('dashboard.noWidgetsYet', 'No widgets yet'),
             style: TextStyle(
               color: theme.textPrimary,
               fontSize: 28,
@@ -649,7 +654,10 @@ class _Empty extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            'Open this in a browser to arrange the dashboard:',
+            tr(
+              'dashboard.openThisInABrowser',
+              'Open this in a browser to arrange the dashboard:',
+            ),
             style: TextStyle(color: theme.textSecondary, fontSize: 16),
           ),
           const SizedBox(height: 10),
@@ -704,7 +712,7 @@ class _MediaControlsState extends State<_MediaControls> {
         children: [
           Semantics(
             button: true,
-            label: 'Now playing: ${source.now.title}. Open the player.',
+            label: tr('dashboard.nowPlayingOpenThePlayer', 'Now playing: {title}. Open the player.', {'title': source.now.title}),
             child: GestureDetector(
               onTap: () => widget.player?.expand(from: _art),
               behavior: HitTestBehavior.opaque,
@@ -740,19 +748,19 @@ class _MediaControlsState extends State<_MediaControls> {
           ),
           PillIconButton(
             icon: Icons.skip_previous_rounded,
-            tooltip: 'Previous',
+            tooltip: tr('dashboard.previous', 'Previous'),
             colour: t.textPrimary,
             onPressed: source.previous,
           ),
           PillIconButton(
             icon: playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
-            tooltip: playing ? 'Pause' : 'Play',
+            tooltip: playing ? tr('dashboard.pause', 'Pause') : tr('dashboard.play', 'Play'),
             colour: t.accent,
             onPressed: source.playPause,
           ),
           PillIconButton(
             icon: Icons.skip_next_rounded,
-            tooltip: 'Next',
+            tooltip: tr('dashboard.next', 'Next'),
             colour: t.textPrimary,
             onPressed: source.next,
           ),
@@ -843,7 +851,7 @@ class _PageDots extends StatelessWidget {
             ),
             Semantics(
               button: true,
-              label: paused ? 'Carry on turning pages' : 'Hold this page',
+              label: paused ? tr('dashboard.carryOnTurningPages', 'Carry on turning pages') : tr('dashboard.holdThisPage', 'Hold this page'),
               child: GestureDetector(
                 onTap: onTogglePause,
                 behavior: HitTestBehavior.opaque,

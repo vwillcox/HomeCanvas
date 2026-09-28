@@ -12,6 +12,7 @@ import '../../widgets/now_playing_overlay.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'scrolling_text.dart';
+import '../../l10n/l10n.dart';
 
 /// What's playing, with transport controls.
 ///
@@ -58,7 +59,7 @@ class _DashboardSpotifyWidgetState extends State<DashboardSpotifyWidget> {
     if (!source.available || !source.now.hasTrack) {
       return Center(
         child: Text(
-          'Nothing playing',
+          tr('widget.spotify.nothingPlaying', 'Nothing playing'),
           style: TextStyle(color: t.textSecondary, fontSize: 16),
         ),
       );
@@ -453,7 +454,7 @@ class _Like extends StatelessWidget {
     return Semantics(
       button: true,
       toggled: liked,
-      label: liked ? 'Remove from Liked Songs' : 'Add to Liked Songs',
+      label: liked ? tr('widget.spotify.removeFromLikedSongs', 'Remove from Liked Songs') : tr('widget.spotify.addToLikedSongs', 'Add to Liked Songs'),
       child: Material(
         color: Colors.transparent,
         shape: const CircleBorder(),

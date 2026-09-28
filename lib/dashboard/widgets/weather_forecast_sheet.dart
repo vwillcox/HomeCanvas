@@ -8,6 +8,8 @@ import 'package:provider/provider.dart';
 import '../../services/weather_service.dart';
 import '../../widgets/weather_overlay.dart' show weatherIcon;
 import '../dashboard_theme.dart';
+import '../../l10n/l10n.dart';
+import '../../l10n/dates.dart';
 
 /// Opens the full forecast over the dashboard.
 ///
@@ -26,7 +28,7 @@ Future<void> showWeatherForecast(
   return showGeneralDialog<void>(
     context: context,
     barrierDismissible: true,
-    barrierLabel: 'Close the forecast',
+    barrierLabel: tr('weather.closeTheForecast', 'Close the forecast'),
     barrierColor: Colors.black.withValues(alpha: 0.45),
     transitionDuration: const Duration(milliseconds: 320),
     pageBuilder: (context, _, _) =>
@@ -167,7 +169,10 @@ class _WeatherForecastSheetState extends State<WeatherForecastSheet>
                   child: weather == null
                       ? Center(
                           child: Text(
-                            'Waiting for the forecast…',
+                            tr(
+                              'weather.waitingForTheForecast',
+                              'Waiting for the forecast…',
+                            ),
                             style: TextStyle(
                                 color: t.textSecondary, fontSize: 24),
                           ),
@@ -283,7 +288,7 @@ class _CloseButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: 'Close the forecast',
+      label: tr('weather.closeTheForecast', 'Close the forecast'),
       child: Material(
         color: theme.textPrimary.withValues(alpha: 0.08),
         shape: const CircleBorder(),
@@ -314,16 +319,22 @@ class _Now extends StatelessWidget {
     final today = weather.daily.isNotEmpty ? weather.daily.first : null;
 
     final stats = <_StatData>[
-      _StatData(Icons.thermostat, 'Feels like', '${weather.feelsLike.round()}°'),
-      _StatData(Icons.water_drop_outlined, 'Humidity', '${weather.humidity}%'),
-      _StatData(Icons.air, 'Wind',
+      _StatData(Icons.thermostat, tr('weather.feelsLike', 'Feels like'), '${weather.feelsLike.round()}°'),
+      _StatData(Icons.water_drop_outlined, tr('weather.humidity', 'Humidity'), '${weather.humidity}%'),
+      _StatData(Icons.air, tr('weather.wind', 'Wind'),
           '${weather.windSpeed.round()} ${weather.windUnit}'),
       if (today != null) ...[
-        _StatData(Icons.umbrella_outlined, 'Chance of rain',
+        _StatData(Icons.umbrella_outlined, tr(
+          'weather.chanceOfRain',
+          'Chance of rain',
+        ),
             '${today.precipitationChance}%'),
-        _StatData(Icons.wb_sunny_outlined, 'UV index',
+        _StatData(Icons.wb_sunny_outlined, tr('weather.uvIndex', 'UV index'),
             '${today.uvIndexMax.round()} · ${uvLabel(today.uvIndexMax)}'),
-        _StatData(Icons.wb_twilight, 'Sunrise · sunset',
+        _StatData(Icons.wb_twilight, tr(
+          'weather.sunriseSunset',
+          'Sunrise · sunset',
+        ),
             '${today.sunrise} · ${today.sunset}'),
       ],
     ];
@@ -363,8 +374,11 @@ class _Now extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'High ${weather.tempMax.round()}° · '
-                      'Low ${weather.tempMin.round()}°',
+                      tr(
+                        'weather.highLow',
+                        'High {tempMax}° · Low {tempMin}°',
+                        {'tempMax': weather.tempMax.round(), 'tempMin': weather.tempMin.round()},
+                      ),
                       style: TextStyle(color: t.textSecondary, fontSize: 26),
                     ),
                   ],
@@ -500,7 +514,7 @@ class _Week extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'NEXT ${days.length} DAYS',
+            tr('weather.nextDays', 'NEXT {days} DAYS', {'days': days.length}),
             style: TextStyle(
               color: t.textSecondary,
               fontSize: 17,
@@ -702,7 +716,7 @@ class _Hours extends StatelessWidget {
           if (hours.isEmpty) {
             return Center(
               child: Text(
-                'No hourly forecast yet.',
+                tr('weather.noHourlyForecastYet', 'No hourly forecast yet.'),
                 style: TextStyle(color: t.textSecondary, fontSize: 22),
               ),
             );
@@ -861,10 +875,6 @@ class _TemperatureCurve extends CustomPainter {
 
 // --- the arithmetic, kept out of the widgets so it can be tested ------------
 
-const _dayNames = [
-  'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
-];
-
 bool isToday(DateTime d, {DateTime? now}) {
   final n = now ?? DateTime.now();
   return d.year == n.year && d.month == n.month && d.day == n.day;
@@ -872,11 +882,11 @@ bool isToday(DateTime d, {DateTime? now}) {
 
 /// "Today", or the weekday in full — there is room here for the whole word.
 String dayName(DateTime d, {DateTime? now}) =>
-    isToday(d, now: now) ? 'Today' : _dayNames[d.weekday - 1];
+    isToday(d, now: now) ? tr('common.today', 'Today') : weekdayName(d);
 
 /// "Now" for the first column, otherwise the hour on the 24-hour clock.
 String hourLabel(DateTime t, {bool first = false}) =>
-    first ? 'Now' : '${t.hour.toString().padLeft(2, '0')}:00';
+    first ? tr('weather.now', 'Now') : '${t.hour.toString().padLeft(2, '0')}:00';
 
 /// The coldest low and warmest high across [days].
 ///
@@ -938,9 +948,9 @@ List<HourlyForecast> hoursToShow(List<HourlyForecast> hourly, double width,
 
 /// The UV index in words, as the Met Office bands it.
 String uvLabel(double uv) {
-  if (uv < 3) return 'Low';
-  if (uv < 6) return 'Moderate';
-  if (uv < 8) return 'High';
-  if (uv < 11) return 'Very high';
-  return 'Extreme';
+  if (uv < 3) return tr('weather.low', 'Low');
+  if (uv < 6) return tr('weather.moderate', 'Moderate');
+  if (uv < 8) return tr('weather.high', 'High');
+  if (uv < 11) return tr('weather.veryHigh', 'Very high');
+  return tr('weather.extreme', 'Extreme');
 }

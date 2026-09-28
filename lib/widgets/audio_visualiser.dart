@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../config/app_config.dart';
 import '../services/audio_levels_service.dart';
 import 'pause_when_hidden.dart';
+import '../l10n/l10n.dart';
 
 /// The music, drawn.
 ///
@@ -132,7 +133,7 @@ class _AudioVisualiserState extends State<AudioVisualiser>
     if (widget.style == VisualiserStyle.off) {
       if (widget.onTap == null) return const SizedBox.shrink();
       return _tappable(
-        label: 'Visualiser off. Tap to turn it on.',
+        label: tr('visualiser.visualiserOffTapToTurn', 'Visualiser off. Tap to turn it on.'),
         // Enough to hit with a thumb without pretending there is a picture.
         child: SizedBox(
           height: math.max(36, widget.height * 0.36),
@@ -150,8 +151,8 @@ class _AudioVisualiserState extends State<AudioVisualiser>
 
     return _tappable(
       label: widget.style == VisualiserStyle.wave
-          ? 'Visualiser: waveform. Tap to change.'
-          : 'Visualiser: bars. Tap to change.',
+          ? tr('visualiser.visualiserWaveformTapToChange', 'Visualiser: waveform. Tap to change.')
+          : tr('visualiser.visualiserBarsTapToChange', 'Visualiser: bars. Tap to change.'),
       child: RepaintBoundary(
         child: SizedBox(
           height: widget.height,

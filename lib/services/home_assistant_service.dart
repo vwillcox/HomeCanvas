@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import 'config_service.dart';
+import '../l10n/l10n.dart';
 
 /// One Home Assistant entity, as the widget shows it.
 @immutable
@@ -31,7 +32,7 @@ class HaEntity {
 
   /// The reading, in words, as Home Assistant's own cards would put it.
   String get display {
-    if (unavailable) return 'Unavailable';
+    if (unavailable) return tr('widget.home_assistant.unavailable', 'Unavailable');
     final a = attributes;
     switch (domain) {
       case 'sensor':
@@ -51,19 +52,19 @@ class HaEntity {
           'door' ||
           'window' ||
           'opening' ||
-          'garage_door' => on ? 'Open' : 'Closed',
-          'motion' || 'occupancy' || 'presence' => on ? 'Detected' : 'Clear',
-          'moisture' => on ? 'Wet' : 'Dry',
-          'battery' => on ? 'Low' : 'OK',
-          'connectivity' => on ? 'Connected' : 'Disconnected',
-          'problem' => on ? 'Problem' : 'OK',
-          _ => on ? 'On' : 'Off',
+          'garage_door' => on ? tr('widget.home_assistant.open', 'Open') : tr('widget.home_assistant.closed', 'Closed'),
+          'motion' || 'occupancy' || 'presence' => on ? tr('widget.home_assistant.detected', 'Detected') : tr('widget.home_assistant.clear', 'Clear'),
+          'moisture' => on ? tr('widget.home_assistant.wet', 'Wet') : tr('widget.home_assistant.dry', 'Dry'),
+          'battery' => on ? tr('widget.home_assistant.low', 'Low') : tr('widget.home_assistant.ok', 'OK'),
+          'connectivity' => on ? tr('widget.home_assistant.connected', 'Connected') : tr('widget.home_assistant.disconnected', 'Disconnected'),
+          'problem' => on ? tr('widget.home_assistant.problem', 'Problem') : tr('widget.home_assistant.ok', 'OK'),
+          _ => on ? tr('widget.home_assistant.on', 'On') : tr('widget.home_assistant.off', 'Off'),
         };
       case 'person' || 'device_tracker':
         return state == 'home'
-            ? 'Home'
+            ? tr('widget.home_assistant.home', 'Home')
             : state == 'not_home'
-            ? 'Away'
+            ? tr('widget.home_assistant.away', 'Away')
             : _title(state);
       case 'media_player':
         final title = '${a['media_title'] ?? ''}'.trim();
@@ -140,7 +141,7 @@ class HomeAssistantService extends ChangeNotifier {
   /// within a few seconds of another.
   Future<void> refresh() {
     if (!configured) {
-      _error = 'Set up Home Assistant in Settings first';
+      _error = tr('widget.home_assistant.setUpHomeAssistantIn', 'Set up Home Assistant in Settings first');
       notifyListeners();
       return Future.value();
     }
@@ -162,10 +163,10 @@ class HomeAssistantService extends ChangeNotifier {
       _error = null;
     } on DioException catch (e) {
       _error = e.response?.statusCode == 401
-          ? 'Home Assistant did not accept the token'
-          : 'Could not reach Home Assistant';
+          ? tr('widget.home_assistant.homeAssistantDidNotAccept', 'Home Assistant did not accept the token')
+          : tr('widget.home_assistant.couldNotReachHomeAssistant', 'Could not reach Home Assistant');
     } catch (e) {
-      _error = 'Unexpected answer from Home Assistant';
+      _error = tr('widget.home_assistant.unexpectedAnswerFromHomeAssistant', 'Unexpected answer from Home Assistant');
     }
     notifyListeners();
   }
@@ -190,7 +191,7 @@ class HomeAssistantService extends ChangeNotifier {
       _fetched = null; // the next refresh reads the real state
     } catch (_) {
       _states[e.id] = e;
-      _error = 'Home Assistant did not take the change';
+      _error = tr('widget.home_assistant.homeAssistantDidNotTake', 'Home Assistant did not take the change');
       notifyListeners();
     }
   }

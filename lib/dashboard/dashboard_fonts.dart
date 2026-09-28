@@ -9,6 +9,9 @@
 /// redistribution. The licence text ships beside each file in `assets/fonts/`.
 library;
 
+import '../l10n/l10n.dart';
+
+
 /// Loose grouping, shown as headings in the editor's font list so twenty
 /// choices read as a few short lists rather than one long one.
 enum FontGroup { plain, friendly, tech, display }
@@ -16,13 +19,13 @@ enum FontGroup { plain, friendly, tech, display }
 String fontGroupLabel(FontGroup g) {
   switch (g) {
     case FontGroup.plain:
-      return 'Plain';
+      return tr('font.plain', 'Plain');
     case FontGroup.friendly:
-      return 'Friendly';
+      return tr('font.friendly', 'Friendly');
     case FontGroup.tech:
-      return 'Technical';
+      return tr('font.technical', 'Technical');
     case FontGroup.display:
-      return 'Display';
+      return tr('font.display', 'Display');
   }
 }
 
@@ -47,10 +50,24 @@ class DashboardFont {
     this.group = FontGroup.plain,
   });
 
+  /// The stem of this font's keys in a language pack: `font.Lora`, or
+  /// `font.default` for the theme's own.
+  String get _at => 'font.${family.isEmpty ? 'default' : family}';
+
+  /// Its name and description, by key, in British English — what a
+  /// language pack translates. Only the theme default's name is words; the
+  /// rest are typefaces' own names.
+  Iterable<(String, String)> texts() sync* {
+    if (family.isEmpty) yield ('$_at.name', name);
+    yield ('$_at.description', description);
+  }
+
   Map<String, dynamic> toJson() => {
         'family': family,
-        'name': name,
-        'description': description,
+        'name': family.isEmpty
+            ? (L10n.instance.lookup('$_at.name') ?? name)
+            : name,
+        'description': L10n.instance.lookup('$_at.description') ?? description,
         'file': file,
         'group': group.name,
         'groupLabel': fontGroupLabel(group),

@@ -12,6 +12,7 @@ import 'fit_canvas.dart';
 import 'tile_bits.dart';
 import '../../widgets/pause_when_hidden.dart';
 import '../../l10n/dates.dart';
+import '../../l10n/l10n.dart';
 
 /// Your photos from this date in past years, from Immich's own memories.
 ///
@@ -159,7 +160,7 @@ class _MemoriesWidgetState extends State<MemoriesWidget>
     }
     if (_photos.isEmpty) {
       return TileMessage(
-        _error != null ? 'Waiting for Immich…' : 'No memories today',
+        _error != null ? tr('widget.memories.waitingForImmich', 'Waiting for Immich…') : tr('widget.memories.noMemoriesToday', 'No memories today'),
         theme: t,
       );
     }
@@ -170,10 +171,10 @@ class _MemoriesWidgetState extends State<MemoriesWidget>
     final years = shown.year == null ? null : now.year - shown.year!;
     final place = _places[shown.asset.id];
     final headline = years == null
-        ? 'From your library'
+        ? tr('widget.memories.fromYourLibrary', 'From your library')
         : years == 1
-        ? 'A year ago'
-        : '$years years ago';
+        ? tr('widget.memories.aYearAgo', 'A year ago')
+        : tr('widget.memories.yearsAgo', '{years} years ago', {'years': years});
     final detail = [
       if (taken != null)
         fullDate(taken),

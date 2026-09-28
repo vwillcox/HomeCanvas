@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
+import '../l10n/l10n.dart';
 
 /// Reverse-engineered constants (from libmqttcrypt.so / pyvidaa).
 const String kPattern = '38D65DC30F45109A369A86FCE866A85B';
@@ -400,7 +401,7 @@ class VidaaClient {
     try {
       await _authAccepted.future.timeout(timeout);
     } catch (_) {
-      _log('PIN not accepted');
+      _log(tr('widget.tv.pinNotAccepted', 'PIN not accepted'));
       return null;
     }
     return requestToken('', timeout: timeout);

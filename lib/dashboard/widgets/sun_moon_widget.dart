@@ -13,6 +13,7 @@ import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
 import '../../time_format.dart';
+import '../../l10n/l10n.dart';
 
 /// Where the sun is in its arc, sunrise and sunset, how the days are
 /// changing, and the moon's phase.
@@ -36,7 +37,7 @@ class _SunMoonWidgetState extends State<SunMoonWidget>
     final weather = context.watch<ConfigService>().config.weather;
     final lat = weather.latitude, lon = weather.longitude;
     if (lat == null || lon == null) {
-      return TileMessage('Set a place in Settings → Weather', theme: t);
+      return TileMessage(tr('widget.sun_moon.setAPlaceInSettings', 'Set a place in Settings → Weather'), theme: t);
     }
     final now = DateTime.now();
     final today = SunMoon.sun(now, lat, lon);
@@ -58,7 +59,7 @@ class _SunMoonWidgetState extends State<SunMoonWidget>
           children: [
             TileLabel(
               icon: Icons.wb_twilight_rounded,
-              text: showMoon ? SunMoon.phaseName(phase) : 'Sun',
+              text: showMoon ? SunMoon.phaseName(phase) : tr('widget.sun_moon.sun', 'Sun'),
               theme: t,
               size: 11,
             ),
@@ -196,7 +197,7 @@ class _Times extends StatelessWidget {
     final sign = change.isNegative ? '−' : '+';
     final changeText = change.inSeconds.abs() < 60
         ? '$sign${change.inSeconds.abs()} s'
-        : '$sign${change.inMinutes.abs()} min';
+        : '$sign${tr('common.min', '{n} min', {'n': change.inMinutes.abs()})}';
 
     Widget time(String label, DateTime? at) => Text.rich(
       TextSpan(
@@ -229,11 +230,11 @@ class _Times extends StatelessWidget {
             children: [
               FittedBox(
                 fit: BoxFit.scaleDown,
-                child: time('Rise', today.sunrise),
+                child: time(tr('widget.sun_moon.rise', 'Rise'), today.sunrise),
               ),
               FittedBox(
                 fit: BoxFit.scaleDown,
-                child: time('Set', today.sunset),
+                child: time(tr('widget.sun_moon.set', 'Set'), today.sunset),
               ),
             ],
           );
@@ -256,7 +257,7 @@ class _Times extends StatelessWidget {
           child: FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
-            child: time('Rise', today.sunrise),
+            child: time(tr('widget.sun_moon.rise', 'Rise'), today.sunrise),
           ),
         ),
         const SizedBox(width: 10),
@@ -282,7 +283,7 @@ class _Times extends StatelessWidget {
           child: FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerRight,
-            child: time('Set', today.sunset),
+            child: time(tr('widget.sun_moon.set', 'Set'), today.sunset),
           ),
         ),
       ],

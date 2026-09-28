@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b0c10">
-<title>Kiosk dashboard</title>
+<title data-t="web.editor.kioskDashboard">Kiosk dashboard</title>
 <style>
   /* The kiosk's own look: near-black with a cool glow from the top left,
      frosted glass surfaces, white pill buttons, the pale blue accent. The
@@ -470,12 +470,12 @@
 <body>
 <header class="appbar">
   <div class="titles">
-    <h1>Dashboard</h1>
-    <p id="subtitle">Arrange what the panel shows</p>
+    <h1 data-t="web.editor.dashboard">Dashboard</h1>
+    <p data-t="web.editor.arrangeWhatThePanelShows" id="subtitle">Arrange what the panel shows</p>
   </div>
-  <span id="status" class="chip">Loading…</span>
-  <button id="revert">Revert</button>
-  <button id="save" class="primary">Save to panel</button>
+  <span data-t="web.editor.loading" id="status" class="chip">Loading…</span>
+  <button data-t="web.editor.revert" id="revert">Revert</button>
+  <button data-t="web.editor.saveToPanel" id="save" class="primary">Save to panel</button>
 </header>
 
 <main>
@@ -483,11 +483,11 @@
     <div class="toolbar">
       <div class="segmented" id="pageTabs" role="tablist" aria-label="Pages"></div>
       <div class="segmented movePage" role="group" aria-label="Move this page">
-        <button id="pageLeft" title="Move this page earlier">‹ Move</button>
-        <button id="pageRight" title="Move this page later">Move ›</button>
+        <button data-t="web.editor.move2" id="pageLeft" title="Move this page earlier">‹ Move</button>
+        <button data-t="web.editor.move" id="pageRight" title="Move this page later">Move ›</button>
       </div>
-      <button id="pageDel" class="danger" title="Delete this page">Delete page</button>
-      <span class="hint">Drag a widget to move it · its corner to resize · a page number to reorder pages</span>
+      <button data-t="web.editor.deletePage" id="pageDel" class="danger" title="Delete this page">Delete page</button>
+      <span data-t="web.editor.dragAWidgetToMove" class="hint">Drag a widget to move it · its corner to resize · a page number to reorder pages</span>
     </div>
     <div id="canvasWrap">
       <div id="canvas">
@@ -497,7 +497,7 @@
         <div id="floatMock" hidden></div>
       </div>
     </div>
-    <div id="clashWarning" class="warn" hidden>⚠︎ Two widgets overlap — drag one clear before saving.</div>
+    <div data-t="web.editor.twoWidgetsOverlapDragOne" id="clashWarning" class="warn" hidden>⚠︎ Two widgets overlap — drag one clear before saving.</div>
   </section>
 
   <aside>
@@ -529,35 +529,35 @@
           <input type="range" id="brightness" min="5" max="100" step="1" disabled>
           <output id="brightnessValue" for="brightness">…</output>
         </div>
-        <p class="help">Changes the panel as you drag — no need to save. Kept across restarts.</p>
+        <p data-t="web.editor.changesThePanelAsYou" class="help">Changes the panel as you drag — no need to save. Kept across restarts.</p>
       </div>
     </section>
 
     <section class="card" data-panel="sound">
       <h2 class="panelHead" data-t="web.editor.panel.sound">Sound<span class="chev">▾</span></h2>
       <div class="panelBody">
-        <label class="field" for="volNotification">Notifications</label>
+        <label data-t="web.editor.notifications" class="field" for="volNotification">Notifications</label>
         <div class="rangeRow">
           <input type="range" id="volNotification" min="0" max="100" step="5" disabled>
           <output id="volNotificationValue" for="volNotification">…</output>
         </div>
-        <label class="field" for="volSpeech">Speech</label>
+        <label data-t="web.editor.speech" class="field" for="volSpeech">Speech</label>
         <div class="rangeRow">
           <input type="range" id="volSpeech" min="0" max="100" step="5" disabled>
           <output id="volSpeechValue" for="volSpeech">…</output>
         </div>
-        <label class="field" for="volReader">News reader</label>
+        <label data-t="web.editor.newsReader" class="field" for="volReader">News reader</label>
         <div class="rangeRow">
           <input type="range" id="volReader" min="0" max="100" step="5" disabled>
           <output id="volReaderValue" for="volReader">…</output>
         </div>
-        <label class="field" for="volTimer">Timers</label>
+        <label data-t="web.editor.timers" class="field" for="volTimer">Timers</label>
         <div class="rangeRow">
           <input type="range" id="volTimer" min="0" max="100" step="5" disabled>
           <output id="volTimerValue" for="volTimer">…</output>
         </div>
-        <p class="help" id="volDnd" hidden>🔕 Do Not Disturb is on, so all of these are muted. They come back at these levels when it is turned off.</p>
-        <p class="help">Separate from the music. Notifications is the chime when something is shared; Speech is notes and bin reminders read aloud; News reader is articles read out; Timers is a timer's sound and voice. Saved as you drag.</p>
+        <p data-t="web.editor.doNotDisturbIsOn" class="help" id="volDnd" hidden>🔕 Do Not Disturb is on, so all of these are muted. They come back at these levels when it is turned off.</p>
+        <p data-t="web.editor.separateFromTheMusicNotifications" class="help">Separate from the music. Notifications is the chime when something is shared; Speech is notes and bin reminders read aloud; News reader is articles read out; Timers is a timer's sound and voice. Saved as you drag.</p>
       </div>
     </section>
 
@@ -565,58 +565,59 @@
       <h2 class="panelHead" data-t="web.editor.panel.dashboard">Look<span class="chev">▾</span></h2>
       <div class="panelBody">
         <div class="themes" id="theme" role="radiogroup" aria-label="Theme"></div>
-        <p class="help">The theme dresses the whole kiosk — the photos, the music player and Settings as well as this dashboard.</p>
+        <p data-t="web.editor.theThemeDressesTheWhole" class="help">The theme dresses the whole kiosk — the photos, the music player and Settings as well as this dashboard.</p>
         <div class="settings-list" style="margin-top:6px">
-          <label class="setting">Rounded corners<input type="checkbox" id="roundedCorners"></label>
-          <label class="setting">Shadows<input type="checkbox" id="tileShadows"></label>
-          <label class="setting"><span>Top bar<small>Greeting, date, pages and the app bar, as on every other screen</small></span><input type="checkbox" id="topBar"></label>
-          <label class="setting"><span>Photo background<small>Your Immich photos behind the widgets, changing slowly</small></span><input type="checkbox" id="photoBackground"></label>
+          <label data-t="web.editor.roundedCorners" class="setting">Rounded corners<input type="checkbox" id="roundedCorners"></label>
+          <label data-t="web.editor.shadows" class="setting">Shadows<input type="checkbox" id="tileShadows"></label>
+          <label class="setting"><span data-t="web.editor.topBar">Top bar<small>Greeting, date, pages and the app bar, as on every other screen</small></span><input type="checkbox" id="topBar"></label>
+          <label class="setting"><span data-t="web.editor.photoBackground">Photo background<small>Your Immich photos behind the widgets, changing slowly</small></span><input type="checkbox" id="photoBackground"></label>
         </div>
         <div class="subgroup" id="photoOptions" hidden>
-          <label class="field" for="photoAlbum">Photos from</label>
+          <label data-t="web.editor.photosFrom" class="field" for="photoAlbum">Photos from</label>
           <select id="photoAlbum"></select>
-          <label class="field" for="photoDim">Darken them</label>
+          <label data-t="web.editor.darkenThem" class="field" for="photoDim">Darken them</label>
           <select id="photoDim">
-            <option value="0.3">A little</option>
-            <option value="0.5">Medium</option>
-            <option value="0.65">A lot</option>
-            <option value="0.8">Most</option>
+            <option data-t="web.editor.aLittle" value="0.3">A little</option>
+            <option data-t="web.editor.medium" value="0.5">Medium</option>
+            <option data-t="web.editor.aLot" value="0.65">A lot</option>
+            <option data-t="web.editor.most" value="0.8">Most</option>
           </select>
-          <label class="field" for="photoSeconds">Change every</label>
+          <label data-t="web.editor.changeEvery" class="field" for="photoSeconds">Change every</label>
           <select id="photoSeconds">
-            <option value="30">30 seconds</option>
-            <option value="90">90 seconds</option>
-            <option value="300">5 minutes</option>
-            <option value="900">15 minutes</option>
+            <option data-t="web.editor.30Seconds" value="30">30 seconds</option>
+            <option data-t="web.editor.90Seconds" value="90">90 seconds</option>
+            <option data-t="web.editor.5Minutes" value="300">5 minutes</option>
+            <option data-t="web.editor.15Minutes" value="900">15 minutes</option>
           </select>
         </div>
       </div>
     </section>
 
     <section class="card" data-panel="paging">
-      <h2 class="panelHead">Pages<span class="chev">▾</span></h2>
+      <h2 data-t="web.editor.pages" class="panelHead">Pages<span class="chev">▾</span></h2>
       <div class="panelBody">
         <div class="settings-list">
-          <label class="setting"><span>Turn the page every<small>Seconds. 0 leaves paging to you.</small></span><input type="number" id="pageSeconds" min="0" max="3600" step="1"></label>
-          <label class="setting"><span>Tap to turn<small>A tap on empty space goes to the next page</small></span><input type="checkbox" id="tapToFlip"></label>
+          <label class="setting"><span data-t="web.editor.turnThePageEvery">Turn the page every<small>Seconds. 0 leaves paging to you.</small></span><input type="number" id="pageSeconds" min="0" max="3600" step="1"></label>
+          <label class="setting"><span data-t="web.editor.tapToTurn">Tap to turn<small>A tap on empty space goes to the next page</small></span><input type="checkbox" id="tapToFlip"></label>
         </div>
         <div class="subgroup">
-          <label class="field" id="pageTitle" for="pageName">This page</label>
+          <label data-t="web.editor.thisPage" class="field" id="pageTitle" for="pageName">This page</label>
           <input type="text" id="pageName" placeholder="A name, like Morning" autocomplete="off">
-          <label class="field">Only show it between</label>
+          <label data-t="web.editor.onlyShowItBetween" class="field">Only show it between</label>
           <div class="timeRow">
             <input type="time" id="pageFrom" aria-label="From">
             <span>and</span>
             <input type="time" id="pageTo" aria-label="To">
           </div>
           <input type="text" id="pageDays" placeholder="Every day" autocomplete="off" aria-label="On these days">
-          <p class="help">Days: weekdays, weekends, or Mon Wed Fri. Leave the times empty to show it all day. When its time comes the panel goes to it; outside its time it is not there to turn to.</p>
+          <p data-t="web.editor.daysWeekdaysWeekendsOrMon" class="help">Days: weekdays, weekends, or Mon Wed Fri. Leave the times empty to show it all day. When its time comes the panel goes to it; outside its time it is not there to turn to.</p>
         </div>
       </div>
     </section>
   </aside>
 </main>
 
+<script src="/i18n.js"></script>
 <script>
 "use strict";
 
@@ -658,96 +659,6 @@ const api = {
     return r.json();
   },
 };
-
-/* ---------- words ---------- */
-
-/* The editor's own text in the panel's language, from the same packs the
-   panel reads. Markup marked data-t="key" is translated where it stands;
-   text built by script asks t(key, english). Whatever a pack lacks stays in
-   British English, the language the editor is written in. */
-let WORDS = {};
-let LANGUAGE = "en-GB";
-let LANGUAGES = [];
-
-function t(key, english, args) {
-  const s = WORDS[key] ?? english;
-  return args ? fillIn(s, args) : s;
-}
-
-/* {name} from args, and {n, plural, one{…} other{…}} by the language's own
-   plural rules, # standing for the number — the same forms the panel reads. */
-function fillIn(s, args) {
-  let out = "";
-  let i = 0;
-  while (i < s.length) {
-    const open = s.indexOf("{", i);
-    if (open < 0) { out += s.slice(i); break; }
-    out += s.slice(i, open);
-    let depth = 0, close = -1;
-    for (let j = open; j < s.length; j++) {
-      if (s[j] === "{") depth++;
-      if (s[j] === "}" && --depth === 0) { close = j; break; }
-    }
-    if (close < 0) { out += s.slice(open); break; }
-    const body = s.slice(open + 1, close);
-    const m = body.match(/^\s*(\w+)\s*,\s*plural\s*,([\s\S]*)$/);
-    if (m) {
-      const n = Number(args[m[1]]);
-      const cases = {};
-      const re = /\s*(=?\w+)\s*\{/g;
-      let rest = m[2], k;
-      while ((k = re.exec(rest))) {
-        let d = 1, j = re.lastIndex;
-        for (; j < rest.length && d; j++) { if (rest[j] === "{") d++; if (rest[j] === "}") d--; }
-        cases[k[1]] = rest.slice(re.lastIndex, j - 1);
-        re.lastIndex = j;
-      }
-      const which = cases["=" + n] ?? cases[new Intl.PluralRules(LANGUAGE).select(n)] ?? cases.other ?? "";
-      out += fillIn(which, args).replaceAll("#", String(n));
-    } else {
-      const name = body.trim();
-      out += name in args ? String(args[name]) : "{" + body + "}";
-    }
-    i = close + 1;
-  }
-  return out;
-}
-
-/* Replaces an element's own words and leaves its children — a heading's
-   fold arrow — where they are. */
-function setOwnText(el, text) {
-  const node = [...el.childNodes].find(
-    n => n.nodeType === Node.TEXT_NODE && n.textContent.trim());
-  if (node) node.textContent = text; else el.textContent = text;
-}
-
-function translatePage(root = document) {
-  for (const el of root.querySelectorAll("[data-t]")) {
-    const s = WORDS[el.dataset.t];
-    if (s) setOwnText(el, s);
-  }
-  for (const el of root.querySelectorAll("[data-t-title]")) {
-    const s = WORDS[el.dataset.tTitle];
-    if (s) el.title = s;
-  }
-  for (const el of root.querySelectorAll("[data-t-placeholder]")) {
-    const s = WORDS[el.dataset.tPlaceholder];
-    if (s) el.placeholder = s;
-  }
-}
-
-async function loadWords() {
-  try {
-    const r = await api.get("/api/strings");
-    WORDS = r.strings || {};
-    LANGUAGE = r.language || "en-GB";
-    LANGUAGES = r.languages || [];
-    document.documentElement.lang = LANGUAGE;
-    translatePage();
-  } catch {
-    // An older panel: the editor stays in British English.
-  }
-}
 
 /* The language picker: each language by its own name, what that is in
    English, and whether an AI translated it. Changing it changes the panel
@@ -794,7 +705,7 @@ function setStatus(text, tone) {
 
 function markDirty() {
   state.dirty = true;
-  setStatus("Unsaved changes", "dirty");
+  setStatus(t("web.editor.unsavedChanges", "Unsaved changes"), "dirty");
   // An option typed into the form changes how the widget looks without
   // redrawing the canvas, so its picture is asked for again from here.
   requestShots();
@@ -1127,7 +1038,7 @@ function renderChrome(topBar) {
     return;
   }
   const h = new Date().getHours();
-  const greeting = h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+  const greeting = h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : t("web.editor.goodEvening", "Good evening");
   bar.innerHTML =
     '<div class="greet"><b>' + greeting + "</b><span>" +
       escapeHtml(substitute("{date}")) + "</span></div>" +
@@ -1159,20 +1070,21 @@ function renderCells(columns, rows, place, key) {
 function renderSubtitle() {
   const n = state.dashboard.widgets.length;
   const pages = pageCount();
-  document.getElementById("subtitle").textContent =
-    n + " widget" + (n === 1 ? "" : "s") + " across " + pages + " page" +
-    (pages === 1 ? "" : "s") + " · " + (currentTheme() ? currentTheme().name : "") + " theme";
+  document.getElementById("subtitle").textContent = t("web.editor.subtitle",
+    "{widgets, plural, one{# widget} other{# widgets}} across {pages, plural, one{# page} other{# pages}} · {theme} theme",
+    { widgets: n, pages, theme: currentTheme() ? currentTheme().name : "" });
 }
 
 function substitute(text) {
   const now = new Date();
   const two = (n) => String(n).padStart(2, "0");
-  const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
-  const months = ["January","February","March","April","May","June","July",
-                  "August","September","October","November","December"];
+  // "Monday 28 September", as the panel writes it in its language.
+  const date = new Intl.DateTimeFormat(LANGUAGE, {
+    weekday: "long", day: "numeric", month: "long",
+  }).format(now);
   return text
     .replace("{time}", two(now.getHours()) + ":" + two(now.getMinutes()))
-    .replace("{date}", days[now.getDay()] + " " + now.getDate() + " " + months[now.getMonth()]);
+    .replace("{date}", date);
 }
 
 function escapeHtml(s) {
@@ -1397,10 +1309,10 @@ function renderPalette() {
   const order = state.schema.categories || [];
   const groups = new Map();
   for (const name of order) groups.set(name, []);
-  for (const t of state.schema.widgetTypes) {
-    const c = t.category || "Other";
+  for (const wt of state.schema.widgetTypes) {
+    const c = wt.category || "Other";
     if (!groups.has(c)) groups.set(c, []);
-    groups.get(c).push(t);
+    groups.get(c).push(wt);
   }
   const collapsed = collapsedPanels();
   for (const [name, types] of groups) {
@@ -1426,11 +1338,11 @@ function renderPalette() {
     };
     const grid = document.createElement("div");
     grid.className = "palette";
-    for (const t of types) {
+    for (const wt of types) {
       const b = document.createElement("button");
-      b.title = t.description;
-      b.innerHTML = '<span class="g">' + t.glyph + '</span><span class="n">' + t.name + "</span>";
-      b.onclick = () => addWidget(t);
+      b.title = wt.description;
+      b.innerHTML = '<span class="g">' + wt.glyph + '</span><span class="n">' + wt.name + "</span>";
+      b.onclick = () => addWidget(wt);
       grid.appendChild(b);
     }
     group.append(head, grid);
@@ -1480,65 +1392,65 @@ function renderSettings() {
       "Tap a widget on the panel to change it, or add one below.</div>";
     return;
   }
-  const t = typeOf(w.type);
+  const wt = typeOf(w.type);
   host.innerHTML = "";
 
   const head = document.createElement("div");
   head.className = "widgetHead";
-  head.innerHTML = '<span class="g">' + (t ? t.glyph : "❓") + "</span>" +
-    "<div><strong>" + escapeHtml(t ? t.name : w.type) + "</strong><small>" +
-    "Page " + ((w.page || 0) + 1) + " · " + w.width + " × " + w.height +
-    " cells</small></div>";
+  head.innerHTML = '<span class="g">' + (wt ? wt.glyph : "❓") + "</span>" +
+    "<div><strong>" + escapeHtml(wt ? wt.name : w.type) + "</strong><small>" +
+    escapeHtml(t("web.editor.widgetWhere", "Page {page} · {width} × {height} cells", {
+      page: (w.page || 0) + 1, width: w.width, height: w.height,
+    })) + "</small></div>";
   host.appendChild(head);
 
-  if (t && t.description) {
+  if (wt && wt.description) {
     const d = document.createElement("p");
     d.className = "help";
-    d.textContent = t.description;
+    d.textContent = wt.description;
     host.appendChild(d);
   }
 
-  if (t) {
-    for (const o of t.options) {
+  if (wt) {
+    for (const o of wt.options) {
       host.appendChild(field(w, o));
     }
   } else {
     const p = document.createElement("p");
     p.className = "help";
-    p.textContent = "This kiosk build doesn't have a widget of this type. Its settings are kept as they are.";
+    p.textContent = t("web.editor.thisKioskBuildDoesnT", "This kiosk build doesn'wt have a widget of this type. Its settings are kept as they are.");
     host.appendChild(p);
   }
 
   // Appearance is offered for every widget by the frame that draws it, so a
-  // new widget gets these without asking and can't forget to honour them.
+  // new widget gets these without asking and can'wt forget to honour them.
   const rule = document.createElement("hr");
   rule.className = "divider";
   host.appendChild(rule);
 
   // When the widget shows: all the time unless given hours or days.
   const whenLabel = document.createElement("label");
-  whenLabel.textContent = "Only show it between";
+  whenLabel.textContent = t("web.editor.onlyShowItBetween", "Only show it between");
   host.appendChild(whenLabel);
   const sched = Object.assign({ from: "", to: "", days: "" }, w.schedule || {});
   const timeRow = document.createElement("div");
   timeRow.className = "timeRow";
   const wFrom = document.createElement("input");
-  wFrom.type = "time"; wFrom.value = sched.from; wFrom.setAttribute("aria-label", "From");
+  wFrom.type = "time"; wFrom.value = sched.from; wFrom.setAttribute("aria-label", t("web.editor.from", "From"));
   const and = document.createElement("span");
   and.textContent = "and";
   const wTo = document.createElement("input");
-  wTo.type = "time"; wTo.value = sched.to; wTo.setAttribute("aria-label", "To");
+  wTo.type = "time"; wTo.value = sched.to; wTo.setAttribute("aria-label", t("web.editor.to", "To"));
   timeRow.append(wFrom, and, wTo);
   host.appendChild(timeRow);
   const wDays = document.createElement("input");
-  wDays.type = "text"; wDays.placeholder = "Every day"; wDays.value = sched.days;
-  wDays.setAttribute("aria-label", "On these days");
+  wDays.type = "text"; wDays.placeholder = t("web.editor.everyDay", "Every day"); wDays.value = sched.days;
+  wDays.setAttribute("aria-label", t("web.editor.onTheseDays", "On these days"));
   wDays.style.marginTop = "6px";
   host.appendChild(wDays);
   const whenHelp = document.createElement("p");
   whenHelp.className = "help";
-  whenHelp.textContent = "Trains on weekday mornings, bins the evening before. Days: weekdays, " +
-    "weekends or Mon Wed Fri. Empty shows it all the time; outside its hours its space stays empty.";
+  whenHelp.textContent = t("web.editor.whenHelp", "Trains on weekday mornings, bins the evening before. Days: weekdays, weekends or Mon Wed Fri. Empty shows it all the time; outside its hours its space stays empty.");
   host.appendChild(whenHelp);
   const saveWhen = () => {
     const s = { from: wFrom.value, to: wTo.value, days: wDays.value.trim() };
@@ -1553,13 +1465,13 @@ function renderSettings() {
   // created on a page, never moved off it, and dragging across a page break
   // is not a gesture this canvas has.
   const pageLabel = document.createElement("label");
-  pageLabel.textContent = "Page";
+  pageLabel.textContent = t("web.editor.page", "Page");
   host.appendChild(pageLabel);
   const pageSel = document.createElement("select");
   for (let i = 0; i < pageCount(); i++) {
     const o = document.createElement("option");
     o.value = String(i);
-    o.textContent = "Page " + (i + 1);
+    o.textContent = t("web.editor.pageN", "Page {n}", { n: i + 1 });
     pageSel.appendChild(o);
   }
   pageSel.value = String(w.page || 0);
@@ -1579,13 +1491,13 @@ function renderSettings() {
   host.appendChild(pageSel);
 
   const fontLabel = document.createElement("label");
-  fontLabel.textContent = "Font";
+  fontLabel.textContent = t("web.editor.font", "Font");
   host.appendChild(fontLabel);
   const fontSel = document.createElement("select");
   // Grouped, because twenty in one list is a scroll rather than a choice.
   const groups = new Map();
   for (const f of state.schema.fonts || []) {
-    const key = f.groupLabel || "Other";
+    const key = f.groupLabel || t("web.editor.other", "Other");
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(f);
   }
@@ -1612,7 +1524,7 @@ function renderSettings() {
   host.appendChild(fontHelp);
 
   const sizeLabel = document.createElement("label");
-  sizeLabel.textContent = "Text size";
+  sizeLabel.textContent = t("web.editor.textSize", "Text size");
   host.appendChild(sizeLabel);
   const sizeSel = document.createElement("select");
   for (const [name, value] of Object.entries(state.schema.fontScales || { Normal: 1 })) {
@@ -1626,7 +1538,7 @@ function renderSettings() {
 
   const del = document.createElement("button");
   del.className = "danger";
-  del.textContent = "Remove widget";
+  del.textContent = t("web.editor.removeWidget", "Remove widget");
   del.style.cssText = "margin-top:18px;width:100%";
   del.onclick = () => {
     state.dashboard.widgets = state.dashboard.widgets.filter(x => x.id !== w.id);
@@ -1802,7 +1714,7 @@ function listField(w, o) {
 
     const remove = document.createElement("button");
     remove.className = "danger";
-    remove.textContent = "Remove";
+    remove.textContent = t("web.editor.remove", "Remove");
     remove.onclick = () => {
       removeRowKey(w, o, index, rows.length);
       rows.splice(index, 1);
@@ -1816,7 +1728,7 @@ function listField(w, o) {
       summary.className = "summary";
       const [first, second] = rowSummary(o, row);
       const title = document.createElement("b");
-      title.textContent = first || "Not filled in yet";
+      title.textContent = first || t("web.editor.notFilledInYet", "Not filled in yet");
       summary.appendChild(title);
       if (second) {
         const sub = document.createElement("span");
@@ -1824,7 +1736,7 @@ function listField(w, o) {
         summary.appendChild(sub);
       }
       const edit = document.createElement("button");
-      edit.textContent = "Edit";
+      edit.textContent = t("web.editor.edit", "Edit");
       summary.onclick = edit.onclick = () => { setRowOpen(w, o, index, true); render(); };
       card.append(summary, edit, remove);
       host.appendChild(card);
@@ -1843,9 +1755,9 @@ function listField(w, o) {
         // replaced with the first choice.
         const select = document.createElement("select");
         const dynamic = f.choicesFrom ? (state.schema.lists || {})[f.choicesFrom] : null;
-        const entries = { "": "Choose…", ...(dynamic && Object.keys(dynamic).length ? dynamic : (f.choices || {})) };
+        const entries = { "": t("web.editor.choose", "Choose…"), ...(dynamic && Object.keys(dynamic).length ? dynamic : (f.choices || {})) };
         const current = row[f.key] != null ? String(row[f.key]) : "";
-        if (current && !(current in entries)) entries[current] = current + " (not found)";
+        if (current && !(current in entries)) entries[current] = t("web.editor.notFound", "{value} (not found)", { value: current });
         for (const [k, name] of Object.entries(entries)) {
           const opt = document.createElement("option");
           opt.value = k; opt.textContent = name;
@@ -1891,7 +1803,7 @@ function listField(w, o) {
     actions.style.cssText = "display:flex;gap:8px;margin-top:10px";
     if (foldable) {
       const done = document.createElement("button");
-      done.textContent = "Done";
+      done.textContent = t("web.editor.done", "Done");
       done.onclick = () => { setRowOpen(w, o, index, false); render(); };
       actions.appendChild(done);
     }
@@ -1901,7 +1813,7 @@ function listField(w, o) {
   });
 
   const add = document.createElement("button");
-  add.textContent = "＋ " + (o.addLabel || "Add");
+  add.textContent = "＋ " + (o.addLabel || t("web.editor.add", "Add"));
   add.style.marginTop = "10px";
   add.onclick = () => {
     const row = {};
@@ -1966,7 +1878,7 @@ function field(w, o) {
       // An uploaded sound deleted since: shown as missing, not swapped for
       // the first choice without a word.
       if (o.choicesFrom === "timerSounds" && value && !(String(value) in entries)) {
-        entries[value] = String(value).replace(/^custom:/, "") + " (not found)";
+        entries[value] = t("web.editor.notFound", "{value} (not found)", { value: String(value).replace(/^custom:/, "") });
       }
       for (const [k, name] of Object.entries(entries)) {
         const opt = document.createElement("option");
@@ -2026,25 +1938,25 @@ function soundControls(w, o, select) {
   let audio = null;
 
   const listen = document.createElement("button");
-  listen.textContent = "▶ Listen";
-  listen.title = "Play it in this browser";
+  listen.textContent = t("web.editor.listen", "▶ Listen");
+  listen.title = t("web.editor.playItInThisBrowser", "Play it in this browser");
   listen.onclick = () => {
     if (!select.value || select.value === "none") return;
     if (audio) audio.pause();
     audio = new Audio("/api/sounds/file?id=" + encodeURIComponent(select.value));
-    audio.play().catch(() => setStatus("Couldn't play that here", true));
+    audio.play().catch(() => setStatus(t("web.editor.couldnTPlayThatHere", "Couldn't play that here"), true));
   };
 
   const panel = document.createElement("button");
-  panel.textContent = "Play on panel";
-  panel.title = "Hear how loud it is in the room";
+  panel.textContent = t("web.editor.playOnPanel", "Play on panel");
+  panel.title = t("web.editor.hearHowLoudItIs", "Hear how loud it is in the room");
   panel.onclick = async () => {
     if (!select.value || select.value === "none") return;
     try {
       const res = await fetch("/api/sounds/play?id=" + encodeURIComponent(select.value), { method: "POST" });
       if (!res.ok) throw new Error(await res.text());
     } catch (e) {
-      setStatus("Couldn't play it on the panel", true);
+      setStatus(t("web.editor.couldnTPlayItOn", "Couldn't play it on the panel"), true);
     }
   };
 
@@ -2053,14 +1965,14 @@ function soundControls(w, o, select) {
   picker.accept = ".mp3,.wav,.ogg,audio/mpeg,audio/wav,audio/ogg";
   picker.style.display = "none";
   const upload = document.createElement("button");
-  upload.textContent = "＋ Upload MP3";
+  upload.textContent = t("web.editor.uploadMp3", "＋ Upload MP3");
   upload.onclick = () => picker.click();
   picker.onchange = async () => {
     const file = picker.files && picker.files[0];
     picker.value = "";
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { setStatus("That file is over 5 MB", true); return; }
-    setStatus("Uploading " + file.name + "…");
+    if (file.size > 5 * 1024 * 1024) { setStatus(t("web.editor.thatFileIsOver5", "That file is over 5 MB"), true); return; }
+    setStatus(t("web.editor.uploading", "Uploading {file}…", { file: file.name }));
     try {
       const res = await fetch("/api/sounds?name=" + encodeURIComponent(file.name), {
         method: "POST",
@@ -2074,20 +1986,20 @@ function soundControls(w, o, select) {
       w.options[o.key] = data.id;
       markDirty();
       render();
-      setStatus("Uploaded — save to use it", "dirty");
+      setStatus(t("web.editor.uploadedSaveToUseIt", "Uploaded — save to use it"), "dirty");
     } catch (e) {
-      setStatus("Upload failed: " + e.message, true);
+      setStatus(t("web.editor.uploadFailed", "Upload failed: {reason}", { reason: e.message }), true);
     }
   };
 
   const remove = document.createElement("button");
   remove.className = "danger";
-  remove.textContent = "Delete";
-  remove.title = "Delete this uploaded sound from the kiosk";
+  remove.textContent = t("web.editor.delete", "Delete");
+  remove.title = t("web.editor.deleteThisUploadedSoundFrom", "Delete this uploaded sound from the kiosk");
   remove.hidden = !String(select.value).startsWith("custom:");
   remove.onclick = async () => {
     const id = select.value;
-    if (!confirm("Delete " + id.slice("custom:".length) + " from the kiosk? Timers using it will fall back to no sound.")) return;
+    if (!confirm(t("web.editor.confirmDeleteSound", "Delete {sound} from the kiosk? Timers using it will fall back to no sound.", { sound: id.slice("custom:".length) }))) return;
     try {
       const res = await fetch("/api/sounds?id=" + encodeURIComponent(id), { method: "DELETE" });
       if (!res.ok) throw new Error(res.statusText);
@@ -2097,7 +2009,7 @@ function soundControls(w, o, select) {
       markDirty();
       render();
     } catch (e) {
-      setStatus("Couldn't delete it", true);
+      setStatus(t("web.editor.couldnTDeleteIt", "Couldn't delete it"), true);
     }
   };
 
@@ -2248,13 +2160,18 @@ function renderPageBar() {
     tabs.appendChild(b);
     return b;
   };
-  tab("‹", "Previous page", () => goToPage(state.page - 1));
+  tab("‹", t("web.editor.previousPage", "Previous page"), () => goToPage(state.page - 1));
   for (let i = 0; i < count; i++) {
     const info = pageInfo(i);
     const b = tab(String(i + 1),
-                  (info.name ? info.name : "Page " + (i + 1)) +
-                    (isTimed(i) ? " · shown " + describeSchedule(info.schedule) : "") +
-                    " — drag to reorder",
+                  (isTimed(i)
+                    ? t("web.editor.pageTabTimed", "{page} · shown {when} — drag to reorder", {
+                        page: info.name || t("web.editor.pageN", "Page {n}", { n: i + 1 }),
+                        when: describeSchedule(info.schedule),
+                      })
+                    : t("web.editor.pageTab", "{page} — drag to reorder", {
+                        page: info.name || t("web.editor.pageN", "Page {n}", { n: i + 1 }),
+                      })),
                   () => goToPage(i),
                   "page" + (i === state.page ? " on" : "") + (isTimed(i) ? " timed" : ""));
     b.dataset.page = String(i);
@@ -2262,8 +2179,8 @@ function renderPageBar() {
     b.setAttribute("aria-selected", String(i === state.page));
     installPageDrag(b, i);
   }
-  tab("›", "Next page", () => goToPage(state.page + 1));
-  tab("+", "Add a page", () => {
+  tab("›", t("web.editor.nextPage", "Next page"), () => goToPage(state.page + 1));
+  tab("+", t("web.editor.addAPage", "Add a page"), () => {
     state.pagesShown = count + 1;
     goToPage(count);
   }, "add");
@@ -2279,12 +2196,13 @@ function renderPageBar() {
 
   const del = document.getElementById("pageDel");
   del.disabled = count <= 1;
-  del.textContent = "Delete page " + (state.page + 1);
+  del.textContent = t("web.editor.deletePageN", "Delete page {n}", { n: state.page + 1 });
   del.onclick = () => {
     const onThis = widgetsOnPage();
     if (onThis.length &&
-        !confirm("Delete page " + (state.page + 1) + " and its " +
-                 onThis.length + " widget(s)?")) return;
+        !confirm(t("web.editor.confirmDeletePage",
+          "Delete page {n} and its {count, plural, one{# widget} other{# widgets}}?",
+          { n: state.page + 1, count: onThis.length }))) return;
     // Everything above this page shuffles down, so the numbering stays
     // contiguous instead of leaving a gap that renders as a blank page.
     state.dashboard.widgets = state.dashboard.widgets
@@ -2399,7 +2317,9 @@ function renderPageSchedule() {
   const i = state.page;
   const info = pageInfo(i);
   document.getElementById("pageTitle").textContent =
-    "Page " + (i + 1) + (info.name ? " — " + info.name : "");
+    info.name
+      ? t("web.editor.pageNamed", "Page {n} — {name}", { n: i + 1, name: info.name })
+      : t("web.editor.pageN", "Page {n}", { n: i + 1 });
   const name = document.getElementById("pageName");
   const from = document.getElementById("pageFrom");
   const to = document.getElementById("pageTo");
@@ -2458,7 +2378,7 @@ function renderPhoto() {
   on.checked = !!d.photoBackground;
   opts.hidden = !on.checked;
   album.innerHTML = "";
-  const albums = { "": "All photos, at random", ...((state.schema.lists || {}).albums || {}) };
+  const albums = { "": t("web.editor.allPhotosAtRandom", "All photos, at random"), ...((state.schema.lists || {}).albums || {}) };
   for (const [id, name] of Object.entries(albums)) {
     const o = document.createElement("option");
     o.value = id; o.textContent = name;
@@ -2523,12 +2443,12 @@ function renderThemes() {
 
 document.getElementById("save").onclick = async () => {
   try {
-    setStatus("Saving…");
+    setStatus(t("web.editor.saving", "Saving…"));
     await api.put("/api/dashboard", state.dashboard);
     state.dirty = false;
-    setStatus("Saved", "ok");
+    setStatus(t("web.editor.saved", "Saved"), "ok");
   } catch (e) {
-    setStatus("Save failed", true);
+    setStatus(t("web.editor.saveFailed", "Save failed"), true);
     console.error(e);
   }
 };
@@ -2545,7 +2465,7 @@ window.addEventListener("beforeunload", (e) => {
 
 async function load(quiet) {
   try {
-    if (!quiet) setStatus("Loading…");
+    if (!quiet) setStatus(t("web.editor.loading", "Loading…"));
     const [schema, dashboard] = await Promise.all([
       api.get("/api/schema"),
       api.get("/api/dashboard"),
@@ -2574,9 +2494,9 @@ async function load(quiet) {
     render();
     renderBrightness();
     renderVolumes();
-    setStatus("Up to date", "ok");
+    setStatus(t("web.editor.upToDate", "Up to date"), "ok");
   } catch (e) {
-    setStatus("Could not reach the kiosk", true);
+    setStatus(t("web.editor.couldNotReachTheKiosk", "Could not reach the kiosk"), true);
     console.error(e);
   }
 }
@@ -2592,14 +2512,14 @@ async function renderVolumes() {
   };
   const show = (key, v) => {
     sliders[key].value = v;
-    document.getElementById(sliders[key].id + "Value").textContent = v + "%";
+    document.getElementById(sliders[key].id + t("web.editor.value", "Value")).textContent = v + "%";
   };
   try {
     const v = await api.get("/api/volume");
     for (const key in sliders) { show(key, v[key]); sliders[key].disabled = false; }
     document.getElementById("volDnd").hidden = !v.dnd;
   } catch (e) {
-    for (const key in sliders) document.getElementById(sliders[key].id + "Value").textContent = "—";
+    for (const key in sliders) document.getElementById(sliders[key].id + t("web.editor.value", "Value")).textContent = "—";
     return;
   }
   let sending = false, pending = null;
@@ -2608,7 +2528,7 @@ async function renderVolumes() {
     sending = true;
     const body = pending; pending = null;
     try { await api.put("/api/volume", body); }
-    catch (e) { setStatus("Could not set the volume", true); }
+    catch (e) { setStatus(t("web.editor.couldNotSetTheVolume", "Could not set the volume"), true); }
     sending = false;
     send();
   };
@@ -2642,7 +2562,7 @@ async function renderBrightness() {
     sending = true;
     const v = pending; pending = null;
     try { await api.put("/api/brightness", { value: v }); }
-    catch (e) { setStatus("Could not set the brightness", true); }
+    catch (e) { setStatus(t("web.editor.couldNotSetTheBrightness", "Could not set the brightness"), true); }
     sending = false;
     send();
   };

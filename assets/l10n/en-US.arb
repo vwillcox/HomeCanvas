@@ -2,6 +2,12 @@
   "@@locale": "en-US",
   "@@x-ai-created": true,
   "@@x-translator": "Claude (AI), from the British source, with scripts/l10n_en_us.py — not yet checked by a person.",
+  "about.homecanvasIsReleasedUnderThe": "HomeCanvas is released under the MIT License. It talks only to your own Immich server and to Open-Meteo for the weather — there is no analytics and no third-party tracking.",
+  "about.licence": "License",
+  "about.versionLibrariesLicencesAndCredits": "Version, libraries, licenses and credits",
+  "settings.versionOpenSourceLibrariesLicences": "Version, open-source libraries, licenses and credits",
+  "video.notSignedInDidNot": "Not signed in — {name} did not recognize an account.",
+  "widget.bins.addYourBinsInThe": "Add your bins in the widget settings: a name, a color, the date of one collection and how often they go.",
   "widget.bins.description": "Which trash and recycling go out next and when. From the evening before it says to put them out; tap it once they are out.",
   "widget.bins.name": "Trash day",
   "widget.bins.option.bins.addLabel": "Add a collection",
@@ -17,5 +23,6 @@
   "widget.lights.description": "Govee lights and plugs. Tap one to switch it, drag along its bar for brightness, tap a color. Works over the home network for devices with LAN Control turned on in the Govee app, or through Govee with an API key.",
   "widget.lights.option.swatches.label": "Colors to offer",
   "widget.news.option.readerTheme.label": "Reader colors",
+  "widget.trains.cancelled": "Canceled",
   "widget.unifi_presence.option.watch.help": "Part of a device name, or a MAC address. Leave empty to list everything. Anything named here but absent is shown grayed out, so the list keeps its shape."
 }

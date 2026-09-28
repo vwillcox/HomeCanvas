@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart';
 import '../config/app_config.dart';
 import 'config_service.dart';
 import 'retry_schedule.dart';
+import '../l10n/l10n.dart';
+import '../l10n/dates.dart';
 
 /// One day in the 7-day forecast.
 class DailyForecast {
@@ -33,13 +35,9 @@ class DailyForecast {
 
   String get description => weatherCodeDescription(weatherCode);
 
-  static const _days = [
-    'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun',
-  ];
-
   /// 'Today' for the first entry, otherwise the short weekday name.
   String dayLabel(bool isToday) =>
-      isToday ? 'Today' : _days[(date.weekday - 1) % 7];
+      isToday ? tr('common.today', 'Today') : weekdayShort(date);
 }
 
 /// Current conditions for the configured location.
@@ -127,55 +125,55 @@ List<HourlyForecast> parseHourly(Object? block) {
 String weatherCodeDescription(int code) {
   switch (code) {
     case 0:
-      return 'Clear';
+      return tr('weather.clear', 'Clear');
     case 1:
-      return 'Mainly clear';
+      return tr('weather.mainlyClear', 'Mainly clear');
     case 2:
-      return 'Partly cloudy';
+      return tr('weather.partlyCloudy', 'Partly cloudy');
     case 3:
-      return 'Overcast';
+      return tr('weather.overcast', 'Overcast');
     case 45:
     case 48:
-      return 'Fog';
+      return tr('weather.fog', 'Fog');
     case 51:
     case 53:
     case 55:
-      return 'Drizzle';
+      return tr('weather.drizzle', 'Drizzle');
     case 56:
     case 57:
-      return 'Freezing drizzle';
+      return tr('weather.freezingDrizzle', 'Freezing drizzle');
     case 61:
-      return 'Light rain';
+      return tr('weather.lightRain', 'Light rain');
     case 63:
-      return 'Rain';
+      return tr('weather.rain', 'Rain');
     case 65:
-      return 'Heavy rain';
+      return tr('weather.heavyRain', 'Heavy rain');
     case 66:
     case 67:
-      return 'Freezing rain';
+      return tr('weather.freezingRain', 'Freezing rain');
     case 71:
-      return 'Light snow';
+      return tr('weather.lightSnow', 'Light snow');
     case 73:
-      return 'Snow';
+      return tr('weather.snow', 'Snow');
     case 75:
-      return 'Heavy snow';
+      return tr('weather.heavySnow', 'Heavy snow');
     case 77:
-      return 'Snow grains';
+      return tr('weather.snowGrains', 'Snow grains');
     case 80:
     case 81:
-      return 'Showers';
+      return tr('weather.showers', 'Showers');
     case 82:
-      return 'Heavy showers';
+      return tr('weather.heavyShowers', 'Heavy showers');
     case 85:
     case 86:
-      return 'Snow showers';
+      return tr('weather.snowShowers', 'Snow showers');
     case 95:
-      return 'Thunderstorm';
+      return tr('weather.thunderstorm', 'Thunderstorm');
     case 96:
     case 99:
-      return 'Thunderstorm, hail';
+      return tr('weather.thunderstormHail', 'Thunderstorm, hail');
     default:
-      return 'Unknown';
+      return tr('weather.unknown', 'Unknown');
   }
 }
 
@@ -299,7 +297,11 @@ class WeatherService extends ChangeNotifier {
       if (needsGeocode) {
         final geo = await _geocode(s.location);
         if (geo == null) {
-          _error = 'Could not find "${s.location}"';
+          _error = tr(
+            'weather.couldNotFind',
+            'Could not find "{location}"',
+            {'location': s.location},
+          );
           _weather = null;
           _loading = false;
           notifyListeners();
@@ -337,7 +339,7 @@ class WeatherService extends ChangeNotifier {
         },
       );
       if (r.statusCode != 200) {
-        _error = 'Weather unavailable';
+        _error = tr('weather.weatherUnavailable', 'Weather unavailable');
       } else {
         final data = r.data as Map<String, dynamic>;
         final c = data['current'] as Map<String, dynamic>;
@@ -387,7 +389,7 @@ class WeatherService extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint('WeatherService.refresh error: $e');
-      _error = 'Weather unavailable';
+      _error = tr('weather.weatherUnavailable', 'Weather unavailable');
     }
 
     _loading = false;

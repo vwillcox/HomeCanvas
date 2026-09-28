@@ -10,6 +10,7 @@ import '../../widgets/shown_timers.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
+import '../../l10n/l10n.dart';
 
 /// Something being counted down to.
 @immutable
@@ -163,8 +164,10 @@ class _CountdownsWidgetState extends State<CountdownsWidget>
     ).take(max).toList();
     if (items.isEmpty) {
       return TileMessage(
-        'Add dates in the widget settings — 25/12 for every year, or a full '
-        'date like 31/10/2026 for once.',
+        tr(
+          'widget.countdowns.addDatesInTheWidget',
+          'Add dates in the widget settings — 25/12 for every year, or a full date like 31/10/2026 for once.',
+        ),
         theme: t,
       );
     }
@@ -181,7 +184,7 @@ class _CountdownsWidgetState extends State<CountdownsWidget>
             children: [
               TileLabel(
                 icon: Icons.flag_outlined,
-                text: 'Coming up',
+                text: tr('widget.countdowns.comingUp', 'Coming up'),
                 theme: t,
                 size: 11,
               ),
@@ -220,7 +223,7 @@ class _Row extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = w.theme;
     final (String number, String unit) = switch (days) {
-      0 => ('Today', ''),
+      0 => (tr('widget.countdowns.today', 'Today'), ''),
       1 => ('1', 'day'),
       _ => ('$days', 'days'),
     };

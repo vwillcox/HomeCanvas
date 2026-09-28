@@ -2,6 +2,7 @@
 library;
 
 import '../dashboard/dashboard_model.dart';
+import '../l10n/l10n.dart';
 
 enum SlideshowTransition { fade, slide, kenBurns, pageTurn }
 
@@ -72,11 +73,11 @@ enum OverlaySlot { weather, nowPlaying, camera }
 String slotLabel(OverlaySlot s) {
   switch (s) {
     case OverlaySlot.weather:
-      return 'Weather';
+      return tr('settings.weather', 'Weather');
     case OverlaySlot.nowPlaying:
-      return 'Now playing';
+      return tr('settings.nowPlaying', 'Now playing');
     case OverlaySlot.camera:
-      return 'Camera';
+      return tr('settings.camera', 'Camera');
   }
 }
 
@@ -99,13 +100,13 @@ String cornerToString(OverlayCorner c) => c.name;
 String cornerLabel(OverlayCorner c) {
   switch (c) {
     case OverlayCorner.topLeft:
-      return 'Top left';
+      return tr('settings.topLeft', 'Top left');
     case OverlayCorner.topRight:
-      return 'Top right';
+      return tr('settings.topRight', 'Top right');
     case OverlayCorner.bottomLeft:
-      return 'Bottom left';
+      return tr('settings.bottomLeft', 'Bottom left');
     case OverlayCorner.bottomRight:
-      return 'Bottom right';
+      return tr('settings.bottomRight', 'Bottom right');
   }
 }
 
@@ -170,11 +171,11 @@ String visualiserToString(VisualiserStyle v) => v.name;
 String visualiserLabel(VisualiserStyle v) {
   switch (v) {
     case VisualiserStyle.off:
-      return 'Off';
+      return tr('settings.off', 'Off');
     case VisualiserStyle.bars:
-      return 'Bars';
+      return tr('settings.bars', 'Bars');
     case VisualiserStyle.wave:
-      return 'Waveform';
+      return tr('settings.waveform', 'Waveform');
   }
 }
 

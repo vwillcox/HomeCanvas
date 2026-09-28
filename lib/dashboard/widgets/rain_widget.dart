@@ -9,6 +9,7 @@ import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
+import '../../l10n/l10n.dart';
 
 /// Whether it is about to rain: the next two hours in one sentence, and as
 /// bars a quarter of an hour wide.
@@ -30,7 +31,7 @@ class _RainWidgetState extends State<RainWidget>
     final slots = service.slots;
     if (slots == null) {
       return TileMessage(
-        service.error ?? 'Fetching the rain forecast…',
+        service.error ?? tr('widget.rain.fetchingTheRainForecast', 'Fetching the rain forecast…'),
         theme: t,
       );
     }
@@ -103,7 +104,11 @@ class _RainWidgetState extends State<RainWidget>
                     ),
                     const Spacer(),
                     Text(
-                      '+${(ahead.length / 4 * 60).round()} min',
+                      tr(
+                        'widget.rain.min',
+                        '+{length} min',
+                        {'length': (ahead.length / 4 * 60).round()},
+                      ),
                       style: TextStyle(color: t.textSecondary, fontSize: 8),
                     ),
                   ],

@@ -11,6 +11,7 @@ import '../services/media_source.dart';
 import '../widgets/remote_image.dart';
 import '../widgets/glass.dart';
 import 'gallery_screen.dart';
+import '../l10n/l10n.dart';
 
 /// Shows the assets in Immich's server-side Locked Folder. Assumes the session
 /// is already unlocked (navigated here after a successful PIN unlock). Re-locks
@@ -112,8 +113,8 @@ class _LockedFolderScreenState extends State<LockedFolderScreen> {
       child: ModernScaffold(
         header: ScreenHeader(
           onBack: () => Navigator.of(context).maybePop(),
-          title: 'Locked Folder',
-          subtitle: 'Locks again when you leave',
+          title: tr('lockedFolder.lockedFolder', 'Locked Folder'),
+          subtitle: tr('lockedFolder.locksAgainWhenYouLeave', 'Locks again when you leave'),
           actions: [
             Padding(
               padding: EdgeInsets.all(15),
@@ -141,7 +142,7 @@ class _LockedFolderScreenState extends State<LockedFolderScreen> {
               FilledButton.icon(
                 onPressed: _load,
                 icon: const Icon(Icons.refresh),
-                label: const Text('Retry'),
+                label: Text(tr('lockedFolder.retry', 'Retry')),
               ),
             ],
           ),
@@ -155,7 +156,10 @@ class _LockedFolderScreenState extends State<LockedFolderScreen> {
     if (assets.isEmpty) {
       return Center(
         child: Text(
-          'The Locked Folder is empty',
+          tr(
+            'lockedFolder.theLockedFolderIsEmpty',
+            'The Locked Folder is empty',
+          ),
           style: TextStyle(fontSize: 20, color: context.look.textSecondary),
         ),
       );

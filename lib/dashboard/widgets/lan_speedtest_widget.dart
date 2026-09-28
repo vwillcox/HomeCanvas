@@ -8,6 +8,7 @@ import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'speed_gauge.dart';
+import '../../l10n/l10n.dart';
 
 /// Speed between this panel and another machine on the network.
 ///
@@ -43,17 +44,20 @@ class _DashboardLanSpeedtestWidgetState
     };
 
     final label = switch (s.phase) {
-      LanPhase.idle => s.hasResult ? 'tap to retest' : 'tap to start',
+      LanPhase.idle => s.hasResult ? tr('widget.speedtest.tapToRetest', 'tap to retest') : tr('widget.speedtest.tapToStart', 'tap to start'),
       LanPhase.download => 'download',
       LanPhase.upload => 'upload',
-      LanPhase.done => 'tap to retest',
+      LanPhase.done => tr('widget.speedtest.tapToRetest', 'tap to retest'),
       LanPhase.failed => 'failed',
     };
 
     if (server.isEmpty) {
       return Center(
         child: Text(
-          'Set the server address in the widget settings',
+          tr(
+            'widget.speedtest.setTheServerAddressIn',
+            'Set the server address in the widget settings',
+          ),
           textAlign: TextAlign.center,
           style: TextStyle(color: t.textSecondary, fontSize: 14),
         ),
@@ -142,7 +146,7 @@ class _Readout extends StatelessWidget {
         if (state.phase == LanPhase.failed) {
           return Center(
             child: Text(
-              state.error ?? 'Test failed',
+              state.error ?? tr('widget.speedtest.testFailed', 'Test failed'),
               textAlign: TextAlign.center,
               maxLines: 4,
               overflow: TextOverflow.ellipsis,
@@ -157,7 +161,7 @@ class _Readout extends StatelessWidget {
             _readoutLine(
               theme,
               Icons.download,
-              'Down',
+              tr('widget.speedtest.down', 'Down'),
               _mbps(state.downloadMbps),
               active: state.phase == LanPhase.download,
               colour: theme.accent,
@@ -166,7 +170,7 @@ class _Readout extends StatelessWidget {
             _readoutLine(
               theme,
               Icons.upload,
-              'Up',
+              tr('widget.speedtest.up', 'Up'),
               _mbps(state.uploadMbps),
               active: state.phase == LanPhase.upload,
               colour: _DashboardLanSpeedtestWidgetState._uploadColour(theme),
@@ -179,7 +183,7 @@ class _Readout extends StatelessWidget {
               style: TextStyle(color: theme.textSecondary, fontSize: 12),
             ),
             Text(
-              'on your own network',
+              tr('widget.speedtest.onYourOwnNetwork', 'on your own network'),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(color: theme.textSecondary, fontSize: 11),

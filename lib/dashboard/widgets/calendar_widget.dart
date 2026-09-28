@@ -62,7 +62,7 @@ class DashboardCalendarWidget extends StatelessWidget {
     final sources = _sources(t.accent);
     if (sources.isEmpty) {
       return _Hint(
-        text: 'Add a calendar link in this widget’s settings.',
+        text: tr('widget.calendar.addACalendarLinkIn', 'Add a calendar link in this widget’s settings.'),
         colour: t.textSecondary,
       );
     }
@@ -107,7 +107,7 @@ class _ScheduleView extends StatelessWidget {
 
     if (shown.isEmpty) {
       return _Hint(
-        text: error ?? 'Nothing in the next $days days.',
+        text: error ?? tr('widget.calendar.nothingInTheNextDays', 'Nothing in the next {days} days.', {'days': days}),
         colour: t.textSecondary,
       );
     }
@@ -178,7 +178,7 @@ class _ScheduleView extends StatelessWidget {
       dayLabel = '${weekdayShort(e.start)} ${numericDayMonth(e.start)}';
     }
 
-    if (e.allDay) return '$dayLabel · all day';
+    if (e.allDay) return tr('widget.calendar.allDay', '{dayLabel} · all day', {'dayLabel': dayLabel});
     final time = hhmm(e.start);
     final where = e.location == null ? '' : ' · ${e.location}';
     return '$dayLabel $time$where';
@@ -364,7 +364,11 @@ class _Day extends StatelessWidget {
                         ),
                       if (list.length > shown.length)
                         Text(
-                          '+${list.length - shown.length} more',
+                          tr(
+                            'widget.calendar.more',
+                            '+{shown} more',
+                            {'shown': list.length - shown.length},
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(

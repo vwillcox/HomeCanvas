@@ -4,6 +4,7 @@ import '../look.dart';
 
 import '../services/indoor_sensor_service.dart';
 import '../time_format.dart';
+import '../l10n/l10n.dart';
 
 /// Line chart of recent indoor readings. Drawn with a CustomPainter so the
 /// project doesn't take on a charting dependency for one graph.
@@ -26,7 +27,7 @@ class IndoorChart extends StatelessWidget {
     if (readings.length < 2) {
       return Center(
         child: Text(
-          'Collecting readings…',
+          tr('weather.collectingReadings', 'Collecting readings…'),
           style: TextStyle(color: context.look.textSecondary, fontSize: 18),
         ),
       );

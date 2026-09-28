@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b0c10">
-<title>Shopping</title>
+<title data-t="web.list.shopping">Shopping</title>
 <style>
   /* The kiosk's glass look, as on the notes page. */
   :root {
@@ -56,16 +56,17 @@
 <body>
 <main>
   <header>
-    <h1>Shopping</h1>
-    <p class="sub">Add it here; it's on the panel straight away.</p>
+    <h1 data-t="web.list.shopping">Shopping</h1>
+    <p data-t="web.list.addItHereItS" class="sub">Add it here; it's on the panel straight away.</p>
   </header>
   <form id="form" autocomplete="off">
-    <input id="text" maxlength="80" placeholder="Milk" aria-label="Something to get" required>
-    <button type="submit">Add</button>
+    <input id="text" maxlength="80" placeholder="Milk" data-t-placeholder="web.list.examplePlaceholder" aria-label="Something to get" data-t-aria="web.list.somethingToGet" required>
+    <button data-t="web.list.add" type="submit">Add</button>
   </form>
   <div id="status" role="status"></div>
   <ul id="items"></ul>
 </main>
+<script src="/i18n.js"></script>
 <script>
 "use strict";
 const $ = (id) => document.getElementById(id);
@@ -74,7 +75,10 @@ function show(items) {
   const list = $("items");
   list.innerHTML = "";
   if (!items.length) {
-    list.innerHTML = '<li class="empty">Nothing to get.</li>';
+    const empty = document.createElement("li");
+    empty.className = "empty";
+    empty.textContent = t("web.list.nothingToGet", "Nothing to get.");
+    list.appendChild(empty);
     return;
   }
   for (const i of items) {
@@ -83,7 +87,9 @@ function show(items) {
     const tick = document.createElement("button");
     tick.className = "tick";
     tick.type = "button";
-    tick.setAttribute("aria-label", (i.doneAt ? "Untick " : "Tick off ") + i.text);
+    tick.setAttribute("aria-label", i.doneAt
+      ? t("web.list.untick", "Untick {item}", { item: i.text })
+      : t("web.list.tickOff", "Tick off {item}", { item: i.text }));
     tick.onclick = () => call("POST", { toggle: i.id });
     const text = document.createElement("span");
     text.className = "text";
@@ -93,7 +99,7 @@ function show(items) {
     del.className = "del";
     del.type = "button";
     del.textContent = "×";
-    del.setAttribute("aria-label", "Remove " + i.text);
+    del.setAttribute("aria-label", t("web.list.remove", "Remove {item}", { item: i.text }));
     del.onclick = () => call("DELETE", null, "?id=" + encodeURIComponent(i.id));
     li.append(tick, text, del);
     list.appendChild(li);
@@ -115,7 +121,7 @@ async function call(method, body, query) {
     return true;
   } catch (e) {
     status.className = "error";
-    status.textContent = "Couldn't reach the panel. Check you're on the home Wi-Fi and try again.";
+    status.textContent = t("web.common.unreachable", "Couldn’t reach the panel. Check you’re on the home Wi-Fi and try again.");
     return false;
   }
 }
@@ -128,7 +134,8 @@ $("form").addEventListener("submit", async (e) => {
   $("text").focus();
 });
 
-call("GET");
+// Words first, so the list is drawn in the panel's language.
+loadWords().then(() => call("GET"));
 setInterval(() => { if (!document.hidden) call("GET"); }, 20000);
 </script>
 </body>

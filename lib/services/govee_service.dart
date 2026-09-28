@@ -6,6 +6,7 @@ import 'dart:math';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart' show Color;
+import '../l10n/l10n.dart';
 
 /// A Govee light or plug, and what it is doing.
 class GoveeDevice {
@@ -239,12 +240,12 @@ class GoveeService extends ChangeNotifier {
     } on DioException catch (e) {
       final code = e.response?.statusCode;
       _error = code == 401 || code == 403
-          ? 'Govee did not accept the API key'
+          ? tr('widget.lights.goveeDidNotAcceptThe', 'Govee did not accept the API key')
           : code == 429
-          ? 'Govee’s daily allowance is used up'
-          : 'Could not reach Govee';
+          ? tr('widget.lights.goveeSDailyAllowanceIs', 'Govee’s daily allowance is used up')
+          : tr('widget.lights.couldNotReachGovee', 'Could not reach Govee');
     } catch (e) {
-      _error = 'Unexpected answer from Govee';
+      _error = tr('widget.lights.unexpectedAnswerFromGovee', 'Unexpected answer from Govee');
       debugPrint('Govee: $e');
     }
   }
@@ -398,7 +399,7 @@ class GoveeService extends ChangeNotifier {
         ..on = wasOn
         ..brightness = wasLevel
         ..colour = wasColour;
-      _error = 'Govee did not take the change';
+      _error = tr('widget.lights.goveeDidNotTakeThe', 'Govee did not take the change');
       notifyListeners();
     }
   }

@@ -14,6 +14,7 @@ import 'kiosk_browser.dart';
 import 'now_playing_service.dart' show NowPlaying;
 import 'playback_source.dart';
 import 'screen_state.dart';
+import '../l10n/l10n.dart';
 
 /// A Spotify Connect device the account can play on.
 class SpotifyDevice {
@@ -303,7 +304,7 @@ class SpotifyService extends ChangeNotifier implements PlaybackSource {
     try {
       server = await HttpServer.bind(InternetAddress.loopbackIPv4, redirectPort);
     } catch (e) {
-      return 'Could not open port $redirectPort locally: $e';
+      return tr('spotify.couldNotOpenPortLocally', 'Could not open port {redirectPort} locally: {e}', {'redirectPort': redirectPort, 'e': e});
     }
 
     final authUrl = Uri.parse(_authorizeUrl).replace(queryParameters: {
@@ -318,7 +319,7 @@ class SpotifyService extends ChangeNotifier implements PlaybackSource {
 
     if (await _openLoginPage(authUrl.toString()) == null) {
       await server.close(force: true);
-      return 'Could not open a browser to log in with.';
+      return tr('spotify.couldNotOpenABrowser', 'Could not open a browser to log in with.');
     }
 
     String? code;
@@ -327,7 +328,7 @@ class SpotifyService extends ChangeNotifier implements PlaybackSource {
       final request = await server.first.timeout(const Duration(minutes: 3));
       final params = request.uri.queryParameters;
       if (params['state'] != state) {
-        error = 'Spotify redirect did not match — try again.';
+        error = tr('spotify.spotifyRedirectDidNotMatch', 'Spotify redirect did not match — try again.');
       } else if (params['error'] != null) {
         error = 'Spotify said: ${params['error']}';
       } else {
@@ -339,12 +340,12 @@ class SpotifyService extends ChangeNotifier implements PlaybackSource {
         ..write(_callbackPage(error == null))
         ..close();
     } on TimeoutException {
-      error = 'Timed out waiting for the Spotify login to complete.';
+      error = tr('spotify.timedOutWaitingForThe', 'Timed out waiting for the Spotify login to complete.');
     } finally {
       await server.close(force: true);
     }
     if (error != null) return error;
-    if (code == null) return 'Spotify did not return an authorization code.';
+    if (code == null) return tr('spotify.spotifyDidNotReturnAn', 'Spotify did not return an authorization code.');
 
     try {
       final r = await _dio.post(
@@ -363,7 +364,7 @@ class SpotifyService extends ChangeNotifier implements PlaybackSource {
       _accessTokenExpiry = DateTime.now()
           .add(Duration(seconds: (data['expires_in'] as int) - 60));
       final refreshToken = data['refresh_token'] as String?;
-      if (refreshToken == null) return 'Spotify did not return a refresh token.';
+      if (refreshToken == null) return tr('spotify.spotifyDidNotReturnA', 'Spotify did not return a refresh token.');
 
       _settings.clientId = clientId;
       _settings.refreshToken = refreshToken;
@@ -371,7 +372,7 @@ class SpotifyService extends ChangeNotifier implements PlaybackSource {
       refreshFromSettings();
       return null;
     } on DioException catch (e) {
-      return 'Spotify rejected the login: ${e.response?.data ?? e.message}';
+      return tr('spotify.spotifyRejectedTheLogin', 'Spotify rejected the login: {message}', {'message': e.response?.data ?? e.message});
     }
   }
 
@@ -490,12 +491,12 @@ display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
       final context = (data['context'] as Map?)?['uri'] as String? ?? '';
       if (context.endsWith(djPlaylistId)) {
         return PlayerReply(PlayerReplyKind.dj,
-            base(title: 'DJ X', artist: 'Talking between tracks'));
+            base(title: 'DJ X', artist: tr('spotify.talkingBetweenTracks', 'Talking between tracks')));
       }
       // Playing, but the API will not say what: an ad, a DJ it does not
       // label, something new. Still audio, so still worth showing.
       return PlayerReply(
-          PlayerReplyKind.unlabelled, base(title: 'Playing on Spotify'));
+          PlayerReplyKind.unlabelled, base(title: tr('spotify.playingOnSpotify', 'Playing on Spotify')));
     }
 
     String? firstImage(Object? images) {
@@ -953,7 +954,7 @@ display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
           .where((d) => d['id'] is String)
           .map((d) => SpotifyDevice(
                 id: d['id'] as String,
-                name: d['name'] as String? ?? 'Unknown',
+                name: d['name'] as String? ?? tr('spotify.unknown', 'Unknown'),
                 type: d['type'] as String? ?? '',
                 isActive: d['is_active'] as bool? ?? false,
               ))

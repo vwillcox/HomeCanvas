@@ -57,56 +57,56 @@
 </head>
 <body>
 <header>
-  <h1>Sign the panel in to <span class="site">YouTube</span></h1>
-  <p>Sign in on this computer instead of typing a password on the panel. This
+  <h1 data-t-html="web.signIn.heading">Sign the panel in to <span class="site">YouTube</span></h1>
+  <p data-t="web.signIn.intro">Sign in on this computer instead of typing a password on the panel. This
      page is served to the local network only.</p>
 </header>
 
 <main>
   <div class="card">
-    <h2>Now</h2>
+    <h2 data-t="web.signIn.now">Now</h2>
     <div class="row">
-      <span id="state" class="state">Checking…</span>
+      <span id="state" class="state" data-t="web.signIn.checking">Checking…</span>
       <span id="how" class="note"></span>
       <span style="flex:1"></span>
-      <button class="danger" id="signout" hidden>Sign out</button>
+      <button class="danger" id="signout" hidden data-t="web.signIn.signOut">Sign out</button>
     </div>
   </div>
 
   <div class="card">
-    <h2>Sign in from this browser</h2>
+    <h2 data-t="web.signIn.fromThisBrowser">Sign in from this browser</h2>
     <ol>
-      <li>Add the <b>Get cookies.txt LOCALLY</b> extension from your browser's
+      <li data-t-html="web.signIn.step1">Add the <b>Get cookies.txt LOCALLY</b> extension from your browser's
         add-on store (Chrome, Edge, Brave or Firefox).
         <span class="warn">Not the older "Get cookies.txt" without
         "LOCALLY" — it was withdrawn for sending people's cookies away.</span></li>
-      <li>Open a <b>private / incognito window</b> and allow the extension to
+      <li data-t-html="web.signIn.step2">Open a <b>private / incognito window</b> and allow the extension to
         run there (the browser asks, or it is in the extension's settings).</li>
-      <li>In that window, go to <b class="domain">youtube.com</b> and sign in
+      <li data-t-html="web.signIn.step3">In that window, go to <b class="domain">youtube.com</b> and sign in
         <span id="what">— Premium, your subscriptions, whatever the panel
         should have</span>.</li>
-      <li>Still on <span class="domain">youtube.com</span>, open the extension and choose
+      <li data-t-html="web.signIn.step4">Still on <span class="domain">youtube.com</span>, open the extension and choose
         <b>Export</b> (as <i>Netscape</i> format) to save a
         <code>cookies.txt</code> file.</li>
-      <li><b>Close the private window without signing out.</b> Signing out
+      <li data-t-html="web.signIn.step5"><b>Close the private window without signing out.</b> Signing out
         would cancel the cookies you just saved; closing the window leaves the
         panel as their only user.</li>
-      <li>Choose that file below, or paste what is in it.</li>
+      <li data-t-html="web.signIn.step6">Choose that file below, or paste what is in it.</li>
     </ol>
   </div>
 
   <div class="card">
-    <h2>Upload</h2>
+    <h2 data-t="web.signIn.upload">Upload</h2>
     <div class="row">
       <input type="file" id="file" accept=".txt,text/plain">
     </div>
-    <p class="note">or paste it:</p>
+    <p class="note" data-t="web.signIn.orPasteIt">or paste it:</p>
     <textarea id="paste" placeholder="# Netscape HTTP Cookie File&#10;…"></textarea>
     <div class="row" style="margin-top:10px">
-      <button class="primary" id="send">Sign in</button>
+      <button class="primary" id="send" data-t="web.signIn.signIn">Sign in</button>
       <span id="result"></span>
     </div>
-    <p class="note">Only the <span id="kept">youtube.com and google.com</span>
+    <p class="note" data-t-html="web.signIn.kept">Only the <span id="kept">youtube.com and google.com</span>
       cookies are kept; the rest of the file is thrown away. The panel keeps them to itself — they
       are never shown here or sent anywhere but <span class="site">YouTube</span> — and renews them as
       <span class="site">YouTube</span> asks. On a phone this works in a browser with add-ons, such as
@@ -115,44 +115,49 @@
   </div>
 </main>
 
+<script src="/i18n.js"></script>
 <script>
+// Words first, so the page is filled in in the panel's language.
+loadWords().then(() => {
   const $ = (id) => document.getElementById(id);
 
   // One page for each site the panel can sign in to, told apart by address.
   const SITES = {
     youtube: {
       name: 'YouTube', domain: 'youtube.com', kept: 'youtube.com and google.com',
-      what: '— Premium, your subscriptions, whatever the panel should have',
-      done: 'Signed in. The YouTube tile shows your subscriptions shortly.',
+      what: t('web.signIn.whatYouTube', '— Premium, your subscriptions, whatever the panel should have'),
+      done: t('web.signIn.doneYouTube', 'Signed in. The YouTube tile shows your subscriptions shortly.'),
     },
     floatplane: {
       name: 'Floatplane', domain: 'floatplane.com', kept: 'floatplane.com',
-      what: 'with the account that has your subscriptions',
-      done: 'Signed in. The Floatplane tile shows your creators\u2019 latest shortly.',
+      what: t('web.signIn.whatFloatplane', 'with the account that has your subscriptions'),
+      done: t('web.signIn.doneCreators', 'Signed in. The {site} tile shows your creators’ latest shortly.', { site: 'Floatplane' }),
     },
     nebula: {
       name: 'Nebula', domain: 'nebula.tv', kept: 'nebula.tv',
-      what: 'with the account that follows your creators',
-      done: 'Signed in. The Nebula tile shows your creators\u2019 latest shortly.',
+      what: t('web.signIn.whatNebula', 'with the account that follows your creators'),
+      done: t('web.signIn.doneCreators', 'Signed in. The {site} tile shows your creators’ latest shortly.', { site: 'Nebula' }),
     },
   };
   const site = ['floatplane', 'nebula'].find((s) => location.pathname.includes(s)) || 'youtube';
   const S = SITES[site];
   const api = '/api/' + site;
-  document.title = S.name + ' sign-in';
+  document.title = t('web.signIn.title', '{site} sign-in', { site: S.name });
   document.querySelectorAll('.site').forEach((e) => (e.textContent = S.name));
   document.querySelectorAll('.domain').forEach((e) => (e.textContent = S.domain));
   $('what').textContent = S.what;
   $('kept').textContent = S.kept;
 
   function show(s) {
-    $('state').textContent = s.signedIn ? 'Signed in' : 'Not signed in';
+    $('state').textContent = s.signedIn
+      ? t('web.signIn.signedIn', 'Signed in')
+      : t('web.signIn.notSignedIn', 'Not signed in');
     $('state').className = 'state' + (s.signedIn ? ' on' : '');
     $('how').textContent = s.signedIn && s.how ? '— ' + s.how : '';
     $('signout').hidden = !s.signedIn;
     if (!s.ready) {
-      $('how').textContent = '— install yt-dlp first, in the panel’s ' +
-          'Settings → Music → Videos → Video player';
+      $('how').textContent = t('web.signIn.needsYtDlp',
+          '— install yt-dlp first, in the panel’s Settings → Music → Videos → Video player');
     }
   }
 
@@ -161,7 +166,7 @@
       const r = await fetch(api);
       show(await r.json());
     } catch (_) {
-      $('state').textContent = 'Could not reach the panel';
+      $('state').textContent = t('web.signIn.unreachable', 'Could not reach the panel');
     }
   }
 
@@ -174,16 +179,16 @@
     let text = $('paste').value.trim();
     const f = $('file').files[0];
     if (f) text = await f.text();
-    if (!text) return result('Choose the cookies.txt file, or paste it.', false);
+    if (!text) return result(t('web.signIn.chooseFile', 'Choose the cookies.txt file, or paste it.'), false);
     $('send').disabled = true;
-    result('Checking with ' + S.name + '…', true);
+    result(t('web.signIn.checkingWith', 'Checking with {site}…', { site: S.name }), true);
     try {
       const r = await fetch(api, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
         body: text,
       });
-      if (r.status === 413) return result('That file is too big to be a cookies.txt.', false);
+      if (r.status === 413) return result(t('web.signIn.tooBig', 'That file is too big to be a cookies.txt.'), false);
       const s = await r.json();
       show(s);
       if (s.error) {
@@ -194,20 +199,21 @@
         $('file').value = '';
       }
     } catch (_) {
-      result('Could not reach the panel.', false);
+      result(t('web.signIn.unreachableFull', 'Could not reach the panel.'), false);
     } finally {
       $('send').disabled = false;
     }
   });
 
   $('signout').addEventListener('click', async () => {
-    if (!confirm('Sign the panel out of ' + S.name + '?')) return;
+    if (!confirm(t('web.signIn.confirmSignOut', 'Sign the panel out of {site}?', { site: S.name }))) return;
     const r = await fetch(api, { method: 'DELETE' });
     show(await r.json());
-    result('Signed out.', true);
+    result(t('web.signIn.signedOut', 'Signed out.'), true);
   });
 
   load();
+});
 </script>
 </body>
 </html>

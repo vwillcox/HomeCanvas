@@ -8,6 +8,7 @@ import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'speed_gauge.dart';
+import '../../l10n/l10n.dart';
 
 /// Runs Ookla's speedtest and shows it happening.
 ///
@@ -62,12 +63,12 @@ class _DashboardSpeedtestWidgetState extends State<DashboardSpeedtestWidget> {
     };
 
     final label = switch (s.phase) {
-      SpeedtestPhase.idle => s.hasResult ? 'tap to retest' : 'tap to start',
+      SpeedtestPhase.idle => s.hasResult ? tr('widget.speedtest.tapToRetest', 'tap to retest') : tr('widget.speedtest.tapToStart', 'tap to start'),
       SpeedtestPhase.starting => 'connecting',
       SpeedtestPhase.ping => 'ping',
       SpeedtestPhase.download => 'download',
       SpeedtestPhase.upload => 'upload',
-      SpeedtestPhase.done => 'tap to retest',
+      SpeedtestPhase.done => tr('widget.speedtest.tapToRetest', 'tap to retest'),
       SpeedtestPhase.failed => 'failed',
     };
 
@@ -147,7 +148,7 @@ class _Readout extends StatelessWidget {
         if (s.phase == SpeedtestPhase.failed) {
           return Center(
             child: Text(
-              s.error ?? 'Speedtest failed',
+              s.error ?? tr('widget.speedtest.speedtestFailed', 'Speedtest failed'),
               textAlign: TextAlign.center,
               maxLines: 4,
               overflow: TextOverflow.ellipsis,
@@ -162,7 +163,7 @@ class _Readout extends StatelessWidget {
             _readoutLine(
               theme,
               Icons.download,
-              'Down',
+              tr('widget.speedtest.down', 'Down'),
               _mbps(s.downloadMbps),
               active: s.phase == SpeedtestPhase.download,
               colour: theme.accent,
@@ -171,24 +172,24 @@ class _Readout extends StatelessWidget {
             _readoutLine(
               theme,
               Icons.upload,
-              'Up',
+              tr('widget.speedtest.up', 'Up'),
               _mbps(s.uploadMbps),
               active: s.phase == SpeedtestPhase.upload,
               colour: _DashboardSpeedtestWidgetState._uploadColour(theme),
             ),
             const Divider(height: 16),
             _small(
-              'Ping',
+              tr('widget.speedtest.ping', 'Ping'),
               s.latencyMs == null
                   ? '—'
                   : '${s.latencyMs!.toStringAsFixed(0)} ms',
             ),
             _small(
-              'Jitter',
+              tr('widget.speedtest.jitter', 'Jitter'),
               s.jitterMs == null ? '—' : '${s.jitterMs!.toStringAsFixed(1)} ms',
             ),
             if (s.packetLoss != null)
-              _small('Loss', '${s.packetLoss!.toStringAsFixed(0)}%'),
+              _small(tr('widget.speedtest.loss', 'Loss'), '${s.packetLoss!.toStringAsFixed(0)}%'),
             if (s.isp.isNotEmpty) ...[
               const SizedBox(height: 6),
               Text(

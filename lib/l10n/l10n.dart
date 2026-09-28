@@ -215,7 +215,13 @@ String _argument(String body, Map<String, Object?> args, String locale) {
           many: cases['many'],
           other: cases['other'],
         );
-    final shown = n == n.roundToDouble() ? '${n.round()}' : '$n';
+    // In the language's own style: 5,881 in English, 5.881 in German.
+    String shown;
+    try {
+      shown = NumberFormat.decimalPattern(locale).format(n);
+    } catch (_) {
+      shown = n == n.roundToDouble() ? '${n.round()}' : '$n';
+    }
     return pick(chosen).replaceAll('#', shown);
   }
   if (kind == 'select') return pick(cases['$value']);

@@ -11,6 +11,7 @@ import '../services/config_service.dart';
 import '../services/indoor_sensor_service.dart';
 import '../services/weather_service.dart';
 import 'indoor_chart.dart';
+import '../l10n/l10n.dart';
 
 /// Maps a WMO weather code to a colour, so conditions read at a glance:
 /// sun = amber, cloud = slate, rain = blue, snow = pale cyan, storm = violet.
@@ -459,33 +460,33 @@ class _DetailContent extends StatelessWidget {
                   _Stat(
                     icon: Icons.thermostat,
                     color: context.look.legible(const Color(0xFFFF8A65)),
-                    label: 'Feels like',
+                    label: tr('weather.feelsLike', 'Feels like'),
                     value: '${weather.feelsLike.round()}${weather.unit}',
                   ),
                   _Stat(
                     icon: Icons.water_drop_outlined,
                     color: context.look.legible(const Color(0xFF4FC3F7)),
-                    label: 'Humidity',
+                    label: tr('weather.humidity', 'Humidity'),
                     value: '${weather.humidity}%',
                   ),
                   _Stat(
                     icon: Icons.air,
                     color: context.look.legible(const Color(0xFF9FE7C7)),
-                    label: 'Wind',
+                    label: tr('weather.wind', 'Wind'),
                     value: '${weather.windSpeed.round()} ${weather.windUnit}',
                   ),
                   if (today != null)
                     _Stat(
                       icon: Icons.umbrella_outlined,
                       color: context.look.accent,
-                      label: 'Rain',
+                      label: tr('weather.rain', 'Rain'),
                       value: '${today.precipitationChance}%',
                     ),
                   if (today != null)
                     _Stat(
                       icon: Icons.wb_twilight,
                       color: context.look.legible(const Color(0xFFFFC542)),
-                      label: 'Sun',
+                      label: tr('weather.sun', 'Sun'),
                       value: '${today.sunrise} – ${today.sunset}',
                     ),
                 ],
@@ -504,7 +505,7 @@ class _DetailContent extends StatelessWidget {
                     size: 22, color: context.look.legible(Color(0xFFFF8A65))),
                 const SizedBox(width: 8),
                 Text(
-                  'INDOORS',
+                  tr('weather.indoors', 'INDOORS'),
                   style: TextStyle(
                     color: context.look.textSecondary,
                     fontSize: 15,
@@ -522,7 +523,11 @@ class _DetailContent extends StatelessWidget {
                 ),
                 const SizedBox(width: 14),
                 Text(
-                  '${indoor!.humidity!.round()}% humidity',
+                  tr(
+                    'weather.humidity2',
+                    '{humidity}% humidity',
+                    {'humidity': indoor!.humidity!.round()},
+                  ),
                   style: TextStyle(
                       color: context.look.legible(Color(0xFF4FC3F7)), fontSize: 22),
                 ),
@@ -534,7 +539,11 @@ class _DetailContent extends StatelessWidget {
                           size: 20, color: context.look.legible(Color(0xFFFFC46B))),
                       const SizedBox(width: 6),
                       Text(
-                        'sensor battery ${indoor!.battery}%',
+                        tr(
+                          'weather.sensorBattery',
+                          'sensor battery {battery}%',
+                          {'battery': indoor!.battery},
+                        ),
                         style: TextStyle(
                             color: context.look.legible(Color(0xFFFFC46B)), fontSize: 17),
                       ),
@@ -556,7 +565,7 @@ class _DetailContent extends StatelessWidget {
           ],
 
           Text(
-            '7-DAY FORECAST',
+            tr('weather.7DayForecast', '7-DAY FORECAST'),
             style: TextStyle(
               color: context.look.textSecondary,
               fontSize: 17,
