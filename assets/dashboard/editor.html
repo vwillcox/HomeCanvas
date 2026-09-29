@@ -72,6 +72,31 @@
   .chip[data-tone="error"] { color: var(--danger); }
   .chip[data-tone="error"]::before { background: var(--danger); }
 
+  /* The panel's other pages, a click away: pills in the bar's own glass,
+     lighting up in the accent under the pointer. A row of their own under
+     the title, wrapping on a phone. */
+  .pagelinks {
+    flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center;
+    gap: 8px; margin-top: 2px;
+  }
+  .pagelinks .label {
+    color: var(--faint); font-size: 11.5px; font-weight: 650;
+    letter-spacing: .06em; text-transform: uppercase; margin-right: 2px;
+  }
+  .pagelinks .sep { width: 1px; height: 22px; background: var(--line); margin: 0 6px; }
+  .pagelinks a {
+    display: inline-flex; align-items: center; gap: 8px;
+    height: 36px; padding: 0 15px 0 11px; border-radius: 999px;
+    background: var(--glass); border: 1px solid var(--line);
+    color: var(--muted); font-size: 14px; text-decoration: none; white-space: nowrap;
+    transition: background .15s, border-color .15s, color .15s, transform .08s;
+  }
+  .pagelinks a:hover, .pagelinks a:focus-visible {
+    background: var(--glass-hi); border-color: rgba(166,200,255,.45); color: var(--text);
+  }
+  .pagelinks a:active { transform: scale(.97); }
+  .pagelinks a .i { font-size: 16px; line-height: 1; }
+
   /* ---------- controls ---------- */
   button, select {
     font: inherit; color: var(--text);
@@ -357,7 +382,9 @@
     display: flex; flex-direction: column; gap: 10px;
     /* Sticky and scrollable, so the settings for the widget being edited
        stay reachable however long the canvas is. */
-    position: sticky; top: 96px; max-height: calc(100vh - 110px);
+    /* Below the bar, however tall its links have made it. */
+    position: sticky; top: calc(var(--appbar-h, 96px) + 4px);
+    max-height: calc(100vh - var(--appbar-h, 96px) - 18px);
     overflow-y: auto; overscroll-behavior: contain;
     scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.2) transparent;
     /* One panel holding the others, so the sidebar reads as a group
@@ -476,6 +503,17 @@
   <span data-t="web.editor.loading" id="status" class="chip">Loading…</span>
   <button data-t="web.editor.revert" id="revert">Revert</button>
   <button data-t="web.editor.saveToPanel" id="save" class="primary">Save to panel</button>
+  <nav class="pagelinks" aria-label="The panel's other pages" data-t-aria="web.editor.otherPages">
+    <span class="label" data-t="web.editor.alsoHere">Also here</span>
+    <a href="/notes" title="Post a note to the wall — works from any phone in the house" data-t-title="web.editor.notesHint"><span class="i" aria-hidden="true">📝</span><span data-t="web.editor.notesBoard">Notes board</span></a>
+    <a href="/list" title="Add to the shopping list the panel shows" data-t-title="web.editor.listHint"><span class="i" aria-hidden="true">🛒</span><span data-t="web.editor.shoppingList">Shopping list</span></a>
+    <a href="/senders" title="Who can share photos, notes and reminders from the phone app" data-t-title="web.editor.sendersHint"><span class="i" aria-hidden="true">📨</span><span data-t="web.editor.whoCanShare">Who can share</span></a>
+    <span class="sep" aria-hidden="true"></span>
+    <span class="label" data-t="web.editor.signInLabel">Sign in</span>
+    <a href="/youtube" title="Sign the panel in to YouTube from this computer" data-t-title="web.editor.youtubeHint"><span class="i" aria-hidden="true">▶️</span><span>YouTube</span></a>
+    <a href="/floatplane" title="Sign the panel in to Floatplane from this computer" data-t-title="web.editor.floatplaneHint"><span class="i" aria-hidden="true">🎬</span><span>Floatplane</span></a>
+    <a href="/nebula" title="Sign the panel in to Nebula from this computer" data-t-title="web.editor.nebulaHint"><span class="i" aria-hidden="true">🌌</span><span>Nebula</span></a>
+  </nav>
 </header>
 
 <main>
@@ -642,6 +680,17 @@ const statusEl = document.getElementById("status");
 /* The panel's top bar, in its own pixels. The grid gets what is left, and
    lays out in it exactly as the panel does. */
 const PANEL_W = 1920, PANEL_H = 1200, TOP_BAR_H = 100;
+
+/* The bar's height, for the sidebar pinned below it: its row of links
+   wraps to two on a narrow window. */
+(() => {
+  const bar = document.querySelector("header.appbar");
+  if (!bar) return;
+  const set = () => document.documentElement.style.setProperty(
+    "--appbar-h", bar.getBoundingClientRect().height + "px");
+  set();
+  if ("ResizeObserver" in window) new ResizeObserver(set).observe(bar);
+})();
 
 const api = {
   async get(path) {

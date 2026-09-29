@@ -53,10 +53,19 @@
   #result.bad { color: var(--danger); }
   #result.good { color: var(--good); }
   input[type=file] { color: var(--muted); max-width: 100%; }
+  /* Back to the editor. */
+  .home {
+    display: inline-flex; align-items: center; gap: 6px; margin-bottom: 14px;
+    padding: 6px 14px; border-radius: 999px; font-size: 14px; text-decoration: none;
+    color: rgba(255,255,255,.62); background: rgba(255,255,255,.055);
+    border: 1px solid rgba(255,255,255,.10); transition: color .15s, background .15s;
+  }
+  .home:hover, .home:focus-visible { color: #fff; background: rgba(255,255,255,.09); }
 </style>
 </head>
 <body>
 <header>
+  <a class="home" href="/" data-t="web.common.backToDashboard">← Dashboard</a>
   <h1 data-t-html="web.signIn.heading">Sign the panel in to <span class="site">YouTube</span></h1>
   <p data-t="web.signIn.intro">Sign in on this computer instead of typing a password on the panel. This
      page is served to the local network only.</p>

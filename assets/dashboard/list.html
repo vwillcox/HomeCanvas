@@ -51,11 +51,20 @@
   .del { background: transparent; color: var(--faint); padding: 0 12px; min-height: 44px; font-size: 22px; font-weight: 400; }
   .del:hover { color: var(--danger); }
   .empty { color: var(--muted); text-align: center; padding: 22px; display: block; }
+  /* Back to the editor. */
+  .home {
+    display: inline-flex; align-items: center; gap: 6px; margin-bottom: 14px;
+    padding: 6px 14px; border-radius: 999px; font-size: 14px; text-decoration: none;
+    color: rgba(255,255,255,.62); background: rgba(255,255,255,.055);
+    border: 1px solid rgba(255,255,255,.10); transition: color .15s, background .15s;
+  }
+  .home:hover, .home:focus-visible { color: #fff; background: rgba(255,255,255,.09); }
 </style>
 </head>
 <body>
 <main>
   <header>
+    <a class="home" href="/" data-t="web.common.backToDashboard">← Dashboard</a>
     <h1 data-t="web.list.shopping">Shopping</h1>
     <p data-t="web.list.addItHereItS" class="sub">Add it here; it's on the panel straight away.</p>
   </header>
