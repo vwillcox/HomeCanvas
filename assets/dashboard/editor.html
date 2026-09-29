@@ -492,6 +492,13 @@
   .subcard.folded .summary b { font-weight: 600; font-size: 14px; }
   .subcard.folded .summary span { font-size: 12px; color: var(--muted); }
   .subcard.folded button { min-height: 34px; padding: 0 12px; font-size: 13px; }
+  /* Rows of a list are dragged by their grip to change their order. */
+  .subcard button.grip { background: transparent; border: none; color: var(--muted); cursor: grab;
+                         touch-action: none; font-size: 18px; min-height: 34px; padding: 0 6px; line-height: 1; }
+  .subcard button.grip:hover, .subcard button.grip:focus-visible { color: var(--accent); }
+  .subcard.lifted { opacity: .55; outline: 2px dashed var(--accent); }
+  .subcard.before { box-shadow: 0 -3px 0 var(--accent); }
+  .subcard.after { box-shadow: 0 3px 0 var(--accent); }
 </style>
 </head>
 <body>
@@ -1630,6 +1637,76 @@ function removeRowKey(w, o, index, count) {
   savePanels(now);
 }
 
+/* Moving a row from one place to another: the rows between shift by one,
+   and whether each is open goes with it. */
+function moveRow(w, o, rows, from, to) {
+  if (from === to || to < 0 || to >= rows.length) return;
+  const now = collapsedPanels();
+  const open = rows.map((_, i) => now.has(rowKey(w, o, i)));
+  const [row] = rows.splice(from, 1);
+  rows.splice(to, 0, row);
+  const [was] = open.splice(from, 1);
+  open.splice(to, 0, was);
+  open.forEach((isOpen, i) => {
+    if (isOpen) now.add(rowKey(w, o, i)); else now.delete(rowKey(w, o, i));
+  });
+  savePanels(now);
+  markDirty();
+  render();
+}
+
+/* The grip a row is dragged by — pointer events, so it works on a phone as
+   well as with a mouse — and moved with the arrow keys too. */
+function rowGrip(w, o, rows, index, card, host) {
+  const grip = document.createElement("button");
+  grip.type = "button";
+  grip.className = "grip";
+  grip.textContent = "⠿";
+  grip.title = t("web.editor.dragToReorder", "Drag to change the order — or use the arrow keys");
+  grip.setAttribute("aria-label", grip.title);
+  grip.onkeydown = (e) => {
+    const to = e.key === "ArrowUp" ? index - 1 : e.key === "ArrowDown" ? index + 1 : null;
+    if (to === null) return;
+    e.preventDefault();
+    moveRow(w, o, rows, index, to);
+    // Keep the keyboard on the row just moved.
+    const grips = document.querySelectorAll('[data-list="' + w.id + ':' + o.key + '"] button.grip');
+    if (grips[to]) grips[to].focus();
+  };
+  grip.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    grip.setPointerCapture(e.pointerId);
+    const cards = [...host.querySelectorAll(":scope > .subcard")];
+    let target = index;
+    const clear = () => cards.forEach(c => c.classList.remove("before", "after"));
+    card.classList.add("lifted");
+    const move = (ev) => {
+      // Its new place: after every other row whose middle is above the
+      // pointer.
+      target = cards.filter((c, i) => {
+        if (i === index) return false;
+        const r = c.getBoundingClientRect();
+        return ev.clientY > r.top + r.height / 2;
+      }).length;
+      clear();
+      if (target !== index) cards[target].classList.add(target > index ? "after" : "before");
+    };
+    const up = () => {
+      grip.removeEventListener("pointermove", move);
+      grip.removeEventListener("pointerup", up);
+      grip.removeEventListener("pointercancel", up);
+      clear();
+      card.classList.remove("lifted");
+      moveRow(w, o, rows, index, target);
+    };
+    grip.addEventListener("pointermove", move);
+    grip.addEventListener("pointerup", up);
+    grip.addEventListener("pointercancel", up);
+  });
+  return grip;
+}
+
 /* A date box in the panel's language's order — 28/09/2026 in British
    English, 09/28/2026 in American, 28.09.2026 in German — with a button
    for the browser's calendar. The browser's own date box can't do this: it
@@ -1756,6 +1833,9 @@ function listField(w, o) {
   // Rows of more than one field fold to a line each, so a long list of feeds
   // is a list rather than a page of boxes.
   const foldable = (o.fields || []).length > 1;
+  host.dataset.list = w.id + ":" + o.key;
+  // Only a list of two or more has an order to change.
+  const grip = (index, card) => rows.length > 1 ? [rowGrip(w, o, rows, index, card, host)] : [];
 
   rows.forEach((row, index) => {
     const card = document.createElement("div");
@@ -1787,7 +1867,7 @@ function listField(w, o) {
       const edit = document.createElement("button");
       edit.textContent = t("web.editor.edit", "Edit");
       summary.onclick = edit.onclick = () => { setRowOpen(w, o, index, true); render(); };
-      card.append(summary, edit, remove);
+      card.append(...grip(index, card), summary, edit, remove);
       host.appendChild(card);
       return;
     }
@@ -1849,7 +1929,8 @@ function listField(w, o) {
     }
 
     const actions = document.createElement("div");
-    actions.style.cssText = "display:flex;gap:8px;margin-top:10px";
+    actions.style.cssText = "display:flex;gap:8px;margin-top:10px;align-items:center";
+    actions.append(...grip(index, card));
     if (foldable) {
       const done = document.createElement("button");
       done.textContent = t("web.editor.done", "Done");
