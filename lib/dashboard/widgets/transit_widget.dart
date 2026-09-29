@@ -33,8 +33,9 @@ Color? _hex(String? h) =>
 Color _inkOn(Color c) =>
     c.computeLuminance() > 0.45 ? const Color(0xFF111111) : Colors.white;
 
-/// Departures from any stop Transitous knows — most of Europe's trains,
-/// trams and buses and more besides — live where the operator shares it.
+/// Departures from any stop Transitous knows — most of Europe's and North
+/// America's trains, subways, trams and buses, and more besides — live
+/// where the operator shares it.
 class TransitWidget extends StatefulWidget {
   const TransitWidget({super.key, required this.w});
   final DashboardWidgetContext w;
@@ -91,7 +92,7 @@ class _TransitWidgetState extends State<TransitWidget>
       return TileMessage(
         tr(
           'widget.transit.setStop',
-          'Set a station or stop in the widget settings — Amsterdam Centraal, Zürich HB, Berlin Hbf.',
+          'Set a station or stop in the widget settings — Amsterdam Centraal, Berlin Hbf, Times Sq-42 St.',
         ),
         theme: t,
       );
@@ -368,12 +369,13 @@ class _DepartureRow extends StatelessWidget {
 final transitWidgetType = DashboardWidgetType(
   type: 'transit',
   category: WidgetCategory.gettingOut,
-  name: 'Departures (Europe)',
+  name: 'Departures (Europe & US)',
   description:
-      'The next trains, trams or buses from any station or stop across most '
-      'of Europe — the Netherlands, Germany, Switzerland, France, Ireland, the '
-      'Nordics and more — live where the operator shares it. From Transitous, '
-      'the open journey planner — no key needed.',
+      'The next trains, trams, subways or buses from any station or stop '
+      'across most of Europe and North America — the Netherlands, Germany, '
+      'Switzerland, the Nordics, New York, Boston, Washington DC, Los Angeles '
+      'and more — live where the operator shares it. From Transitous, the '
+      'open journey planner — no key needed.',
   glyph: '🚆',
   defaultWidth: 4,
   defaultHeight: 3,
@@ -386,7 +388,7 @@ final transitWidgetType = DashboardWidgetType(
       defaultValue: '',
       help:
           'Its name as the operator writes it: Amsterdam Centraal, Zürich '
-          'HB, Berlin Hbf, Dublin Connolly.',
+          'HB, Berlin Hbf, Times Sq-42 St, Park Street, Metro Center.',
     ),
     WidgetOption(
       key: 'show',
@@ -395,7 +397,7 @@ final transitWidgetType = DashboardWidgetType(
       defaultValue: 'trains',
       choices: {
         'trains': 'Trains',
-        'local': 'Metro, trams, buses and ferries',
+        'local': 'Subway, metro, trams, buses and ferries',
         'all': 'Everything',
       },
     ),

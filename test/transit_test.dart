@@ -33,16 +33,23 @@ void main() {
           'cancelled': true,
           'place': {'scheduledDeparture': '2026-09-29T09:28:00Z'},
         },
+        {
+          'mode': 'SUBWAY',
+          'displayName': '?',
+          'routeLongName': 'Red Line',
+          'place': {'scheduledDeparture': '2026-09-29T09:50:00Z'},
+        },
         {'mode': 'BUS', 'place': {}},
       ],
     });
-    expect(list, hasLength(2));
+    expect(list, hasLength(3));
+    expect(list.last.line, 'Red Line');
     expect(list.first.line, 'Intercity');
     expect(list.first.cancelled, isTrue);
-    expect(list.last.lateMinutes, 4);
-    expect(list.last.track, '14');
-    expect(list.last.colour, 'E32017');
-    expect(list.last.rail, isTrue);
+    expect(list[1].lateMinutes, 4);
+    expect(list[1].track, '14');
+    expect(list[1].colour, 'E32017');
+    expect(list[1].rail, isTrue);
     expect(
       TransitousService.pickStop([
         {'id': 'de-DELFI_000008400058', 'name': 'Amsterdam Centraal', 'type': 'STOP'},
