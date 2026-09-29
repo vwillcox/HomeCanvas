@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:home_canvas/services/article_reader.dart';
 import 'package:home_canvas/services/article_text.dart';
+import 'package:home_canvas/services/elevenlabs_tts.dart';
 import 'package:home_canvas/services/tts_service.dart';
 
 const _para =
@@ -27,11 +28,18 @@ class FakeOutput implements SpeechOutput {
   final _files = <File, String>{};
 
   final speeds = <double>[];
+  final clouds = <ElevenLabsVoice?>[];
 
   @override
-  Future<File?> synthesise(String text, {String? voice, double speed = 1}) async {
+  Future<File?> synthesise(
+    String text, {
+    String? voice,
+    double speed = 1,
+    ElevenLabsVoice? cloud,
+  }) async {
     made.add(text);
     voices.add(voice);
+    clouds.add(cloud);
     speeds.add(speed);
     final f = File('${Directory.systemTemp.path}/fake-${made.length}-'
         '${DateTime.now().microsecondsSinceEpoch}.wav')
@@ -391,6 +399,26 @@ void main() {
       await r.stop();
       expect(out.speeds, isNotEmpty);
       expect(out.speeds.toSet(), {1.15});
+    });
+
+    test('an ElevenLabs reading is all in its one voice, at the main pace',
+        () async {
+      final out = FakeOutput();
+      final r = readerWith(out);
+      const cloud = ElevenLabsVoice(apiKey: 'k');
+      unawaited(r.read(
+        title: 'Scheme extended',
+        link: 'https://x/1',
+        speeds: {'alan': 1.15, 'main': 0.85},
+        cloud: cloud,
+      ));
+      await settle();
+      out.finishOne();
+      await settle();
+      await r.stop();
+      expect(out.clouds.toSet(), {cloud});
+      expect(out.voices.toSet(), {null});
+      expect(out.speeds.toSet(), {0.85});
     });
 
     test('a voice with no speed set reads at its own pace', () async {
