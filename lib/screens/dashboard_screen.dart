@@ -42,6 +42,16 @@ class DashboardScreen extends StatefulWidget {
   /// itself always opens on the first page.
   final int initialPage;
 
+  /// A page to show — its number as saved, not its place among the pages
+  /// showing now — asked for from outside: a reminder falling due brings
+  /// up the page its widget is on. Taken up by an open dashboard at once,
+  /// or by the next one to open.
+  static final ValueNotifier<int?> requestedPage = ValueNotifier(null);
+
+  /// Whether a dashboard is on screen to take a [requestedPage] up.
+  static bool get isOpen => _open > 0;
+  static int _open = 0;
+
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
@@ -97,6 +107,10 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   void initState() {
     super.initState();
+    DashboardScreen._open++;
+    DashboardScreen.requestedPage.addListener(_pageRequested);
+    // Opened for a page: gone to once the page view is laid out.
+    if (DashboardScreen.requestedPage.value != null) _pageRequested();
     _player.isOpen.addListener(_playerOpened);
     // Scheduled pages and tiles come and go by the clock — only looked at
     // while the dashboard can be seen.
@@ -131,8 +145,32 @@ class _DashboardScreenState extends State<DashboardScreen>
     _turn.hold(!shown);
   }
 
+  /// Goes to [DashboardScreen.requestedPage], if it is one of the pages
+  /// showing now; otherwise stays where it is.
+  void _pageRequested() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final want = DashboardScreen.requestedPage.value;
+      if (want == null || !mounted || !_pages.hasClients) return;
+      DashboardScreen.requestedPage.value = null;
+      final settings = context.read<ConfigService>().config.dashboard;
+      final visible = visiblePages(
+        settings.pageCount,
+        settings.pages,
+        DateTime.now(),
+      );
+      final target = visible.indexOf(want);
+      if (target < 0) return;
+      _pages.jumpToPage(target);
+      setState(() => _page = target);
+      // A full page's time from now, if the pages are turning.
+      _restartTurn();
+    });
+  }
+
   @override
   void dispose() {
+    DashboardScreen._open--;
+    DashboardScreen.requestedPage.removeListener(_pageRequested);
     // Releasing it here rather than on the way in to the next screen means
     // the timer restarts from now, not from whenever the dashboard opened.
     _screenIdle?.dashboardShowing = false;

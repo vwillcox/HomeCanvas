@@ -108,4 +108,30 @@ void main() {
     expect(showing(0), isTrue);
     await tester.pumpWidget(const SizedBox());
   });
+
+  testWidgets('a requested page is gone to, and given its full time', (
+    tester,
+  ) async {
+    await open(tester);
+    await wait(tester, const Duration(seconds: 3));
+    // A reminder falls due; its widget is on the third page.
+    DashboardScreen.requestedPage.value = 2;
+    await wait(tester, const Duration(milliseconds: 300));
+    expect(showing(2), isTrue);
+    expect(DashboardScreen.requestedPage.value, isNull);
+    // Five seconds from the jump, not from when the page was opened.
+    await wait(tester, const Duration(seconds: 4));
+    expect(showing(2), isTrue);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('a dashboard opened for a page opens on it', (tester) async {
+    DashboardScreen.requestedPage.value = 1;
+    await open(tester);
+    await tester.pump();
+    expect(showing(1), isTrue);
+    expect(DashboardScreen.isOpen, isTrue);
+    await tester.pumpWidget(const SizedBox());
+    expect(DashboardScreen.isOpen, isFalse);
+  });
 }

@@ -263,6 +263,7 @@ void main() async {
   reminders
     ..onDue = (r) async {
       await screenIdle.wakeForNotification();
+      showRemindersPage(config);
       final words = r.from.isEmpty
           ? tr('reminders.spoken', 'Reminder: {what}', {'what': r.text})
           : tr('reminders.spokenFrom', 'Reminder from {name}: {what}', {
@@ -425,6 +426,23 @@ void main() async {
     },
     screenLit: screen.set,
   ).start());
+}
+
+/// Brings up the dashboard page the Reminders widget is on — when one falls
+/// due, so what is being said is also on the screen. From wherever the
+/// panel is: an open dashboard turns to the page, anything else gives way
+/// to the dashboard.
+void showRemindersPage(ConfigService config) {
+  final settings = config.config.dashboard;
+  if (!settings.enabled) return;
+  final tile = settings.widgets.where((w) => w.type == 'reminders').firstOrNull;
+  if (tile == null) return;
+  DashboardScreen.requestedPage.value = tile.page;
+  if (DashboardScreen.isOpen) return;
+  final navigator = rootNavigatorKey.currentState;
+  if (navigator == null) return;
+  navigator.popUntil((route) => route.isFirst);
+  navigator.push(MaterialPageRoute(builder: (_) => const DashboardScreen()));
 }
 
 /// Carries out a command from [KioskControlService], the way the kiosk's own
