@@ -28,6 +28,24 @@ void main() {
     expect(p('Remind me to call Mum')!.due, isNull);
   });
 
+  test('a short message with a clock time is a reminder without asking', () {
+    var r = p('Book taxi at 3pm')!;
+    expect((r.what, r.due), ('Book taxi', DateTime(2026, 9, 28, 15)));
+    r = p('Dentist tomorrow at 9:30')!;
+    expect((r.what, r.due), ('Dentist', DateTime(2026, 9, 29, 9, 30)));
+    expect(p('Check the oven in 20 minutes')!.due, DateTime(2026, 9, 28, 14, 20));
+    // A day alone is news, a question is a question, a long message is a
+    // note that happens to mention a time.
+    expect(p('The parcel came today'), isNull);
+    expect(p('Are you back at 6?'), isNull);
+    expect(
+      p('We had a lovely walk by the river and stopped for lunch at the pub '
+          'before heading home at 3pm through the woods'),
+      isNull,
+    );
+    expect(p('Dinner is in the oven'), isNull);
+  });
+
   test('times and days, taken out of the words', () {
     var r = p('Remind me to call Mum at 6pm')!;
     expect((r.what, r.due), ('Call Mum', DateTime(2026, 9, 28, 18)));
