@@ -307,7 +307,9 @@ class MarketsService extends ChangeNotifier {
         history.add(c.toDouble());
         if (timed && stamps[i] is num) {
           times.add(
-            DateTime.fromMillisecondsSinceEpoch((stamps[i] as num).toInt() * 1000),
+            DateTime.fromMillisecondsSinceEpoch(
+              (stamps[i] as num).toInt() * 1000,
+            ),
           );
         }
       }
@@ -361,7 +363,8 @@ class MarketsService extends ChangeNotifier {
     } else {
       // A day's chart starts at yesterday's close; a longer one doesn't, so
       // only a named previous close will do there.
-      final prev = meta['previousClose'] ??
+      final prev =
+          meta['previousClose'] ??
           (meta['range'] == '1d' ? meta['chartPreviousClose'] : null);
       if (prev is num && prev != 0) change = (price - prev) / prev * 100;
     }
@@ -383,7 +386,8 @@ class MarketsService extends ChangeNotifier {
       changePercent: change,
       history: history,
       times: times,
-      previousClose: number('previousClose') ??
+      previousClose:
+          number('previousClose') ??
           (meta['range'] == '1d' ? number('chartPreviousClose') : null) ??
           sessionClose,
       high: number('regularMarketDayHigh'),
@@ -433,6 +437,9 @@ class MarketsService extends ChangeNotifier {
   final Map<String, ({DateTime at, List<double> history, List<DateTime> times})>
   _histories = {};
 
+  /// When CoinGecko said to slow down, the time it may be asked again.
+  DateTime? _coinsRestUntil;
+
   /// [coins] are CoinGecko ids ("bitcoin") or ticker symbols ("BTC");
   /// [currency] is `gbp`, `usd` or `eur`; [period] `24h`, `7d`, `30d`,
   /// `90d` or `1y`.
@@ -442,22 +449,31 @@ class MarketsService extends ChangeNotifier {
     required String period,
     required Duration maxAge,
     bool force = false,
+    String apiKey = '',
   }) async {
+    // Told to wait: CoinGecko isn't asked until then, only Coinbase.
+    final restUntil = _coinsRestUntil;
+    final resting = restUntil != null && DateTime.now().isBefore(restUntil);
+    final key = apiKey.trim();
+    final headers = {if (key.isNotEmpty) 'x-cg-demo-api-key': key};
     final due = [
       for (final c in coins)
-        if (c.trim().isNotEmpty && _due(_coinKey(c, currency, period), maxAge, force))
+        if (c.trim().isNotEmpty &&
+            _due(_coinKey(c, currency, period), maxAge, force))
           c.trim().toLowerCase(),
     ];
     if (due.isEmpty) return;
     final keys = [for (final c in due) _coinKey(c, currency, period)];
     _busy.addAll(keys);
     try {
+      if (resting) throw const _Resting();
       Future<List<({String id, Quote quote})>> markets(
         String by,
         Iterable<String> values,
       ) async {
         final r = await _dio.get<List<dynamic>>(
           'https://api.coingecko.com/api/v3/coins/markets',
+          options: Options(headers: headers),
           queryParameters: {
             'vs_currency': currency,
             by: values.join(','),
@@ -487,7 +503,14 @@ class MarketsService extends ChangeNotifier {
       final days = _longPeriods[period];
       if (days != null) {
         for (final entry in found.entries.toList()) {
-          final h = await _history(entry.value.id, currency, period, days, force);
+          final h = await _history(
+            entry.value.id,
+            currency,
+            period,
+            days,
+            force,
+            headers,
+          );
           if (h == null || h.history.length < 2) continue;
           final q = entry.value.quote;
           final first = h.history.first;
@@ -515,15 +538,185 @@ class MarketsService extends ChangeNotifier {
         _done(key, maxAge, ok: true);
       }
     } catch (e) {
-      for (final key in keys) {
-        _errors[key] = tr('widget.markets.unreachable', 'Unreachable');
-        _done(key, maxAge, ok: false);
+      final status = e is DioException ? e.response?.statusCode : null;
+      final String why;
+      if (e is _Resting) {
+        why = tr(
+          'widget.markets.busy',
+          'CoinGecko is busy — trying again shortly',
+        );
+      } else if (status == 429 || (key.isEmpty && status == 403)) {
+        // The free allowance is small and shared by everyone at this
+        // address — past it, CoinGecko's front door answers 403 for a
+        // while too. Wait as long as it asks, or a few minutes.
+        final after = int.tryParse(
+          '${(e as DioException).response?.headers.value('retry-after')}',
+        );
+        _coinsRestUntil = DateTime.now().add(
+          Duration(
+            seconds: (after ?? (status == 403 ? 300 : 60)).clamp(10, 600),
+          ),
+        );
+        why = key.isEmpty
+            ? tr(
+                'widget.markets.busyNoKey',
+                'CoinGecko is busy — a free API key helps',
+              )
+            : tr(
+                'widget.markets.busy',
+                'CoinGecko is busy — trying again shortly',
+              );
+      } else if (key.isNotEmpty && (status == 401 || status == 403)) {
+        why = tr(
+          'widget.markets.keyRefused',
+          'CoinGecko turned the API key away',
+        );
+      } else {
+        why = tr('widget.markets.unreachable', 'Unreachable');
       }
-      debugPrint('Markets: coins: $e');
+      debugPrint('Markets: coins: ${status ?? e} — trying Coinbase');
+      // Coinbase's public prices meanwhile, for the coins it trades.
+      for (final c in due) {
+        final k = _coinKey(c, currency, period);
+        final q = await _coinbase(c, currency, period);
+        if (q != null) {
+          _quotes[k] = q;
+          _errors.remove(k);
+          // Back to CoinGecko at the next check, for the fuller picture.
+          _done(k, maxAge, ok: true);
+        } else {
+          // A price already on show stays, rather than giving way to the
+          // error, until the next check.
+          _errors[k] = why;
+          _done(k, maxAge, ok: false);
+        }
+      }
     } finally {
       _busy.removeAll(keys);
       _changed();
     }
+  }
+
+  /// Ticker symbols and names of the coins people most often follow, by
+  /// CoinGecko id — for asking Coinbase when CoinGecko can't be asked.
+  static const _knownCoins = {
+    'bitcoin': ('BTC', 'Bitcoin'),
+    'ethereum': ('ETH', 'Ethereum'),
+    'solana': ('SOL', 'Solana'),
+    'ripple': ('XRP', 'XRP'),
+    'cardano': ('ADA', 'Cardano'),
+    'dogecoin': ('DOGE', 'Dogecoin'),
+    'litecoin': ('LTC', 'Litecoin'),
+    'polkadot': ('DOT', 'Polkadot'),
+    'chainlink': ('LINK', 'Chainlink'),
+    'avalanche-2': ('AVAX', 'Avalanche'),
+    'shiba-inu': ('SHIB', 'Shiba Inu'),
+    'stellar': ('XLM', 'Stellar'),
+    'bitcoin-cash': ('BCH', 'Bitcoin Cash'),
+    'uniswap': ('UNI', 'Uniswap'),
+    'tether': ('USDT', 'Tether'),
+    'usd-coin': ('USDC', 'USDC'),
+    'cosmos': ('ATOM', 'Cosmos'),
+    'tezos': ('XTZ', 'Tezos'),
+    'algorand': ('ALGO', 'Algorand'),
+    'polygon-ecosystem-token': ('POL', 'Polygon'),
+  };
+
+  /// Candle sizes Coinbase offers, by period, and how far back each goes.
+  static const _coinbaseCandles = {
+    '24h': (seconds: 3600, days: 1),
+    '7d': (seconds: 3600, days: 7),
+    '30d': (seconds: 21600, days: 30),
+    '90d': (seconds: 86400, days: 90),
+    '1y': (seconds: 86400, days: 365),
+  };
+
+  /// [entry] priced by Coinbase's public exchange data — no key — or null
+  /// if Coinbase doesn't trade it in [currency].
+  Future<Quote?> _coinbase(String entry, String currency, String period) async {
+    final known = _knownCoins[entry];
+    final symbol =
+        known?.$1 ??
+        (RegExp(r'^[a-z0-9]{2,6}$').hasMatch(entry)
+            ? entry.toUpperCase()
+            : null);
+    if (symbol == null) return null;
+    final c = _coinbaseCandles[period] ?? _coinbaseCandles['24h']!;
+    final now = DateTime.now().toUtc();
+    try {
+      // At most 300 candles an answer: a year of days is asked in two.
+      final candles = <List<dynamic>>[];
+      final windowDays = (300 * c.seconds / 86400).floor();
+      var end = now;
+      final start = now.subtract(Duration(days: c.days));
+      while (end.isAfter(start)) {
+        final from = end.subtract(Duration(days: windowDays));
+        final r = await _dio.get<List<dynamic>>(
+          'https://api.exchange.coinbase.com/products/$symbol-${currency.toUpperCase()}/candles',
+          queryParameters: {
+            'granularity': c.seconds,
+            'start': (from.isBefore(start) ? start : from).toIso8601String(),
+            'end': end.toIso8601String(),
+          },
+        );
+        candles.addAll((r.data ?? const []).whereType<List<dynamic>>());
+        end = from;
+      }
+      return parseCoinbase(
+        candles,
+        symbol,
+        known?.$2 ?? symbol,
+        currency,
+        dayRange: period == '24h',
+      );
+    } catch (e) {
+      debugPrint('Markets: Coinbase $symbol: $e');
+      return null;
+    }
+  }
+
+  /// Coinbase candles — `[time, low, high, open, close, volume]`, newest
+  /// first — as a quote: the latest close its price, the first open where
+  /// the change is measured from.
+  @visibleForTesting
+  static Quote? parseCoinbase(
+    List<List<dynamic>> candles,
+    String symbol,
+    String name,
+    String currency, {
+    bool dayRange = true,
+  }) {
+    final rows = [
+      for (final c in candles)
+        if (c.length >= 5 && c[0] is num && c[3] is num && c[4] is num) c,
+    ]..sort((a, b) => (a[0] as num).compareTo(b[0] as num));
+    if (rows.isEmpty) return null;
+    final open = (rows.first[3] as num).toDouble();
+    final price = (rows.last[4] as num).toDouble();
+    return Quote(
+      symbol: symbol,
+      name: name,
+      price: price,
+      currency: currency.toUpperCase(),
+      changePercent: open == 0 ? null : (price - open) / open * 100,
+      history: [for (final r in rows) (r[4] as num).toDouble()],
+      times: [
+        for (final r in rows)
+          DateTime.fromMillisecondsSinceEpoch((r[0] as num).toInt() * 1000),
+      ],
+      // The card calls these the day's range.
+      high: dayRange
+          ? rows
+                .map((r) => (r[2] as num).toDouble())
+                .reduce((a, b) => a > b ? a : b)
+          : null,
+      low: dayRange
+          ? rows
+                .map((r) => (r[1] as num).toDouble())
+                .reduce((a, b) => a < b ? a : b)
+          : null,
+      exchange: 'Coinbase',
+    );
   }
 
   /// A coin's history over [days], from the half-hour cache when it can be.
@@ -535,6 +728,7 @@ class MarketsService extends ChangeNotifier {
     String period,
     int days,
     bool force,
+    Map<String, String> headers,
   ) async {
     final key = '$id|$currency|$period';
     final kept = _histories[key];
@@ -547,6 +741,7 @@ class MarketsService extends ChangeNotifier {
       final r = await _dio.get<Map<String, dynamic>>(
         'https://api.coingecko.com/api/v3/coins/'
         '${Uri.encodeComponent(id)}/market_chart',
+        options: Options(headers: headers),
         queryParameters: {
           'vs_currency': currency,
           'days': days,
@@ -555,7 +750,11 @@ class MarketsService extends ChangeNotifier {
         },
       );
       final h = parseHistory(r.data ?? const {});
-      _histories[key] = (at: DateTime.now(), history: h.history, times: h.times);
+      _histories[key] = (
+        at: DateTime.now(),
+        history: h.history,
+        times: h.times,
+      );
       return h;
     } catch (e) {
       debugPrint('Markets: $id history: $e');
@@ -601,7 +800,8 @@ class MarketsService extends ChangeNotifier {
     for (final c in json.whereType<Map>()) {
       final price = c['current_price'];
       if (price is! num) continue;
-      final change = c['price_change_percentage_${period}_in_currency'] ??
+      final change =
+          c['price_change_percentage_${period}_in_currency'] ??
           c['price_change_percentage_$period'];
       final image = c['image'];
       double? number(String key) {
@@ -683,7 +883,11 @@ String formatCompact(double v) {
   for (final (size, unit) in units) {
     if (v.abs() >= size) {
       final n = v / size;
-      return '${n.toStringAsFixed(n.abs() >= 100 ? 0 : n.abs() >= 10 ? 1 : 2)}$unit';
+      return '${n.toStringAsFixed(n.abs() >= 100
+          ? 0
+          : n.abs() >= 10
+          ? 1
+          : 2)}$unit';
     }
   }
   return v.toStringAsFixed(0);
@@ -805,12 +1009,23 @@ DateTime? parseDay(String typed) {
     final y = int.parse(dmy[3]!);
     return _day(y < 100 ? 2000 + y : y, int.parse(dmy[2]!), int.parse(dmy[1]!));
   }
-  final named = RegExp(r'^(\d{1,2})\s+([A-Za-z]{3})[a-z]*\.?\s+(\d{4})$')
-      .firstMatch(s);
+  final named = RegExp(
+    r'^(\d{1,2})\s+([A-Za-z]{3})[a-z]*\.?\s+(\d{4})$',
+  ).firstMatch(s);
   if (named != null) {
     const months = [
-      'jan', 'feb', 'mar', 'apr', 'may', 'jun',
-      'jul', 'aug', 'sep', 'oct', 'nov', 'dec',
+      'jan',
+      'feb',
+      'mar',
+      'apr',
+      'may',
+      'jun',
+      'jul',
+      'aug',
+      'sep',
+      'oct',
+      'nov',
+      'dec',
     ];
     final m = months.indexOf(named[2]!.toLowerCase()) + 1;
     if (m > 0) return _day(int.parse(named[3]!), m, int.parse(named[1]!));
@@ -874,4 +1089,9 @@ String _number(double v) {
     (_) => ',',
   );
   return '${v < 0 ? '-' : ''}$grouped$frac';
+}
+
+/// CoinGecko asked for a pause that hasn't ended yet.
+class _Resting implements Exception {
+  const _Resting();
 }

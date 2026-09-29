@@ -530,4 +530,26 @@ void main() {
       expect(find.text('£62,844'), findsOneWidget);
     });
   });
+
+  test('Coinbase candles, oldest to newest, when CoinGecko can’t be asked', () {
+    final q = MarketsService.parseCoinbase(
+      [
+        // Newest first, as Coinbase sends them: time, low, high, open, close.
+        [1790679600, 99.0, 112.0, 105.0, 110.0, 3.1],
+        [1790676000, 95.0, 106.0, 100.0, 105.0, 2.2],
+        ['bad'],
+      ],
+      'BTC',
+      'Bitcoin',
+      'gbp',
+    )!;
+    expect(q.price, 110);
+    expect(q.changePercent, closeTo(10, 1e-9));
+    expect(q.history, [105, 110]);
+    expect(q.high, 112);
+    expect(q.low, 95);
+    expect(q.currency, 'GBP');
+    expect(q.exchange, 'Coinbase');
+    expect(MarketsService.parseCoinbase([], 'BTC', 'Bitcoin', 'gbp'), isNull);
+  });
 }
