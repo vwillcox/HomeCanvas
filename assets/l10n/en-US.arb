@@ -27,6 +27,8 @@
   "widget.news.option.readerTheme.label": "Reader colors",
   "widget.planes.option.units.choice.km": "Kilometers",
   "widget.tfl_lines.description": "Whether the Tube, Elizabeth line, Overground, DLR and trams are running, each line in its own color. Tap a line with trouble to read why. From TfL — no key needed.",
+  "widget.tides.description": "High and low tide times, whether the water is coming in or going out, and the sea’s height through the day — anywhere on the coast. From Open-Meteo’s tide model, no key needed. Modeled, not measured: fine for a walk on the beach, not for navigation.",
+  "widget.tides.option.units.choice.m": "Meters",
   "widget.trains.cancelled": "Canceled",
   "widget.unifi_presence.option.watch.help": "Part of a device name, or a MAC address. Leave empty to list everything. Anything named here but absent is shown grayed out, so the list keeps its shape."
 }

@@ -1364,6 +1364,7 @@ class CryptoWidget extends StatelessWidget {
         period: period,
         maxAge: maxAge,
         force: force,
+        apiKey: w.option<String>('apiKey', ''),
       ),
       lookup: (s, entry) => (
         quote: s.coin(entry, currency, period),
@@ -1469,6 +1470,15 @@ final cryptoWidgetType = DashboardWidgetType(
         '15': '15 minutes',
         '60': 'Hour',
       },
+    ),
+    WidgetOption(
+      key: 'apiKey',
+      label: 'CoinGecko API key',
+      kind: OptionKind.secret,
+      defaultValue: '',
+      help: 'Optional, free, and recommended: without one, CoinGecko shares a '
+          'small allowance between everyone at your address and often says '
+          'it is busy. Sign up for a Demo key at coingecko.com/en/api.',
     ),
   ],
   preview: const [
