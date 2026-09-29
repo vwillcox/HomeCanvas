@@ -342,6 +342,9 @@ if [ -x "$BINARY" ] && [ -f "$UNIT" ]; then
     FL=$(flutter_cmd)
     run "Building (this takes a few minutes)" bash -c "cd '$APP_DIR' && '$FL' pub get && '$FL' build linux --release" || die "The build failed."
     systemctl --user restart homecanvas.service 2>/dev/null || true
+    # The screen controller runs from the same copy, so it is restarted to
+    # pick up its new version too — only if it was set up.
+    systemctl --user try-restart screen-control.service 2>/dev/null || true
     echo
     say "${G}${B}Updated and restarted.${N}"
     exit 0
