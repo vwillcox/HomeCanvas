@@ -405,7 +405,7 @@ class DashboardNewsWidget extends StatelessWidget {
     if (!w.option('readerView', true)) return null;
     const steps = {'medium': 10, 'large': 11, 'huge': 12};
     return ReaderStyle(
-      fontStep: steps[w.option('readerTextSize', 'large')] ?? 11,
+      fontStep: steps[w.option<String>('readerTextSize', 'large')] ?? 11,
       colourScheme: w.option('readerTheme', 'dark'),
     );
   }

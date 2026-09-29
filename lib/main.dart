@@ -18,6 +18,7 @@ import 'services/bins_service.dart';
 import 'services/carbon_service.dart';
 import 'services/markets_service.dart';
 import 'services/tfl_service.dart';
+import 'services/transitous_service.dart';
 import 'services/fuel_service.dart';
 import 'services/reminders_service.dart';
 import 'services/chores_service.dart';
@@ -385,6 +386,8 @@ void main() async {
         ChangeNotifierProvider(create: (_) => RainService(config)),
         // Made when a London lines or arrivals tile first asks.
         ChangeNotifierProvider(create: (_) => TflService()),
+        // Made when a Departures (Europe) tile first asks.
+        ChangeNotifierProvider(create: (_) => TransitousService()),
         // Made when a Fuel prices tile first asks.
         ChangeNotifierProvider(create: (_) => FuelService(config)),
         // Made when a Stocks or Crypto widget first asks.

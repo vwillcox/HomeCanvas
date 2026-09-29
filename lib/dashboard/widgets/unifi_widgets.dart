@@ -807,7 +807,7 @@ class UnifiThroughputWidget extends StatelessWidget {
     if (!unifi.hasContent) return _Waiting(theme: t, service: unifi);
 
     final window =
-        windows[w.option('window', '1h')] ?? const Duration(hours: 1);
+        windows[w.option<String>('window', '1h')] ?? const Duration(hours: 1);
     final showVolume = w.option('showVolume', true);
     final up = _uploadColour(t);
 
