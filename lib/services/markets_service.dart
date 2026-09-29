@@ -437,8 +437,9 @@ class MarketsService extends ChangeNotifier {
   final Map<String, ({DateTime at, List<double> history, List<DateTime> times})>
   _histories = {};
 
-  /// When CoinGecko said to slow down, the time it may be asked again.
-  DateTime? _coinsRestUntil;
+  /// When CoinGecko said to slow down, the time it may be asked again — by
+  /// key, so a key newly added isn't held back by the keyless allowance.
+  final Map<String, DateTime> _coinsRestUntil = {};
 
   /// [coins] are CoinGecko ids ("bitcoin") or ticker symbols ("BTC");
   /// [currency] is `gbp`, `usd` or `eur`; [period] `24h`, `7d`, `30d`,
@@ -452,9 +453,9 @@ class MarketsService extends ChangeNotifier {
     String apiKey = '',
   }) async {
     // Told to wait: CoinGecko isn't asked until then, only Coinbase.
-    final restUntil = _coinsRestUntil;
-    final resting = restUntil != null && DateTime.now().isBefore(restUntil);
     final key = apiKey.trim();
+    final restUntil = _coinsRestUntil[key];
+    final resting = restUntil != null && DateTime.now().isBefore(restUntil);
     final headers = {if (key.isNotEmpty) 'x-cg-demo-api-key': key};
     final due = [
       for (final c in coins)
@@ -552,7 +553,7 @@ class MarketsService extends ChangeNotifier {
         final after = int.tryParse(
           '${(e as DioException).response?.headers.value('retry-after')}',
         );
-        _coinsRestUntil = DateTime.now().add(
+        _coinsRestUntil[key] = DateTime.now().add(
           Duration(
             seconds: (after ?? (status == 403 ? 300 : 60)).clamp(10, 600),
           ),
