@@ -47,43 +47,87 @@ class _RemindersWidgetState extends State<RemindersWidget>
     final status = StatusColours.of(t);
     final now = DateTime.now();
     final due = list.where((r) => r.fired).length;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        TileLabel(
-          icon: Icons.alarm_outlined,
-          text: tr('widget.reminders.title', 'Reminders'),
-          theme: t,
-          size: 12,
-          trailing: due == 0
-              ? null
-              : StatusChip(
-                  text: tr('widget.reminders.dueCount',
-                      '{n, plural, one{# due} other{# due}}', {'n': due}),
-                  colour: status.warn,
-                  size: 11,
-                ),
-        ),
-        const SizedBox(height: 6),
-        Expanded(
-          child: ListView.separated(
-            padding: EdgeInsets.zero,
-            itemCount: list.length,
-            separatorBuilder: (_, _) => Divider(
-              height: 10,
-              thickness: 1,
-              color: t.textSecondary.withValues(alpha: .15),
-            ),
-            itemBuilder: (context, i) => _ReminderRow(
-              r: list[i],
+    return LayoutBuilder(
+      builder: (context, c) {
+        // Sized to the room each reminder has: one fills the tile, a long
+        // list comes down to the smallest readable size and scrolls. Held
+        // back by the width too, so a tall narrow tile doesn't overflow.
+        final each = (c.maxHeight - 30) / list.length;
+        // A reminder can run to two lines and a sender: about 72 at the
+        // smallest size, dividers included.
+        final k = [each / 58, c.maxWidth / 300, 3.5]
+            .reduce((a, b) => a < b ? a : b)
+            .clamp(1.0, 3.5);
+        final rows = [
+          for (final r in list)
+            _ReminderRow(
+              r: r,
               now: now,
               theme: t,
               status: status,
-              onDone: () => service?.remove(list[i].id),
+              k: k,
+              onDone: () => service?.remove(r.id),
             ),
-          ),
-        ),
-      ],
+        ];
+        Widget divider() => Divider(
+          height: 10 * k,
+          thickness: 1,
+          color: t.textSecondary.withValues(alpha: .15),
+        );
+        // A few fit whole: centred in the space. More scroll.
+        final fits = each >= 72;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TileLabel(
+              icon: Icons.alarm_outlined,
+              text: tr('widget.reminders.title', 'Reminders'),
+              theme: t,
+              size: (12 * k).clamp(12.0, 20.0),
+              trailing: due == 0
+                  ? null
+                  : StatusChip(
+                      text: tr('widget.reminders.dueCount',
+                          '{n, plural, one{# due} other{# due}}', {'n': due}),
+                      colour: status.warn,
+                      size: (11 * k).clamp(11.0, 18.0),
+                    ),
+            ),
+            const SizedBox(height: 6),
+            Expanded(
+              child: fits
+                  // Shrunk a touch rather than overflowing, should the
+                  // words run longer than the estimate.
+                  ? LayoutBuilder(
+                      builder: (context, box) => Center(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: SizedBox(
+                            width: box.maxWidth,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                for (var i = 0; i < rows.length; i++) ...[
+                                  if (i > 0) divider(),
+                                  rows[i],
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: EdgeInsets.zero,
+                      itemCount: rows.length,
+                      separatorBuilder: (_, _) => divider(),
+                      itemBuilder: (context, i) => rows[i],
+                    ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -95,7 +139,11 @@ class _ReminderRow extends StatelessWidget {
     required this.theme,
     required this.status,
     required this.onDone,
+    this.k = 1,
   });
+
+  /// How much larger than its smallest it is drawn.
+  final double k;
 
   final Reminder r;
   final DateTime now;
@@ -128,23 +176,23 @@ class _ReminderRow extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: () => _confirm(context),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2),
+        padding: EdgeInsets.symmetric(vertical: 2 * k),
         child: Row(
           children: [
             SizedBox(
-              width: 92,
+              width: 92 * k,
               child: Text(
                 r.fired ? tr('widget.reminders.now', 'Now') : _when(),
                 maxLines: 2,
                 style: TextStyle(
                   color: colour,
-                  fontSize: 13,
+                  fontSize: 13 * k,
                   fontWeight: FontWeight.w700,
                   fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: 8 * k),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -155,20 +203,24 @@ class _ReminderRow extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: t.textPrimary,
-                      fontSize: 15,
+                      fontSize: 15 * k,
                       fontWeight: r.fired ? FontWeight.w700 : FontWeight.w500,
                     ),
                   ),
                   if (r.from.isNotEmpty)
                     Text(
                       tr('widget.reminders.from', 'from {name}', {'name': r.from}),
-                      style: TextStyle(color: t.textSecondary, fontSize: 11),
+                      style: TextStyle(color: t.textSecondary, fontSize: 11 * k),
                     ),
                 ],
               ),
             ),
             if (r.fired)
-              Icon(Icons.notifications_active_outlined, color: status.warn, size: 20),
+              Icon(
+                Icons.notifications_active_outlined,
+                color: status.warn,
+                size: 20 * k,
+              ),
           ],
         ),
       ),
@@ -220,6 +272,9 @@ final remindersWidgetType = DashboardWidgetType(
   defaultHeight: 3,
   minWidth: 2,
   minHeight: 2,
+  // Sizes its own text to the room it has, so the dashboard's shrink for
+  // smaller-than-default tiles would only make it small twice.
+  fitsItself: true,
   options: const [
     WidgetOption(
       key: 'showUndated',
