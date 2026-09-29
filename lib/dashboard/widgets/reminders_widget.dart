@@ -209,7 +209,7 @@ class _ReminderRow extends StatelessWidget {
 
 final remindersWidgetType = DashboardWidgetType(
   type: 'reminders',
-  category: WidgetCategory.house,
+  category: WidgetCategory.timeAndDay,
   name: 'Reminders',
   description:
       'Reminders shared from the phone app — “Remind me to put the bins out '
