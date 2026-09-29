@@ -481,6 +481,18 @@ void main() {
       expect(find.text('£21,391'), findsOneWidget);
       expect(find.text('Holdings'), findsWidgets);
 
+      // Three cards on a tall tile: all three, sharing it, nothing hidden.
+      await draw(tester, 'stocks', tile(6, 8), markets,
+          options: {'view': 'cards'});
+      for (final name in ['FTSE 100', 'S&P 500', 'Apple']) {
+        expect(find.text(name), findsOneWidget, reason: name);
+      }
+      expect(find.textContaining('Scroll for'), findsNothing);
+      // On a shorter one, what doesn't fit is said to be below.
+      await draw(tester, 'stocks', tile(6, 4), markets,
+          options: {'view': 'cards'});
+      expect(find.textContaining('Scroll for'), findsOneWidget);
+
       await draw(tester, 'stocks', tile(4, 3), markets);
       expect(find.text('FTSE 100'), findsOneWidget);
       expect(find.text('£10,695'), findsOneWidget);

@@ -181,14 +181,21 @@ class _MarketsTileState extends State<_MarketsTile>
     if (view == 'cards' || view == 'single') {
       return withTotal(LayoutBuilder(
         builder: (context, c) {
-          // Half the tile each, two at once — or the whole tile for one —
-          // but never so short the chart has no room.
-          final height = view == 'single' || c.maxHeight < 200
-              ? c.maxHeight
-              : (c.maxHeight / 2).clamp(200.0, c.maxHeight);
-          return RefreshIndicator(
+          // As many at once as fit with room for a chart — all of them when
+          // they can — sharing the tile; the whole tile for one at a time.
+          final n = widget.picks.length;
+          const smallest = 240.0;
+          final atOnce = view == 'single' || c.maxHeight < smallest
+              ? 1
+              : (c.maxHeight / smallest).floor().clamp(1, n < 1 ? 1 : n);
+          final height = c.maxHeight / atOnce;
+          return _MoreBelow(
+            hidden: n - atOnce,
+            theme: t,
+            builder: (controller) => RefreshIndicator(
             onRefresh: () => widget.fetch(service, force: true),
             child: ListView.builder(
+              controller: controller,
               padding: EdgeInsets.zero,
               physics: const AlwaysScrollableScrollPhysics(),
               itemExtent: height,
@@ -213,6 +220,7 @@ class _MarketsTileState extends State<_MarketsTile>
                 );
               },
             ),
+          ),
           );
         },
       ));
@@ -1487,3 +1495,95 @@ final cryptoWidgetType = DashboardWidgetType(
   ],
   build: (context, w) => CryptoWidget(w: w),
 );
+
+/// A list with a hint along its foot while any of it is out of sight below
+/// — "Scroll for 1 more" — so a card that doesn't fit isn't simply missing.
+class _MoreBelow extends StatefulWidget {
+  const _MoreBelow({
+    required this.hidden,
+    required this.theme,
+    required this.builder,
+  });
+
+  /// How many don't fit at once.
+  final int hidden;
+  final DashboardTheme theme;
+  final Widget Function(ScrollController controller) builder;
+
+  @override
+  State<_MoreBelow> createState() => _MoreBelowState();
+}
+
+class _MoreBelowState extends State<_MoreBelow> {
+  final _controller = ScrollController();
+  bool _atEnd = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_check);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _check() {
+    final p = _controller.position;
+    final atEnd = p.pixels >= p.maxScrollExtent - 8;
+    if (atEnd != _atEnd) setState(() => _atEnd = atEnd);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = widget.theme;
+    final ink = t.accent.computeLuminance() > 0.45
+        ? const Color(0xFF111111)
+        : Colors.white;
+    return Stack(
+      children: [
+        Positioned.fill(child: widget.builder(_controller)),
+        if (widget.hidden > 0 && !_atEnd)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 8,
+            child: IgnorePointer(
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: t.accent.withValues(alpha: .92),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.keyboard_arrow_down, size: 16, color: ink),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                        tr('widget.markets.scrollForMore',
+                            'Scroll for {n, plural, one{# more} other{# more}}',
+                            {'n': widget.hidden}),
+                        style: TextStyle(
+                          color: ink,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
