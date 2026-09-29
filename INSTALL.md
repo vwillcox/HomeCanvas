@@ -599,6 +599,19 @@ curl -fsSL -O $V/en_GB-alan-medium.onnx.json
 Restart the kiosk after adding voices. Shared notes and reminders keep the
 main voice.
 
+**ElevenLabs, optionally.** Piper is the default and the recommendation: it
+is free, works offline and sends nothing anywhere. If you'd rather hear
+an ElevenLabs voice, open the news widget's settings and set **Read in** to
+**ElevenLabs**. Paste an API key from elevenlabs.io (your profile → API keys;
+a key limited to Text to Speech is enough). A voice ID is optional and
+defaults to George, a British narrator. Then choose a model: Flash is
+quicker and costs half the credits, and Multilingual sounds the most
+natural. Each article is sent to ElevenLabs and paid for in credits. That's
+roughly one per character with Flash, so a long article can be a few
+thousand. Whenever ElevenLabs can't answer (no network, a refused key, no
+credits left), piper reads instead. Speed comes from the **main** row of
+**Voice speeds**, held to the 0.7–1.2 range ElevenLabs allows.
+
 #### Speed test
 
 Runs [Ookla's speedtest CLI](https://www.speedtest.net/apps/cli). Install it —

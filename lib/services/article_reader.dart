@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:media_kit/media_kit.dart';
 
 import 'article_text.dart';
+import 'elevenlabs_tts.dart';
 import 'plain_text.dart';
 import 'tts_service.dart';
 
@@ -15,8 +16,14 @@ import 'tts_service.dart';
 /// without piper or a speaker.
 abstract class SpeechOutput {
   /// [text] as a sound file in [voice] (a voice's model path; null for the
-  /// main voice), or null if it could not be made.
-  Future<File?> synthesise(String text, {String? voice, double speed = 1});
+  /// main voice), or null if it could not be made. With [cloud], in that
+  /// ElevenLabs voice instead, where it can be.
+  Future<File?> synthesise(
+    String text, {
+    String? voice,
+    double speed = 1,
+    ElevenLabsVoice? cloud,
+  });
 
   /// Plays [file]; completes when it has finished or been stopped.
   Future<void> play(File file, double volume);
@@ -25,19 +32,33 @@ abstract class SpeechOutput {
   Future<void> stop();
 }
 
-/// Piper for the voice, and a player of its own — so reading does not
-/// disturb whatever else has a player, and can be paused on its own.
+/// Piper for the voice — or ElevenLabs, when the news widget asks for it,
+/// with piper whenever ElevenLabs can't — and a player of its own, so
+/// reading does not disturb whatever else has a player, and can be paused
+/// on its own.
 class PiperSpeechOutput implements SpeechOutput {
-  PiperSpeechOutput(this.tts);
+  PiperSpeechOutput(this.tts, {ElevenLabsTts? elevenLabs})
+    : elevenLabs = elevenLabs ?? ElevenLabsTts();
 
   final TtsService tts;
+  final ElevenLabsTts elevenLabs;
   Player? _player;
   Completer<void>? _playing;
   StreamSubscription<bool>? _done;
 
   @override
-  Future<File?> synthesise(String text, {String? voice, double speed = 1}) =>
-      tts.synthesise(text, voice: voice, speed: speed);
+  Future<File?> synthesise(
+    String text, {
+    String? voice,
+    double speed = 1,
+    ElevenLabsVoice? cloud,
+  }) async {
+    if (cloud != null) {
+      final file = await elevenLabs.synthesise(text, cloud, speed: speed);
+      if (file != null) return file;
+    }
+    return tts.synthesise(text, voice: voice, speed: speed);
+  }
 
   @override
   Future<void> play(File file, double volume) async {
@@ -132,6 +153,9 @@ class ArticleReader extends ChangeNotifier {
   String? _voice;
   double _speed = 1;
 
+  /// The ElevenLabs voice this reading is in, if it is one.
+  ElevenLabsVoice? _cloud;
+
   /// The link being read, so the news tile can mark its headline.
   String? _link;
   String? get link => _link;
@@ -163,6 +187,7 @@ class ArticleReader extends ChangeNotifier {
     String? source,
     Map<String, double> speeds = const {},
     bool sayAuthor = true,
+    ElevenLabsVoice? cloud,
   }) async {
     // Taking over from a reading already going, the music stays paused
     // rather than coming back for a moment in between.
@@ -172,6 +197,7 @@ class ArticleReader extends ChangeNotifier {
     _title = plainText(title);
     _author = null;
     _voice = null;
+    _cloud = cloud;
     _link = link;
     _summaryOnly = false;
     _chunks = const [];
@@ -203,7 +229,8 @@ class ArticleReader extends ChangeNotifier {
     final parts = <String>['$_title.'];
     if (article != null) {
       _author = article.author;
-      _voice = await voiceFor?.call(_author);
+      // An ElevenLabs reading is all in the one voice chosen for it.
+      _voice = cloud == null ? await voiceFor?.call(_author) : null;
       if (run != _run) return;
       if (_author != null && sayAuthor) parts.add('By $_author.');
       if (source != null && source.isNotEmpty) parts.add('From $source.');
@@ -229,14 +256,24 @@ class ArticleReader extends ChangeNotifier {
   Future<void> _readFrom(int run) async {
     final voice = _voice;
     final speed = _speed;
-    Future<File?>? next =
-        output.synthesise(_chunks[_index], voice: voice, speed: speed);
+    final cloud = _cloud;
+    Future<File?>? next = output.synthesise(
+      _chunks[_index],
+      voice: voice,
+      speed: speed,
+      cloud: cloud,
+    );
     try {
       while (run == _run && _index < _chunks.length) {
         final file = await next;
         // Start on the next piece while this one is said.
         next = _index + 1 < _chunks.length
-            ? output.synthesise(_chunks[_index + 1], voice: voice, speed: speed)
+            ? output.synthesise(
+                _chunks[_index + 1],
+                voice: voice,
+                speed: speed,
+                cloud: cloud,
+              )
             : null;
         if (run != _run) {
           _discard(file);
@@ -295,6 +332,7 @@ class ArticleReader extends ChangeNotifier {
     _link = null;
     _author = null;
     _voice = null;
+    _cloud = null;
     _skipping = false;
     _set(ReaderStatus.idle);
     if (_started) {
@@ -315,18 +353,20 @@ class ArticleReader extends ChangeNotifier {
 
   /// A browser's user agent: some sites serve a stripped page, or nothing,
   /// to anything that does not look like one.
-  static final Dio _dio = Dio(BaseOptions(
-    connectTimeout: const Duration(seconds: 10),
-    receiveTimeout: const Duration(seconds: 15),
-    responseType: ResponseType.bytes,
-    headers: {
-      'User-Agent':
-          'Mozilla/5.0 (X11; Linux aarch64; rv:128.0) Gecko/20100101 '
-          'Firefox/128.0',
-      'Accept': 'text/html,application/xhtml+xml',
-      'Accept-Language': 'en-GB,en;q=0.8',
-    },
-  ));
+  static final Dio _dio = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 15),
+      responseType: ResponseType.bytes,
+      headers: {
+        'User-Agent':
+            'Mozilla/5.0 (X11; Linux aarch64; rv:128.0) Gecko/20100101 '
+            'Firefox/128.0',
+        'Accept': 'text/html,application/xhtml+xml',
+        'Accept-Language': 'en-GB,en;q=0.8',
+      },
+    ),
+  );
 
   /// The most of a page taken: news pages run to a few hundred kilobytes,
   /// and a link can point at anything.

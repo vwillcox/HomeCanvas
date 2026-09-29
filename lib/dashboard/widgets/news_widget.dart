@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../../screens/link_viewer_screen.dart';
 import '../../services/article_reader.dart';
+import '../../services/elevenlabs_tts.dart';
 import '../../services/kiosk_browser.dart' show ReaderStyle;
 import '../../services/feed_service.dart';
 import '../../services/video_link.dart';
@@ -330,6 +331,7 @@ class DashboardNewsWidget extends StatelessWidget {
                   summary: item.summary,
                   speeds: voiceSpeeds(w),
                   sayAuthor: w.option('readAuthor', true),
+                  cloud: elevenLabs(w),
                 );
               },
               icon: const Icon(Icons.record_voice_over_rounded, size: 26),
@@ -397,6 +399,20 @@ class DashboardNewsWidget extends StatelessWidget {
         if ('${r['voice'] ?? ''}'.isNotEmpty)
           '${r['voice']}': double.tryParse('${r['speed']}') ?? 1,
     };
+  }
+
+  /// The ElevenLabs voice to read in, when the settings choose it and give
+  /// a key — otherwise null, and piper reads.
+  static ElevenLabsVoice? elevenLabs(DashboardWidgetContext w) {
+    if (w.option<String>('voiceEngine', 'piper') != 'elevenlabs') return null;
+    final key = w.option<String>('elevenLabsKey', '').trim();
+    if (key.isEmpty) return null;
+    final voice = w.option<String>('elevenLabsVoice', '').trim();
+    return ElevenLabsVoice(
+      apiKey: key,
+      voiceId: voice.isEmpty ? kElevenLabsDefaultVoice : voice,
+      model: w.option<String>('elevenLabsModel', kElevenLabsDefaultModel),
+    );
   }
 
   /// How articles should open, from this widget's settings — or null for the
@@ -688,7 +704,8 @@ final newsWidgetType = DashboardWidgetType(
       defaultValue: true,
       help: 'A button on each headline that reads the whole article out, a '
           'paragraph at a time, with pause and stop along the bottom of the '
-          'screen. Needs piper on the Pi — see INSTALL.md.',
+          'screen. Needs piper on the Pi — see INSTALL.md — or an ElevenLabs '
+          'account.',
     ),
     WidgetOption(
       key: 'readAuthor',
@@ -696,6 +713,45 @@ final newsWidgetType = DashboardWidgetType(
       kind: OptionKind.boolean,
       defaultValue: true,
       help: '“By …” after the headline, when the page names its author.',
+    ),
+    WidgetOption(
+      key: 'voiceEngine',
+      label: 'Read in',
+      kind: OptionKind.choice,
+      defaultValue: 'piper',
+      choices: {
+        'piper': 'Piper, on the Pi (recommended)',
+        'elevenlabs': 'ElevenLabs',
+      },
+      help: 'Piper is free, works without the internet and sends nothing '
+          'anywhere. ElevenLabs sounds more natural, but sends each article '
+          'to ElevenLabs and uses your account’s credits — about one per '
+          'character with Flash. Piper reads whenever ElevenLabs can’t.',
+    ),
+    WidgetOption(
+      key: 'elevenLabsKey',
+      label: 'ElevenLabs API key',
+      kind: OptionKind.secret,
+      defaultValue: '',
+      help: 'On elevenlabs.io: your profile → API keys. A key limited to '
+          'Text to Speech is all it needs.',
+    ),
+    WidgetOption(
+      key: 'elevenLabsVoice',
+      label: 'ElevenLabs voice ID',
+      defaultValue: '',
+      help: 'Optional — George, a British narrator, otherwise. Copy a voice’s '
+          'ID from the Voices page on elevenlabs.io.',
+    ),
+    WidgetOption(
+      key: 'elevenLabsModel',
+      label: 'ElevenLabs model',
+      kind: OptionKind.choice,
+      defaultValue: kElevenLabsDefaultModel,
+      choices: {
+        'eleven_flash_v2_5': 'Flash — quick, half the credits',
+        'eleven_multilingual_v2': 'Multilingual — the most natural',
+      },
     ),
     WidgetOption(
       key: 'voiceSpeeds',
