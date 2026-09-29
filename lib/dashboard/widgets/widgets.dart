@@ -29,6 +29,7 @@ import 'shopping_widget.dart';
 import 'speedtest_widget.dart';
 import 'sun_moon_widget.dart';
 import 'timers_widget.dart';
+import 'tfl_widgets.dart';
 import 'trains_widget.dart';
 import 'updates_widget.dart';
 import 'tv_widget.dart';
@@ -75,6 +76,8 @@ void registerBuiltInWidgets() {
     shoppingWidgetType,
     carbonWidgetType,
     trainsWidgetType,
+    tflLinesWidgetType,
+    tflArrivalsWidgetType,
     lightsWidgetType,
     rainWidgetType,
     homeAssistantWidgetType,

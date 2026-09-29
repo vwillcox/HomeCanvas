@@ -200,7 +200,10 @@ class _Row extends StatelessWidget {
         ? (tr('widget.trains.atPlatform', 'At platform'), theme.accent)
         : (tr('widget.trains.onTime', 'On time'), status.good);
     final sub = [
-      if (d.late && d.expected != null) 'expected ${hhmm(d.expected!)}',
+      if (d.late && d.expected != null)
+        tr('widget.trains.expected', 'expected {time}', {
+          'time': hhmm(d.expected!),
+        }),
       if (d.bus) tr('widget.trains.replacementBus', 'replacement bus'),
       if ((d.cancelled || d.late) && d.reason != null) d.reason!,
     ].join(' · ');

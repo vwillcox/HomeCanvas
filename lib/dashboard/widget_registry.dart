@@ -157,6 +157,9 @@ class WidgetCategory {
   static const gettingOut = 'Getting out';
   static const reference = 'News & reference';
   static const network = 'Network';
+
+  /// Ubiquiti's own: a brand has its group, so its tiles are found together.
+  static const unifi = 'UniFi';
   static const homeLab = 'Home lab';
   static const other = 'Other';
 
@@ -173,6 +176,7 @@ class WidgetCategory {
     gettingOut,
     reference,
     network,
+    unifi,
     homeLab,
     other,
   ];

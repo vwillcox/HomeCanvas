@@ -998,7 +998,7 @@ final _needsKey =
 
 final unifiHealthWidgetType = DashboardWidgetType(
   type: 'unifi_health',
-  category: WidgetCategory.network,
+  category: WidgetCategory.unifi,
   name: 'Network health',
   description:
       'Whether the internet is up, current WAN speeds, client count, and any '
@@ -1019,7 +1019,7 @@ final unifiHealthWidgetType = DashboardWidgetType(
 
 final unifiPresenceWidgetType = DashboardWidgetType(
   type: 'unifi_presence',
-  category: WidgetCategory.network,
+  category: WidgetCategory.unifi,
   name: "Who's home",
   description:
       'Which devices are on the network right now. Presence on your own WiFi '
@@ -1058,7 +1058,7 @@ final unifiPresenceWidgetType = DashboardWidgetType(
 
 final unifiDevicesWidgetType = DashboardWidgetType(
   type: 'unifi_devices',
-  category: WidgetCategory.network,
+  category: WidgetCategory.unifi,
   name: 'UniFi devices',
   description:
       'Your router, switches and access points with model, firmware and '
@@ -1079,7 +1079,7 @@ final unifiDevicesWidgetType = DashboardWidgetType(
 
 final unifiClientsWidgetType = DashboardWidgetType(
   type: 'unifi_clients',
-  category: WidgetCategory.network,
+  category: WidgetCategory.unifi,
   name: 'Network clients',
   description:
       'Everything connected, newest first, and which device each is connected '
@@ -1105,7 +1105,7 @@ final unifiClientsWidgetType = DashboardWidgetType(
 
 final unifiThroughputWidgetType = DashboardWidgetType(
   type: 'unifi_throughput',
-  category: WidgetCategory.network,
+  category: WidgetCategory.unifi,
   name: 'WAN throughput',
   description:
       'Live up and down rates on the internet connection, graphed over about '
@@ -1262,7 +1262,7 @@ class UnifiIspWidget extends StatelessWidget {
 
 final unifiIspWidgetType = DashboardWidgetType(
   type: 'unifi_isp',
-  category: WidgetCategory.network,
+  category: WidgetCategory.unifi,
   name: 'ISP speed test',
   description:
       "The router's own built-in speed test — what the line achieved, "

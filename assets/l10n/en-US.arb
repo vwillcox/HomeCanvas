@@ -25,6 +25,7 @@
   "widget.lights.description": "Govee lights and plugs. Tap one to switch it, drag along its bar for brightness, tap a color. Works over the home network for devices with LAN Control turned on in the Govee app, or through Govee with an API key.",
   "widget.lights.option.swatches.label": "Colors to offer",
   "widget.news.option.readerTheme.label": "Reader colors",
+  "widget.tfl_lines.description": "Whether the Tube, Elizabeth line, Overground, DLR and trams are running, each line in its own color. Tap a line with trouble to read why. From TfL — no key needed.",
   "widget.trains.cancelled": "Canceled",
   "widget.unifi_presence.option.watch.help": "Part of a device name, or a MAC address. Leave empty to list everything. Anything named here but absent is shown grayed out, so the list keeps its shape."
 }
