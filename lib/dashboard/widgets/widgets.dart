@@ -32,6 +32,7 @@ import 'sun_moon_widget.dart';
 import 'timers_widget.dart';
 import 'fuel_widget.dart';
 import 'tfl_widgets.dart';
+import 'transit_widget.dart';
 import 'trains_widget.dart';
 import 'updates_widget.dart';
 import 'tv_widget.dart';
@@ -81,6 +82,7 @@ void registerBuiltInWidgets() {
     trainsWidgetType,
     tflLinesWidgetType,
     tflArrivalsWidgetType,
+    transitWidgetType,
     fuelWidgetType,
     lightsWidgetType,
     rainWidgetType,
