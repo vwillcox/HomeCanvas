@@ -34,6 +34,8 @@ import 'fuel_widget.dart';
 import 'tfl_widgets.dart';
 import 'transit_widget.dart';
 import 'planes_widget.dart';
+import 'tides_widget.dart';
+import 'traffic_cams_widget.dart';
 import 'trains_widget.dart';
 import 'updates_widget.dart';
 import 'tv_widget.dart';
@@ -85,6 +87,8 @@ void registerBuiltInWidgets() {
     tflArrivalsWidgetType,
     transitWidgetType,
     planesWidgetType,
+    trafficCamsWidgetType,
+    tidesWidgetType,
     fuelWidgetType,
     lightsWidgetType,
     rainWidgetType,

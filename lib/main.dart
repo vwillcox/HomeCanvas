@@ -20,6 +20,8 @@ import 'services/markets_service.dart';
 import 'services/tfl_service.dart';
 import 'services/transitous_service.dart';
 import 'services/planes_service.dart';
+import 'services/tides_service.dart';
+import 'services/traffic_cams_service.dart';
 import 'services/fuel_service.dart';
 import 'services/reminders_service.dart';
 import 'services/chores_service.dart';
@@ -348,6 +350,13 @@ void main() async {
   dashboard.haEntities = homeAssistant.choices;
   dashboard.voices = speech.voiceChoices;
 
+  // The place in Settings → Weather, once found: where "near home" is.
+  ({double lat, double lon})? home() {
+    final w = config.config.weather;
+    final lat = w.latitude, lon = w.longitude;
+    return lat == null || lon == null ? null : (lat: lat, lon: lon);
+  }
+
   runApp(
     MultiProvider(
       providers: [
@@ -395,15 +404,9 @@ void main() async {
         ChangeNotifierProvider(create: (_) => TflService()),
         // Made when a Departures (Europe) tile first asks.
         ChangeNotifierProvider(create: (_) => TransitousService()),
-        ChangeNotifierProvider(
-          create: (_) => PlanesService(
-            home: () {
-              final w = config.config.weather;
-              final lat = w.latitude, lon = w.longitude;
-              return lat == null || lon == null ? null : (lat: lat, lon: lon);
-            },
-          ),
-        ),
+        ChangeNotifierProvider(create: (_) => PlanesService(home: home)),
+        ChangeNotifierProvider(create: (_) => TrafficCamsService(home: home)),
+        ChangeNotifierProvider(create: (_) => TidesService(home: home)),
         // Made when a Fuel prices tile first asks.
         ChangeNotifierProvider(create: (_) => FuelService(config)),
         // Made when a Stocks or Crypto widget first asks.
