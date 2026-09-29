@@ -2,7 +2,7 @@ name: home_canvas
 description: "Touchscreen Immich photo/video browser for a Raspberry Pi DSI display."
 # Licensed under the MIT License — see LICENSE.
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.1+2
 
 environment:
   sdk: ^3.12.2
