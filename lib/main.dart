@@ -19,6 +19,7 @@ import 'services/carbon_service.dart';
 import 'services/markets_service.dart';
 import 'services/tfl_service.dart';
 import 'services/fuel_service.dart';
+import 'services/reminders_service.dart';
 import 'services/chores_service.dart';
 import 'services/govee_service.dart';
 import 'services/home_assistant_service.dart';
@@ -253,9 +254,33 @@ void main() async {
   // well as popping up; the editor server has a page for posting to it.
   final notes = NotesService();
   unawaited(notes.load());
+
+  // Reminders shared from the phone app: text that reads as one — "remind
+  // me to…", "don't forget…" — goes on the Reminders list rather than the
+  // Notes board, and is said aloud when it falls due.
+  final reminders = RemindersService();
+  unawaited(reminders.load());
+  reminders
+    ..onDue = (r) async {
+      await screenIdle.wakeForNotification();
+      final words = r.from.isEmpty
+          ? tr('reminders.spoken', 'Reminder: {what}', {'what': r.text})
+          : tr('reminders.spokenFrom', 'Reminder from {name}: {what}', {
+              'name': r.from,
+              'what': r.text,
+            });
+      await speech.speakAll([words], volume: config.config.shareInbox.speechOut);
+    }
+    ..start();
+
   shareInbox.onShared = (item) {
-    if (item.type == ShareType.text && (item.content ?? '').trim().isNotEmpty) {
-      notes.add(item.content!, from: item.sender);
+    final text = (item.content ?? '').trim();
+    if (item.type != ShareType.text || text.isEmpty) return;
+    final reminder = parseReminder(text, DateTime.now());
+    if (reminder != null) {
+      reminders.add(reminder, from: item.sender);
+    } else {
+      notes.add(text, from: item.sender);
     }
   };
   dashboard.notes = notes;
@@ -348,6 +373,7 @@ void main() async {
         // nothing, and it starts no capture until a widget attaches.
         ChangeNotifierProvider(create: (_) => AudioLevelsService()),
         ChangeNotifierProvider.value(value: notes),
+        ChangeNotifierProvider<RemindersService?>.value(value: reminders),
         ChangeNotifierProvider.value(value: shopping),
         ChangeNotifierProvider.value(value: chores),
         ChangeNotifierProvider.value(value: timers),

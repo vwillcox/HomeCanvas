@@ -14,6 +14,7 @@ import 'home_assistant_widget.dart';
 import 'news_widget.dart';
 import 'omarchy_widget.dart';
 import 'rain_widget.dart';
+import 'reminders_widget.dart';
 import 'spotify_widget.dart';
 import 'immich_library_widget.dart';
 import 'immich_widget.dart';
@@ -71,6 +72,7 @@ void registerBuiltInWidgets() {
     airQualityWidgetType,
     binsWidgetType,
     notesWidgetType,
+    remindersWidgetType,
     serversWidgetType,
     servicesWidgetType,
     countdownsWidgetType,
