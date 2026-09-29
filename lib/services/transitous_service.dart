@@ -210,6 +210,16 @@ class TransitousService extends ChangeNotifier {
     return null;
   }
 
+  /// "ICE 578", "S3", "Red Line" — the first name the feed gives that is
+  /// one; some write "?" for a line they don't name.
+  static String _lineName(Map s) {
+    for (final k in ['displayName', 'routeShortName', 'routeLongName']) {
+      final v = '${s[k] ?? ''}'.trim();
+      if (v.isNotEmpty && v != '?') return v;
+    }
+    return '';
+  }
+
   @visibleForTesting
   static List<TransitDeparture> parseStopTimes(Map<String, dynamic> json) {
     final out = <TransitDeparture>[];
@@ -229,7 +239,7 @@ class TransitousService extends ChangeNotifier {
 
       out.add(
         TransitDeparture(
-          line: '${s['displayName'] ?? s['routeShortName'] ?? ''}'.trim(),
+          line: _lineName(s),
           mode: '${s['mode'] ?? ''}',
           headsign: '${s['headsign'] ?? (s['tripTo'] as Map?)?['name'] ?? ''}'
               .trim(),

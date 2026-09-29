@@ -19,6 +19,7 @@ import 'services/carbon_service.dart';
 import 'services/markets_service.dart';
 import 'services/tfl_service.dart';
 import 'services/transitous_service.dart';
+import 'services/planes_service.dart';
 import 'services/fuel_service.dart';
 import 'services/reminders_service.dart';
 import 'services/chores_service.dart';
@@ -207,11 +208,13 @@ void main() async {
   final nebula = NebulaSite(config, ytDlp);
   final sites = [youtube, floatplane, nebula];
   // The sign-ins are checked once yt-dlp is known to be there to check them.
-  unawaited(ytDlp.start().then((_) {
-    for (final site in sites) {
-      site.start();
-    }
-  }));
+  unawaited(
+    ytDlp.start().then((_) {
+      for (final site in sites) {
+        site.start();
+      }
+    }),
+  );
   // Music playing already is paused rather than talked over, and a video
   // playing keeps the screen on.
   final player = VideoPlayerService(config, ytDlp, sites)
@@ -237,8 +240,9 @@ void main() async {
     final covered = player.view == VideoView.full;
     if (covered == coveredByVideo) return;
     coveredByVideo = covered;
-    backgroundChange = backgroundChange
-        .then((_) => covered ? background.pause() : background.resume());
+    backgroundChange = backgroundChange.then(
+      (_) => covered ? background.pause() : background.resume(),
+    );
   });
 
   // The backlight as it was left in Settings or the editor, rather than
@@ -271,7 +275,9 @@ void main() async {
               'name': r.from,
               'what': r.text,
             });
-      await speech.speakAll([words], volume: config.config.shareInbox.speechOut);
+      await speech.speakAll([
+        words,
+      ], volume: config.config.shareInbox.speechOut);
     }
     ..start();
 
@@ -332,7 +338,8 @@ void main() async {
   // For the editor's preview of the photo background: the photo showing
   // now, or any photo if the dashboard is not up.
   dashboard.backgroundImage = () async {
-    final id = PhotoBackdrop.current ??
+    final id =
+        PhotoBackdrop.current ??
         (await immich.getRandomAssets(count: 1)).firstOrNull?.id;
     return id == null ? null : immich.previewBytes(id);
   };
@@ -388,6 +395,15 @@ void main() async {
         ChangeNotifierProvider(create: (_) => TflService()),
         // Made when a Departures (Europe) tile first asks.
         ChangeNotifierProvider(create: (_) => TransitousService()),
+        ChangeNotifierProvider(
+          create: (_) => PlanesService(
+            home: () {
+              final w = config.config.weather;
+              final lat = w.latitude, lon = w.longitude;
+              return lat == null || lon == null ? null : (lat: lat, lon: lon);
+            },
+          ),
+        ),
         // Made when a Fuel prices tile first asks.
         ChangeNotifierProvider(create: (_) => FuelService(config)),
         // Made when a Stocks or Crypto widget first asks.
@@ -404,31 +420,33 @@ void main() async {
   // Lets the TV remote app's copy of the control bar reach in here: open
   // the dashboard, Settings, the Locked Folder and so on. Local only — see
   // KioskControlService.
-  unawaited(KioskControlService(
-    state: () {
-      final context = rootNavigatorKey.currentContext;
-      final camera = context?.read<CameraService>();
-      return KioskState(
-        dashboard: config.config.dashboard.enabled,
-        lockedFolder: context?.read<LockedFolderService>().canUse ?? false,
-        camera: camera?.isConfigured ?? false,
-        cameraOpen: camera?.isOpen ?? false,
-        dnd: config.config.shareInbox.dndMuted,
-      );
-    },
-    run: (command) => runKioskCommand(command, config),
-    playVideo: (url) {
-      final link = VideoLink.parse(url);
-      if (link == null) return false;
-      unawaited(player.play(link));
-      return true;
-    },
-    setDnd: (muted) {
-      config.config.shareInbox.dndMuted = muted;
-      unawaited(config.save());
-    },
-    screenLit: screen.set,
-  ).start());
+  unawaited(
+    KioskControlService(
+      state: () {
+        final context = rootNavigatorKey.currentContext;
+        final camera = context?.read<CameraService>();
+        return KioskState(
+          dashboard: config.config.dashboard.enabled,
+          lockedFolder: context?.read<LockedFolderService>().canUse ?? false,
+          camera: camera?.isConfigured ?? false,
+          cameraOpen: camera?.isOpen ?? false,
+          dnd: config.config.shareInbox.dndMuted,
+        );
+      },
+      run: (command) => runKioskCommand(command, config),
+      playVideo: (url) {
+        final link = VideoLink.parse(url);
+        if (link == null) return false;
+        unawaited(player.play(link));
+        return true;
+      },
+      setDnd: (muted) {
+        config.config.shareInbox.dndMuted = muted;
+        unawaited(config.save());
+      },
+      screenLit: screen.set,
+    ).start(),
+  );
 }
 
 /// Brings up the dashboard page the Reminders widget is on — when one falls
@@ -460,8 +478,9 @@ void runKioskCommand(KioskCommand command, ConfigService config) {
     case KioskCommand.dashboard:
       if (!config.config.dashboard.enabled) return;
       navigator.popUntil((route) => route.isFirst);
-      navigator
-          .push(MaterialPageRoute(builder: (_) => const DashboardScreen()));
+      navigator.push(
+        MaterialPageRoute(builder: (_) => const DashboardScreen()),
+      );
     case KioskCommand.settings:
       navigator.push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
     case KioskCommand.lockedFolder:
@@ -501,10 +520,7 @@ class HomeCanvasApp extends StatelessWidget {
     final language = context.select<ConfigService, String>(
       (c) => c.config.language,
     );
-    return KioskLook(
-      theme: look,
-      child: _app(context, look, language),
-    );
+    return KioskLook(theme: look, child: _app(context, look, language));
   }
 
   Widget _app(BuildContext context, DashboardTheme look, String language) {
@@ -536,7 +552,8 @@ class HomeCanvasApp extends StatelessWidget {
         // event on the way down without consuming it, so nothing below
         // behaves any differently.
         behavior: HitTestBehavior.translucent,
-        onPointerDown: (_) => context.read<ScreenIdleService>().noteInteraction(),
+        onPointerDown: (_) =>
+            context.read<ScreenIdleService>().noteInteraction(),
         child: _RestWhileDark(
           child: Stack(
             children: [
@@ -610,12 +627,12 @@ class _AppScrollBehavior extends MaterialScrollBehavior {
 
   @override
   Set<PointerDeviceKind> get dragDevices => const {
-        PointerDeviceKind.touch,
-        PointerDeviceKind.mouse,
-        PointerDeviceKind.trackpad,
-        PointerDeviceKind.stylus,
-        PointerDeviceKind.unknown,
-      };
+    PointerDeviceKind.touch,
+    PointerDeviceKind.mouse,
+    PointerDeviceKind.trackpad,
+    PointerDeviceKind.stylus,
+    PointerDeviceKind.unknown,
+  };
 }
 
 /// Shows setup until a connection is configured, then the album browser.
@@ -657,8 +674,10 @@ class _RootGate extends StatelessWidget {
         immich: immich,
         builder: (imgs) => GalleryScreen(
           assets: imgs,
-          initialIndex: int.tryParse(
-                  Platform.environment['HOMECANVAS_TEST_GALLERY_INDEX'] ?? '') ??
+          initialIndex:
+              int.tryParse(
+                Platform.environment['HOMECANVAS_TEST_GALLERY_INDEX'] ?? '',
+              ) ??
               0,
           source: immich,
         ),
@@ -695,7 +714,8 @@ class _RootGate extends StatelessWidget {
     if (testLocked != null && testLocked.isNotEmpty) {
       return _DebugLockedLoader(pin: testLocked);
     }
-    final testLockedVideo = Platform.environment['HOMECANVAS_TEST_LOCKED_VIDEO'];
+    final testLockedVideo =
+        Platform.environment['HOMECANVAS_TEST_LOCKED_VIDEO'];
     if (testLockedVideo != null && testLockedVideo.isNotEmpty) {
       return _DebugLockedVideoLoader(pin: testLockedVideo);
     }
@@ -716,8 +736,9 @@ class _DebugLockedLoader extends StatefulWidget {
 }
 
 class _DebugLockedLoaderState extends State<_DebugLockedLoader> {
-  late final Future<UnlockResult> _future =
-      context.read<LockedFolderService>().unlock(widget.pin);
+  late final Future<UnlockResult> _future = context
+      .read<LockedFolderService>()
+      .unlock(widget.pin);
 
   @override
   Widget build(BuildContext context) {
@@ -725,7 +746,9 @@ class _DebugLockedLoaderState extends State<_DebugLockedLoader> {
       future: _future,
       builder: (context, snap) {
         if (!snap.hasData) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
         if (snap.data == UnlockResult.success) {
           return const LockedFolderScreen();
@@ -767,10 +790,10 @@ class _DebugLockedVideoLoaderState extends State<_DebugLockedVideoLoader> {
     }
     final assets = await _locked.getLockedAssets();
     if (!mounted) return;
-    final v = assets.where((a) => a.isVideo).cast<Asset?>().firstWhere(
-          (a) => true,
-          orElse: () => null,
-        );
+    final v = assets
+        .where((a) => a.isVideo)
+        .cast<Asset?>()
+        .firstWhere((a) => true, orElse: () => null);
     if (v == null) {
       setState(() => _status = 'no locked video found');
       return;
