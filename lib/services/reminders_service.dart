@@ -80,6 +80,9 @@ typedef ParsedReminder = ({String what, DateTime? due, bool allDay});
 /// "Reminder: dentist tomorrow at 9:30", "Don't forget the bins tonight",
 /// "Remember to water the plants on Saturday" — or null if it isn't one.
 ///
+/// A short message with a clock time in it counts too, without the asking:
+/// "Book taxi at 3pm".
+///
 /// Times understood: at 5pm, at 17:30, at 5.30pm, at noon, at midnight, in
 /// 20 minutes, in 2 hours; days: today, tonight, this morning / afternoon /
 /// evening, tomorrow (morning…), on Friday, next Friday, on 12/10, on the
@@ -91,9 +94,16 @@ ParsedReminder? parseReminder(String text, DateTime now) {
     caseSensitive: false,
   );
   final m = trigger.firstMatch(text);
-  if (m == null) return null;
-  var what = text.substring(m.end).trim();
+  // Without "remind me" and the like, a short message with a clock time in
+  // it — "Book taxi at 3pm", "Call the school in 20 minutes" — is still one.
+  // Not a question, and not a day alone: "The parcel came today" is news.
+  final asked = m != null;
+  var what = (asked ? text.substring(m.end) : text).trim();
   if (what.isEmpty) return null;
+  if (!asked &&
+      (what.contains('?') || what.split(RegExp(r'\s+')).length > 15)) {
+    return null;
+  }
 
   DateTime? day;
   int? hour, minute;
@@ -211,6 +221,8 @@ ParsedReminder? parseReminder(String text, DateTime now) {
     if (date.isBefore(today)) date = DateTime(now.year, now.month + 1, d);
     day = date;
   });
+
+  if (!asked && hour == null && after == null) return null;
 
   // Whatever is left, tidied: no dangling "on"/"at", no full stop.
   what = what
