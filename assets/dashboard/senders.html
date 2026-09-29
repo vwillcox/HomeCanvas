@@ -53,10 +53,19 @@
   .note { color: var(--muted); font-size: 13px; }
   .warn { color: var(--danger); }
   #status { font-size: 13px; color: var(--muted); min-height: 1.4em; }
+  /* Back to the editor. */
+  .home {
+    display: inline-flex; align-items: center; gap: 6px; margin-bottom: 14px;
+    padding: 6px 14px; border-radius: 999px; font-size: 14px; text-decoration: none;
+    color: rgba(255,255,255,.62); background: rgba(255,255,255,.055);
+    border: 1px solid rgba(255,255,255,.10); transition: color .15s, background .15s;
+  }
+  .home:hover, .home:focus-visible { color: #fff; background: rgba(255,255,255,.09); }
 </style>
 </head>
 <body>
 <header>
+  <a class="home" href="/" data-t="web.common.backToDashboard">← Dashboard</a>
   <h1 data-t="web.senders.whoCanShareToThe">Who can share to the kiosk</h1>
   <p data-t="web.senders.intro">One token per device, so a single phone can be revoked without disturbing
      anyone else. This page is served to the local network only.</p>
