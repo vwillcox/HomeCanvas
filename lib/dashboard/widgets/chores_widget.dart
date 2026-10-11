@@ -187,16 +187,10 @@ class _Column extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     if (goal > 0)
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(3),
-                        child: LinearProgressIndicator(
-                          value: (stars / goal).clamp(0.0, 1.0),
-                          minHeight: 5,
-                          backgroundColor: theme.textSecondary.withValues(
-                            alpha: 0.15,
-                          ),
-                          valueColor: AlwaysStoppedAnimation(person.colour),
-                        ),
+                      TileProgress(
+                        theme: theme,
+                        value: (stars / goal).clamp(0.0, 1.0),
+                        colour: person.colour,
                       ),
                     if (reached && reward.isNotEmpty)
                       Text(
@@ -283,7 +277,7 @@ class _ChoreTile extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 220),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(tileCorner(theme, 12)),
           color: done
               ? person.colour.withValues(alpha: mine ? 0.22 : 0.08)
               : theme.textSecondary.withValues(alpha: 0.08),

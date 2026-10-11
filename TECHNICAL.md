@@ -1076,7 +1076,7 @@ Built with [Flutter](https://flutter.dev) (BSD-3-Clause,
 
 ### Fonts
 
-The dashboard's twenty fonts are all under the
+The dashboard's twenty-one fonts are all under the
 [SIL Open Font Licence 1.1](https://scripts.sil.org/OFL), listed with their
 designers on the About screen.
 

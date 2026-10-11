@@ -14,6 +14,7 @@ import '../services/brightness_service.dart';
 import '../services/camera_service.dart';
 import '../services/config_service.dart';
 import '../services/dashboard_service.dart';
+import '../services/homey_service.dart';
 import '../services/indoor_sensor_service.dart';
 import '../services/locked_folder_service.dart';
 import '../services/media_cache.dart';
@@ -32,6 +33,7 @@ import '../services/tv_service.dart';
 import '../services/weather_service.dart';
 import '../widgets/weather_overlay.dart';
 import '../widgets/glass.dart';
+import '../widgets/lcars.dart';
 import '../widgets/language_tile.dart';
 import '../l10n/l10n.dart';
 import 'about_screen.dart';
@@ -168,6 +170,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [const _HomeAssistantSettingsTile()],
           ),
           GlassSection(
+            title: tr('settings.homey', 'Homey'),
+            children: [const _HomeySettingsTile()],
+          ),
+          GlassSection(
             title: tr('settings.television', 'Television'),
             children: [const _TvSettingsTile()],
           ),
@@ -261,6 +267,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  /// [content] with the tabs beside it, on a console: a rail of blocks down
+  /// the left, each named in its corner, the one you are in lit. Any other
+  /// theme has them in the header, and gets [content] alone.
+  Widget _railed(Widget content) {
+    if (!context.look.isLcars) return content;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 200,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(28, 12, 0, 24),
+            children: [
+              for (var i = 0; i < tabs.length; i++)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: lcarsLine),
+                  child: LcarsRailBlock(
+                    index: i,
+                    label: tabs[i].$1,
+                    selected: i == _tab,
+                    first: i == 0,
+                    last: i == tabs.length - 1,
+                    onTap: () => setState(() => _tab = _lastTab = i),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        Expanded(child: content),
+      ],
+    );
+  }
+
   Widget _tabBar() {
     return Glass(
       padding: const EdgeInsets.all(5),
@@ -347,7 +386,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return ModernScaffold(
       header: ScreenHeader(
         onBack: () => Navigator.of(context).maybePop(),
-        trailing: _tabBar(),
+        // A console lists the tabs down the side instead: see [_railed].
+        trailing: context.look.isLcars ? null : _tabBar(),
         title: tr('settings.title', 'Settings'),
         subtitle: config.immichUrl.isEmpty
             ? tr('settings.notConnectedToImmichYet', 'Not connected to Immich yet')
@@ -357,7 +397,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       // larger type throughout — every piece of it, section headings and help
       // text included: this is read standing, often from across the room.
       // The tabs above keep their size so all of them still fit.
-      body: MediaQuery(
+      body: _railed(MediaQuery(
         data: MediaQuery.of(
           context,
         ).copyWith(textScaler: const TextScaler.linear(textScale)),
@@ -406,7 +446,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
         ),
-      ),
+      )),
     );
   }
 }
@@ -1024,6 +1064,126 @@ class _HomeAssistantSettingsTile extends StatelessWidget {
       trailing: const Icon(Icons.chevron_right),
       onTap: () => _edit(context),
       isThreeLine: false,
+    );
+  }
+}
+
+/// Where the Homey is, and the key to it — once, for every Homey tile on
+/// the dashboard.
+class _HomeySettingsTile extends StatelessWidget {
+  const _HomeySettingsTile();
+
+  Future<void> _edit(BuildContext context) async {
+    final service = context.read<ConfigService>();
+    final homey = context.read<HomeyService>();
+    final s = service.config.homey;
+    final address = TextEditingController(text: s.address);
+    final key = TextEditingController(text: s.apiKey);
+    var hidden = true;
+
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(tr('settings.homey', 'Homey')),
+        content: SizedBox(
+          width: 640,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  tr(
+                    'settings.homeyHelp',
+                    'For the Homey widgets on the dashboard. The address is your Homey’s on your home network — an address anywhere else is refused. Make the API key at my.homey.app under Settings → API Keys, allowed to see and control devices, and to see zones and flows.',
+                  ),
+                  style: TextStyle(color: context.look.textSecondary, fontSize: 14),
+                ),
+                const SizedBox(height: 14),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: TextField(
+                    controller: address,
+                    style: const TextStyle(fontSize: 18),
+                    decoration: InputDecoration(
+                      labelText: tr('settings.homeyAddress', 'Address'),
+                      hintText: '192.168.1.50',
+                      border: const OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                // Dots unless asked: the panel is on a wall, and the key
+                // works the house.
+                StatefulBuilder(
+                  builder: (context, setLocal) => TextField(
+                    controller: key,
+                    obscureText: hidden,
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    style: const TextStyle(fontSize: 18),
+                    decoration: InputDecoration(
+                      labelText: tr('settings.homeyApiKey', 'API key'),
+                      border: const OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          hidden
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                        ),
+                        onPressed: () => setLocal(() => hidden = !hidden),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(tr('settings.cancel', 'Cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(tr('settings.save', 'Save')),
+          ),
+        ],
+      ),
+    );
+
+    if (saved != true) return;
+    s.address = address.text.trim();
+    s.apiKey = key.text.trim();
+    await service.save();
+    // Apply straight away rather than waiting for a tile to ask.
+    unawaited(homey.ensure());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<ConfigService>().config.homey;
+    final homey = context.watch<HomeyService>();
+    final devices = homey.all.length;
+    return ListTile(
+      leading: Icon(
+        Icons.hub_outlined,
+        color: devices > 0 ? const Color(0xFF7E57C2) : null,
+      ),
+      title: Text(tr('settings.homey', 'Homey')),
+      subtitle: Text(
+        !s.isConfigured
+            ? tr('settings.homeyNotConfigured', 'Not configured — the Homey widgets have nothing to show')
+            : devices > 0
+            ? tr('settings.homeyDevices', '{address} — {count} devices{live}', {
+                'address': s.address,
+                'count': devices,
+                'live': homey.live ? tr('settings.homeyLive', ', live') : '',
+              })
+            : '${s.address} — ${homey.error ?? tr('widget.homey.asking', 'Asking Homey…')}',
+      ),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () => _edit(context),
     );
   }
 }
@@ -2095,6 +2255,24 @@ class _DashboardSettingsTile extends StatelessWidget {
                 service.save();
               },
             ),
+          ),
+          // Only here, on the panel: what is uploaded is run, and the
+          // editor asks nobody who they are.
+          SwitchListTile(
+            secondary: const Icon(Icons.code_rounded),
+            title: Text(tr('settings.codeWidgets', 'Widgets written in Dart')),
+            subtitle: Text(
+              tr(
+                'settings.codeWidgetsHelp',
+                'Lets the editor take widgets as Dart and build them into the panel. Anyone on your network who can open the editor could then run their own code here, so leave it off unless you are writing one.',
+              ),
+            ),
+            isThreeLine: true,
+            value: s.codeWidgets,
+            onChanged: (v) {
+              s.codeWidgets = v;
+              service.save();
+            },
           ),
         ],
       ],

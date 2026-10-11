@@ -12,6 +12,7 @@ import '../widget_registry.dart';
 import 'tile_bits.dart';
 import '../../l10n/dates.dart';
 import '../../l10n/l10n.dart';
+import '../../widgets/lcars.dart';
 
 /// One row a tile was asked for: what to look up, what to call it, and —
 /// as typed — what was paid for it, how many are held, when they were
@@ -260,6 +261,9 @@ class _MarketsTileState extends State<_MarketsTile>
   }
 }
 
+/// Words as the theme letters them: capitals on a console.
+String _cased(DashboardTheme t, String s) => t.isLcars ? lcarsCaps(s) : s;
+
 /// What everything held on the tile is worth, and what it has made or lost.
 /// A line for each currency, since pounds and dollars don't add up.
 class _Total extends StatelessWidget {
@@ -284,6 +288,18 @@ class _Total extends StatelessWidget {
     for (final h in holdings) {
       byCurrency.putIfAbsent(h.currency, () => []).add(h);
     }
+    if (t.isLcars) {
+      return Column(
+        children: [
+          for (final (i, MapEntry(key: currency, value: group))
+              in byCurrency.entries.indexed)
+            Padding(
+              padding: EdgeInsets.only(top: i == 0 ? 0 : lcarsLine),
+              child: _consoleLine(currency, group, k),
+            ),
+        ],
+      );
+    }
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 14 * k, vertical: 8 * k),
       decoration: BoxDecoration(
@@ -297,6 +313,39 @@ class _Total extends StatelessWidget {
             _line(currency, group, k),
         ],
       ),
+    );
+  }
+
+  /// The same line on a console: what it is all worth on a block capped on
+  /// the left, and beside it what it has made or lost, on a block of the
+  /// colour that says which.
+  Widget _consoleLine(String currency, List<Holding> group, double k) {
+    final value = group.fold<double>(0, (a, h) => a + h.value);
+    final known = group.where((h) => h.cost != null).toList();
+    final cost = known.fold<double>(0, (a, h) => a + h.cost!);
+    final gain = known.fold<double>(0, (a, h) => a + h.value) - cost;
+    final height = 30 * k;
+    return Row(
+      children: [
+        Expanded(
+          child: LcarsReadout(
+            colour: theme.block(3),
+            name: tr('widget.markets.holdings', 'Holdings'),
+            value: formatPrice(value, currency),
+            height: height,
+          ),
+        ),
+        if (known.isNotEmpty && cost > 0) ...[
+          const SizedBox(width: lcarsLine),
+          _ConsoleFigure(
+            text: '${formatGain(gain, currency)}  '
+                '${formatChange(gain / cost * 100)}',
+            colour: gain < 0 ? status.bad : status.good,
+            height: height,
+            end: true,
+          ),
+        ],
+      ],
     );
   }
 
@@ -435,7 +484,7 @@ class _Row extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  name,
+                  t.isLcars ? lcarsCaps(name) : name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -495,7 +544,14 @@ class _Row extends StatelessWidget {
                   fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
-              if (change != null)
+              if (change != null && t.isLcars)
+                _ConsoleFigure(
+                  text: formatChange(change),
+                  colour: colour,
+                  height: 17,
+                  end: true,
+                )
+              else if (change != null)
                 Text(
                   formatChange(change),
                   style: TextStyle(
@@ -508,6 +564,53 @@ class _Row extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// A figure on a small block of its own, on a console: black on [colour],
+/// which is what says whether it is good news. Rounded at its [end] where
+/// it finishes a row.
+class _ConsoleFigure extends StatelessWidget {
+  const _ConsoleFigure({
+    required this.text,
+    required this.colour,
+    required this.height,
+    this.end = false,
+  });
+
+  final String text;
+  final Color colour;
+  final double height;
+  final bool end;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: height,
+      alignment: Alignment.center,
+      padding: EdgeInsets.only(
+        left: height * 0.4,
+        right: height * (end ? 0.55 : 0.4),
+      ),
+      decoration: BoxDecoration(
+        color: colour,
+        borderRadius: BorderRadius.horizontal(
+          right: end ? Radius.circular(height / 2) : Radius.zero,
+        ),
+      ),
+      child: Text(
+        text,
+        maxLines: 1,
+        textScaler: TextScaler.noScaling,
+        style: TextStyle(
+          color: lcarsInk,
+          fontSize: height * 0.62,
+          height: 1,
+          fontWeight: FontWeight.w700,
+          fontFeatures: const [FontFeature.tabularFigures()],
+        ),
       ),
     );
   }
@@ -663,9 +766,19 @@ class _Card extends StatelessWidget {
                   ),
                 ..._facts(q, money),
               ];
+        final lcars = t.isLcars;
+        // A console's card has no box: it is headed by a bar, capped on the
+        // left, that carries its name and its small print, in colours of
+        // its own so one card can be told from the next.
+        final seed = lcarsIndex(pick.entry);
+        final bar = 22 * k;
         return Container(
-          padding: EdgeInsets.fromLTRB(14 * k, 12 * k, 14 * k, 12 * k),
-          decoration: BoxDecoration(
+          padding: lcars
+              ? EdgeInsets.only(top: 2 * k)
+              : EdgeInsets.fromLTRB(14 * k, 12 * k, 14 * k, 12 * k),
+          decoration: lcars
+              ? null
+              : BoxDecoration(
             color: t.textPrimary.withValues(alpha: 0.04),
             borderRadius: BorderRadius.circular(14 * k),
             border: Border.all(color: t.textSecondary.withValues(alpha: 0.12)),
@@ -673,6 +786,99 @@ class _Card extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (lcars)
+                Row(
+                  children: [
+                    Container(
+                      width: bar * 1.2,
+                      height: bar,
+                      decoration: BoxDecoration(
+                        color: t.block(seed),
+                        borderRadius: BorderRadius.horizontal(
+                          left: Radius.circular(bar / 2),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 8 * k),
+                    ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: c.maxWidth * 0.4),
+                      child: Text(
+                        lcarsCaps(name),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: t.accent,
+                          fontSize: 24 * k,
+                          height: 1.1,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 8 * k),
+                    Expanded(
+                      child: Container(
+                        height: bar,
+                        color: t.block(seed + 2),
+                        alignment: Alignment.bottomRight,
+                        padding: EdgeInsets.only(
+                          left: 6 * k,
+                          right: 6 * k,
+                          bottom: 2 * k,
+                        ),
+                        child: Text(
+                          lcarsCaps(sub),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: lcarsInk,
+                            fontSize: 13 * k,
+                            height: 1.1,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 10 * k),
+                    ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: c.maxWidth * 0.42),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              q == null ? (error ?? '…') : money(q.price),
+                              style: TextStyle(
+                                color: q == null
+                                    ? t.textSecondary
+                                    : t.textPrimary,
+                                fontSize: (q == null ? 14 : 26) * k,
+                                height: 1.1,
+                                fontWeight: FontWeight.w700,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                              ),
+                            ),
+                            if (change != null) ...[
+                              SizedBox(width: 8 * k),
+                              _ConsoleFigure(
+                                text: [formatChange(change), ?moved].join('  '),
+                                colour: colour,
+                                height: bar,
+                                end: true,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              else
               Row(
                 children: [
                   if (q?.image != null) ...[
@@ -790,6 +996,40 @@ class _Card extends StatelessWidget {
                     final rows =
                         c.maxHeight >= 300 * k && facts.length > n ? 2 : 1;
                     final shown = facts.take(n * rows).toList();
+                    if (lcars) {
+                      // Blocks, a black line apart, the first of each row
+                      // capped: a figure's name quiet at its start and the
+                      // figure heavy at its end. One that is good or bad
+                      // news is a block of the colour that says so.
+                      return Column(
+                        children: [
+                          for (var r = 0; r * n < shown.length; r++)
+                            Padding(
+                              padding: EdgeInsets.only(
+                                top: r == 0 ? 0 : lcarsLine,
+                              ),
+                              child: Row(
+                                children: [
+                                  for (var i = r * n; i < r * n + n; i++) ...[
+                                    if (i > r * n)
+                                      const SizedBox(width: lcarsLine),
+                                    Expanded(
+                                      child: i < shown.length
+                                          ? _consoleFact(
+                                              shown[i],
+                                              t.block(seed + i * 2 + 1),
+                                              26 * k,
+                                              capped: i == r * n,
+                                            )
+                                          : const SizedBox.shrink(),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                        ],
+                      );
+                    }
                     return Column(
                       children: [
                         for (var r = 0; r * n < shown.length; r++)
@@ -844,6 +1084,61 @@ class _Card extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  /// One of the card's figures as a console's block.
+  Widget _consoleFact(
+    (String, String, Color?) fact,
+    Color colour,
+    double height, {
+    required bool capped,
+  }) {
+    final size = height * 0.54;
+    return Container(
+      height: height,
+      padding: EdgeInsets.only(
+        left: height * (capped ? 0.5 : 0.25),
+        right: height * 0.25,
+      ),
+      decoration: BoxDecoration(
+        color: fact.$3 ?? colour,
+        borderRadius: BorderRadius.horizontal(
+          left: capped ? Radius.circular(height / 2) : Radius.zero,
+        ),
+      ),
+      child: Row(
+        children: [
+          // The name gives way to the figure, which goes to the far end.
+          Expanded(
+            child: Text(
+              lcarsCaps(fact.$1),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              softWrap: false,
+              textScaler: TextScaler.noScaling,
+              style: TextStyle(
+                color: lcarsInk.withValues(alpha: 0.65),
+                fontSize: size * 0.86,
+                height: 1,
+              ),
+            ),
+          ),
+          SizedBox(width: height * 0.25),
+          Text(
+            fact.$2,
+            maxLines: 1,
+            textScaler: TextScaler.noScaling,
+            style: TextStyle(
+              color: lcarsInk,
+              fontSize: size,
+              height: 1,
+              fontWeight: FontWeight.w700,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -929,6 +1224,8 @@ class _Chart extends CustomPainter {
       style: TextStyle(
         color: theme.textSecondary,
         fontSize: size,
+        // A painter inherits no font: a console's figures are named theirs.
+        fontFamily: theme.isLcars ? theme.fontFamily : null,
         fontFeatures: const [FontFeature.tabularFigures()],
       ),
     ),
@@ -1004,6 +1301,7 @@ class _Chart extends CustomPainter {
             color: c,
             fontSize: 10 * scale,
             fontWeight: FontWeight.w700,
+            fontFamily: theme.isLcars ? theme.fontFamily : null,
             fontFeatures: const [FontFeature.tabularFigures()],
           ),
         ),
@@ -1054,18 +1352,21 @@ class _Chart extends CustomPainter {
       ..lineTo(w, h)
       ..lineTo(0, h)
       ..close();
-    canvas.drawPath(
-      area,
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            colour.withValues(alpha: 0.28),
-            colour.withValues(alpha: 0),
-          ],
-        ).createShader(Rect.fromLTWH(0, 0, w, h)),
-    );
+    // A console draws in flat colour: the line alone, nothing shaded.
+    if (!theme.isLcars) {
+      canvas.drawPath(
+        area,
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              colour.withValues(alpha: 0.28),
+              colour.withValues(alpha: 0),
+            ],
+          ).createShader(Rect.fromLTWH(0, 0, w, h)),
+      );
+    }
     canvas.drawPath(
       line,
       Paint()
@@ -1103,6 +1404,7 @@ class _Chart extends CustomPainter {
             color: c,
             fontSize: 10 * scale,
             fontWeight: FontWeight.w700,
+            fontFamily: theme.isLcars ? theme.fontFamily : null,
           ),
         ),
         textDirection: TextDirection.ltr,
@@ -1555,7 +1857,7 @@ class _MoreBelowState extends State<_MoreBelow> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                   decoration: BoxDecoration(
-                    color: t.accent.withValues(alpha: .92),
+                    color: t.isLcars ? lcarsLit : t.accent.withValues(alpha: .92),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
@@ -1565,9 +1867,9 @@ class _MoreBelowState extends State<_MoreBelow> {
                       const SizedBox(width: 4),
                       Flexible(
                         child: Text(
-                        tr('widget.markets.scrollForMore',
+                        _cased(t, tr('widget.markets.scrollForMore',
                             'Scroll for {n, plural, one{# more} other{# more}}',
-                            {'n': widget.hidden}),
+                            {'n': widget.hidden})),
                         style: TextStyle(
                           color: ink,
                           fontSize: 12,

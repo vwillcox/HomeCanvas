@@ -1,7 +1,7 @@
 # Themes
 
-Sixteen themes ship with HomeCanvas: dark and light, glassy, glossy and
-flat. A theme dresses the **whole kiosk**: the dashboard, the photo browser,
+Seventeen themes ship with HomeCanvas: dark and light, glassy, glossy and
+flat, and one drawn as a starship's console. A theme dresses the **whole kiosk**: the dashboard, the photo browser,
 the music player, the weather panel, Settings and the rest. Photos and videos
 themselves are always shown on black.
 
@@ -13,7 +13,7 @@ below is the same dashboard page on the real panel, in that theme.
   [Obsidian](#obsidian) · [Synthwave](#synthwave) · [Midnight](#midnight) ·
   [Ember](#ember) · [Forest](#forest) · [Espresso](#espresso) ·
   [Terminal](#terminal) · [Terminal Night](#terminal-night) ·
-  [Nightstand](#nightstand)
+  [LCARS](#lcars) · [Nightstand](#nightstand)
 - [Light](#light): [Frost](#frost) · [Paper](#paper) · [Sorbet](#sorbet) ·
   [Swiss](#swiss)
 - [Making your own](#making-your-own)
@@ -101,6 +101,24 @@ room.
 
 ![Terminal Night](docs/screenshots/themes/terminal-night.jpg)
 
+### LCARS
+
+*Console · Antonio.* A starship's console: black, with bars of flat orange,
+lilac and blue swept round the corner of every panel, and tall condensed
+capitals. It is the one theme that changes the drawing as well as the
+colours:
+
+- each widget sits inside a bar and a rail rather than on a tile, with its
+  name lettered on the rail, and the panels sit against each other so their
+  bars run on as one;
+- buttons are solid blocks with their marks in black, a row of them joined
+  into one strip, and the one that is chosen or switched on is near-white;
+- a screen is headed by a text bar: an end cap, the title, and a bar carrying
+  the small print;
+- Settings lists its tabs as a rail of blocks down the left.
+
+It follows the LCARS skin of TT Launcher, colour for colour.
+
 ### Nightstand
 
 *Flat.* Deliberately plain and very high contrast: white and amber on black,
@@ -159,7 +177,9 @@ replaces that theme.
 | `glow`, `glowEnd` | Soft light from the top left and the bottom right |
 | `sheen` | Light along the top of each tile: 0 for none, about 0.05–0.1 for glass, more for gloss |
 | `cornerRadius`, `gap`, `shadow` | The shape of the tiles and the space between them |
-| `fontFamily` | Any of the twenty bundled fonts, for the whole kiosk |
+| `fontFamily` | Any of the twenty-one bundled fonts, for the whole kiosk |
+| `style` | `"lcars"` draws the theme as a console, like LCARS. Leave it out for tiles |
+| `palette` | With `style: "lcars"`, the colours its bars and blocks are drawn in, taken in turn |
 
 Colours are `#rrggbb`, or `#aarrggbb` for see-through. The built-in themes are
 held to WCAG contrast levels by a test (`test/theme_contrast_test.dart`): body

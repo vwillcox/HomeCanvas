@@ -168,7 +168,9 @@ class _TileRenderHostState extends State<TileRenderHost> {
                     config: r.config,
                     theme: r.theme,
                     settings: r.settings,
-                    framed: false,
+                    // A console's bars are drawn, so they are in the
+                    // picture; any other frame is a box the editor copies.
+                    framed: r.theme.isLcars,
                   ),
                 ),
               ],

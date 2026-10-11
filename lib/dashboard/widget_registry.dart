@@ -160,7 +160,11 @@ class WidgetCategory {
 
   /// Ubiquiti's own: a brand has its group, so its tiles are found together.
   static const unifi = 'UniFi';
+  static const homey = 'Homey';
   static const homeLab = 'Home lab';
+
+  /// Widgets installed from a file in the editor, not built in.
+  static const custom = 'Custom';
   static const other = 'Other';
 
   /// [category]'s name in the panel's language. The British name is also
@@ -177,7 +181,9 @@ class WidgetCategory {
     reference,
     network,
     unifi,
+    homey,
     homeLab,
+    custom,
     other,
   ];
 }
@@ -369,6 +375,9 @@ class WidgetRegistry {
       register(t);
     }
   }
+
+  /// Takes a type back out: a custom widget that has been removed.
+  static void unregister(String type) => _types.remove(type);
 
   static DashboardWidgetType? find(String type) => _types[type];
 

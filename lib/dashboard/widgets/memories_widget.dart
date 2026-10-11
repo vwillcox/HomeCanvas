@@ -10,6 +10,7 @@ import '../../widgets/remote_image.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
+import '../../look.dart';
 import '../../widgets/pause_when_hidden.dart';
 import '../../l10n/dates.dart';
 import '../../l10n/l10n.dart';
@@ -187,7 +188,10 @@ class _MemoriesWidgetState extends State<MemoriesWidget>
       child: LayoutBuilder(
         builder: (context, c) {
           return ClipRRect(
-            borderRadius: BorderRadius.circular(12),
+            // Square on a console, as its blocks are.
+            borderRadius: BorderRadius.circular(
+              context.look.isLcars ? 0 : 12,
+            ),
             child: Stack(
               fit: StackFit.expand,
               children: [

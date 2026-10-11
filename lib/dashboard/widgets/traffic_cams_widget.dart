@@ -10,6 +10,7 @@ import '../../widgets/shown_timers.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
+import '../../look.dart';
 
 /// A camera as a tile shows it: TfL's, or any still image address.
 typedef _Shown = ({String name, String url, String view});
@@ -218,7 +219,8 @@ class _CamView extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
+        // Square on a console, as its blocks are.
+        borderRadius: BorderRadius.circular(context.look.isLcars ? 0 : 8),
         child: Stack(
           fit: StackFit.expand,
           children: [

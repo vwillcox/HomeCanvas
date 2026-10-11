@@ -73,6 +73,45 @@ class FloatplaneLink implements VideoLink {
   String toString() => 'FloatplaneLink($id)';
 }
 
+/// A live camera on railcam.uk. Its id is the camera's name in the site's
+/// addresses: `RCCrewe1`.
+///
+/// Not a page yt-dlp knows: `RailcamService` reads the stream off it — see
+/// `VideoPlayerService.finders`.
+class RailcamLink implements VideoLink {
+  const RailcamLink(this.id);
+
+  @override
+  final String id;
+
+  @override
+  String get site => 'railcam';
+
+  @override
+  String get siteName => 'Railcam';
+
+  @override
+  String get url => 'https://railcam.uk/site/watch/anycam.php'
+      '?sz=xl&ti=${Uri.encodeQueryComponent(id)}';
+
+  /// The site's own small picture of the view.
+  @override
+  String get thumbnailUrl =>
+      'https://railcam.uk/images/camera_thumbs/${Uri.encodeComponent(id)}.png';
+
+  @override
+  Duration get start => Duration.zero;
+
+  @override
+  bool operator ==(Object other) => other is RailcamLink && other.id == id;
+
+  @override
+  int get hashCode => id.hashCode;
+
+  @override
+  String toString() => 'RailcamLink($id)';
+}
+
 /// A Nebula video. Its id is the video's slug, from `nebula.tv/videos/<slug>`.
 class NebulaLink implements VideoLink {
   const NebulaLink(this.id, {this.thumbnailUrl});

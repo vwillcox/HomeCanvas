@@ -87,6 +87,12 @@ class VideoPlayerService extends ChangeNotifier {
 
   final Map<String, (DateTime, Future<VideoStream>)> _streams = {};
 
+  /// Sites whose streams are found without yt-dlp, by [VideoLink.site]: a
+  /// live camera's own page names its stream outright. Each is given the
+  /// link and the height wanted.
+  final Map<String, Future<VideoStream> Function(VideoLink link, int height)>
+      finders = {};
+
   /// What mpv should open for [link], no taller than [maxHeight] (or the
   /// setting), as the site's account. Shared between the panel's player and
   /// the dashboard's tiles, so a tile tapped to go full screen does not ask
@@ -100,7 +106,7 @@ class VideoPlayerService extends ChangeNotifier {
     final cached = _streams[key];
     if (cached != null) return cached.$2;
 
-    final future = () async {
+    final future = finders[link.site]?.call(link, height) ?? () async {
       final account = await _sites[link.site]?.ytDlpAccount() ?? const [];
       final info = await ytDlp.run(
           [...YtDlp.streamArgs(height, hevc: YtDlp.hevcDecoder), link.url],
@@ -200,8 +206,7 @@ class VideoPlayerService extends ChangeNotifier {
     }
     if (session != _session) return;
 
-    final player = _player ??= await _newPlayer();
-    _controller ??= VideoController(player, configuration: videoConfig);
+    final player = await _ensurePlayer();
     final from = at ?? link.start;
     // The level first, so a loud video does not begin at mpv's 100%.
     await applyAudio(player, settings);
@@ -215,6 +220,37 @@ class VideoPlayerService extends ChangeNotifier {
     _stream = stream;
     _loading = false;
     notifyListeners();
+  }
+
+  Future<Player>? _making;
+
+  /// The one player, and its picture, made on first use — or ahead of it,
+  /// by [warm].
+  Future<Player> _ensurePlayer() => _making ??= () async {
+    try {
+      final player = await _newPlayer();
+      _player = player;
+      _controller = VideoController(player, configuration: videoConfig);
+      return player;
+    } catch (_) {
+      // Not kept: the next video tries again rather than failing as this did.
+      _making = null;
+      rethrow;
+    }
+  }();
+
+  /// Makes the player before there is a video for it. media_kit takes three
+  /// seconds or more over a player's first picture, and that was the wait
+  /// between touching a camera in a tile and seeing it. For tiles whose
+  /// videos are a touch away from full screen; nothing plays.
+  Future<void> warm() async {
+    if (_making != null) return;
+    try {
+      // The picture is ready when the player next answers.
+      await applyAudio(await _ensurePlayer(), settings);
+    } catch (e) {
+      debugPrint('Video: could not ready the player: $e');
+    }
   }
 
   Future<Player> _newPlayer() async {

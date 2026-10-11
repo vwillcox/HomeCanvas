@@ -308,6 +308,12 @@
     display: flex; flex-direction: column; user-select: none;
     transition: box-shadow .15s;
   }
+  /* A console theme (style "lcars") has no box behind a widget: the tile is
+     black, and its bars are in the kiosk's picture of it. Until that comes,
+     a bar down the side stands in for them. */
+  #canvas.lcars .tile { background: #000; border-color: transparent; border-radius: 0; }
+  #canvas.lcars .tile:not(.rendered) { box-shadow: inset 1cqw 0 0 var(--t-accent); padding-left: 1.6cqw; }
+  #canvas.lcars #cells i { border-radius: 0; }
   .tile:hover { box-shadow: var(--t-shadow, none), 0 0 0 2px rgba(166,200,255,.45); }
   .tile.selected { box-shadow: var(--t-shadow, none), 0 0 0 3px var(--accent), 0 0 24px rgba(166,200,255,.35); z-index: 3; }
   /* The tile under the finger goes above the others, so dragging it past an
@@ -514,6 +520,7 @@
     <span class="label" data-t="web.editor.alsoHere">Also here</span>
     <a href="/notes" title="Post a note to the wall — works from any phone in the house" data-t-title="web.editor.notesHint"><span class="i" aria-hidden="true">📝</span><span data-t="web.editor.notesBoard">Notes board</span></a>
     <a href="/list" title="Add to the shopping list the panel shows" data-t-title="web.editor.listHint"><span class="i" aria-hidden="true">🛒</span><span data-t="web.editor.shoppingList">Shopping list</span></a>
+    <a href="/widgets" title="Install widgets of your own: upload one, see it build, take one out" data-t-title="web.editor.widgetsHint"><span class="i" aria-hidden="true">🧩</span><span data-t="web.editor.customWidgets">Custom widgets</span></a>
     <a href="/senders" title="Who can share photos, notes and reminders from the phone app" data-t-title="web.editor.sendersHint"><span class="i" aria-hidden="true">📨</span><span data-t="web.editor.whoCanShare">Who can share</span></a>
     <span class="sep" aria-hidden="true"></span>
     <span class="label" data-t="web.editor.signInLabel">Sign in</span>
@@ -603,6 +610,19 @@
         </div>
         <p data-t="web.editor.doNotDisturbIsOn" class="help" id="volDnd" hidden>🔕 Do Not Disturb is on, so all of these are muted. They come back at these levels when it is turned off.</p>
         <p data-t="web.editor.separateFromTheMusicNotifications" class="help">Separate from the music. Notifications is the chime when something is shared; Speech is notes and bin reminders read aloud; News reader is articles read out; Timers is a timer's sound and voice. Saved as you drag.</p>
+      </div>
+    </section>
+
+    <section class="card" data-panel="homey">
+      <h2 class="panelHead" data-t="web.editor.panel.homey">Homey<span class="chev">▾</span></h2>
+      <div class="panelBody">
+        <label data-t="web.editor.homeyAddress" class="field" for="homeyAddress">Address</label>
+        <input type="text" id="homeyAddress" placeholder="192.168.1.50" autocomplete="off" spellcheck="false">
+        <label data-t="web.editor.homeyKey" class="field" for="homeyKey">API key</label>
+        <input type="password" id="homeyKey" autocomplete="new-password" spellcheck="false">
+        <div style="margin-top:10px"><button data-t="web.editor.homeySave" id="homeySave">Save Homey</button></div>
+        <p class="help" id="homeyStatus"></p>
+        <p data-t="web.editor.homeyHelp" class="help">For every Homey widget. The address is your Homey's on your home network; an address anywhere else is refused. Make the key at my.homey.app under Settings → API Keys. A saved key is never shown again or sent back to this page — leave the box empty to keep it, unless the address changes. Saved at once, not with the layout.</p>
       </div>
     </section>
 
@@ -711,7 +731,7 @@ const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    if (!r.ok) throw new Error(path + " -> " + r.status);
+    if (!r.ok) throw Object.assign(new Error(path + " -> " + r.status), { status: r.status });
     return r.json();
   },
 };
@@ -833,6 +853,7 @@ function applyTheme() {
   s.setProperty("--t-radius", (radius / 1920 * 100) + "cqw");
   s.setProperty("--t-shadow", shadow ? "0 6px 18px rgba(0,0,0,.25)" : "none");
   canvas.style.color = cssColour(t.textPrimary);
+  canvas.classList.toggle("lcars", t.style === "lcars");
 }
 
 /* The theme's background as CSS, for the canvas and for the theme swatches.
@@ -985,8 +1006,14 @@ function tilePx(w) {
 function shotKey(w) {
   const px = tilePx(w);
   const d = state.dashboard;
+  // A console's bars are in the picture, and they depend on which widget
+  // this is and which half of the grid it is in: its number is lettered on
+  // them, and the lower half's sweep the other way.
+  const t = currentTheme();
+  const bars = t && t.style === "lcars"
+    ? [w.id, w.y * 2 + w.height > state.schema.grid.rows] : 0;
   return JSON.stringify([w.type, w.options, w.fontFamily || "", w.fontScale || 1,
-    px.width, px.height, d.themeId, d.roundedCorners !== false, d.tileShadows !== false]);
+    px.width, px.height, d.themeId, d.roundedCorners !== false, d.tileShadows !== false, bars]);
 }
 
 function requestShots(delay) {
@@ -2552,11 +2579,16 @@ function renderThemes() {
     const on = t.id === (currentTheme() || {}).id;
     b.setAttribute("aria-checked", String(on));
     if (on) b.className = "on";
-    const tile = "background:" + sheenCss(t) + "," + cssColour(t.surface) + ";border-color:" +
+    // A console's tile is a bar swept round a corner, each in its own colour.
+    const bars = n => "background:none;border:0 solid " +
+      cssColour((t.palette || [])[n] || t.accent) +
+      ";border-width:4px 0 0 5px;border-radius:7px 0 0 0";
+    const tile = n => t.style === "lcars" ? bars(n) :
+      "background:" + sheenCss(t) + "," + cssColour(t.surface) + ";border-color:" +
       cssColour(t.border) + ";border-radius:" + Math.min(6, (t.cornerRadius || 0) / 4) + "px";
     b.innerHTML =
       '<span class="swatch" style="background:' + themeBackground(t, "%") + '">' +
-        '<i style="' + tile + '"></i><i style="' + tile + '"></i><i style="' + tile + '"></i>' +
+        '<i style="' + tile(0) + '"></i><i style="' + tile(1) + '"></i><i style="' + tile(2) + '"></i>' +
         '<b style="background:' + cssColour(t.accent) + '"></b>' +
       "</span>" + escapeHtml(t.name);
     b.onclick = () => {
@@ -2624,6 +2656,7 @@ async function load(quiet) {
     render();
     renderBrightness();
     renderVolumes();
+    renderHomey();
     setStatus(t("web.editor.upToDate", "Up to date"), "ok");
   } catch (e) {
     setStatus(t("web.editor.couldNotReachTheKiosk", "Could not reach the kiosk"), true);
@@ -2669,6 +2702,60 @@ async function renderVolumes() {
       send();
     };
   }
+}
+
+/* Custom widgets are installed on a page of their own. Coming back to this
+   one, the palette is asked for again: what it offers may have changed. */
+window.addEventListener("focus", async () => {
+  if (!state.schema) return;
+  try {
+    const schema = await api.get("/api/schema");
+    const had = state.schema.widgetTypes.map(w => w.type).join();
+    if (schema.widgetTypes.map(w => w.type).join() === had) return;
+    state.schema.widgetTypes = schema.widgetTypes;
+    state.schema.categories = schema.categories;
+    renderPalette();
+    render();
+  } catch (e) {}
+});
+
+/* Where the Homey is and the key to it, for every Homey widget. The key is
+   only ever sent, never read back: the kiosk says whether it has one. */
+async function renderHomey() {
+  const address = document.getElementById("homeyAddress");
+  const key = document.getElementById("homeyKey");
+  const save = document.getElementById("homeySave");
+  const status = document.getElementById("homeyStatus");
+  const show = h => {
+    address.value = h.address || "";
+    key.value = "";
+    key.placeholder = h.hasKey
+      ? t("web.editor.homeyKeySaved", "Saved — leave empty to keep it")
+      : "";
+    status.textContent = !h.address || !h.hasKey
+      ? t("web.editor.homeyNotSet", "Not set up yet.")
+      : h.devices
+      ? t("web.editor.homeyReached", "Reached: {count} devices", { count: h.devices }) +
+        (h.live ? t("web.editor.homeyLive", ", changes arriving live") : "")
+      : (h.error || t("web.editor.homeyNoAnswer", "No answer from Homey yet."));
+  };
+  try { show(await api.get("/api/homey")); }
+  catch (e) { status.textContent = "—"; return; }
+  save.onclick = async () => {
+    save.disabled = true;
+    status.textContent = t("web.editor.homeyAsking", "Asking Homey…");
+    try {
+      show(await api.put("/api/homey", { address: address.value, key: key.value }));
+      // The pickers: what the Homey has is now there to choose from.
+      state.schema.lists = (await api.get("/api/schema")).lists;
+      render();
+    } catch (e) {
+      status.textContent = e.status === 409
+        ? t("web.editor.homeyKeyAgain", "Enter the API key again to change the address.")
+        : t("web.editor.homeyCouldNotSave", "Could not save");
+    }
+    save.disabled = false;
+  };
 }
 
 /* The backlight. Sent as the slider moves, one request at a time with the

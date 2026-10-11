@@ -190,7 +190,7 @@ class _LineRow extends StatelessWidget {
             width: 8,
             decoration: BoxDecoration(
               color: line.colour,
-              borderRadius: BorderRadius.circular(3),
+              borderRadius: BorderRadius.circular(tileCorner(theme, 3)),
               border: Border.all(color: theme.textSecondary.withValues(alpha: .25)),
             ),
           ),
@@ -483,7 +483,9 @@ class _ArrivalRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
           decoration: BoxDecoration(
             color: colour,
-            borderRadius: BorderRadius.circular(bus ? 4 : 10),
+            borderRadius: BorderRadius.circular(
+              tileCorner(theme, bus ? 4 : 10),
+            ),
           ),
           child: Text(
             a.line,

@@ -14,6 +14,8 @@ import '../../services/video_player_service.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import '../../l10n/l10n.dart';
+import '../../widgets/lcars.dart';
+import 'tile_bits.dart';
 
 /// Headlines from an RSS or Atom feed.
 class DashboardNewsWidget extends StatelessWidget {
@@ -118,6 +120,44 @@ class DashboardNewsWidget extends StatelessWidget {
     final t = w.theme;
     final host = (Uri.tryParse(link)?.host ?? '').replaceFirst('www.', '');
     final label = w.option('tabLabel', 'both');
+    if (t.isLcars) {
+      // A console's tab is a block, in the feed's own colour, a black line
+      // from the next, and near-white for the one showing.
+      return Container(
+        height: 44,
+        margin: const EdgeInsets.symmetric(horizontal: lcarsLine / 2),
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        color: selected ? lcarsLit : t.block(lcarsIndex(link)),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (label != 'name')
+              _SourceIcon(
+                icon: icon,
+                name: name,
+                link: link,
+                theme: t,
+                side: label == 'icon' ? 28 : 18,
+              ),
+            if (label == 'both') const SizedBox(width: 6),
+            if (label != 'icon')
+              Flexible(
+                child: Text(
+                  lcarsCaps(name.isNotEmpty ? name : host),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: lcarsInk,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+    }
     return Container(
       height: 40,
       padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -517,14 +557,16 @@ class _SourceIcon extends StatelessWidget {
       height: side,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: theme.accent.withValues(alpha: 0.25),
-          borderRadius: BorderRadius.circular(4),
+          color: theme.isLcars
+              ? lcarsInk.withValues(alpha: 0.2)
+              : theme.accent.withValues(alpha: 0.25),
+          borderRadius: BorderRadius.circular(tileCorner(theme, 4)),
         ),
         child: Center(
           child: Text(
             _initial(),
             style: TextStyle(
-              color: theme.textPrimary,
+              color: theme.isLcars ? lcarsInk : theme.textPrimary,
               fontSize: side * 0.625,
               height: 1,
               fontWeight: FontWeight.w700,
@@ -535,7 +577,7 @@ class _SourceIcon extends StatelessWidget {
     );
     if (icon == null) return letter;
     return ClipRRect(
-      borderRadius: BorderRadius.circular(4),
+      borderRadius: BorderRadius.circular(tileCorner(theme, 4)),
       child: CachedNetworkImage(
         imageUrl: icon!,
         width: side,

@@ -340,7 +340,7 @@ if [ -x "$BINARY" ] && [ -f "$UNIT" ]; then
       warn "Rebuilding what's here."
     fi
     FL=$(flutter_cmd)
-    run "Building (this takes a few minutes)" bash -c "cd '$APP_DIR' && '$FL' pub get && '$FL' build linux --release" || die "The build failed."
+    run "Building (this takes a few minutes)" bash -c "cd '$APP_DIR' && bash scripts/widget-build.sh generate && '$FL' pub get && '$FL' build linux --release" || die "The build failed."
     systemctl --user restart homecanvas.service 2>/dev/null || true
     # The screen controller runs from the same copy, so it is restarted to
     # pick up its new version too — only if it was set up.
@@ -428,7 +428,7 @@ fi
 # 4 -------------------------------------------------------------------------
 step "Building HomeCanvas"
 say "${DIM}This takes a few minutes on a Raspberry Pi.${N}"
-run "Building" bash -c "cd '$APP_DIR' && '$FL' build linux --release" || die "The build failed."
+run "Building" bash -c "cd '$APP_DIR' && bash scripts/widget-build.sh generate && '$FL' build linux --release" || die "The build failed."
 [ -x "$BINARY" ] || die "The build finished, but $BINARY isn't there."
 ok "Built"
 

@@ -484,20 +484,73 @@ class UnifiPresenceWidget extends StatelessWidget {
         )
         .toList();
 
-    return ListView(
-      children: [
-        for (final c in list)
-          _PresenceRow(
-            theme: t,
-            name: c.displayName,
-            here: true,
-            detail: c.connectedFor == null
-                ? (c.wireless ? 'wireless' : 'wired')
-                : 'for ${formatUptime(c.connectedFor!)}',
-          ),
-        for (final name in missing)
-          _PresenceRow(theme: t, name: name, here: false, detail: 'away'),
-      ],
+    final rows = [
+      for (final c in list)
+        (
+          name: c.displayName,
+          here: true,
+          detail: c.connectedFor == null
+              ? (c.wireless ? 'wireless' : 'wired')
+              : 'for ${formatUptime(c.connectedFor!)}',
+        ),
+      for (final name in missing) (name: name, here: false, detail: 'away'),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, c) {
+        // As large as the tile allows with everyone still in view: its
+        // height shared out between the rows, and the type no bigger than
+        // lets the longest name sit beside its detail without being cut
+        // short. Never below the size it always was; with more names than
+        // fit at that, the list scrolls.
+        final scaler = MediaQuery.textScalerOf(context).scale(1);
+        final row = c.maxHeight.isFinite
+            ? (c.maxHeight / rows.length).clamp(30.0, 84.0)
+            : 30.0;
+        final style = DefaultTextStyle.of(context).style;
+        double widthOf(String s, FontWeight weight) {
+          final p = TextPainter(
+            text: TextSpan(
+              text: s,
+              style: style.copyWith(fontSize: 100, fontWeight: weight),
+            ),
+            textDirection: TextDirection.ltr,
+            maxLines: 1,
+          )..layout();
+          final w = p.width / 100;
+          p.dispose();
+          return w;
+        }
+
+        String longest(Iterable<String> all) =>
+            all.reduce((a, b) => b.length > a.length ? b : a);
+        final name = widthOf(longest(rows.map((r) => r.name)), FontWeight.w600);
+        final detail = widthOf(
+          longest(rows.map((r) => r.detail)),
+          FontWeight.w400,
+        );
+        // The dot and the gaps round the name come to 1.7 of the type size,
+        // and a little more is left so nothing sits hard against the edge.
+        final byWidth = c.maxWidth / (name + detail * 0.72 + 1.9);
+        final byHeight = row * 0.62;
+        final font =
+            (byWidth < byHeight ? byWidth : byHeight).clamp(16.0, 60.0) /
+            (scaler <= 0 ? 1 : scaler);
+        return ListView(
+          padding: EdgeInsets.zero,
+          itemExtent: row,
+          children: [
+            for (final r in rows)
+              _PresenceRow(
+                theme: t,
+                name: r.name,
+                here: r.here,
+                detail: r.detail,
+                size: font,
+              ),
+          ],
+        );
+      },
     );
   }
 }
@@ -508,6 +561,7 @@ class _PresenceRow extends StatelessWidget {
     required this.name,
     required this.here,
     required this.detail,
+    this.size = 16,
   });
 
   final DashboardTheme theme;
@@ -515,21 +569,24 @@ class _PresenceRow extends StatelessWidget {
   final bool here;
   final String detail;
 
+  /// The name's type size; the dot and the detail are in proportion.
+  final double size;
+
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
+      padding: EdgeInsets.zero,
       child: Row(
         children: [
           Container(
-            width: 10,
-            height: 10,
+            width: size * 0.6,
+            height: size * 0.6,
             decoration: BoxDecoration(
               color: here ? const Color(0xFF4ADE80) : theme.textSecondary,
               shape: BoxShape.circle,
             ),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: size * 0.6),
           Expanded(
             child: Text(
               name,
@@ -537,15 +594,20 @@ class _PresenceRow extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: here ? theme.textPrimary : theme.textSecondary,
-                fontSize: 16,
+                fontSize: size,
+                height: 1.1,
                 fontWeight: here ? FontWeight.w600 : FontWeight.w400,
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: size * 0.5),
           Text(
             detail,
-            style: TextStyle(color: theme.textSecondary, fontSize: 12),
+            style: TextStyle(
+              color: theme.textSecondary,
+              fontSize: size * 0.72,
+              height: 1.1,
+            ),
           ),
         ],
       ),
@@ -752,42 +814,89 @@ class UnifiClientsWidget extends StatelessWidget {
         return y.compareTo(x);
       });
 
-    return ListView(
-      children: [
-        for (final c in clients)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(
-              children: [
-                Icon(
-                  c.wireless ? Icons.wifi : Icons.settings_ethernet,
-                  size: 16,
-                  color: t.textSecondary,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  flex: 3,
-                  child: Text(
-                    c.displayName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: t.textPrimary, fontSize: 14),
-                  ),
-                ),
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    byId[c.uplinkDeviceId]?.name ?? c.ipAddress,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.right,
-                    style: TextStyle(color: t.textSecondary, fontSize: 12),
-                  ),
-                ),
-              ],
-            ),
-          ),
-      ],
+    return LayoutBuilder(
+      builder: (context, c0) {
+        // Name, address and what it is connected through. On a narrow tile
+        // the address is kept and the uplink gives way: the address is the
+        // one you come here to read off.
+        final roomy = c0.maxWidth >= 380;
+        // As large as lets every client be seen at once: the tile's height
+        // shared out between them, up to a size that is plenty. With more
+        // clients than fit at the smallest readable size, the list scrolls
+        // as it always did.
+        final scaler = MediaQuery.textScalerOf(context).scale(1);
+        final row = clients.isEmpty || !c0.maxHeight.isFinite
+            ? 26.0
+            : (c0.maxHeight / clients.length).clamp(26.0, 48.0);
+        final font = row * 0.66 / (scaler <= 0 ? 1 : scaler);
+        return ListView(
+          padding: EdgeInsets.zero,
+          itemExtent: row,
+          children: [
+            for (final c in clients)
+              Row(
+                  children: [
+                    Icon(
+                      c.wireless ? Icons.wifi : Icons.settings_ethernet,
+                      size: row * 0.6,
+                      color: t.textSecondary,
+                    ),
+                    SizedBox(width: row * 0.3),
+                    Expanded(
+                      flex: 3,
+                      child: Text(
+                        c.displayName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: t.textPrimary,
+                          fontSize: font,
+                          height: 1.1,
+                        ),
+                      ),
+                    ),
+                    if (c.ipAddress.isNotEmpty) ...[
+                      SizedBox(width: row * 0.3),
+                      // A column of its own width, set to the right, so the
+                      // addresses sit under one another.
+                      SizedBox(
+                        width: row * 4.6,
+                        child: Text(
+                          c.ipAddress,
+                          maxLines: 1,
+                          textAlign: TextAlign.right,
+                          style: TextStyle(
+                            color: t.accent,
+                            fontSize: font * 0.93,
+                            height: 1.1,
+                            // So the addresses line up down the list.
+                            fontFeatures: const [
+                              FontFeature.tabularFigures(),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                    if (roomy)
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          byId[c.uplinkDeviceId]?.name ?? '',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.right,
+                          style: TextStyle(
+                            color: t.textSecondary,
+                            fontSize: font * 0.85,
+                            height: 1.1,
+                          ),
+                        ),
+                      ),
+                  ],
+              ),
+          ],
+        );
+      },
     );
   }
 }

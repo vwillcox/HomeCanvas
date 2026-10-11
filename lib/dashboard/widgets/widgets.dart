@@ -11,8 +11,11 @@ import 'countdowns_widget.dart';
 import 'history_widget.dart';
 import 'github_widget.dart';
 import 'home_assistant_widget.dart';
+import 'custom/custom_registry.dart';
+import 'homey_widgets.dart';
 import 'news_widget.dart';
 import 'omarchy_widget.dart';
+import 'railcam_widget.dart';
 import 'rain_widget.dart';
 import 'reminders_widget.dart';
 import 'spotify_widget.dart';
@@ -88,11 +91,28 @@ void registerBuiltInWidgets() {
     transitWidgetType,
     planesWidgetType,
     trafficCamsWidgetType,
+    railcamWidgetType,
     tidesWidgetType,
     fuelWidgetType,
     lightsWidgetType,
     rainWidgetType,
     homeAssistantWidgetType,
+    homeyWidgetType,
+    homeyRoomWidgetType,
+    homeyLightsWidgetType,
+    homeyFlowsWidgetType,
+    homeyColourWidgetType,
+    homeyFanWidgetType,
+    homeyHouseWidgetType,
+    homeyMoodsWidgetType,
+    homeyAlertsWidgetType,
+    homeyClimateWidgetType,
+    homeyEnergyWidgetType,
+    homeyHistoryWidgetType,
+    homeyPresenceWidgetType,
+    homeyVariablesWidgetType,
+    homeyTimelineWidgetType,
+    homeySystemWidgetType,
     immichLibraryWidgetType,
     historyWidgetType,
     githubWidgetType,
@@ -105,4 +125,6 @@ void registerBuiltInWidgets() {
     nebulaWidgetType,
     choresWidgetType,
   ]);
+  // After the app's own, so none of them can be taken the place of.
+  registerCustomCodeWidgets();
 }

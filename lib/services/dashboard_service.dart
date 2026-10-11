@@ -23,6 +23,10 @@ import 'notes_service.dart';
 import 'shopping_service.dart';
 import 'timer_sounds.dart';
 import 'video_site.dart';
+import 'code_widgets.dart';
+import 'custom_widgets.dart';
+import 'homey_service.dart';
+import 'local_network.dart';
 
 /// Hosts the dashboard's web editor and the small API behind it.
 ///
@@ -319,19 +323,10 @@ class DashboardService extends ChangeNotifier {
         await request.response.close();
         return;
       }
-      // The editor is served to a browser on the same network, which is also
-      // where the requests come from. No credentials are involved and nothing
-      // here reaches beyond this app's own configuration.
-      request.response.headers
-        ..set('Access-Control-Allow-Origin', '*')
-        ..set('Cache-Control', 'no-store');
-
-      if (request.method == 'OPTIONS') {
-        request.response.headers
-          ..set('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE, OPTIONS')
-          ..set('Access-Control-Allow-Headers', 'Content-Type');
-        return await _status(request, HttpStatus.noContent);
-      }
+      // Nothing here says a page from elsewhere may read the answer, so a
+      // browser will not let one: the editor's pages are served from here,
+      // and ask as themselves. Widgets' settings have passwords in them.
+      request.response.headers.set('Cache-Control', 'no-store');
 
       if (path == '/' || path == '/index.html') {
         return await _serveEditor(request);
@@ -355,8 +350,14 @@ class DashboardService extends ChangeNotifier {
           'lists': {
             'albums': await _albumChoices(),
             'haEntities': await _haChoices(),
+            'homeyDevices': await _choices(homeyDevices),
+            'homeyLights': await _choices(homeyLights),
+            'homeyZones': await _choices(homeyZones),
+            'homeyFlows': await _choices(homeyFlows),
+            for (final e in extraLists.entries) e.key: await _choices(e.value),
             'voices': await _voiceChoices(),
             'timerSounds': await _timerSoundChoices(),
+            'railcams': await _choices(railcams),
           },
         });
       }
@@ -374,6 +375,10 @@ class DashboardService extends ChangeNotifier {
         return;
       }
       if (path == '/api/render' && request.method == 'POST') {
+        // A tile drawn to order shows what its widget fetched.
+        if (!_fromThisSite(request)) {
+          return await _status(request, HttpStatus.forbidden);
+        }
         return await _render(request);
       }
       if (path == '/api/dashboard' && request.method == 'GET') {
@@ -434,6 +439,64 @@ class DashboardService extends ChangeNotifier {
         }
         return await _json(request, {'panels': settings.editorPanels});
       }
+      // Widgets installed from a file: listed, uploaded, handed back and
+      // removed. An upload is a description, not a program — it is read,
+      // checked and drawn from, never run — but it does say what address
+      // the panel should fetch, so it is taken only from the editor's own
+      // page on the local network.
+      if (path == '/api/widgets' || path.startsWith('/api/widgets/')) {
+        if (!_requireLocal(request)) return;
+        if (request.method != 'GET' && !_fromThisSite(request)) {
+          return await _status(request, HttpStatus.forbidden);
+        }
+        if (path == '/api/widgets/build' || path.startsWith('/api/widgets/code')) {
+          return await _codeWidgetsApi(request, path);
+        }
+        return await _widgetsApi(request, path);
+      }
+      // Where the Homey is and the key to it: Settings' own, set from here
+      // as well. The key goes in and never comes back out — the page is told
+      // only that there is one.
+      if (path == '/api/homey') {
+        if (!_requireLocal(request)) return;
+        final homey = _config.config.homey;
+        if (request.method == 'PUT') {
+          if (!_fromThisSite(request)) {
+            return await _status(request, HttpStatus.forbidden);
+          }
+          final data = jsonDecode(await _body(request));
+          final address = data is Map ? data['address'] : null;
+          final key = data is Map ? data['key'] : null;
+          if (address is! String ||
+              address.length > 200 ||
+              (key != null && (key is! String || key.length > 2000))) {
+            return await _status(request, HttpStatus.badRequest);
+          }
+          final given = key is String && key.trim().isNotEmpty;
+          // Left empty, the key already there is kept — but only for the
+          // Homey it was given for. Otherwise anything on the network could
+          // name itself as the Homey here and be sent the key.
+          if (homeyKeyNeeded(homey.address, address, homey.apiKey, given)) {
+            return await _status(request, HttpStatus.conflict);
+          }
+          homey.address = address.trim();
+          if (given) homey.apiKey = key.trim();
+          await _config.save();
+        } else if (request.method != 'GET') {
+          return await _status(request, HttpStatus.methodNotAllowed);
+        }
+        var status = const <String, dynamic>{};
+        try {
+          status =
+              await homeyStatus?.call().timeout(const Duration(seconds: 12)) ??
+              status;
+        } catch (_) {}
+        return await _json(request, {
+          'address': homey.address,
+          'hasKey': homey.apiKey.isNotEmpty,
+          ...status,
+        });
+      }
       // The backlight: live, not part of the layout's Save, since you judge
       // it by looking at the panel as you drag.
       if (path == '/api/brightness') {
@@ -479,6 +542,12 @@ class DashboardService extends ChangeNotifier {
         if (!_requireLocal(request)) return;
         return await _serveAsset(
             request, 'assets/dashboard/notes.html', ContentType.html);
+      }
+      // Custom widgets: installing them, and watching one build.
+      if (path == '/widgets' || path == '/widgets/') {
+        if (!_requireLocal(request)) return;
+        return await _serveAsset(
+            request, 'assets/dashboard/widgets.html', ContentType.html);
       }
       if (path == '/list' || path == '/list/') {
         if (!_requireLocal(request)) return;
@@ -618,20 +687,7 @@ class DashboardService extends ChangeNotifier {
   /// port. A reverse proxy in front of this would defeat it — every request
   /// would then appear to come from the proxy — which is precisely why these
   /// pages should not be proxied.
-  static bool _isLocal(InternetAddress? address) {
-    if (address == null) return false;
-    if (address.isLoopback) return true;
-    final a = address.address;
-    if (a.startsWith('192.168.') || a.startsWith('10.')) return true;
-    // 172.16.0.0 - 172.31.255.255
-    final m = RegExp(r'^172\.(\d{1,2})\.').firstMatch(a);
-    if (m != null) {
-      final second = int.parse(m.group(1)!);
-      if (second >= 16 && second <= 31) return true;
-    }
-    // Link-local, and IPv6 unique-local / loopback.
-    return a.startsWith('169.254.') || a.startsWith('fd') || a == '::1';
-  }
+  static bool _isLocal(InternetAddress? address) => isLocalAddress(address);
 
   @visibleForTesting
   static bool debugIsLocal(InternetAddress address) => _isLocal(address);
@@ -795,6 +851,20 @@ class DashboardService extends ChangeNotifier {
     if (!name.contains('.')) return true;
     return _localSuffixes.any(name.endsWith);
   }
+
+  /// Whether a change of the Homey's address from [saved] to [address] has
+  /// to come with the key again: there is one saved, it was saved for
+  /// somewhere else, and none was [given].
+  @visibleForTesting
+  static bool homeyKeyNeeded(
+    String saved,
+    String address,
+    String savedKey,
+    bool given,
+  ) =>
+      !given &&
+      savedKey.isNotEmpty &&
+      HomeyService.baseOf(address) != HomeyService.baseOf(saved);
 
   /// Answers [request] with [code] and nothing else.
   static Future<void> _status(HttpRequest request, int code) async {
@@ -1029,6 +1099,176 @@ class DashboardService extends ChangeNotifier {
       return const {};
     }
   }
+
+  /// What the Homey has, id to name, for the Homey widgets' pickers. Empty
+  /// until Settings has its address and key.
+  Future<Map<String, String>> Function()? homeyDevices;
+
+  /// How many devices the Homey answered with, whether changes are arriving
+  /// live, and what went wrong if anything did.
+  Future<Map<String, dynamic>> Function()? homeyStatus;
+  Future<Map<String, String>> Function()? homeyLights;
+  Future<Map<String, String>> Function()? homeyZones;
+  Future<Map<String, String>> Function()? homeyFlows;
+
+  /// Widgets uploaded as Dart, and the build that makes them part of the
+  /// app.
+  CodeWidgets? codeWidgets;
+
+  /// Says [message] with [code], in words for whoever is at the editor.
+  Future<void> _say(HttpRequest request, int code, String message) {
+    request.response
+      ..statusCode = code
+      ..headers.contentType = ContentType.text
+      ..write(message);
+    return request.response.close();
+  }
+
+  Future<void> _codeWidgetsApi(HttpRequest request, String path) async {
+    final code = codeWidgets;
+    if (code == null) return _status(request, HttpStatus.notFound);
+    final name = request.uri.queryParameters['name'] ?? '';
+    Future<void> state() => _json(request, {
+      'enabled': settings.codeWidgets,
+      'available': code.available,
+      'installed': code.installed,
+      'build': code.status(),
+    });
+
+    if (path == '/api/widgets/build' && request.method == 'GET') {
+      return state();
+    }
+    if (path == '/api/widgets/code/example' && request.method == 'GET') {
+      request.response.headers.set(
+        'Content-Disposition',
+        'attachment; filename="tide_curve.dart"',
+      );
+      return _serveAsset(
+        request,
+        'assets/dashboard/example_widget.dart',
+        ContentType.text,
+      );
+    }
+    if (path != '/api/widgets/code') {
+      return _status(request, HttpStatus.notFound);
+    }
+    if (request.method == 'GET') {
+      final source = code.source(name);
+      if (source == null) return _status(request, HttpStatus.notFound);
+      request.response
+        ..headers.contentType = ContentType.text
+        ..headers.set(
+          'Content-Disposition',
+          'attachment; filename="$name.dart"',
+        )
+        ..write(source);
+      return request.response.close();
+    }
+    // Everything past here runs what was uploaded.
+    if (!settings.codeWidgets) {
+      return _say(
+        request,
+        HttpStatus.forbidden,
+        'Widgets written in Dart are switched off. Switch them on at the '
+        'panel: Settings → Dashboard → Widgets written in Dart.',
+      );
+    }
+    final String? refused;
+    switch (request.method) {
+      case 'POST':
+        refused = await code.install(name, await _body(request));
+      case 'DELETE':
+        refused = await code.remove(name);
+      default:
+        return _status(request, HttpStatus.methodNotAllowed);
+    }
+    if (refused != null) {
+      return _say(request, HttpStatus.badRequest, refused);
+    }
+    request.response.statusCode = HttpStatus.accepted;
+    return state();
+  }
+
+  /// The widgets installed from files, for the editor to add to.
+  CustomWidgets? customWidgets;
+
+  Future<void> _widgetsApi(HttpRequest request, String path) async {
+    final custom = customWidgets;
+    if (custom == null) return _status(request, HttpStatus.notFound);
+    final id = request.uri.queryParameters['id'] ?? '';
+    Future<void> listed() => _json(request, {
+      'widgets': [for (final s in custom.all) s.toJson()],
+    });
+
+    // The one to start from, and any installed one to change.
+    if (path == '/api/widgets/example' && request.method == 'GET') {
+      request.response.headers.set(
+        'Content-Disposition',
+        'attachment; filename="sea_state.json"',
+      );
+      return _serveAsset(
+        request,
+        'assets/dashboard/example-widget.json',
+        ContentType.json,
+      );
+    }
+    if (path == '/api/widgets/file' && request.method == 'GET') {
+      final spec = custom.spec(id);
+      if (spec == null) return _status(request, HttpStatus.notFound);
+      request.response
+        ..headers.contentType = ContentType.json
+        ..headers.set(
+          'Content-Disposition',
+          'attachment; filename="${spec.id}.json"',
+        )
+        ..write(spec.source);
+      return request.response.close();
+    }
+    if (path != '/api/widgets') return _status(request, HttpStatus.notFound);
+
+    switch (request.method) {
+      case 'GET':
+        return listed();
+      case 'POST':
+        try {
+          await custom.install(await _body(request));
+        } on FormatException catch (e) {
+          // In words, for whoever wrote the file.
+          request.response
+            ..statusCode = HttpStatus.badRequest
+            ..headers.contentType = ContentType.text
+            ..write(e.message);
+          return request.response.close();
+        }
+        return listed();
+      case 'DELETE':
+        if (!await custom.remove(id)) {
+          return _status(request, HttpStatus.notFound);
+        }
+        return listed();
+    }
+    return _status(request, HttpStatus.methodNotAllowed);
+  }
+
+  /// More pickers' lists, by the name a widget's option asks for them
+  /// under: whoever supplies one puts it here.
+  final Map<String, Future<Map<String, String>> Function()> extraLists = {};
+
+  /// A picker's list, or nothing when whoever supplies it is not answering.
+  Future<Map<String, String>> _choices(
+    Future<Map<String, String>> Function()? fetch,
+  ) async {
+    if (fetch == null) return const {};
+    try {
+      return await fetch().timeout(const Duration(seconds: 6));
+    } catch (_) {
+      return const {};
+    }
+  }
+
+  /// Railcam's cameras, id to name, for the Railcam widget's picker. Empty
+  /// when the site is not answering.
+  Future<Map<String, String>> Function()? railcams;
 
   /// The piper voices installed, for the news widget's speed settings.
   Future<Map<String, String>> Function()? voices;

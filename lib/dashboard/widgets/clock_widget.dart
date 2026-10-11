@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../widget_registry.dart';
 import '../../l10n/dates.dart';
+import '../../widgets/lcars.dart';
 
 /// Time and date.
 class ClockWidget extends StatefulWidget {
@@ -65,6 +66,57 @@ class _ClockWidgetState extends State<ClockWidget> {
     final time = seconds
         ? '$hh:${_two(_now.minute)}:${_two(_now.second)}$suffix'
         : '$hh:${_two(_now.minute)}$suffix';
+
+    if (t.isLcars) {
+      // A console's clock: the hour in the text colour and the rest in the
+      // accent, heavy, over the date lettered on a bar of its own.
+      final colon = time.indexOf(':');
+      return LayoutBuilder(
+        builder: (context, c) {
+          final bar = showDate ? (c.maxHeight * 0.17).clamp(14.0, 40.0) : 0.0;
+          final gap = showDate ? (bar * 0.3).clamp(lcarsLine, 12.0) : 0.0;
+          final digits = TextStyle(
+            fontSize: 200,
+            height: 1.0,
+            fontWeight: FontWeight.w600,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          );
+          return Column(
+            children: [
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.contain,
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: time.substring(0, colon),
+                          style: TextStyle(color: t.textPrimary),
+                        ),
+                        TextSpan(
+                          text: time.substring(colon),
+                          style: TextStyle(color: t.accent),
+                        ),
+                      ],
+                    ),
+                    maxLines: 1,
+                    style: digits,
+                  ),
+                ),
+              ),
+              if (showDate) ...[
+                SizedBox(height: gap),
+                LcarsReadout(
+                  colour: t.block(2),
+                  value: _dateLine(_now),
+                  height: bar,
+                ),
+              ],
+            ],
+          );
+        },
+      );
+    }
 
     return LayoutBuilder(
       builder: (context, c) {

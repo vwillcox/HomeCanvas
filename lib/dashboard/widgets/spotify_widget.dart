@@ -13,6 +13,7 @@ import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'scrolling_text.dart';
 import '../../l10n/l10n.dart';
+import '../../widgets/lcars.dart';
 
 /// What's playing, with transport controls.
 ///
@@ -59,7 +60,9 @@ class _DashboardSpotifyWidgetState extends State<DashboardSpotifyWidget> {
     if (!source.available || !source.now.hasTrack) {
       return Center(
         child: Text(
-          tr('widget.spotify.nothingPlaying', 'Nothing playing'),
+          t.isLcars
+              ? lcarsCaps(tr('widget.spotify.nothingPlaying', 'Nothing playing'))
+              : tr('widget.spotify.nothingPlaying', 'Nothing playing'),
           style: TextStyle(color: t.textSecondary, fontSize: 16),
         ),
       );
@@ -109,7 +112,12 @@ class _DashboardSpotifyWidgetState extends State<DashboardSpotifyWidget> {
           ),
           _Layout.beside => Row(
             children: [
-              _Art(url: art!, side: side, radius: t.cornerRadius * 0.5),
+              _Art(
+                url: art!,
+                side: side,
+                // A console's pictures are square, as its blocks are.
+                radius: t.isLcars ? 0 : t.cornerRadius * 0.5,
+              ),
               const SizedBox(width: 16),
               Expanded(
                 child: _Details(
@@ -129,7 +137,7 @@ class _DashboardSpotifyWidgetState extends State<DashboardSpotifyWidget> {
                   child: _Art(
                     url: art!,
                     side: c.maxWidth * 0.66,
-                    radius: t.cornerRadius * 0.5,
+                    radius: t.isLcars ? 0 : t.cornerRadius * 0.5,
                   ),
                 ),
               ),
@@ -146,7 +154,8 @@ class _DashboardSpotifyWidgetState extends State<DashboardSpotifyWidget> {
           ),
         };
 
-        if (!backdrop || art == null) return content;
+        // A console is black behind everything: no wash of the cover.
+        if (!backdrop || art == null || t.isLcars) return content;
 
         // The same treatment as the kiosk's own now-playing panel: the cover
         // blurred behind, veiled towards the bottom so the text stays legible
@@ -316,7 +325,7 @@ class _Details extends StatelessWidget {
         // hides the part that says which version it is. Scrolls only when it
         // has to; a title that fits sits still.
         ScrollingText(
-          now.title,
+          t.isLcars ? lcarsCaps(now.title) : now.title,
           align: centred ? TextAlign.center : TextAlign.start,
           style: TextStyle(
             color: t.textPrimary,
@@ -334,6 +343,12 @@ class _Details extends StatelessWidget {
         ),
         if (now.duration > Duration.zero) ...[
           const SizedBox(height: 8),
+          if (t.isLcars)
+            LcarsSegments(
+              theme: t,
+              value: now.position.inMilliseconds / now.duration.inMilliseconds,
+            )
+          else
           ClipRRect(
             borderRadius: BorderRadius.circular(3),
             child: LinearProgressIndicator(
@@ -345,7 +360,14 @@ class _Details extends StatelessWidget {
             ),
           ),
         ],
-        if (showControls) ...[
+        if (showControls && t.isLcars) ...[
+          const SizedBox(height: 8),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: centred ? Alignment.center : Alignment.centerLeft,
+            child: _consoleControls(t, now.status == 'playing'),
+          ),
+        ] else if (showControls) ...[
           const SizedBox(height: 8),
           // Shrinks rather than runs off the edge on a tile too small for
           // the buttons at full size.
@@ -389,6 +411,60 @@ class _Details extends StatelessWidget {
             ),
           ),
         ],
+      ],
+    );
+  }
+}
+
+extension on _Details {
+  /// The transport as a console's: one strip of blocks, rounded at its two
+  /// ends, with play in the accent and lit while the music is going. As
+  /// large a target as the round buttons it stands in for.
+  Widget _consoleControls(DashboardTheme t, bool playing) {
+    final keys = <(IconData, VoidCallback, Color, double, String?)>[
+      if (showLike)
+        (
+          source.isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+          source.toggleLike,
+          source.isLiked ? lcarsLit : t.block(4),
+          1.0,
+          source.isLiked
+              ? tr('widget.spotify.removeFromLikedSongs', 'Remove from Liked Songs')
+              : tr('widget.spotify.addToLikedSongs', 'Add to Liked Songs'),
+        ),
+      (Icons.skip_previous, source.previous, t.block(2), 1.0, null),
+      (
+        playing ? Icons.pause : Icons.play_arrow,
+        source.playPause,
+        playing ? lcarsLit : t.accent,
+        1.3,
+        null,
+      ),
+      (Icons.skip_next, source.next, t.block(2), 1.0, null),
+    ];
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final (i, k) in keys.indexed)
+          Padding(
+            padding: EdgeInsets.only(left: i == 0 ? 0 : lcarsLine),
+            child: Semantics(
+              button: true,
+              label: k.$5,
+              child: LcarsBlock(
+                colour: k.$3,
+                onTap: k.$2,
+                width: controlSize * k.$4,
+                height: controlSize * 0.72,
+                ends: i == 0
+                    ? LcarsEnds.start
+                    : i == keys.length - 1
+                    ? LcarsEnds.end
+                    : LcarsEnds.none,
+                child: Icon(k.$1, size: controlSize * 0.44),
+              ),
+            ),
+          ),
       ],
     );
   }

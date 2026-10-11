@@ -7,6 +7,7 @@ import '../widget_registry.dart';
 import 'omarchy_hotkeys.dart';
 import '../../widgets/pause_when_hidden.dart';
 import '../../widgets/shown_timers.dart';
+import '../../widgets/lcars.dart';
 
 /// The Omarchy keyboard shortcuts, as a wall-sized cheat sheet.
 ///
@@ -304,12 +305,17 @@ class _Header extends StatelessWidget {
             children: [
               for (var i = 0; i < pages; i++)
                 Container(
-                  width: 10,
-                  height: 10,
-                  margin: const EdgeInsets.only(left: 8),
+                  // A console marks its pages with segments of bar.
+                  width: theme.isLcars ? (i == page ? 26 : 14) : 10,
+                  height: theme.isLcars ? 8 : 10,
+                  margin: EdgeInsets.only(left: theme.isLcars ? 3 : 8),
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: i == page
+                    shape: theme.isLcars
+                        ? BoxShape.rectangle
+                        : BoxShape.circle,
+                    color: theme.isLcars
+                        ? (i == page ? lcarsLit : theme.block(i))
+                        : i == page
                         ? theme.accent
                         : theme.textSecondary.withValues(alpha: 0.35),
                   ),
@@ -401,7 +407,13 @@ class _TabsState extends State<_Tabs> {
             child: Container(
               alignment: Alignment.center,
               padding: const EdgeInsets.symmetric(horizontal: 14),
-              decoration: BoxDecoration(
+              // On a console each tab is a block of its own colour, the
+              // one showing near-white, lettered in black.
+              decoration: theme.isLcars
+                  ? BoxDecoration(
+                      color: selected ? lcarsLit : theme.block(i),
+                    )
+                  : BoxDecoration(
                 color: selected
                     ? theme.accent.withValues(alpha: 0.22)
                     : theme.textSecondary.withValues(alpha: 0.10),
@@ -414,11 +426,19 @@ class _TabsState extends State<_Tabs> {
                 ),
               ),
               child: Text(
-                sections[i].title,
+                theme.isLcars
+                    ? lcarsCaps(sections[i].title)
+                    : sections[i].title,
                 style: TextStyle(
-                  color: selected ? theme.accent : theme.textSecondary,
+                  color: theme.isLcars
+                      ? lcarsInk
+                      : selected
+                      ? theme.accent
+                      : theme.textSecondary,
                   fontSize: metrics.action,
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                  fontWeight: theme.isLcars || selected
+                      ? FontWeight.w600
+                      : FontWeight.w400,
                 ),
               ),
             ),
@@ -567,7 +587,10 @@ class _Caps extends StatelessWidget {
   Widget _cap(String label) => Container(
         padding: EdgeInsets.symmetric(
             horizontal: size * 0.45, vertical: size * 0.26),
-        decoration: BoxDecoration(
+        // A key, on a console, is a block lettered in black.
+        decoration: theme.isLcars
+            ? BoxDecoration(color: theme.block(lcarsIndex(label)))
+            : BoxDecoration(
           color: theme.accent.withValues(alpha: 0.16),
           borderRadius: BorderRadius.circular(size * 0.35),
           border: Border.all(color: theme.accent.withValues(alpha: 0.55)),
@@ -575,7 +598,7 @@ class _Caps extends StatelessWidget {
         child: Text(
           label,
           style: TextStyle(
-            color: theme.accent,
+            color: theme.isLcars ? lcarsInk : theme.accent,
             fontSize: size,
             fontWeight: FontWeight.w600,
             height: 1.0,

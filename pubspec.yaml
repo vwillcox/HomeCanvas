@@ -72,7 +72,11 @@ flutter:
     - assets/dashboard/senders.html
     - assets/dashboard/notes.html
     - assets/dashboard/list.html
+    - assets/dashboard/widgets.html
     - assets/dashboard/sign_in.html
+    # The custom widget the editor hands out to be changed and uploaded.
+    - assets/dashboard/example-widget.json
+    - assets/dashboard/example_widget.dart
     - assets/dashboard/i18n.js
     # Language packs: one ARB file each, keyed by string id.
     - assets/l10n/
@@ -95,6 +99,8 @@ flutter:
       fonts: [{ asset: assets/fonts/JetBrainsMono.ttf }]
     - family: Oswald
       fonts: [{ asset: assets/fonts/Oswald.ttf }]
+    - family: Antonio
+      fonts: [{ asset: assets/fonts/Antonio.ttf }]
     - family: Quicksand
       fonts: [{ asset: assets/fonts/Quicksand.ttf }]
     - family: Comfortaa

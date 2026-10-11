@@ -57,3 +57,8 @@ scripts/local.env
 # Private keys are never committed. The TV client key was published here
 # once; supply your own locally instead (see INSTALL.md, TV Remote).
 assets/certs/*.key
+
+# Widgets uploaded as Dart in the editor: the panel's own, copied in by
+# scripts/widget-build.sh. The registry is kept, empty.
+lib/dashboard/widgets/custom/*.dart
+!lib/dashboard/widgets/custom/custom_registry.dart

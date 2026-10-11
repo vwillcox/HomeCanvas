@@ -6,6 +6,9 @@ import '../dashboard_theme.dart';
 import 'fit_canvas.dart';
 import '../../l10n/dates.dart';
 import '../../l10n/l10n.dart';
+import '../../look.dart';
+import '../../widgets/lcars.dart';
+import 'tile_bits.dart';
 
 /// One video in a [VideoGrid].
 class VideoGridItem {
@@ -57,7 +60,9 @@ class VideoGrid extends StatelessWidget {
                 behavior: HitTestBehavior.opaque,
                 onTap: items[i].onTap,
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(t.cornerRadius * 0.4),
+                  borderRadius: BorderRadius.circular(
+                    tileCorner(t, t.cornerRadius * 0.4),
+                  ),
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
@@ -137,6 +142,26 @@ class TileRefreshButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final look = context.look;
+    if (look.isLcars) {
+      return LcarsBlock(
+        colour: look.block(5),
+        // Still a block while it is busy, but one with nothing to press.
+        onTap: busy ? null : onRefresh,
+        width: 64,
+        height: 46,
+        child: busy
+            ? const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: lcarsInk,
+                ),
+              )
+            : const Icon(Icons.refresh, size: 26),
+      );
+    }
     return Material(
       color: Colors.black.withValues(alpha: 0.55),
       shape: const CircleBorder(),

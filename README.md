@@ -33,7 +33,7 @@ Built with Flutter as a native Linux app, so it stays smooth on a Pi.
 |---|---|
 | **[Wiki](https://github.com/vwillcox/HomeCanvas/wiki)** | Start here: installing, what hardware you need, using it, every widget, the FAQ and troubleshooting. Questions go in [Discussions](https://github.com/vwillcox/HomeCanvas/discussions). |
 | **[INSTALL.md](INSTALL.md)** | Setting it up: the hardware, the install, and every optional feature — Spotify, Bluetooth, the camera, the share inbox, the dashboard's widgets, turning the screen off with Alexa. Troubleshooting too. |
-| **[THEMES.md](THEMES.md)** | The sixteen themes, each shown on the real panel, and how to make your own. |
+| **[THEMES.md](THEMES.md)** | The seventeen themes, each shown on the real panel, and how to make your own. |
 | **[TECHNICAL.md](TECHNICAL.md)** | How it works: the dashboard's widget registry and editor, the encryption, the visualiser, the APIs it talks to, the project layout, debug hooks and the libraries it is built on. |
 
 ---
@@ -101,9 +101,9 @@ A page of its own for the Omarchy keyboard shortcuts.
 
 ### Themes
 
-[![Sixteen themes](docs/screenshots/themes/all.jpg)](THEMES.md)
+[![The themes](docs/screenshots/themes/all.jpg)](THEMES.md)
 
-Sixteen themes, dark and light, glassy, glossy and flat, and each one dresses
+Seventeen themes, dark and light, glassy, glossy and flat, and one a starship's console, and each one dresses
 the whole kiosk: the photo browser, the music player and Settings as well as
 the dashboard. **[THEMES.md](THEMES.md)** shows each one full size.
 
@@ -169,7 +169,7 @@ queue.
 | Network | UniFi health, Who's home, UniFi devices, Network clients, WAN throughput, ISP speed test, Speed test, LAN speed test |
 | Home lab | Servers (with SMART disk health), Services, Certificates, Updates |
 
-Sixteen [themes](THEMES.md) — dark and light, glassy, glossy and flat, dressing the whole kiosk — plus a JSON template for your own, twenty fonts, per-widget sizing,
+Seventeen [themes](THEMES.md) — dark and light, glassy, glossy and flat, and LCARS, dressing the whole kiosk — plus a JSON template for your own, twenty-one fonts, per-widget sizing,
 pages and widgets that show only at certain hours, and an optional background
 of your own photos behind the tiles.
 

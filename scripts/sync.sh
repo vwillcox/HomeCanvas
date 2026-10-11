@@ -22,6 +22,12 @@ rsync -az --delete \
   --exclude '**/.DS_Store' \
   --exclude 'companion_app/' \
   --exclude 'assets/certs/*.key' \
+  --exclude 'lib/dashboard/widgets/custom/' \
   "$HERE"/ "$PI:$PI_DIR"/
+
+# Widgets uploaded as Dart in the editor live on the Pi, not here: their
+# folder is left alone above, and the file that registers them written
+# again from what is installed, so the next build has them in it.
+ssh "$PI" "bash '$PI_DIR/scripts/widget-build.sh' generate"
 
 echo "Synced $HERE -> $PI:$PI_DIR"

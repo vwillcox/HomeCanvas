@@ -10,6 +10,7 @@ import '../../widgets/weather_overlay.dart' show weatherIcon;
 import '../dashboard_theme.dart';
 import '../../l10n/l10n.dart';
 import '../../l10n/dates.dart';
+import '../../widgets/lcars.dart';
 
 /// Opens the full forecast over the dashboard.
 ///
@@ -143,7 +144,11 @@ class _WeatherForecastSheetState extends State<WeatherForecastSheet>
               child: Container(
                 width: math.min(screen.width * 0.94, 1780),
                 height: math.min(screen.height * 0.92, 1100),
-                decoration: BoxDecoration(
+                decoration: t.isLcars
+                    // A console's sheet is black to its square edges; the
+                    // panels inside it are its frame.
+                    ? BoxDecoration(color: t.background.first)
+                    : BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -211,16 +216,29 @@ class _Body extends StatelessWidget {
           final wide = c.maxWidth > 1000;
           final header = Row(
             children: [
-              Icon(Icons.place_outlined, color: t.textSecondary, size: 26),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  weather.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: t.textSecondary, fontSize: 24),
+              if (t.isLcars)
+                // A console's text bar: the place, and today on the bar.
+                Expanded(
+                  child: LcarsTextBar(
+                    title: weather.label.isEmpty
+                        ? tr('weather.lcars.forecast', 'Forecast')
+                        : weather.label,
+                    note: longDate(DateTime.now()),
+                  ),
+                )
+              else ...[
+                Icon(Icons.place_outlined, color: t.textSecondary, size: 26),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    weather.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: t.textSecondary, fontSize: 24),
+                  ),
                 ),
-              ),
+              ],
+              if (t.isLcars) const SizedBox(width: 12),
               _CloseButton(theme: t, onPressed: onClose),
             ],
           );
@@ -257,7 +275,7 @@ class _Body extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               header,
-              const SizedBox(height: 8),
+              SizedBox(height: t.isLcars ? 16 : 8),
               Expanded(
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -268,7 +286,8 @@ class _Body extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
+              // A console's panels sit against each other.
+              SizedBox(height: t.isLcars ? 4 : 24),
               SizedBox(height: 250, child: hours),
             ],
           );
@@ -286,6 +305,19 @@ class _CloseButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (theme.isLcars) {
+      return Semantics(
+        button: true,
+        label: tr('weather.closeTheForecast', 'Close the forecast'),
+        child: LcarsBlock(
+          colour: theme.block(4),
+          onTap: onPressed,
+          width: 104,
+          height: 60,
+          child: const Icon(Icons.close, size: 34),
+        ),
+      );
+    }
     return Semantics(
       button: true,
       label: tr('weather.closeTheForecast', 'Close the forecast'),
@@ -351,7 +383,7 @@ class _Now extends StatelessWidget {
               children: [
                 Icon(
                   weatherIcon(weather.weatherCode, weather.isDay),
-                  color: t.accent,
+                  color: t.isLcars ? t.textPrimary : t.accent,
                   size: 140,
                 ),
                 const SizedBox(width: 28),
@@ -362,15 +394,25 @@ class _Now extends StatelessWidget {
                     Text(
                       '${weather.temperature.round()}°',
                       style: TextStyle(
-                        color: t.textPrimary,
+                        color: t.isLcars ? t.accent : t.textPrimary,
                         fontSize: 136,
                         height: 1.0,
-                        fontWeight: FontWeight.w200,
+                        // Heavy, in the accent, as a console's reading is.
+                        fontWeight: t.isLcars
+                            ? FontWeight.w700
+                            : FontWeight.w200,
                       ),
                     ),
                     Text(
-                      weather.description,
-                      style: TextStyle(color: t.textPrimary, fontSize: 34),
+                      t.isLcars
+                          ? lcarsCaps(weather.description)
+                          : weather.description,
+                      style: TextStyle(
+                        color: t.textPrimary,
+                        fontSize: 34,
+                        fontWeight: t.isLcars ? FontWeight.w700 : null,
+                        letterSpacing: t.isLcars ? 1.5 : null,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -396,22 +438,28 @@ class _Now extends StatelessWidget {
               // none of them looks like the headline.
               const perRow = 3;
               final rows = (stats.length / perRow).ceil();
-              final h = (c.maxHeight - (rows - 1) * 14) / rows;
+              final gap = t.isLcars ? lcarsLine : 14.0;
+              final h = (c.maxHeight - (rows - 1) * gap) / rows;
               return Column(
                 children: [
                   for (var r = 0; r < rows; r++) ...[
-                    if (r > 0) const SizedBox(height: 14),
+                    if (r > 0) SizedBox(height: gap),
                     SizedBox(
                       height: h,
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           for (var i = 0; i < perRow; i++) ...[
-                            if (i > 0) const SizedBox(width: 14),
+                            if (i > 0) SizedBox(width: gap),
                             Expanded(
                               child: r * perRow + i < stats.length
                                   ? _Stat(
-                                      data: stats[r * perRow + i], theme: t)
+                                      data: stats[r * perRow + i],
+                                      theme: t,
+                                      index: r * perRow + i,
+                                      // The start of each row is capped.
+                                      capped: i == 0,
+                                    )
                                   : const SizedBox.shrink(),
                             ),
                           ],
@@ -437,14 +485,76 @@ class _StatData {
 }
 
 class _Stat extends StatelessWidget {
-  const _Stat({required this.data, required this.theme});
+  const _Stat({
+    required this.data,
+    required this.theme,
+    this.index = 0,
+    this.capped = false,
+  });
 
   final _StatData data;
   final DashboardTheme theme;
 
+  /// Its place among the figures, which picks its colour on a console.
+  final int index;
+  final bool capped;
+
   @override
   Widget build(BuildContext context) {
     final t = theme;
+    if (t.isLcars) {
+      // A block: the figure's name quiet in the top corner, the figure
+      // itself heavy in the bottom one, both in black.
+      return LayoutBuilder(
+        builder: (context, c) => Container(
+          padding: EdgeInsets.fromLTRB(capped ? 34 : 16, 8, 14, 6),
+          decoration: BoxDecoration(
+            color: t.block(index * 2 + 1),
+            // Capped, but not so round that the cap takes the name's corner.
+            borderRadius: BorderRadius.horizontal(
+              left: capped
+                  ? Radius.circular(math.min(c.maxHeight / 2, 40))
+                  : Radius.zero,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  lcarsCaps(data.label),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: lcarsInk.withValues(alpha: 0.65),
+                    fontSize: 19,
+                    letterSpacing: 1,
+                    height: 1.1,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.bottomRight,
+                  child: Text(
+                    lcarsCaps(data.value),
+                    style: const TextStyle(
+                      color: lcarsInk,
+                      fontSize: 34,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1,
+                      height: 1.1,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
       decoration: BoxDecoration(
@@ -503,6 +613,34 @@ class _Week extends StatelessWidget {
     final t = theme;
     if (days.isEmpty) return const SizedBox.shrink();
     final range = weekRange(days);
+
+    if (t.isLcars) {
+      // A panel, its heading lettered on the bar rather than inside.
+      return LcarsPanel(
+        theme: t,
+        heavy: true,
+        label: tr('weather.nextDays', 'NEXT {days} DAYS', {'days': days.length}),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 4, 14, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var i = 0; i < days.length; i++)
+                Expanded(
+                  child: _DayRow(
+                    day: days[i],
+                    range: range,
+                    now: i == 0 && isToday(days[i].date)
+                        ? weather.temperature
+                        : null,
+                    theme: t,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Container(
       padding: const EdgeInsets.fromLTRB(28, 18, 28, 18),
@@ -572,7 +710,7 @@ class _DayRow extends StatelessWidget {
           // Wide enough for "Wednesday" at this size — at 110 it wrapped.
           width: 150,
           child: Text(
-            dayName(day.date),
+            t.isLcars ? lcarsCaps(dayName(day.date)) : dayName(day.date),
             maxLines: 1,
             softWrap: false,
             style: TextStyle(
@@ -585,7 +723,7 @@ class _DayRow extends StatelessWidget {
         SizedBox(
           width: 60,
           child: Icon(weatherIcon(day.weatherCode, true),
-              color: t.accent, size: 34),
+              color: t.isLcars ? t.textSecondary : t.accent, size: 34),
         ),
         SizedBox(
           width: 76,
@@ -611,15 +749,17 @@ class _DayRow extends StatelessWidget {
         const SizedBox(width: 16),
         Expanded(
           child: SizedBox(
-            height: 10,
+            height: t.isLcars ? 16 : 10,
             child: CustomPaint(
               painter: _RangeBar(
                 min: day.tempMin,
                 max: day.tempMax,
                 range: range,
                 now: now,
-                track: t.textPrimary.withValues(alpha: 0.10),
-                marker: t.textPrimary,
+                track: t.textPrimary.withValues(alpha: t.isLcars ? 0.16 : 0.10),
+                marker: t.isLcars ? lcarsLit : t.textPrimary,
+                // A console's bar is a flat block, in the day's own colour.
+                flat: t.isLcars ? t.block(day.date.weekday) : null,
               ),
             ),
           ),
@@ -650,6 +790,7 @@ class _RangeBar extends CustomPainter {
     required this.now,
     required this.track,
     required this.marker,
+    this.flat,
   });
 
   final double min;
@@ -659,8 +800,34 @@ class _RangeBar extends CustomPainter {
   final Color track;
   final Color marker;
 
+  /// Drawn square and in this one colour, rather than rounded and shaded
+  /// from cold to warm.
+  final Color? flat;
+
   @override
   void paint(Canvas canvas, Size size) {
+    final flat = this.flat;
+    if (flat != null) {
+      canvas.drawRect(Offset.zero & size, Paint()..color = track);
+      final from = rangeFraction(min, range) * size.width;
+      final to = math.max(
+        from + size.height,
+        rangeFraction(max, range) * size.width,
+      );
+      canvas.drawRect(
+        Rect.fromLTRB(from, 0, math.min(to, size.width), size.height),
+        Paint()..color = flat,
+      );
+      final n = now;
+      if (n != null) {
+        final x = rangeFraction(n, range) * size.width;
+        canvas.drawRect(
+          Rect.fromLTWH(x - 4, -4, 8, size.height + 8),
+          Paint()..color = marker,
+        );
+      }
+      return;
+    }
     final r = Radius.circular(size.height / 2);
     canvas.drawRRect(
       RRect.fromRectAndRadius(Offset.zero & size, r),
@@ -691,7 +858,11 @@ class _RangeBar extends CustomPainter {
 
   @override
   bool shouldRepaint(_RangeBar old) =>
-      old.min != min || old.max != max || old.range != range || old.now != now;
+      old.min != min ||
+      old.max != max ||
+      old.range != range ||
+      old.now != now ||
+      old.flat != flat;
 }
 
 /// The next twenty-four hours: time, sky, a temperature curve and rain.
@@ -704,13 +875,7 @@ class _Hours extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = theme;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
-      decoration: BoxDecoration(
-        color: t.textPrimary.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: LayoutBuilder(
+    final hours = LayoutBuilder(
         builder: (context, c) {
           final hours = hoursToShow(withNow(weather), c.maxWidth);
           if (hours.isEmpty) {
@@ -741,7 +906,7 @@ class _Hours extends StatelessWidget {
                   )),
               const SizedBox(height: 8),
               row((h, _) => Icon(weatherIcon(h.weatherCode, h.isDay),
-                  color: t.accent, size: 32)),
+                  color: t.isLcars ? t.textSecondary : t.accent, size: 32)),
               Expanded(
                 child: CustomPaint(
                   size: Size.infinite,
@@ -749,6 +914,9 @@ class _Hours extends StatelessWidget {
                     temps: [for (final h in hours) h.temperature],
                     line: t.accent,
                     label: t.textPrimary,
+                    // A console draws in flat colour: the line alone.
+                    filled: !t.isLcars,
+                    fontFamily: t.fontFamily,
                   ),
                 ),
               ),
@@ -765,7 +933,28 @@ class _Hours extends StatelessWidget {
             ],
           );
         },
+    );
+    if (t.isLcars) {
+      // The bottom panel: its bar sweeps down and across the foot of the
+      // sheet, as the lower half of a dashboard's do.
+      return LcarsPanel(
+        theme: t,
+        heavy: true,
+        down: true,
+        label: tr('weather.lcars.hours', 'Next 24 hours'),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(10, 10, 14, 4),
+          child: hours,
+        ),
+      );
+    }
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
+      decoration: BoxDecoration(
+        color: t.textPrimary.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(24),
       ),
+      child: hours,
     );
   }
 }
@@ -780,11 +969,19 @@ class _TemperatureCurve extends CustomPainter {
     required this.temps,
     required this.line,
     required this.label,
+    this.filled = true,
+    this.fontFamily,
   });
 
   final List<double> temps;
   final Color line;
   final Color label;
+
+  /// Whether to shade under the line.
+  final bool filled;
+
+  /// The theme's face for the figures, which a painter does not inherit.
+  final String? fontFamily;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -824,15 +1021,17 @@ class _TemperatureCurve extends CustomPainter {
       ..lineTo(points.last.dx, size.height)
       ..lineTo(points.first.dx, size.height)
       ..close();
-    canvas.drawPath(
-      fill,
-      Paint()
-        ..shader = ui.Gradient.linear(
-          Offset(0, top),
-          Offset(0, size.height),
-          [line.withValues(alpha: 0.28), line.withValues(alpha: 0.0)],
-        ),
-    );
+    if (filled) {
+      canvas.drawPath(
+        fill,
+        Paint()
+          ..shader = ui.Gradient.linear(
+            Offset(0, top),
+            Offset(0, size.height),
+            [line.withValues(alpha: 0.28), line.withValues(alpha: 0.0)],
+          ),
+      );
+    }
     canvas.drawPath(
       path,
       Paint()
@@ -851,6 +1050,7 @@ class _TemperatureCurve extends CustomPainter {
             color: label,
             fontSize: 20,
             fontWeight: FontWeight.w500,
+            fontFamily: fontFamily,
           ),
         ),
         textDirection: TextDirection.ltr,
@@ -862,7 +1062,11 @@ class _TemperatureCurve extends CustomPainter {
 
   @override
   bool shouldRepaint(_TemperatureCurve old) =>
-      old.line != line || old.label != label || !_same(old.temps, temps);
+      old.line != line ||
+      old.label != label ||
+      old.filled != filled ||
+      old.fontFamily != fontFamily ||
+      !_same(old.temps, temps);
 
   static bool _same(List<double> a, List<double> b) {
     if (a.length != b.length) return false;

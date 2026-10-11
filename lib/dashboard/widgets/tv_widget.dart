@@ -8,6 +8,7 @@ import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'tv_inputs_sheet.dart';
 import '../../l10n/l10n.dart';
+import '../../widgets/lcars.dart';
 
 /// A remote control for the television.
 ///
@@ -120,7 +121,12 @@ class _Status extends StatelessWidget {
         const SizedBox(width: 8),
         Expanded(
           child: Text(
-            bits.isEmpty ? tr('widget.tv.television', 'Television') : bits.join(' · '),
+            _cased(
+              theme,
+              bits.isEmpty
+                  ? tr('widget.tv.television', 'Television')
+                  : bits.join(' · '),
+            ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(color: theme.textSecondary, fontSize: 15),
@@ -132,6 +138,10 @@ class _Status extends StatelessWidget {
     );
   }
 }
+
+/// Words as the theme letters them: capitals on a console.
+String _cased(DashboardTheme theme, String s) =>
+    theme.isLcars ? lcarsCaps(s) : s;
 
 /// Opens the inputs pop-up.
 ///
@@ -145,6 +155,29 @@ class _InputButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (theme.isLcars) {
+      return Semantics(
+        button: true,
+        label: tr('widget.tv.switchInput', 'Switch input'),
+        child: LcarsBlock(
+          colour: theme.accent,
+          onTap: () => showTvInputs(context, theme),
+          height: 40,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.input, size: 20),
+              const SizedBox(width: 6),
+              Text(
+                lcarsCaps(tr('widget.tv.input', 'Input')),
+                style: const TextStyle(fontSize: 16),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return Semantics(
       button: true,
       label: tr('widget.tv.switchInput', 'Switch input'),
@@ -197,6 +230,7 @@ class _Pad extends StatelessWidget {
         // usable by thumb rather than shrinking to fit whatever is left.
         final side = c.maxHeight < c.maxWidth ? c.maxHeight : c.maxWidth;
         final unit = side / 3;
+        if (theme.isLcars) return Center(child: _consolePad(side));
         Widget key(IconData icon, String code, {double scale = 1}) => _Key(
               theme: theme,
               icon: icon,
@@ -237,6 +271,81 @@ class _Pad extends StatelessWidget {
   }
 }
 
+extension on _Pad {
+  /// The pad as a console's: a cross of blocks a black line apart, each
+  /// direction rounded on its outer side, with OK in the accent between.
+  Widget _consolePad(double side) {
+    final unit = (side - lcarsLine * 2) / 3;
+    final round = Radius.circular(unit * 0.5);
+    Widget block(
+      Color colour,
+      BorderRadius radius,
+      Widget child,
+      String code,
+    ) => LcarsBlock(
+      colour: colour,
+      radius: radius,
+      width: unit,
+      height: unit,
+      onTap: () => tv.key(code),
+      child: child,
+    );
+    Widget arrow(IconData icon) => Icon(icon, size: unit * 0.6);
+    const gap = SizedBox(width: lcarsLine, height: lcarsLine);
+    return SizedBox(
+      width: side,
+      height: side,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          block(
+            theme.block(2),
+            BorderRadius.vertical(top: round),
+            arrow(Icons.keyboard_arrow_up),
+            'KEY_UP',
+          ),
+          gap,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              block(
+                theme.block(1),
+                BorderRadius.horizontal(left: round),
+                arrow(Icons.keyboard_arrow_left),
+                'KEY_LEFT',
+              ),
+              gap,
+              block(
+                theme.accent,
+                BorderRadius.zero,
+                Text(
+                  lcarsCaps(tr('widget.tv.ok', 'OK')),
+                  style: TextStyle(fontSize: unit * 0.34),
+                ),
+                'KEY_OK',
+              ),
+              gap,
+              block(
+                theme.block(1),
+                BorderRadius.horizontal(right: round),
+                arrow(Icons.keyboard_arrow_right),
+                'KEY_RIGHT',
+              ),
+            ],
+          ),
+          gap,
+          block(
+            theme.block(2),
+            BorderRadius.vertical(bottom: round),
+            arrow(Icons.keyboard_arrow_down),
+            'KEY_DOWN',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Power, volume, mute, channel, back and home.
 class _Transport extends StatelessWidget {
   const _Transport(
@@ -256,6 +365,43 @@ class _Transport extends StatelessWidget {
         // thumb-sized. This is a remote control: nothing here should need
         // aiming at.
         final size = ((c.maxWidth / 6) - 6).clamp(48.0, expanded ? 96.0 : 72.0);
+        if (theme.isLcars) {
+          // One strip of six blocks, rounded at its two ends: power in the
+          // red, and mute lit while the sound is off.
+          final keys = <(IconData, VoidCallback, Color)>[
+            (Icons.power_settings_new, tv.power, theme.block(4)),
+            (Icons.volume_down, tv.volumeDown, theme.block(5)),
+            (
+              tv.state.muted ? Icons.volume_off : Icons.volume_mute,
+              tv.mute,
+              tv.state.muted ? lcarsLit : theme.block(3),
+            ),
+            (Icons.volume_up, tv.volumeUp, theme.block(5)),
+            (Icons.arrow_back, () => tv.key('KEY_BACK'), theme.block(1)),
+            (Icons.home, () => tv.key('KEY_HOME'), theme.block(6)),
+          ];
+          return Row(
+            children: [
+              for (final (i, k) in keys.indexed)
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(left: i == 0 ? 0 : lcarsLine),
+                    child: LcarsBlock(
+                      colour: k.$3,
+                      onTap: k.$2,
+                      height: size * 0.86,
+                      ends: i == 0
+                          ? LcarsEnds.start
+                          : i == keys.length - 1
+                          ? LcarsEnds.end
+                          : LcarsEnds.none,
+                      child: Icon(k.$1, size: size * 0.46),
+                    ),
+                  ),
+                ),
+            ],
+          );
+        }
         Widget key(IconData icon, VoidCallback onPressed, {Color? colour}) =>
             _Key(
               theme: theme,
@@ -453,7 +599,7 @@ class _Message extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            text,
+            _cased(theme, text),
             textAlign: TextAlign.center,
             style: TextStyle(color: theme.textSecondary, fontSize: 15),
           ),
@@ -525,12 +671,39 @@ class _Inputs extends StatelessWidget {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: tv.sources.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        separatorBuilder: (_, _) =>
+            SizedBox(width: theme.isLcars ? lcarsLine : 8),
         itemBuilder: (context, i) {
           final s = tv.sources[i];
           final Color dot = s.hasSignal
               ? const Color(0xFF4ADE80)
               : (s.knownButAsleep ? const Color(0xFFF59E0B) : theme.textSecondary);
+          if (theme.isLcars) {
+            // A block each: lit for the one showing, in colour for one with
+            // something plugged in, and unlit for the rest.
+            final colour = s.isActive
+                ? lcarsLit
+                : theme
+                      .block(i)
+                      .withValues(
+                        alpha: s.hasSignal || s.knownButAsleep ? 1 : 0.45,
+                      );
+            return LcarsBlock(
+              colour: colour,
+              onTap: () => tv.changeSource(s.id),
+              height: 46,
+              ends: i == 0
+                  ? LcarsEnds.start
+                  : i == tv.sources.length - 1
+                  ? LcarsEnds.end
+                  : LcarsEnds.none,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                lcarsCaps(s.name),
+                style: const TextStyle(fontSize: 16),
+              ),
+            );
+          }
           return Material(
             color: s.isActive ? theme.accent : theme.surface,
             borderRadius: BorderRadius.circular(12),

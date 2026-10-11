@@ -29,7 +29,9 @@ class YouTubeWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(w.theme.cornerRadius * 0.6),
+      borderRadius: BorderRadius.circular(
+        tileCorner(w.theme, w.theme.cornerRadius * 0.6),
+      ),
       child: w.option('source', 'subscriptions') == 'video'
           ? _VideoTile(w: w)
           : SiteFeedTile<YouTubeSite>(w: w),

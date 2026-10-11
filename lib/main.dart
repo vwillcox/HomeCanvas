@@ -26,7 +26,11 @@ import 'services/fuel_service.dart';
 import 'services/reminders_service.dart';
 import 'services/chores_service.dart';
 import 'services/govee_service.dart';
+import 'services/code_widgets.dart';
+import 'services/custom_widgets.dart';
 import 'services/home_assistant_service.dart';
+import 'services/homey_service.dart';
+import 'services/railcam_service.dart';
 import 'services/rain_service.dart';
 import 'services/notes_service.dart';
 import 'services/shopping_service.dart';
@@ -230,6 +234,17 @@ void main() async {
   // Their sign-in pages, for signing in from a computer instead of the panel.
   dashboard.videoSites = sites;
 
+  // Railcam's cameras, picked in the editor and watched through the same
+  // player. Its pages name their streams, so yt-dlp is only asked about
+  // the cameras YouTube carries.
+  final railcam = RailcamService();
+  dashboard.railcams = railcam.choices;
+  player.finders['railcam'] = (link, height) => railcam.find(
+    link,
+    maxHeight: height,
+    youtube: (yt) => player.resolve(yt, maxHeight: height),
+  );
+
   // Programs that cannot be seen behind a full-screen video — the desktop's
   // taskbar, the TV remote app — are paused for its length, leaving the CPU
   // to the video. Carried on at start-up too, in case the kiosk stopped
@@ -348,6 +363,30 @@ void main() async {
 
   final homeAssistant = HomeAssistantService(config);
   dashboard.haEntities = homeAssistant.choices;
+  // Widgets installed from a file in the editor. Drawn again as one is
+  // installed or removed, so it is on the panel without a restart.
+  final customWidgets = CustomWidgets(onChanged: rebuildEverything);
+  await customWidgets.load();
+  dashboard.customWidgets = customWidgets;
+  // And as Dart, built into the app by the panel itself.
+  dashboard.codeWidgets = CodeWidgets();
+
+  final homey = HomeyService(config);
+  dashboard.homeyDevices = homey.choices;
+  dashboard.homeyStatus = homey.status;
+  dashboard.extraLists.addAll({
+    'homeyMoods': () =>
+        homey.listChoices('moods/mood', (m) => m['name'] as String?),
+    'homeyVariables': () =>
+        homey.listChoices('logic/variable', (v) => v['name'] as String?),
+    'homeyLogs': () => homey.listChoices(
+      'insights/log',
+      (l) => l['title'] is String ? '${l['ownerName']} · ${l['title']}' : null,
+    ),
+  });
+  dashboard.homeyLights = homey.lightChoices;
+  dashboard.homeyZones = homey.zoneChoices;
+  dashboard.homeyFlows = homey.flowChoices;
   dashboard.voices = speech.voiceChoices;
 
   // The place in Settings → Weather, once found: where "near home" is.
@@ -407,11 +446,14 @@ void main() async {
         ChangeNotifierProvider(create: (_) => PlanesService(home: home)),
         ChangeNotifierProvider(create: (_) => TrafficCamsService(home: home)),
         ChangeNotifierProvider(create: (_) => TidesService(home: home)),
+        ChangeNotifierProvider.value(value: railcam),
         // Made when a Fuel prices tile first asks.
         ChangeNotifierProvider(create: (_) => FuelService(config)),
         // Made when a Stocks or Crypto widget first asks.
         ChangeNotifierProvider(create: (_) => MarketsService()),
         ChangeNotifierProvider.value(value: homeAssistant),
+        ChangeNotifierProvider.value(value: homey),
+        ChangeNotifierProvider.value(value: customWidgets),
         // Made when a Lights widget first asks; it then listens for Govee
         // devices on the home network.
         ChangeNotifierProvider(create: (_) => GoveeService()),

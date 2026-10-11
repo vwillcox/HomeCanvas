@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0c10">
+<title data-t="web.widgets.title">Custom widgets</title>
+<style>
+  /* The kiosk's glass look, as on the notes page. */
+  :root {
+    --bg: #0b0c10; --glass: rgba(255,255,255,.055); --line: rgba(255,255,255,.10);
+    --text: #fff; --muted: rgba(255,255,255,.62); --faint: rgba(255,255,255,.38);
+    --accent: #a6c8ff; --danger: #ff8a8a;
+    --ui: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; color: var(--text); font: 17px/1.45 var(--ui);
+    background: radial-gradient(900px 600px at 8% -12%, rgba(166,200,255,.16), transparent 70%), var(--bg);
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 720px; margin: 0 auto; padding: 28px 16px 48px; display: grid; gap: 16px; }
+  h1 { margin: 0; font-size: 30px; letter-spacing: -.02em; }
+  h2 { margin: 0 0 8px; font-size: 17px; }
+  .sub { margin: 2px 0 0; color: var(--muted); font-size: 16px; }
+  .card { padding: 16px; border-radius: 22px; background: var(--glass); border: 1px solid var(--line); }
+  .help { color: var(--muted); font-size: 15px; margin: 10px 0 0; }
+  .help b { color: var(--text); }
+  a { color: var(--accent); }
+  button {
+    font: inherit; font-weight: 650; border: none; border-radius: 999px; padding: 0 22px;
+    background: #fff; color: #0b0c10; cursor: pointer; min-height: 48px;
+  }
+  button:disabled { opacity: .5; cursor: default; }
+  button.danger { background: transparent; color: var(--danger); border: 1px solid rgba(255,138,138,.4); min-height: 38px; padding: 0 16px; font-weight: 500; }
+  button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .rows { display: grid; }
+  .setting { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 0;
+             border-top: 1px solid rgba(255,255,255,.06); }
+  .setting:first-child { border-top: none; }
+  .setting small { display: block; color: var(--muted); font-size: 14px; }
+  #customStatus { min-height: 1.3em; color: var(--text); }
+  #switchedOff { color: var(--danger); }
+  /* Back to the editor. */
+  .home {
+    display: inline-flex; align-items: center; gap: 6px; margin-bottom: 14px;
+    padding: 6px 14px; border-radius: 999px; font-size: 14px; text-decoration: none;
+    color: rgba(255,255,255,.62); background: rgba(255,255,255,.055);
+    border: 1px solid rgba(255,255,255,.10); transition: color .15s, background .15s;
+  }
+  .home:hover, .home:focus-visible { color: #fff; background: rgba(255,255,255,.09); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <a class="home" href="/" data-t="web.common.backToDashboard">← Dashboard</a>
+    <h1 data-t="web.widgets.title">Custom widgets</h1>
+    <p data-t="web.widgets.sub" class="sub">Widgets of your own, installed on the panel.</p>
+  </header>
+  <section class="card">
+    <h2 data-t="web.widgets.installed">Installed</h2>
+        <div id="customList" class="rows"></div>
+        <div style="margin-top:10px">
+          <button data-t="web.widgets.Upload" id="customUpload">＋ Upload a widget</button>
+        </div>
+        <p class="help" id="customStatus"></p>
+        <pre id="customError" hidden style="white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;line-height:1.45;padding:10px;border-radius:8px;border:1px solid rgba(255,90,90,.5);max-height:320px;overflow:auto"></pre>
+        <p class="help" id="switchedOff" hidden data-t="web.widgets.switchedOff">Widgets written in Dart are switched off. Switch them on at the panel: Settings → Dashboard → Widgets written in Dart.</p>
+  </section>
+  <section class="card">
+    <h2 data-t="web.widgets.kinds">Two kinds</h2>
+        <p data-t-html="web.widgets.HelpCode" class="help"><b>Written in Dart</b> (.dart) — as full as any widget the panel comes with: its own drawing, taps, timers, anything. The panel checks it, builds it into itself and restarts, which takes a few minutes. If it does not check, build or start, the panel stays on the build it had and what the compiler said is shown here, to fix and send again. Off until switched on at the panel: Settings → Dashboard → Widgets written in Dart. <a href="/api/widgets/code/example" download="tide_curve.dart">Download the Dart example</a></p>
+        <p data-t-html="web.widgets.Help" class="help"><b>Described in JSON</b> (.json) — what it is called, its settings, the address its data comes from and how to show it. On the panel at once, with no rebuild; it can show figures, cards and lists, and nothing more. <a href="/api/widgets/example" download="sea_state.json">Download the JSON example</a></p>
+        <p data-t="web.widgets.Trust" class="help">Only install widgets you trust: one in Dart runs on the panel as a program; one in JSON tells the panel which address to fetch.</p>
+  </section>
+</main>
+<script src="/i18n.js"></script>
+<script>
+const state = { schema: null };
+const api = {
+  async get(path) {
+    const r = await fetch(path);
+    if (!r.ok) throw new Error(path + " -> " + r.status);
+    return r.json();
+  },
+};
+
+/* Widgets installed from a file. One described in JSON is on the panel at
+   once; one written in Dart is built into the panel, which restarts — so
+   that is watched, through the restart, until it has worked or failed. */
+let customWatch = null;
+async function renderCustom() {
+  const list = document.getElementById("customList");
+  const status = document.getElementById("customStatus");
+  const errors = document.getElementById("customError");
+  const upload = document.getElementById("customUpload");
+
+  /* The editor asks for its palette again when it is gone back to. */
+  const refreshPalette = async () => {};
+
+  const steps = {
+    checking: t("web.widgets.Checking", "Checking {name}…"),
+    building: t("web.widgets.Building", "Building {name} into the panel — this takes a few minutes…"),
+    restarting: t("web.widgets.Restarting", "Restarting the panel with {name}…"),
+  };
+  const fill = (s, name) => s.replace("{name}", name);
+
+  /* Shows how a build stands. True while it is still going. */
+  const showBuild = (b, fresh) => {
+    const name = (b.name || "") + ".dart";
+    errors.hidden = true;
+    if (b.state === "building") {
+      status.textContent = fill(steps[b.step] || steps.building, name);
+      return true;
+    }
+    if (b.state === "failed") {
+      status.textContent = b.action === "remove"
+        ? t("web.widgets.RemoveFailed", "{name} could not be removed. The panel is as it was.", { name })
+        : t("web.widgets.Failed", "{name} was not installed. The panel is as it was. Fix what is below and upload it again.", { name });
+      errors.textContent = b.error || "";
+      errors.hidden = !b.error;
+    } else if (b.state === "ok" && fresh) {
+      status.textContent = b.action === "remove"
+        ? t("web.widgets.RemovedCode", "Removed {name}, and the panel rebuilt without it.", { name })
+        : t("web.widgets.Built", "{name} is built in and running. It is in the editor, under \"Add a widget\".", { name });
+    }
+    return false;
+  };
+
+  /* Asked every few seconds. The kiosk not answering is the restart. */
+  const watch = () => {
+    clearInterval(customWatch);
+    upload.disabled = true;
+    customWatch = setInterval(async () => {
+      let data;
+      try { data = await api.get("/api/widgets/build"); }
+      catch (e) {
+        status.textContent = t("web.widgets.Waiting", "The panel is restarting…");
+        return;
+      }
+      if (showBuild(data.build, true)) return;
+      clearInterval(customWatch);
+      customWatch = null;
+      upload.disabled = false;
+      try { await refreshPalette(); } catch (e) {}
+      draw(await api.get("/api/widgets"), data);
+    }, 3000);
+  };
+
+  const row = (label, small, href, file, onRemove) => {
+    const el = document.createElement("div");
+    el.className = "setting";
+    const name = document.createElement("span");
+    name.textContent = label;
+    if (small) {
+      const s = document.createElement("small");
+      s.textContent = small;
+      name.appendChild(s);
+    }
+    const buttons = document.createElement("span");
+    buttons.style.whiteSpace = "nowrap";
+    const get = document.createElement("a");
+    get.href = href;
+    get.download = file;
+    get.textContent = t("web.widgets.Download", "Download");
+    get.style.marginRight = "10px";
+    const remove = document.createElement("button");
+    remove.className = "danger";
+    remove.textContent = t("web.widgets.Remove", "Remove");
+    remove.onclick = async () => {
+      remove.disabled = true;
+      try { await onRemove(); }
+      catch (e) {
+        status.textContent = e.message || t("web.widgets.CouldNotRemove", "Could not remove it");
+        remove.disabled = false;
+      }
+    };
+    buttons.append(get, remove);
+    el.append(name, buttons);
+    return el;
+  };
+
+  const draw = (described, code) => {
+    list.innerHTML = "";
+    if (!described.widgets.length && !code.installed.length) {
+      const none = document.createElement("p");
+      none.className = "help";
+      none.textContent = t("web.widgets.None", "None installed yet.");
+      list.appendChild(none);
+    }
+    for (const name of code.installed) {
+      list.appendChild(row(
+        "⚙️ " + name + ".dart",
+        t("web.widgets.IsCode", "Written in Dart, built into the panel"),
+        "/api/widgets/code?name=" + encodeURIComponent(name),
+        name + ".dart",
+        async () => {
+          const res = await fetch("/api/widgets/code?name=" + encodeURIComponent(name), { method: "DELETE" });
+          if (!res.ok) throw new Error(await res.text() || res.statusText);
+          showBuild((await res.json()).build, true);
+          watch();
+        },
+      ));
+    }
+    for (const w of described.widgets) {
+      list.appendChild(row(
+        w.glyph + " " + w.name,
+        w.description,
+        "/api/widgets/file?id=" + encodeURIComponent(w.id),
+        w.id + ".json",
+        async () => {
+          const res = await fetch("/api/widgets?id=" + encodeURIComponent(w.id), { method: "DELETE" });
+          if (!res.ok) throw new Error(res.statusText);
+          status.textContent = t("web.widgets.Removed", "Removed {name}. Tiles of it keep their settings, for if it comes back.", { name: w.name });
+          await refreshPalette();
+          draw(await res.json(), code);
+        },
+      ));
+    }
+  };
+
+  let described, code;
+  try {
+    [described, code] = await Promise.all([
+      api.get("/api/widgets"),
+      api.get("/api/widgets/build"),
+    ]);
+  } catch (e) { status.textContent = "—"; return; }
+  draw(described, code);
+  document.getElementById("switchedOff").hidden = code.enabled !== false;
+  // A build begun before this page was opened, or one that failed: its
+  // errors are still there to read.
+  if (showBuild(code.build, false)) watch();
+
+  if (upload.dataset.ready) return;
+  upload.dataset.ready = "1";
+  const picker = document.createElement("input");
+  picker.type = "file";
+  picker.accept = ".dart,.json,application/json";
+  picker.style.display = "none";
+  upload.after(picker);
+  upload.onclick = () => picker.click();
+  picker.onchange = async () => {
+    const file = picker.files && picker.files[0];
+    picker.value = "";
+    if (!file) return;
+    const dart = file.name.toLowerCase().endsWith(".dart");
+    if (file.size > (dart ? 256 : 64) * 1024) {
+      status.textContent = t("web.widgets.TooBig", "That file is too big to be a widget");
+      return;
+    }
+    errors.hidden = true;
+    status.textContent = t("web.editor.uploading", "Uploading {file}…", { file: file.name });
+    try {
+      const res = await fetch(
+        dart ? "/api/widgets/code?name=" + encodeURIComponent(file.name) : "/api/widgets",
+        {
+          method: "POST",
+          headers: { "Content-Type": dart ? "text/plain" : "application/json" },
+          body: await file.text(),
+        },
+      );
+      // What is wrong with the file, in the kiosk's own words.
+      if (!res.ok) { status.textContent = (await res.text()) || res.statusText; return; }
+      if (dart) {
+        showBuild((await res.json()).build, true);
+        watch();
+        return;
+      }
+      status.textContent = t("web.widgets.Installed", "Installed. It is in the editor, under Custom in \"Add a widget\".");
+      await refreshPalette();
+      draw(await res.json(), code);
+    } catch (e) {
+      status.textContent = t("web.widgets.CouldNotUpload", "Could not upload it");
+    }
+  };
+}
+
+// Words first, so the page is drawn in the panel's language.
+loadWords().then(renderCustom);
+</script>
+</body>
+</html>

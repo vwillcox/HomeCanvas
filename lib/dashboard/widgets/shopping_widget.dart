@@ -125,7 +125,8 @@ class _Check extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
+        // A console's tick box is a block: square.
+        shape: theme.isLcars ? BoxShape.rectangle : BoxShape.circle,
         color: done ? accent : Colors.transparent,
         border: Border.all(
           color: done ? accent : theme.textSecondary,
