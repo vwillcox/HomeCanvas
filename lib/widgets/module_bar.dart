@@ -121,6 +121,7 @@ class _ModuleBarState extends State<ModuleBar>
     }
 
     return Glass(
+      strip: true,
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
       child: Row(
         mainAxisSize: MainAxisSize.min,

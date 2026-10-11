@@ -44,7 +44,7 @@ class SiteFeedTile<T extends VideoSite> extends StatelessWidget {
     final now = DateTime.now();
     final count = w.option('count', 6).clamp(1, 30).toInt();
     return ClipRRect(
-      borderRadius: BorderRadius.circular(t.cornerRadius * 0.6),
+      borderRadius: BorderRadius.circular(tileCorner(t, t.cornerRadius * 0.6)),
       child: Stack(
         fit: StackFit.expand,
         children: [

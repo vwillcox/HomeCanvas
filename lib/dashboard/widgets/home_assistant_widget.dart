@@ -11,6 +11,7 @@ import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
+import '../../widgets/lcars.dart';
 import '../../l10n/l10n.dart';
 
 /// Home Assistant entities you pick — temperatures, who is home, what is
@@ -153,7 +154,9 @@ class _Card extends StatelessWidget {
       onTap: e != null && e.switchable ? () => onTap(e) : null,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        decoration: BoxDecoration(
+        decoration: theme.isLcars
+            ? lcarsCard(theme, lit: lit)
+            : BoxDecoration(
           borderRadius: BorderRadius.circular(14),
           color: lit
               ? theme.accent.withValues(alpha: 0.14)
@@ -219,8 +222,9 @@ class _Card extends StatelessWidget {
                   child: Container(
                     width: 14,
                     height: 14,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
+                    decoration: BoxDecoration(
+                      // A console's key is black, on a lit track.
+                      color: theme.isLcars ? lcarsInk : Colors.white,
                       shape: BoxShape.circle,
                     ),
                   ),

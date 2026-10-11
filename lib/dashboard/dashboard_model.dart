@@ -207,6 +207,12 @@ class DashboardSettings {
 
   List<DashboardWidgetConfig> widgets;
 
+  /// Whether widgets may be uploaded as Dart and built into the app. Off
+  /// unless switched on in Settings on the panel: what is uploaded is run,
+  /// as the panel's own user, and the editor has no password. The panel's
+  /// own, never the editor's to change.
+  bool codeWidgets;
+
   /// Which of the web editor's panels, palette groups and list rows are
   /// folded or opened, as the editor names them. Kept here rather than in
   /// the browser so every device, and every address the panel answers to,
@@ -233,6 +239,7 @@ class DashboardSettings {
     this.photoDim = 0.5,
     this.photoSeconds = 90,
     List<DashboardWidgetConfig>? widgets,
+    this.codeWidgets = false,
     List<String>? editorPanels,
   }) : pages = pages ?? [],
        widgets = widgets ?? [],
@@ -287,6 +294,7 @@ class DashboardSettings {
             .map(DashboardWidgetConfig.fromJson)
             .where((w) => w.id.isNotEmpty && w.type.isNotEmpty)
             .toList(),
+        codeWidgets: j['codeWidgets'] as bool? ?? false,
         editorPanels: cleanPanels(j['editorPanels']),
       );
 
@@ -309,6 +317,7 @@ class DashboardSettings {
     'photoDim': photoDim,
     'photoSeconds': photoSeconds,
     'widgets': widgets.map((w) => w.toJson()).toList(),
+    'codeWidgets': codeWidgets,
     'editorPanels': editorPanels,
   };
 

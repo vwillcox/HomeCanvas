@@ -1,0 +1,64 @@
+{
+  "type": "sea_state",
+  "name": "Sea state",
+  "description": "The sea at a place you choose: its level against the mean, how high the waves are, and how warm the water is. From Open-Meteo, which asks for no key.",
+  "glyph": "🌊",
+  "defaultWidth": 3,
+  "defaultHeight": 2,
+  "minWidth": 1,
+  "minHeight": 1,
+  "options": [
+    {
+      "key": "place",
+      "label": "Place",
+      "default": "Harwich",
+      "help": "What to call it on the tile."
+    },
+    {
+      "key": "latitude",
+      "label": "Latitude",
+      "kind": "number",
+      "default": 51.95
+    },
+    {
+      "key": "longitude",
+      "label": "Longitude",
+      "kind": "number",
+      "default": 1.29,
+      "help": "West is a minus number."
+    }
+  ],
+  "source": {
+    "url": "https://marine-api.open-meteo.com/v1/marine?latitude={{option.latitude}}&longitude={{option.longitude}}&current=sea_level_height_msl,wave_height,sea_surface_temperature&timezone=auto",
+    "every": 900
+  },
+  "show": {
+    "kind": "cards",
+    "cards": [
+      {
+        "glyph": "🌊",
+        "label": "{{option.place}}",
+        "value": "{{current.sea_level_height_msl | number:2}} m"
+      },
+      {
+        "glyph": "〰️",
+        "label": "Waves",
+        "value": "{{current.wave_height | number:1}} m"
+      },
+      {
+        "glyph": "🌡️",
+        "label": "Water",
+        "value": "{{current.sea_surface_temperature | number:1}} °C"
+      },
+      {
+        "glyph": "🕒",
+        "label": "Read at",
+        "value": "{{current.time | time}}"
+      }
+    ]
+  },
+  "preview": [
+    "Harwich  0.84 m",
+    "Waves  0.3 m"
+  ]
+}

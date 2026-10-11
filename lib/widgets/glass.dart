@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import '../look.dart';
+import 'lcars.dart';
 import 'pause_when_hidden.dart';
 import 'shown_timers.dart';
 import '../l10n/l10n.dart';
@@ -26,6 +27,7 @@ class Glass extends StatelessWidget {
     this.padding = EdgeInsets.zero,
     this.blur = 18,
     this.tint = 0.08,
+    this.strip = false,
   });
 
   final Widget child;
@@ -36,10 +38,34 @@ class Glass extends StatelessWidget {
   /// How strong the frosting is, where 0.08 is the theme's own tile.
   final double tint;
 
+  /// A pill holding a row of buttons and little else. Nothing to a theme
+  /// with glass; a console draws it as one strip of blocks, without the
+  /// padding, rounded only at its two ends.
+  final bool strip;
+
   @override
   Widget build(BuildContext context) {
     final look = context.look;
     final shape = BorderRadius.circular(radius);
+    if (look.isLcars) {
+      // A console has no glass: black behind, so what is on it reads over
+      // a photograph as it does over the black of the screen. A strip is
+      // cut round at its two ends, which rounds its first block and its
+      // last. Anything squarer than a pill is a card, and gets an edge.
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          color: look.background.first.withValues(alpha: 0.88),
+          borderRadius: shape,
+          border: radius >= 100
+              ? null
+              : Border.all(color: look.block(2), width: 2),
+        ),
+        child: ClipRRect(
+          borderRadius: shape,
+          child: strip ? child : Padding(padding: padding, child: child),
+        ),
+      );
+    }
     // The theme's tile, scaled by [tint] — on Glass that is the faint white
     // it always was; on a solid theme, its solid tile.
     final fill = look.surface.withValues(
@@ -81,6 +107,17 @@ class GlassIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final look = context.look;
+    if (look.isLcars) {
+      final block = LcarsBlock(
+        colour: lcarsBlockColour(look, colour, 0),
+        onTap: onPressed,
+        width: size * 1.3,
+        height: size * 0.94,
+        child: Icon(icon, size: size * 0.5),
+      );
+      return tooltip == null ? block : Tooltip(message: tooltip, child: block);
+    }
     final button = Glass(
       child: Material(
         type: MaterialType.transparency,
@@ -127,6 +164,30 @@ class PillIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final lit = selectedColour ?? Theme.of(context).colorScheme.primary;
+    final look = context.look;
+    if (look.isLcars) {
+      // A square block in a strip of them, a black line apart: the one you
+      // are on is lit. The strip it sits in rounds the ends.
+      final block = LcarsBlock(
+        colour: selected
+            ? lcarsLit
+            : lcarsBlockColour(look, colour, icon.codePoint),
+        onTap: onPressed,
+        ends: LcarsEnds.none,
+        width: 72,
+        height: 60,
+        child: Icon(icon, size: 30),
+      );
+      return Semantics(
+        selected: selected,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: lcarsLine / 2),
+          child: tooltip == null
+              ? block
+              : Tooltip(message: tooltip, child: block),
+        ),
+      );
+    }
     return Semantics(
       selected: selected,
       child: IconButton(
@@ -203,6 +264,19 @@ class ChoicePill extends StatelessWidget {
   Widget build(BuildContext context) {
     final a = accent ?? Theme.of(context).colorScheme.primary;
     final look = context.look;
+    if (look.isLcars) {
+      return Semantics(
+        button: true,
+        selected: selected,
+        child: LcarsBlock(
+          colour: selected ? lcarsLit : look.block(lcarsIndex(label)),
+          onTap: onTap,
+          height: 48,
+          padding: const EdgeInsets.symmetric(horizontal: 26),
+          child: Text(lcarsCaps(label), style: const TextStyle(fontSize: 19)),
+        ),
+      );
+    }
     return Semantics(
       button: true,
       selected: selected,
@@ -319,6 +393,7 @@ class ScreenHeader extends StatelessWidget {
           if (actions.isNotEmpty) ...[
             const SizedBox(width: 16),
             Glass(
+              strip: true,
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
               child: Row(mainAxisSize: MainAxisSize.min, children: actions),
             ),
@@ -351,6 +426,11 @@ class HeaderTitle extends StatelessWidget {
     final look = context.look;
     final colour = this.colour ?? look.textPrimary;
     final secondary = this.secondary ?? look.textSecondary;
+    if (look.isLcars) {
+      // A console's text bar: the title in the accent, and the line under
+      // it as the small print on the bar that runs on beside.
+      return LcarsTextBar(title: title, note: subtitle);
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -428,11 +508,18 @@ class _GreetingTitleState extends State<GreetingTitle>
 /// Slideshow, Try again, Save. The theme's text colour as the fill, so white
 /// on a dark theme and near-black on a light one.
 ButtonStyle whitePillButton(BuildContext context) => FilledButton.styleFrom(
-  backgroundColor: context.look.textPrimary,
+  // On a console, the accent: a pill there is a block of colour already.
+  backgroundColor: context.look.isLcars
+      ? context.look.accent
+      : context.look.textPrimary,
   foregroundColor: context.look.background.first,
   shape: const StadiumBorder(),
   padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 18),
-  textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+  textStyle: TextStyle(
+    fontSize: 20,
+    fontWeight: FontWeight.w700,
+    fontFamily: context.look.fontFamily,
+  ),
 );
 
 /// A titled group of rows on a glass card — settings, lists of options.
@@ -445,6 +532,25 @@ class GlassSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final look = context.look;
+    if (look.isLcars) {
+      // The same panel as a dashboard tile, its title lettered on the bar.
+      // A group's colours come from its title, so it keeps them.
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 22),
+        child: LcarsPanel(
+          theme: look,
+          label: title,
+          heavy: true,
+          child: Material(
+            type: MaterialType.transparency,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: children,
+            ),
+          ),
+        ),
+      );
+    }
     // Rounder or squarer with the theme, but never a bubble.
     final radius = BorderRadius.circular(look.cornerRadius.clamp(0, 28));
     return Padding(
@@ -509,8 +615,9 @@ class ModernScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final look = context.look;
     return Scaffold(
-      backgroundColor: context.look.background.first,
+      backgroundColor: look.background.first,
       body: Stack(
         children: [
           const Positioned.fill(child: AmbientBackground()),

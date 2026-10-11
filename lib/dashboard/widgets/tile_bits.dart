@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../look.dart';
+import '../../widgets/lcars.dart';
 import '../dashboard_theme.dart';
 
 /// Good, warning and bad, in shades that read on the theme's background.
@@ -50,16 +52,78 @@ class TileLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (theme.isLcars) {
+      // A console's text bar, at a tile's size: a cap carrying the icon,
+      // the name in the accent, and a bar running on to whatever is at the
+      // far end.
+      final seed = lcarsIndex(text);
+      final bar = size * 1.35;
+      return LayoutBuilder(
+        builder: (context, c) => Row(
+          children: [
+            Container(
+              width: bar * 1.5,
+              height: bar,
+              alignment: Alignment.center,
+              padding: EdgeInsets.only(left: bar * 0.15),
+              decoration: BoxDecoration(
+                color: theme.block(seed),
+                borderRadius: BorderRadius.horizontal(
+                  left: Radius.circular(bar / 2),
+                ),
+              ),
+              child: Icon(icon, size: size, color: lcarsInk),
+            ),
+            SizedBox(width: size * 0.4),
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: c.hasBoundedWidth ? c.maxWidth * 0.55 : 400,
+              ),
+              child: Text(
+                lcarsCaps(text),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: theme.accent,
+                  fontSize: size * 1.15,
+                  height: 1.1,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: size * 0.06,
+                ),
+              ),
+            ),
+            SizedBox(width: size * 0.4),
+            Expanded(
+              child: Container(height: bar, color: theme.block(seed + 2)),
+            ),
+            if (trailing != null) ...[
+              const SizedBox(width: lcarsLine),
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: c.hasBoundedWidth ? c.maxWidth * 0.45 : 300,
+                ),
+                child: FittedBox(fit: BoxFit.scaleDown, child: trailing),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
     return Row(
       children: [
         Icon(icon, size: size * 1.2, color: theme.textSecondary),
         SizedBox(width: size * 0.45),
         Expanded(
           child: Text(
-            text,
+            // A console letters its headings in capitals.
+            theme.isLcars ? text.toUpperCase() : text,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: theme.textSecondary, fontSize: size),
+            style: TextStyle(
+              color: theme.textSecondary,
+              fontSize: size,
+              letterSpacing: theme.isLcars ? size * 0.06 : null,
+            ),
           ),
         ),
         // Shrinks rather than pushing the row off the edge of a narrow tile.
@@ -92,6 +156,35 @@ class StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (context.look.isLcars) {
+      // A block of the colour itself, lettered in black, rounded where it
+      // ends a row.
+      return Container(
+        padding: EdgeInsets.fromLTRB(
+          size * 0.6,
+          size * 0.22,
+          size * 0.85,
+          size * 0.22,
+        ),
+        decoration: BoxDecoration(
+          color: colour.withValues(alpha: 1),
+          borderRadius: BorderRadius.horizontal(
+            right: Radius.circular(size * 2),
+          ),
+        ),
+        child: Text(
+          lcarsCaps(text),
+          maxLines: 1,
+          style: TextStyle(
+            color: lcarsInk,
+            fontSize: size,
+            height: 1.1,
+            fontWeight: FontWeight.w700,
+            letterSpacing: size * 0.05,
+          ),
+        ),
+      );
+    }
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: size * 0.75,
@@ -130,16 +223,123 @@ class TileMessage extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 260),
           child: Text(
-            text,
+            theme.isLcars ? lcarsCaps(text) : text,
             textAlign: TextAlign.center,
             style: TextStyle(
               color: theme.textSecondary,
               fontSize: 15,
               height: 1.35,
+              letterSpacing: theme.isLcars ? 0.8 : null,
             ),
           ),
         ),
       ),
     );
   }
+}
+
+/// How far through something is: the theme's bar, or on a console a row of
+/// segments.
+class TileProgress extends StatelessWidget {
+  const TileProgress({
+    super.key,
+    required this.theme,
+    required this.value,
+    this.height = 5,
+    this.colour,
+  });
+
+  final DashboardTheme theme;
+
+  /// 0 to 1. Null for one that is only busy.
+  final double? value;
+  final double height;
+
+  /// The accent unless given.
+  final Color? colour;
+
+  @override
+  Widget build(BuildContext context) {
+    final v = value;
+    if (theme.isLcars && v != null) {
+      return LcarsSegments(
+        theme: theme,
+        value: v,
+        height: height * 1.6,
+        colour: colour,
+      );
+    }
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(theme.isLcars ? 0 : height / 2),
+      child: LinearProgressIndicator(
+        value: v,
+        minHeight: height,
+        backgroundColor: theme.textSecondary.withValues(alpha: 0.18),
+        valueColor: AlwaysStoppedAnimation(colour ?? theme.accent),
+      ),
+    );
+  }
+}
+
+/// The card something sits on inside a tile, as a console draws it: no
+/// plate, only a bar down its left — near-white while the thing is on, or
+/// in [glow] where its own colour says more.
+BoxDecoration lcarsCard(DashboardTheme theme, {required bool lit, Color? glow}) =>
+    BoxDecoration(
+      border: Border(
+        left: BorderSide(
+          color: lit ? (glow ?? lcarsLit) : theme.block(2),
+          width: 8,
+        ),
+      ),
+    );
+
+/// A corner of [radius], or a square one on a console, whose pictures and
+/// cards are square as its blocks are.
+double tileCorner(DashboardTheme theme, double radius) =>
+    theme.isLcars ? 0 : radius;
+
+/// Words as the theme letters them: capitals on a console.
+String tileCased(DashboardTheme theme, String s) =>
+    theme.isLcars ? lcarsCaps(s) : s;
+
+/// A button inside a tile as a console draws one: a block of [colour] with
+/// its [child] in black. For the widgets to use where another theme has a
+/// tinted chip or a round key.
+class TileBlock extends StatelessWidget {
+  const TileBlock({
+    super.key,
+    required this.colour,
+    required this.child,
+    this.onTap,
+    this.lit = false,
+    this.ends = LcarsEnds.both,
+    this.width,
+    this.height = 44,
+    this.padding = const EdgeInsets.symmetric(horizontal: 14),
+  });
+
+  final Color colour;
+  final Widget child;
+  final VoidCallback? onTap;
+
+  /// Chosen, or switched on: near-white, whatever [colour] is.
+  final bool lit;
+  final LcarsEnds ends;
+  final double? width;
+  final double height;
+  final EdgeInsetsGeometry padding;
+
+  @override
+  Widget build(BuildContext context) => LcarsBlock(
+    colour: lit ? lcarsLit : colour,
+    // Shown at full strength with nothing to press, too: a tile's blocks
+    // are as often a readout as a button.
+    onTap: onTap ?? () {},
+    ends: ends,
+    width: width,
+    height: height,
+    padding: padding,
+    child: child,
+  );
 }

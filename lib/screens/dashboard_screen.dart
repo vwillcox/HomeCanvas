@@ -21,6 +21,7 @@ import '../services/playback_source.dart';
 import '../look.dart';
 import '../theme.dart' show fontFallback;
 import '../widgets/glass.dart';
+import '../widgets/lcars.dart';
 import '../widgets/module_bar.dart';
 import '../widgets/now_playing_overlay.dart';
 import 'home_screen.dart' show showablePlayback;
@@ -626,6 +627,39 @@ class DashboardTile extends StatelessWidget {
       withShadow: settings.shadowOver(theme.shadow),
     );
     final media = MediaQuery.of(context);
+    // A console's tile is black inside drawn bars, not a filled box, with
+    // what it is lettered on the bar — its name, and a number to tell two
+    // of a kind apart. The lower half of the grid sweeps down and across
+    // the bottom, so a page is framed along both edges.
+    final Widget tile;
+    if (theme.isLcars) {
+      tile = LcarsPanel(
+        theme: theme,
+        label: '${type?.localName ?? config.type} '
+            '${lcarsIndex(config.id) % 90 + 10}',
+        down: config.y * 2 + config.height > DashboardGrid.rows,
+        scale: fit,
+        square: settings.radiusOver(theme.cornerRadius) == 0,
+        framed: framed,
+        child: child,
+      );
+    } else {
+      tile = framed
+          ? Container(
+              decoration: decoration,
+              // Padding shrinks with the text. At 1x1 the old fixed 16 took
+              // a fifth of the tile before anything was drawn in it.
+              padding: EdgeInsets.all(16 * fit),
+              clipBehavior: Clip.antiAlias,
+              child: child,
+            )
+          // Where the framed tile's contents would be: a Container adds its
+          // border's width to the padding, so the same inset is kept here.
+          : Padding(
+              padding: EdgeInsets.all(16 * fit).add(decoration.padding),
+              child: child,
+            );
+    }
     return MediaQuery(
       data: media.copyWith(
         textScaler: TextScaler.linear(
@@ -641,21 +675,7 @@ class DashboardTile extends StatelessWidget {
           // A fresh style, not a merge, so the app's fallback is named again.
           fontFamilyFallback: fontFallback,
         ),
-        child: framed
-            ? Container(
-                decoration: decoration,
-                // Padding shrinks with the text. At 1x1 the old fixed 16 took
-                // a fifth of the tile before anything was drawn in it.
-                padding: EdgeInsets.all(16 * fit),
-                clipBehavior: Clip.antiAlias,
-                child: child,
-              )
-            // Where the framed tile's contents would be: a Container adds its
-            // border's width to the padding, so the same inset is kept here.
-            : Padding(
-                padding: EdgeInsets.all(16 * fit).add(decoration.padding),
-                child: child,
-              ),
+        child: tile,
       ),
     );
   }
@@ -744,6 +764,7 @@ class _MediaControlsState extends State<_MediaControls> {
     final playing = source.now.isPlaying;
     final art = source.artUrl;
     return Glass(
+      strip: true,
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -839,6 +860,44 @@ class _PageDots extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dim = theme.textSecondary.withValues(alpha: 0.4);
+    if (theme.isLcars) {
+      // A console's strip of segments, the page you are on the long one,
+      // filling as its time runs, with hold and carry on as a block.
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          LcarsPageStrip(
+            count: count,
+            current: current,
+            onTap: (i) => i == current && onTogglePause != null
+                ? onTogglePause!()
+                : onTap(i),
+            fill: turn == null
+                ? null
+                : _Fill(turn: turn!, paused: paused, colour: lcarsLit),
+          ),
+          if (onTogglePause != null) ...[
+            const SizedBox(width: 6),
+            Semantics(
+              button: true,
+              label: paused
+                  ? tr('dashboard.carryOnTurningPages', 'Carry on turning pages')
+                  : tr('dashboard.holdThisPage', 'Hold this page'),
+              child: LcarsBlock(
+                colour: paused ? lcarsLit : theme.block(1),
+                onTap: onTogglePause,
+                width: 72,
+                height: 44,
+                child: Icon(
+                  paused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                  size: 28,
+                ),
+              ),
+            ),
+          ],
+        ],
+      );
+    }
     // In a glass pill, like every other control on the kiosk's screens, and
     // the same height as the module bar beside it: 60-point targets, as the
     // bar's buttons are, so the two pills line up and read as one toolbar.

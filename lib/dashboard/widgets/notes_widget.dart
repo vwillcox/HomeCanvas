@@ -8,6 +8,7 @@ import '../../services/notes_service.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
+import '../../look.dart';
 import '../../time_format.dart';
 import '../../l10n/dates.dart';
 import '../../l10n/l10n.dart';
@@ -158,15 +159,18 @@ class _Note extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // On a console a note is a block: its own colour, but flat, square and
+    // straight, where any other theme pins up a slip of paper.
+    final block = context.look.isLcars;
     return Transform.rotate(
-      angle: tilt,
+      angle: block ? 0 : tilt,
       child: GestureDetector(
         onTap: onTap,
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: paper,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: const [
+            borderRadius: BorderRadius.circular(block ? 0 : 12),
+            boxShadow: block ? null : const [
               BoxShadow(
                 color: Color(0x59000000),
                 blurRadius: 14,
@@ -220,7 +224,7 @@ class _Note extends StatelessWidget {
                     return DecoratedBox(
                       decoration: BoxDecoration(
                         color: _ink.withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(block ? 0 : 12),
                       ),
                       child: Center(
                         child: GestureDetector(

@@ -12,6 +12,7 @@ import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
+import '../../widgets/lcars.dart';
 import '../../l10n/l10n.dart';
 
 /// Govee lights and plugs: tap a card to switch it, drag along its bar for
@@ -151,7 +152,9 @@ class _Card extends StatelessWidget {
       onTap: () => service.setPower(d, !on, apiKey: apiKey),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        decoration: BoxDecoration(
+        decoration: theme.isLcars
+            ? lcarsCard(theme, lit: on, glow: glow)
+            : BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           color: on
               ? glow.withValues(alpha: 0.14)
@@ -270,10 +273,11 @@ class _Switch extends StatelessWidget {
       child: Container(
         width: 14,
         height: 14,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-        ),
+        decoration: BoxDecoration(
+                      // A console's key is black, on a lit track.
+                      color: theme.isLcars ? lcarsInk : Colors.white,
+                      shape: BoxShape.circle,
+                    ),
       ),
     );
   }
@@ -323,7 +327,9 @@ class _BrightnessState extends State<_Brightness> {
             height: 16,
             child: Center(
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(5),
+                borderRadius: BorderRadius.circular(
+                  tileCorner(widget.theme, 5),
+                ),
                 child: SizedBox(
                   height: 10,
                   child: Stack(

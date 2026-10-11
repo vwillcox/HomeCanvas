@@ -10,6 +10,7 @@ import '../../widgets/shown_timers.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'tile_bits.dart';
+import '../../widgets/lcars.dart';
 
 /// One or more GitHub repositories: stars, issues, pull requests, releases,
 /// a weekly commit chart and — with a token — who is visiting. Several
@@ -95,9 +96,17 @@ class GithubWidget extends StatelessWidget {
                 isScrollable: true,
                 tabAlignment: TabAlignment.start,
                 dividerHeight: 0,
-                labelColor: theme.accent,
+                // On a console the tab showing is a near-white block,
+                // lettered in black, rather than a word underlined.
+                labelColor: theme.isLcars ? lcarsInk : theme.accent,
                 unselectedLabelColor: theme.textSecondary,
                 indicatorColor: theme.accent,
+                indicator: theme.isLcars
+                    ? const BoxDecoration(color: lcarsLit)
+                    : null,
+                indicatorSize: theme.isLcars
+                    ? TabBarIndicatorSize.tab
+                    : null,
                 labelStyle: TextStyle(
                   fontSize: tabSize,
                   fontWeight: FontWeight.w600,

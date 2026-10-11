@@ -9,6 +9,7 @@ import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
+import '../../widgets/lcars.dart';
 import '../../l10n/l10n.dart';
 
 /// Kitchen timers: tap a preset to start one, tap its ring to pause it, hold
@@ -226,6 +227,8 @@ class _Ring extends StatelessWidget {
             fraction: done ? 1 : timer.fraction(now),
             colour: colour,
             track: theme.textSecondary.withValues(alpha: 0.16),
+            // A console's ring is cut square at its end, as its bars are.
+            square: theme.isLcars,
           ),
           // The time fills the inside of the ring at any size: a box the
           // shape of the widest text that fits in a circle, scaled into.
@@ -271,11 +274,13 @@ class _RingPainter extends CustomPainter {
     required this.fraction,
     required this.colour,
     required this.track,
+    this.square = false,
   });
 
   final double fraction;
   final Color colour;
   final Color track;
+  final bool square;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -300,14 +305,17 @@ class _RingPainter extends CustomPainter {
       Paint()
         ..color = colour
         ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round
+        ..strokeCap = square ? StrokeCap.butt : StrokeCap.round
         ..strokeWidth = stroke,
     );
   }
 
   @override
   bool shouldRepaint(_RingPainter old) =>
-      old.fraction != fraction || old.colour != colour || old.track != track;
+      old.fraction != fraction ||
+      old.colour != colour ||
+      old.track != track ||
+      old.square != square;
 }
 
 class _Chip extends StatelessWidget {
@@ -327,6 +335,20 @@ class _Chip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (theme.isLcars) {
+      // A block, in a colour of its own: what it does, in black.
+      return TileBlock(
+        colour: theme.block(lcarsIndex(label)),
+        onTap: onTap,
+        height: height,
+        padding: EdgeInsets.symmetric(horizontal: height * 0.42),
+        child: Text(
+          lcarsCaps(label),
+          maxLines: 1,
+          style: TextStyle(fontSize: height * 0.44),
+        ),
+      );
+    }
     return Material(
       color: filled
           ? theme.textPrimary.withValues(alpha: 0.1)

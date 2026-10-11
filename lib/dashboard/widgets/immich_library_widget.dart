@@ -11,6 +11,7 @@ import '../../widgets/shown_timers.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
+import '../../look.dart';
 import '../../l10n/l10n.dart';
 
 /// The Immich library in numbers — photos, videos, how much space, what has
@@ -169,7 +170,9 @@ class _ImmichLibraryWidgetState extends State<ImmichLibraryWidget>
                     if (i > 0) SizedBox(width: c.maxWidth * 0.02),
                     Expanded(
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(
+                          context.look.isLcars ? 0 : 10,
+                        ),
                         child: RemoteImage(
                           url: media.thumbUrl(s.latest[i].id),
                           fallbackUrl: media.previewUrl(s.latest[i].id),

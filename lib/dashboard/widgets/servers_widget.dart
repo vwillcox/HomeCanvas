@@ -402,14 +402,11 @@ class _Bar extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 3),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(3),
-          child: LinearProgressIndicator(
-            value: (v ?? 0) / 100,
-            minHeight: 6,
-            backgroundColor: theme.textSecondary.withValues(alpha: 0.15),
-            valueColor: AlwaysStoppedAnimation(colour),
-          ),
+        TileProgress(
+          theme: theme,
+          value: ((v ?? 0) / 100).clamp(0.0, 1.0),
+          height: 6,
+          colour: colour,
         ),
       ],
     );

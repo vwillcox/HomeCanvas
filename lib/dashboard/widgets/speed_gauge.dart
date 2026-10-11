@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../look.dart';
+
 /// A single dial carrying both speeds at once: download on the outer track,
 /// upload on the inner one.
 ///
@@ -76,6 +78,8 @@ class SpeedGauge extends StatelessWidget {
               upload: uploadColour,
               track: trackColour,
               tick: mutedColour,
+              // A console's dial is cut square at its ends, as its bars are.
+              square: context.look.isLcars,
             ),
             child: Center(
               child: Column(
@@ -142,7 +146,10 @@ class _GaugePainter extends CustomPainter {
     required this.upload,
     required this.track,
     required this.tick,
+    this.square = false,
   });
+
+  final bool square;
 
   final double downloadMbps;
   final double uploadMbps;
@@ -213,7 +220,7 @@ class _GaugePainter extends CustomPainter {
       final paint = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = strokeWidth
-        ..strokeCap = StrokeCap.round
+        ..strokeCap = square ? StrokeCap.butt : StrokeCap.round
         ..color = colour;
       canvas.drawArc(rect, _start, _sweep * fraction, false, paint);
     }
@@ -255,5 +262,6 @@ class _GaugePainter extends CustomPainter {
       old.uploadMbps != uploadMbps ||
       old.maxMbps != maxMbps ||
       old.download != download ||
-      old.upload != upload;
+      old.upload != upload ||
+      old.square != square;
 }

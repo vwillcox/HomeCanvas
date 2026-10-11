@@ -33,6 +33,8 @@ class HueRelay {
     'language',
     'brightness',
     'volume',
+    'homey',
+    'widgets',
     'sounds',
     'list',
     'notes',

@@ -253,8 +253,9 @@ class _BarsPainter extends CustomPainter {
       canvas.drawRRect(
         RRect.fromRectAndCorners(
           Rect.fromLTWH(i * w + w * 0.12, size.height - h, w * 0.76, h),
-          topLeft: Radius.circular(w * 0.3),
-          topRight: Radius.circular(w * 0.3),
+          // Square on a console, as its bars are.
+          topLeft: Radius.circular(theme.isLcars ? 0 : w * 0.3),
+          topRight: Radius.circular(theme.isLcars ? 0 : w * 0.3),
         ),
         paint,
       );

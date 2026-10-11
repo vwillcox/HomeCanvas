@@ -8,6 +8,7 @@ import '../widget_registry.dart';
 import 'weather_forecast_sheet.dart';
 import '../../l10n/l10n.dart';
 import '../../l10n/dates.dart';
+import '../../widgets/lcars.dart';
 
 /// Current conditions, and optionally the next few days.
 ///
@@ -51,7 +52,9 @@ class DashboardWeatherWidget extends StatelessWidget {
     // the same widget fill a large tile instead of sitting small in the
     // middle of one, and shrink to fit a small tile instead of overflowing —
     // the numbers below are proportions to each other, not sizes on screen.
-    final current = FittedBox(
+    final current = t.isLcars
+        ? _consoleCurrent(weather, showFeels: showFeels, showHighLow: showHighLow)
+        : FittedBox(
       fit: BoxFit.contain,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -172,6 +175,101 @@ class DashboardWeatherWidget extends StatelessWidget {
   }
 
 
+  /// The reading as a console shows it: the temperature heavy in the accent
+  /// with what the sky is doing under it, and the other figures beside it
+  /// as blocks capped on the left, each named.
+  Widget _consoleCurrent(
+    Weather weather, {
+    required bool showFeels,
+    required bool showHighLow,
+  }) {
+    final t = w.theme;
+    final figures = [
+      if (showFeels)
+        (
+          tr('widget.weather.lcars.feels', 'Feels'),
+          '${weather.feelsLike.round()}°',
+        ),
+      if (showHighLow) ...[
+        (
+          tr('widget.weather.lcars.high', 'High'),
+          '${weather.tempMax.round()}°',
+        ),
+        (tr('widget.weather.lcars.low', 'Low'), '${weather.tempMin.round()}°'),
+      ],
+    ];
+    // Given all the room there is, so the reading grows to fill a large
+    // tile as well as shrinking to fit a small one.
+    return SizedBox.expand(
+      child: Padding(
+        padding: const EdgeInsets.all(6),
+        child: FittedBox(
+          fit: BoxFit.contain,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '${weather.temperature.round()}${weather.unit}',
+                        style: TextStyle(
+                          color: t.accent,
+                          fontSize: 64,
+                          height: 1.0,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Icon(
+                        weatherIcon(weather.weatherCode, weather.isDay),
+                        color: t.textPrimary,
+                        size: 46,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    lcarsCaps(weather.description),
+                    style: TextStyle(
+                      color: t.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                ],
+              ),
+              if (figures.isNotEmpty) ...[
+                const SizedBox(width: 18),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final (i, f) in figures.indexed)
+                      Padding(
+                        padding: EdgeInsets.only(top: i == 0 ? 0 : lcarsLine),
+                        child: LcarsReadout(
+                          colour: t.block(i * 2 + 1),
+                          name: f.$1,
+                          value: f.$2,
+                          width: 132,
+                          height: 28,
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   static bool _isToday(DateTime d) {
     final now = DateTime.now();
     return d.year == now.year && d.month == now.month && d.day == now.day;
@@ -200,8 +298,149 @@ class _Forecast extends StatelessWidget {
   /// which is what a tall, narrow share of a wide tile wants.
   final bool vertical;
 
+  /// About what one day's column measures before it is scaled to fit: on
+  /// any other theme, and on a console.
+  static const _cell = Size(64, 86);
+  static const _consoleCell = Size(104, 90);
+
+  /// The days' columns side by side — or, where that leaves each one
+  /// noticeably larger, in two rows: a week across a tile that is wide but
+  /// not that wide is seven slivers in one row and seven readable days in
+  /// two. The second row keeps the first's columns, so the days line up.
+  static Widget _rows(List<Widget> cells, Size room, Size cell) {
+    double scale(int across, int down) {
+      final w = room.width / across / cell.width;
+      final h = room.height / down / cell.height;
+      return w < h ? w : h;
+    }
+
+    final across = (cells.length + 1) ~/ 2;
+    if (cells.length < 4 || scale(across, 2) < scale(cells.length, 1) * 1.15) {
+      return Row(children: cells);
+    }
+    return Column(
+      children: [
+        Expanded(child: Row(children: cells.sublist(0, across))),
+        Expanded(
+          child: Row(
+            children: [
+              ...cells.sublist(across),
+              for (var i = cells.length; i < across * 2; i++)
+                const Spacer(),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// A day on a console: its name on a bar of its own colour, then the
+  /// sky and the high — and the low, where there is the width for it.
+  Widget _consoleDay(int i, DailyForecast day) {
+    final name = DashboardWeatherWidget.dayLabel(day.date);
+    Widget icon(double size) => Icon(
+      weatherIcon(day.weatherCode, true),
+      color: theme.textSecondary,
+      size: size,
+    );
+    Widget high(double size) => Text(
+      '${day.tempMax.round()}°',
+      style: TextStyle(
+        color: theme.textPrimary,
+        fontSize: size,
+        height: 1.1,
+        fontWeight: FontWeight.w700,
+      ),
+    );
+    Widget low(double size) => Text(
+      '${day.tempMin.round()}°',
+      style: TextStyle(
+        color: theme.textSecondary,
+        fontSize: size,
+        height: 1.1,
+      ),
+    );
+    if (vertical) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          LcarsReadout(
+            colour: theme.block(i + 2),
+            value: name,
+            width: 86,
+            height: 26,
+          ),
+          const SizedBox(width: 10),
+          icon(24),
+          const SizedBox(width: 8),
+          high(20),
+          const SizedBox(width: 6),
+          low(20),
+        ],
+      );
+    }
+    // In a column the sky is the large thing, with the high over the low
+    // beside it: nearly square, so it fills its share of a tile whichever
+    // way that is longer.
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: _consoleCell.width,
+          height: 22,
+          color: theme.block(i + 2),
+          alignment: Alignment.centerRight,
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          child: Text(
+            lcarsCaps(name),
+            maxLines: 1,
+            textScaler: TextScaler.noScaling,
+            style: const TextStyle(
+              color: lcarsInk,
+              fontSize: 15,
+              height: 1,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1,
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            icon(56),
+            const SizedBox(width: 8),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [high(25), low(22)],
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (theme.isLcars) {
+      final cells = [
+        for (final (i, day) in days.indexed)
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(lcarsLine / 2),
+              child: FittedBox(
+                fit: BoxFit.contain,
+                child: _consoleDay(i, day),
+              ),
+            ),
+          ),
+      ];
+      if (vertical) return Column(children: cells);
+      return LayoutBuilder(
+        builder: (context, c) => _rows(cells, c.biggest, _consoleCell),
+      );
+    }
     final cells = [
       for (final day in days)
         Expanded(
@@ -254,7 +493,10 @@ class _Forecast extends StatelessWidget {
           ),
         ),
     ];
-    return vertical ? Column(children: cells) : Row(children: cells);
+    if (vertical) return Column(children: cells);
+    return LayoutBuilder(
+      builder: (context, c) => _rows(cells, c.biggest, _cell),
+    );
   }
 }
 
@@ -281,6 +523,7 @@ final weatherWidgetType = DashboardWidgetType(
         '3': '3 day',
         '5': '5 day',
         '7': '7 day',
+        '8': '8 day',
         '10': '10 day',
         '14': '14 day',
       },

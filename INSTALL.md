@@ -415,13 +415,14 @@ from a browser on the same network at **`http://homecanvas.local:8090`**.
 - **Widgets that come and go** — each widget's settings end with **Only show it
   between**, for a trains board on weekday mornings or the bins the evening
   before.
-- **The theme** — sixteen, dark (Glass, Aurora, Abyss, Obsidian, Synthwave,
-  Midnight, Ember, Forest, Espresso, Terminal, Terminal Night, Nightstand) and
+- **The theme** — seventeen, dark (Glass, Aurora, Abyss, Obsidian, Synthwave,
+  Midnight, Ember, Forest, Espresso, Terminal, Terminal Night, LCARS,
+  Nightstand) and
   light (Frost, Paper, Sorbet, Swiss); see [THEMES.md](THEMES.md). The theme
   dresses the whole kiosk, not just the dashboard. To make your own, drop a
   JSON file in `~/.config/homecanvas/themes/`, starting from
   [`deploy/theme-template.json`](deploy/theme-template.json).
-- **The look of each widget** — twenty fonts and twelve sizes, square corners
+- **The look of each widget** — twenty-one fonts and twelve sizes, square corners
   or shadows off, and the top bar on or off.
 - **Photo background** — your Immich photos behind the tiles, darkened and
   cross-fading slowly: from the whole library or one album, how dark, how often

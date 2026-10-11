@@ -41,5 +41,9 @@
   "glowEnd": null,
 
   "//sheen": "Light along the top of each tile, like a pane of glass catching it: 0 for none, around 0.05 to 0.1 for glass.",
-  "sheen": 0
+  "sheen": 0,
+
+  "//style": "Optional. \"lcars\" draws the theme as a starship's console, as the LCARS theme is: bars swept round each panel's corner instead of a tile, block buttons, capitals. Leave it out for tiles.",
+
+  "//palette": "With style lcars, the colours the bars and blocks are drawn in, taken in turn, for example [\"#FF9900\", \"#CC99CC\", \"#9999FF\"]. Lettering on them is black, so keep them light."
 }

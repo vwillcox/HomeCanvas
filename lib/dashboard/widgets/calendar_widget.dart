@@ -7,6 +7,7 @@ import '../widget_registry.dart';
 import '../../time_format.dart';
 import '../../l10n/dates.dart';
 import '../../l10n/l10n.dart';
+import '../../widgets/lcars.dart';
 
 /// One calendar feed and the colour its events are drawn in.
 class _Source {
@@ -219,23 +220,43 @@ class _MonthView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          monthYear(now),
+          t.isLcars ? lcarsCaps(monthYear(now)) : monthYear(now),
           style: TextStyle(
-            color: t.textPrimary,
+            color: t.isLcars ? t.accent : t.textPrimary,
             fontSize: 16,
-            fontWeight: FontWeight.w600,
+            fontWeight: t.isLcars ? FontWeight.w700 : FontWeight.w600,
+            letterSpacing: t.isLcars ? 1 : null,
           ),
         ),
         const SizedBox(height: 6),
         Row(
           children: [
-            for (final d in weekdayLetters())
+            for (final (i, d) in weekdayLetters().indexed)
               Expanded(
-                child: Text(
-                  d,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: t.textSecondary, fontSize: 11),
-                ),
+                child: t.isLcars
+                    // Each day of the week on a bar of its own colour, a
+                    // black line from the next.
+                    ? Container(
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: lcarsLine / 2,
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 1),
+                        color: t.block(i),
+                        child: Text(
+                          d,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: lcarsInk,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      )
+                    : Text(
+                        d,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: t.textSecondary, fontSize: 11),
+                      ),
               ),
           ],
         ),
@@ -312,7 +333,10 @@ class _Day extends StatelessWidget {
                   decoration: isToday
                       ? BoxDecoration(
                           color: theme.accent,
-                          borderRadius: BorderRadius.circular(20),
+                          // Today is a block, on a console: square.
+                          borderRadius: BorderRadius.circular(
+                            theme.isLcars ? 0 : 20,
+                          ),
                         )
                       : null,
                   child: Text(
@@ -344,7 +368,9 @@ class _Day extends StatelessWidget {
                               border: Border(
                                   left:
                                       BorderSide(color: e.colour, width: 2)),
-                              borderRadius: BorderRadius.circular(3),
+                              borderRadius: BorderRadius.circular(
+                                theme.isLcars ? 0 : 3,
+                              ),
                             ),
                             child: Text(
                               e.event.title,

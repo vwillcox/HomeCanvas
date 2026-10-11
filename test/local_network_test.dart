@@ -37,4 +37,15 @@ void main() {
       expect(local('2606:4700:4700::1111'), isFalse);
     });
   });
+
+  test('a saved Homey key does not follow a change of address', () {
+    const needed = DashboardService.homeyKeyNeeded;
+    expect(needed('10.0.0.5', '10.0.0.66', 'key', false), isTrue);
+    // Given again, it is that Homey's to have.
+    expect(needed('10.0.0.5', '10.0.0.66', 'key', true), isFalse);
+    // The same place written another way is no change.
+    expect(needed('10.0.0.5', ' http://10.0.0.5/ ', 'key', false), isFalse);
+    // No key saved, none to send anywhere.
+    expect(needed('', '10.0.0.66', '', false), isFalse);
+  });
 }

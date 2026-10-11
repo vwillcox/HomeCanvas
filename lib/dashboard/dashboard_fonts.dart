@@ -113,6 +113,15 @@ const List<DashboardFont> kDashboardFonts = [
     file: 'Oswald.ttf',
     group: FontGroup.display,
   ),
+  DashboardFont(
+    family: 'Antonio',
+    name: 'Antonio',
+    description:
+        'Narrower still, and best in capitals. The face of a starship’s '
+        'console.',
+    file: 'Antonio.ttf',
+    group: FontGroup.display,
+  ),
 
   // Friendly — rounded and soft. Good on a kitchen wall, less so on a
   // dashboard you are trying to read numbers off in a hurry.

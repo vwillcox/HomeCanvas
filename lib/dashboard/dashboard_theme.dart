@@ -4,6 +4,18 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 
+/// How a theme draws its frames: the tile behind each widget, a screen's
+/// edges, its buttons.
+enum ThemeStyle {
+  /// A panel behind each widget — glass, gloss or flat, by the colours.
+  panels,
+
+  /// A starship's console: black, with bars of flat colour swept round
+  /// each panel's corner, block buttons and condensed capitals. Drawn by
+  /// `widgets/lcars.dart`.
+  lcars,
+}
+
 /// How a dashboard looks.
 ///
 /// A theme is data, not code, so a new one is a JSON file rather than a
@@ -54,6 +66,14 @@ class DashboardTheme {
   /// glass; much more reads as a gradient.
   final double sheen;
 
+  /// How the frames are drawn. Everything above is colour and measure;
+  /// this is the one setting that changes the drawing itself.
+  final ThemeStyle style;
+
+  /// The colours an [ThemeStyle.lcars] theme's blocks are drawn in, taken in
+  /// turn. Empty for a theme with panels, which needs none.
+  final List<Color> palette;
+
   const DashboardTheme({
     required this.id,
     required this.name,
@@ -70,6 +90,8 @@ class DashboardTheme {
     this.glow,
     this.glowEnd,
     this.sheen = 0,
+    this.style = ThemeStyle.panels,
+    this.palette = const [],
   });
 
   static Color _colour(Object? v, Color fallback) {
@@ -82,6 +104,7 @@ class DashboardTheme {
 
   factory DashboardTheme.fromJson(Map<String, dynamic> j) {
     final bg = j['background'];
+    final palette = j['palette'];
     return DashboardTheme(
       id: j['id'] as String? ?? 'custom',
       name: j['name'] as String? ?? 'Custom',
@@ -102,6 +125,13 @@ class DashboardTheme {
           ? null
           : _colour(j['glowEnd'], Colors.transparent),
       sheen: ((j['sheen'] as num?)?.toDouble() ?? 0).clamp(0.0, 0.5),
+      style: ThemeStyle.values.firstWhere(
+        (s) => s.name == j['style'],
+        orElse: () => ThemeStyle.panels,
+      ),
+      palette: palette is List
+          ? palette.map((c) => _colour(c, Colors.transparent)).toList()
+          : const [],
     );
   }
 
@@ -126,6 +156,8 @@ class DashboardTheme {
     if (glow != null) 'glow': _hex(glow!),
     if (glowEnd != null) 'glowEnd': _hex(glowEnd!),
     if (sheen > 0) 'sheen': sheen,
+    if (style != ThemeStyle.panels) 'style': style.name,
+    if (palette.isNotEmpty) 'palette': palette.map(_hex).toList(),
   };
 
   static String _hex(Color c) =>
@@ -166,6 +198,15 @@ class DashboardTheme {
             stops: const [0.0, 0.7],
           ),
         );
+
+  /// Drawn as a starship's console rather than as panels.
+  bool get isLcars => style == ThemeStyle.lcars;
+
+  /// The [i]th of the [palette]'s colours, going round again past the end —
+  /// so neighbouring blocks differ and the same block is always the same
+  /// colour. The accent where a theme names no palette.
+  Color block(int i) =>
+      palette.isEmpty ? accent : palette[i.abs() % palette.length];
 
   /// A light theme — dark text on a pale background.
   bool get isLight => background.first.computeLuminance() > 0.4;
@@ -406,6 +447,38 @@ const List<DashboardTheme> kBuiltInThemes = [
     cornerRadius: 2,
     gap: 12,
     fontFamily: 'ShareTechMono',
+    shadow: false,
+  ),
+  // A starship's console: black, with flat bars of orange, lilac and blue
+  // swept round the corner of every panel, and tall condensed capitals. The
+  // frames are drawn, not coloured in — see ThemeStyle.lcars. The colours
+  // and the rules are TT Launcher's LCARS skin's, so the two match.
+  DashboardTheme(
+    id: 'lcars',
+    name: 'LCARS',
+    style: ThemeStyle.lcars,
+    background: [Color(0xFF000000)],
+    // Not the tiles, which are black inside their bars: what a key on the
+    // PIN pad or the player's sheet is made of, where something solid has
+    // to stand off the black.
+    surface: Color(0xFF15131C),
+    border: Color(0x999999FF),
+    textPrimary: Color(0xFFFFCC99),
+    textSecondary: Color(0xFFAAAAFF),
+    accent: Color(0xFFFF9900),
+    palette: [
+      Color(0xFFFF9900),
+      Color(0xFFCC99CC),
+      Color(0xFF9999FF),
+      Color(0xFFFFCC99),
+      Color(0xFFCC6666),
+      Color(0xFF99CCFF),
+      Color(0xFFFFCC66),
+    ],
+    cornerRadius: 22,
+    // Panels sit against each other, so their side bars run on as one.
+    gap: 4,
+    fontFamily: 'Antonio',
     shadow: false,
   ),
   // Deliberately plain and very high contrast: readable across a room, and

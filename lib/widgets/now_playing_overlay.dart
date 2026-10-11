@@ -5,6 +5,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../look.dart';
+import 'lcars.dart';
 import 'package:provider/provider.dart';
 
 import 'audio_visualiser.dart';
@@ -344,8 +345,17 @@ class _Panel extends StatelessWidget {
     final collapsedOpacity = (1 - expansion * 2).clamp(0.0, 1.0);
     final detailOpacity = ((expansion - 0.5) * 2).clamp(0.0, 1.0);
 
+    final lcars = context.look.isLcars;
     return DecoratedBox(
-      decoration: BoxDecoration(
+      decoration: lcars
+          // A console's player is black to its square edges: no card, no
+          // shadow, and no wash of the cover behind.
+          ? BoxDecoration(
+              color: context.look.background.first.withValues(
+                alpha: 0.8 + 0.2 * expansion,
+              ),
+            )
+          : BoxDecoration(
         // The theme's background, nearly solid — a card over a photo when
         // small, the whole player when large.
         color: context.look.background.first.withValues(
@@ -362,11 +372,11 @@ class _Panel extends StatelessWidget {
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(26 + 6 * expansion),
+        borderRadius: BorderRadius.circular(lcars ? 0 : 26 + 6 * expansion),
         child: Stack(
           fit: StackFit.expand,
           children: [
-            if (detailOpacity > 0)
+            if (detailOpacity > 0 && !lcars)
               Opacity(
                 opacity: detailOpacity,
                 child: _ArtworkBackdrop(url: service.artUrl),
@@ -570,6 +580,7 @@ class _DetailContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final n = service.now;
+    final lcars = context.look.isLcars;
     final visualiser = context
         .watch<ConfigService>()
         .config
@@ -582,6 +593,16 @@ class _DetailContent extends StatelessWidget {
         children: [
           Row(
             children: [
+              if (lcars)
+                // A console's text bar: what this is, and on the bar beside
+                // it, what it is playing on.
+                Expanded(
+                  child: LcarsTextBar(
+                    title: tr('player.nowPlaying', 'Now playing'),
+                    note: n.deviceName,
+                  ),
+                )
+              else ...[
               Icon(service.sourceIcon, color: context.look.accent, size: 26),
               const SizedBox(width: 10),
               Expanded(
@@ -593,6 +614,8 @@ class _DetailContent extends StatelessWidget {
                   ),
                 ),
               ),
+              ],
+              if (lcars) const SizedBox(width: 12),
               // Spotify-only: the AVRCP source has no notion of other
               // devices, a queue, or a library to start something from.
               // Sits up here rather than in the transport bar so the device
@@ -600,6 +623,7 @@ class _DetailContent extends StatelessWidget {
               if (service is SpotifyService) ...[
                 _HeaderButton(
                   icon: Icons.speaker_group,
+                  ends: LcarsEnds.start,
                   tooltip: tr('player.playOn', 'Play on…'),
                   onTap: () => showDialog(
                     context: context,
@@ -608,9 +632,10 @@ class _DetailContent extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
+                SizedBox(width: lcars ? lcarsLine : 10),
                 _HeaderButton(
                   icon: Icons.queue_music,
+                  ends: LcarsEnds.none,
                   tooltip: tr('player.upNext', 'Up next'),
                   onTap: () => showDialog(
                     context: context,
@@ -618,9 +643,10 @@ class _DetailContent extends StatelessWidget {
                         SpotifyQueueDialog(service: service as SpotifyService),
                   ),
                 ),
-                const SizedBox(width: 10),
+                SizedBox(width: lcars ? lcarsLine : 10),
                 _HeaderButton(
                   icon: Icons.library_music,
+                  ends: LcarsEnds.end,
                   tooltip: tr('player.playSomething', 'Play something'),
                   onTap: () => showDialog(
                     context: context,
@@ -630,6 +656,24 @@ class _DetailContent extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
               ],
+              if (lcars)
+                // A block like the others, though not a button of its own:
+                // a touch anywhere that is not one closes the player.
+                Container(
+                  width: 84,
+                  height: 56,
+                  margin: const EdgeInsets.only(left: 4),
+                  decoration: ShapeDecoration(
+                    color: context.look.block(4),
+                    shape: const StadiumBorder(),
+                  ),
+                  child: const Icon(
+                    Icons.close_fullscreen,
+                    color: lcarsInk,
+                    size: 28,
+                  ),
+                )
+              else
               Icon(
                 Icons.close_fullscreen,
                 color: context.look.textSecondary,
@@ -642,7 +686,11 @@ class _DetailContent extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                _Artwork(url: service.artUrl, size: 330, radius: 20),
+                _Artwork(
+                  url: service.artUrl,
+                  size: 330,
+                  radius: lcars ? 0 : 20,
+                ),
                 const SizedBox(width: 36),
                 Expanded(
                   child: Column(
@@ -650,11 +698,13 @@ class _DetailContent extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        n.title,
+                        lcars ? lcarsCaps(n.title) : n.title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: context.look.textPrimary,
+                          color: lcars
+                              ? context.look.accent
+                              : context.look.textPrimary,
                           fontSize: 44,
                           fontWeight: FontWeight.w600,
                           height: 1.15,
@@ -771,6 +821,13 @@ class _ProgressBarState extends State<_ProgressBar> {
     final n = widget.service.now;
 
     if (!widget.service.canSeek) {
+      if (context.look.isLcars) {
+        return LcarsSegments(
+          theme: context.look,
+          value: n.progress,
+          height: 14,
+        );
+      }
       return ClipRRect(
         borderRadius: BorderRadius.circular(4),
         child: LinearProgressIndicator(
@@ -825,6 +882,83 @@ class _Controls extends StatelessWidget {
         repeatIcon = Icons.repeat;
     }
     final repeatOn = n.repeat != 'off';
+
+    if (context.look.isLcars) {
+      // Two strips of blocks, each rounded at its two ends: the transport,
+      // with play in the accent and lit while the music is going, and the
+      // switches, each lit while it is on.
+      final look = context.look;
+      Widget strip(List<(IconData, VoidCallback, Color, double)> keys) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final (i, k) in keys.indexed)
+            Padding(
+              padding: EdgeInsets.only(left: i == 0 ? 0 : lcarsLine),
+              child: LcarsBlock(
+                colour: k.$3,
+                onTap: k.$2,
+                width: k.$4,
+                height: 92,
+                ends: keys.length == 1
+                    ? LcarsEnds.both
+                    : i == 0
+                    ? LcarsEnds.start
+                    : i == keys.length - 1
+                    ? LcarsEnds.end
+                    : LcarsEnds.none,
+                child: Icon(k.$1, size: 48),
+              ),
+            ),
+        ],
+      );
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          strip([
+            (Icons.skip_previous, service.previous, look.block(2), 150),
+            (
+              n.isPlaying ? Icons.pause : Icons.play_arrow,
+              service.playPause,
+              n.isPlaying ? lcarsLit : look.accent,
+              200,
+            ),
+            (Icons.skip_next, service.next, look.block(2), 150),
+          ]),
+          const SizedBox(width: 40),
+          strip([
+            (
+              repeatIcon,
+              service.cycleRepeat,
+              repeatOn ? lcarsLit : look.block(1),
+              120,
+            ),
+            (
+              Icons.shuffle,
+              service.toggleShuffle,
+              n.shuffle ? lcarsLit : look.block(5),
+              120,
+            ),
+            if (service.canLike)
+              (
+                service.isLiked ? Icons.favorite : Icons.favorite_border,
+                service.toggleLike,
+                service.isLiked ? lcarsLit : look.block(4),
+                120,
+              ),
+            if (service.canAddToPlaylist)
+              (
+                Icons.playlist_add,
+                () => showDialog(
+                  context: context,
+                  builder: (_) => _PlaylistPickerDialog(service: service),
+                ),
+                look.block(6),
+                120,
+              ),
+          ]),
+        ],
+      );
+    }
 
     // A full-width bar rather than packed to one side, with bigger buttons
     // throughout — this is meant to be hit quickly without looking, not
@@ -1008,14 +1142,32 @@ class _HeaderButton extends StatelessWidget {
   final IconData icon;
   final String tooltip;
   final VoidCallback onTap;
+
+  /// Which of its ends are rounded, on a console, where the header's
+  /// buttons are one strip.
+  final LcarsEnds ends;
   const _HeaderButton({
     required this.icon,
     required this.tooltip,
     required this.onTap,
+    this.ends = LcarsEnds.both,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (context.look.isLcars) {
+      return Tooltip(
+        message: tooltip,
+        child: LcarsBlock(
+          colour: context.look.block(icon.codePoint),
+          onTap: onTap,
+          ends: ends,
+          width: 84,
+          height: 56,
+          child: Icon(icon, size: 28),
+        ),
+      );
+    }
     return Tooltip(
       message: tooltip,
       child: Material(
@@ -1066,6 +1218,20 @@ class _RoundButton extends StatelessWidget {
         : (active
               ? (activeColor ?? context.look.textPrimary)
               : context.look.textPrimary);
+    if (context.look.isLcars) {
+      // A block: the accent where it was filled, lit while it is on.
+      return LcarsBlock(
+        colour: filled
+            ? context.look.accent
+            : active
+            ? lcarsLit
+            : context.look.block(icon.codePoint),
+        onTap: onTap,
+        width: size * 1.3,
+        height: size * 0.8,
+        child: Icon(icon, size: size * 0.5),
+      );
+    }
     return Material(
       color: bg,
       shape: const CircleBorder(),

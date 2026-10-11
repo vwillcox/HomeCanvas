@@ -492,6 +492,28 @@ class CameraSettings {
 /// a session — the MQTT client id is derived from the UUID — so if you also
 /// run the standalone remote app, give one of them a different UUID or they
 /// will displace each other.
+/// A Homey on the home network: where it is, and the key to it. Every Homey
+/// widget on the dashboard uses the one here.
+class HomeySettings {
+  /// Its address on the home network — `192.168.1.50`, with a port after a
+  /// colon if it is not the usual one.
+  String address;
+
+  /// An API key from my.homey.app → Settings → API Keys.
+  String apiKey;
+
+  HomeySettings({this.address = '', this.apiKey = ''});
+
+  bool get isConfigured => address.isNotEmpty && apiKey.isNotEmpty;
+
+  factory HomeySettings.fromJson(Map<String, dynamic> j) => HomeySettings(
+        address: (j['address'] as String? ?? '').trim(),
+        apiKey: (j['apiKey'] as String? ?? '').trim(),
+      );
+
+  Map<String, dynamic> toJson() => {'address': address, 'apiKey': apiKey};
+}
+
 /// A UniFi console — a Dream Router, Dream Machine or Cloud Key.
 class UnifiSettings {
   bool enabled;
@@ -777,6 +799,7 @@ class AppConfig {
   WeatherSettings weather;
   NowPlayingSettings nowPlaying;
   HomeAssistantSettings homeAssistant;
+  HomeySettings homey;
   SpotifySettings spotify;
   ShareInboxSettings shareInbox;
   ScreenSettings screen;
@@ -804,6 +827,7 @@ class AppConfig {
     WeatherSettings? weather,
     NowPlayingSettings? nowPlaying,
     HomeAssistantSettings? homeAssistant,
+    HomeySettings? homey,
     SpotifySettings? spotify,
     ShareInboxSettings? shareInbox,
     ScreenSettings? screen,
@@ -821,6 +845,7 @@ class AppConfig {
         weather = weather ?? WeatherSettings(),
         nowPlaying = nowPlaying ?? NowPlayingSettings(),
         homeAssistant = homeAssistant ?? HomeAssistantSettings(),
+        homey = homey ?? HomeySettings(),
         spotify = spotify ?? SpotifySettings(),
         shareInbox = shareInbox ?? ShareInboxSettings(),
         screen = screen ?? ScreenSettings(),
@@ -911,6 +936,9 @@ class AppConfig {
           ? HomeAssistantSettings.fromJson(
               j['homeAssistant'] as Map<String, dynamic>)
           : HomeAssistantSettings(),
+      homey: j['homey'] is Map<String, dynamic>
+          ? HomeySettings.fromJson(j['homey'] as Map<String, dynamic>)
+          : HomeySettings(),
       spotify: j['spotify'] is Map<String, dynamic>
           ? SpotifySettings.fromJson(j['spotify'] as Map<String, dynamic>)
           : SpotifySettings(),
@@ -956,6 +984,7 @@ class AppConfig {
         'weather': weather.toJson(),
         'nowPlaying': nowPlaying.toJson(),
         'homeAssistant': homeAssistant.toJson(),
+        'homey': homey.toJson(),
         'spotify': spotify.toJson(),
         'shareInbox': shareInbox.toJson(),
         'screen': screen.toJson(),
