@@ -1,5 +1,82 @@
 # Changelog
 
+## 1.0.2
+
+A seventeenth theme, LCARS, which draws the panel as a starship's console,
+and seventeen new widgets: 69 in all, up from 52. You can now add widgets of
+your own from the editor too.
+
+### Updating
+
+- **Update** by running the installer again, as before:
+
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/vwillcox/HomeCanvas/main/install.sh | bash
+  ```
+
+- **Updating by hand?** After `git pull`, run
+  `bash scripts/widget-build.sh generate` before the build. It writes the
+  file that registers the widgets you have installed, and the installer now
+  does it for you.
+- **For Homey:** create an API key at my.homey.app, then enter it with the
+  Homey's address under **Settings → Home → Homey**, or run
+  `bash scripts/set-homey-key.sh` on the Pi.
+
+### New
+
+**LCARS theme**
+- Black, with bars of flat orange, lilac and blue swept round the corner of
+  every panel, and tall condensed capitals in Antonio, the twenty-first
+  bundled font.
+- It changes the drawing as well as the colours: each widget sits inside a
+  bar and a lettered rail, buttons are solid blocks joined into strips,
+  screens are headed by a text bar, and Settings lists its tabs as a rail of
+  blocks.
+- Sliders, progress bars and the music visualiser are drawn in segments.
+- It moves in steps, as a console does: bars come up a length at a time, one
+  blinks now and then, and a readout flashes as its figure changes. All of it
+  stops while the screen is dark or where animations are switched off.
+- A theme of your own can ask for it with `"style": "lcars"` and a
+  `"palette"`. See [THEMES.md](THEMES.md).
+
+**Homey**
+- Sixteen widgets for a Homey on your network: devices, a room, lights,
+  light colour, fans, flows, moods, alerts, climate, energy, history, who's
+  home, variables, the timeline, the whole house, and Homey itself.
+- The API key is only sent to a Homey on the home network.
+
+**Railcam**
+- Lineside cameras from railcam.uk: pick any of its 300 and touch one to
+  watch it live, or have them playing in the tile, small and silent. Needs
+  your own railcam.uk account.
+
+**Widgets of your own**
+- Install a widget from the editor's new widgets page, in one of two forms:
+  - **described in JSON:** its name, its settings, the address its data comes
+    from and how to show it. It is on the panel at once and can show figures,
+    cards and lists;
+  - **written in Dart:** as full as any built-in widget. The panel checks it,
+    builds it in and restarts, which takes a few minutes, and puts everything
+    back if any of that fails. Switch it on first under
+    **Settings → Dashboard → Widgets written in Dart**.
+- The editor hands out an example of each to change and upload.
+- Only install widgets you trust: one in Dart runs on the panel as a program.
+
+**Smaller additions**
+- **Weather:** an 8-day forecast, and a forecast that takes two rows where
+  that leaves each day larger.
+- **Stocks**, **Crypto**, **Weather** and **News** say when they were last
+  fetched, as "Updated 09:14".
+- **UniFi:** network clients show their addresses, and both client lists
+  size their text to fill the tile.
+- [INSTALL.md](INSTALL.md) lists the parts this panel is built on, and what
+  they cost.
+
+### Bug fixes
+
+- The music visualiser's waveform drew a flat line for quiet music, such as
+  a phone over Bluetooth with its own volume low.
+
 ## 1.0.1
 
 Videos on the panel, the panel in thirteen languages, and fourteen new
