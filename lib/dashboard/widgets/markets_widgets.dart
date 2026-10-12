@@ -122,6 +122,9 @@ class _MarketsTileState extends State<_MarketsTile>
     with PauseWhenHidden, ShownTimers {
   Timer? _timer;
 
+  /// The bar of the console panel this tile is in, where there is one.
+  ValueNotifier<String?>? _bar;
+
   @override
   void initState() {
     super.initState();
@@ -140,6 +143,7 @@ class _MarketsTileState extends State<_MarketsTile>
   @override
   void dispose() {
     _timer?.cancel();
+    _bar?.value = null;
     super.dispose();
   }
 
@@ -189,7 +193,16 @@ class _MarketsTileState extends State<_MarketsTile>
       final at = widget.lookup(service, pick.entry).at;
       if (at != null && (oldest == null || at.isBefore(oldest))) oldest = at;
     }
-    Widget withUpdated(Widget list) => oldest == null
+    final updated = oldest == null
+        ? null
+        : tr('widget.markets.updated', 'Updated {time}', {
+            'time': _clock(oldest, DateTime.now()),
+          });
+    // On a console it is lettered on the panel's bar instead, and takes
+    // nothing from the tile.
+    final bar = _bar = t.isLcars ? LcarsBarNote.maybeOf(context) : null;
+    bar?.value = updated;
+    Widget withUpdated(Widget list) => updated == null || bar != null
         ? list
         : LayoutBuilder(
             builder: (context, c) {
@@ -200,12 +213,7 @@ class _MarketsTileState extends State<_MarketsTile>
                   Expanded(child: list),
                   const SizedBox(height: 4),
                   Text(
-                    _cased(
-                      t,
-                      tr('widget.markets.updated', 'Updated {time}', {
-                        'time': _clock(oldest!, DateTime.now()),
-                      }),
-                    ),
+                    _cased(t, updated),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.right,
