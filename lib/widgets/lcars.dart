@@ -1,7 +1,12 @@
+import 'dart:async';
+import 'dart:math';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../dashboard/dashboard_theme.dart';
 import '../look.dart';
+import 'pause_when_hidden.dart';
 
 /// The drawing behind a theme whose style is [ThemeStyle.lcars]: a starship's
 /// console, in flat blocks of colour on black.
@@ -21,9 +26,22 @@ import '../look.dart';
 ///  * a **rail** ([LcarsRailBlock]) lists places to go as square blocks of
 ///    uneven height, each named in its bottom corner.
 ///
-/// There is no frame round the screen: the panels are the frame. Nothing
-/// moves, either. The panel is on all day, and a bar drawn once and left
-/// alone costs it nothing.
+/// There is no frame round the screen: the panels are the frame.
+///
+/// What moves, moves as a console does — in steps, a block lit or unlit,
+/// never a fade or a slide:
+///
+///  * a panel **comes up** a length at a time when it is first shown, and
+///    again when the screen wakes;
+///  * now and then one short length of a panel's bars **blinks**;
+///  * a readout **flashes** near-white as its figure changes;
+///  * a row of segments **counts** to a new value rather than jumping;
+///  * a block flashes flat under a finger, with no ripple.
+///
+/// Each is a timer and a handful of repaints, not a frame sixty times a
+/// second: the panel is on all day, and between one step and the next it
+/// draws nothing at all. All of it stops while the kiosk cannot be seen
+/// (see [PauseWhenHidden]) and where animations are switched off.
 
 /// The black a block's lettering and icons are drawn in.
 const lcarsInk = Color(0xFF000000);
@@ -34,6 +52,9 @@ const lcarsLit = Color(0xFFFFF4E6);
 /// The black line between two blocks, and between a panel's bars and what
 /// is inside it.
 const lcarsLine = 3.0;
+
+/// How dim a bar is while it is unlit.
+const _unlit = 0.4;
 
 /// A number from [s] that is the same every time, for picking a block's
 /// colour by what it is called. Not `hashCode`, which may differ from one
@@ -57,7 +78,7 @@ String lcarsCaps(String s) => s.toUpperCase();
 /// The bar across and the sweep of the corner are as heavy as the panel has
 /// room for. The bar down the side is the same on every panel, so panels
 /// one above the other line up into a single column.
-class LcarsPanel extends StatelessWidget {
+class LcarsPanel extends StatefulWidget {
   const LcarsPanel({
     super.key,
     required this.theme,
@@ -104,8 +125,99 @@ class LcarsPanel extends StatelessWidget {
 
   static double railFor(int weight) => const [20.0, 24.0, 30.0][weight];
 
+  /// Every length of the bars lit: the elbow, the two lengths after it and
+  /// the foot of the side bar, a bit each.
+  static const allLit = 0xF;
+
+  @override
+  State<LcarsPanel> createState() => LcarsPanelState();
+}
+
+class LcarsPanelState extends State<LcarsPanel>
+    with PauseWhenHidden<LcarsPanel> {
+  /// Between one length coming up and the next.
+  static const _beat = Duration(milliseconds: 70);
+
+  /// How long a length stays unlit when it blinks.
+  static const _blink = Duration(milliseconds: 160);
+
+  final _lit = ValueNotifier<int>(0);
+  Timer? _timer;
+  bool _still = false;
+
+  // By the panel's name, so each keeps its own rhythm and no two blink
+  // together.
+  late final _seed = lcarsIndex(widget.label ?? '');
+  late final _chance = Random(_seed);
+
+  /// Which lengths of the bars are lit, a bit each.
+  @visibleForTesting
+  ValueListenable<int> get lit => _lit;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    _run();
+  }
+
+  @override
+  void didUpdateWidget(LcarsPanel old) {
+    super.didUpdateWidget(old);
+    if (old.framed != widget.framed) _run();
+  }
+
+  @override
+  void onShownChanged(bool shown) {
+    // Dark while it cannot be seen, so it comes up again when it can.
+    if (!shown && !_still) _lit.value = 0;
+    _run();
+  }
+
+  void _run() {
+    _timer?.cancel();
+    _timer = null;
+    if (_still) {
+      _lit.value = LcarsPanel.allLit;
+    } else if (!shown || !widget.framed) {
+      return;
+    } else if (_lit.value == LcarsPanel.allLit) {
+      _idle();
+    } else {
+      // Panels start a moment apart, so a page comes up as a ripple.
+      _comeUp(_lit.value == 0 ? _beat * (_seed % 4) : _beat);
+    }
+  }
+
+  void _comeUp(Duration wait) {
+    _timer = Timer(wait, () {
+      _lit.value = _lit.value << 1 | 1;
+      _lit.value == LcarsPanel.allLit ? _idle() : _comeUp(_beat);
+    });
+  }
+
+  void _idle() {
+    _timer = Timer(Duration(seconds: 14 + _chance.nextInt(30)), () {
+      // One of the short lengths; never the elbow, which carries the name.
+      _lit.value = LcarsPanel.allLit & ~(2 << _chance.nextInt(3));
+      _timer = Timer(_blink, () {
+        _lit.value = LcarsPanel.allLit;
+        _idle();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _lit.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final LcarsPanel(:theme, :child, :label, :down, :scale, :square) = widget;
+    final LcarsPanel(:framed, :heavy) = widget;
     return LayoutBuilder(
       builder: (context, c) {
         // A panel that takes its height from what is inside it is judged
@@ -114,12 +226,12 @@ class LcarsPanel extends StatelessWidget {
           c.maxWidth,
           c.hasBoundedHeight ? c.maxHeight : double.infinity,
         );
-        final weight = heavy ? 2 : weightFor(size);
-        final rail = heavy ? 38.0 : railFor(weight);
+        final weight = heavy ? 2 : LcarsPanel.weightFor(size);
+        final rail = heavy ? 38.0 : LcarsPanel.railFor(weight);
         final across = rail + lcarsLine;
         final inside = Padding(
           padding: EdgeInsets.fromLTRB(
-            side + lcarsLine + (heavy ? 4 : 8 * scale),
+            LcarsPanel.side + lcarsLine + (heavy ? 4 : 8 * scale),
             (down ? 0 : across) + (heavy ? 4 : 5 * scale),
             heavy ? 0 : 10 * scale,
             (down ? across : 0) + (heavy ? 4 : 5 * scale),
@@ -128,21 +240,32 @@ class LcarsPanel extends StatelessWidget {
         );
         if (!framed) return inside;
         final seed = lcarsIndex(label ?? '');
-        return RepaintBoundary(
-          child: CustomPaint(
-            painter: _PanelPainter(
-              first: theme.block(seed),
-              second: theme.block(seed + 2),
-              third: theme.block(seed + 4),
-              rail: rail,
-              outer: square ? 0 : const [26.0, 38.0, 54.0][weight],
-              inner: square ? 0 : const [10.0, 14.0, 20.0][weight],
-              down: down,
-              label: label == null ? null : lcarsCaps(label!),
-              fontFamily: theme.fontFamily,
+        // The bars and what is inside them are painted apart, so a length
+        // that blinks is drawn again without the widget, and the widget
+        // without the bars.
+        return Stack(
+          fit: StackFit.passthrough,
+          children: [
+            Positioned.fill(
+              child: RepaintBoundary(
+                child: CustomPaint(
+                  painter: _PanelPainter(
+                    lit: _lit,
+                    first: theme.block(seed),
+                    second: theme.block(seed + 2),
+                    third: theme.block(seed + 4),
+                    rail: rail,
+                    outer: square ? 0 : const [26.0, 38.0, 54.0][weight],
+                    inner: square ? 0 : const [10.0, 14.0, 20.0][weight],
+                    down: down,
+                    label: label == null ? null : lcarsCaps(label),
+                    fontFamily: theme.fontFamily,
+                  ),
+                ),
+              ),
             ),
-            child: ClipRect(child: inside),
-          ),
+            RepaintBoundary(child: ClipRect(child: inside)),
+          ],
         );
       },
     );
@@ -151,6 +274,7 @@ class LcarsPanel extends StatelessWidget {
 
 class _PanelPainter extends CustomPainter {
   _PanelPainter({
+    required this.lit,
     required this.first,
     required this.second,
     required this.third,
@@ -160,8 +284,11 @@ class _PanelPainter extends CustomPainter {
     required this.down,
     this.label,
     this.fontFamily,
-  });
+  }) : super(repaint: lit);
 
+  /// Which lengths are lit, a bit each: the elbow, the second length, the
+  /// third, and the foot of the side bar.
+  final ValueListenable<int> lit;
   final Color first;
   final Color second;
   final Color third;
@@ -178,6 +305,9 @@ class _PanelPainter extends CustomPainter {
     const s = LcarsPanel.side;
     if (w <= s * 2 || h <= rail * 1.5) return;
     final paint = Paint()..isAntiAlias = true;
+    final on = lit.value;
+    Color shade(Color c, int bit) =>
+        on & bit == 0 ? c.withValues(alpha: c.a * _unlit) : c;
 
     // Drawn as the upward elbow. The downward one is the same shape turned
     // over.
@@ -215,10 +345,10 @@ class _PanelPainter extends CustomPainter {
     elbow
       ..lineTo(s, barEnd)
       ..close();
-    canvas.drawPath(elbow, paint..color = first);
+    canvas.drawPath(elbow, paint..color = shade(first, 1));
     canvas.drawRect(
       Rect.fromLTRB(firstEnd + lcarsLine, 0, secondEnd, rail),
-      paint..color = second,
+      paint..color = shade(second, 2),
     );
     // The last length ends in a half-round cap.
     canvas.drawRRect(
@@ -230,11 +360,11 @@ class _PanelPainter extends CustomPainter {
         topRight: Radius.circular(rail / 2),
         bottomRight: Radius.circular(rail / 2),
       ),
-      paint..color = third,
+      paint..color = shade(third, 4),
     );
     canvas.drawRect(
       Rect.fromLTRB(0, barEnd + lcarsLine, s, h),
-      paint..color = second,
+      paint..color = shade(second, 8),
     );
     canvas.restore();
 
@@ -270,6 +400,7 @@ class _PanelPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_PanelPainter old) =>
+      old.lit != lit ||
       old.first != first ||
       old.second != second ||
       old.third != third ||
@@ -322,7 +453,9 @@ class LcarsBlock extends StatelessWidget {
     final end = ends == LcarsEnds.both || ends == LcarsEnds.end;
     return Material(
       // A button with nothing to do is the same block, unlit.
-      color: onTap == null ? colour.withValues(alpha: colour.a * 0.4) : colour,
+      color: onTap == null
+          ? colour.withValues(alpha: colour.a * _unlit)
+          : colour,
       shape: RoundedRectangleBorder(
         borderRadius:
             radius ??
@@ -334,8 +467,9 @@ class LcarsBlock extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        splashColor: lcarsLit.withValues(alpha: 0.6),
-        highlightColor: lcarsLit.withValues(alpha: 0.35),
+        // Lit flat under the finger: a console's blocks do not ripple.
+        splashFactory: NoSplash.splashFactory,
+        highlightColor: lcarsLit.withValues(alpha: 0.7),
         child: SizedBox(
           width: width,
           height: height,
@@ -380,8 +514,9 @@ Color lcarsBlockColour(DashboardTheme look, Color? asked, int seed) {
 }
 
 /// One figure with its name: a block capped on the left, the [name] quiet
-/// at its start and the [value] bold at its end, both in black.
-class LcarsReadout extends StatelessWidget {
+/// at its start and the [value] bold at its end, both in black. It flashes
+/// near-white as the value changes.
+class LcarsReadout extends StatefulWidget {
   const LcarsReadout({
     super.key,
     required this.colour,
@@ -400,14 +535,40 @@ class LcarsReadout extends StatelessWidget {
   final double height;
 
   @override
+  State<LcarsReadout> createState() => _LcarsReadoutState();
+}
+
+class _LcarsReadoutState extends State<LcarsReadout>
+    with PauseWhenHidden<LcarsReadout> {
+  static const _flash = Duration(milliseconds: 220);
+
+  Timer? _timer;
+
+  @override
+  void didUpdateWidget(LcarsReadout old) {
+    super.didUpdateWidget(old);
+    if (old.value == widget.value || !shown) return;
+    if (MediaQuery.maybeDisableAnimationsOf(context) ?? false) return;
+    _timer?.cancel();
+    _timer = Timer(_flash, () => setState(() => _timer = null));
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final LcarsReadout(:name, :value, :width, :height) = widget;
     final size = height * 0.62;
     return Container(
       width: width,
       height: height,
       padding: EdgeInsets.only(left: height * 0.55, right: height * 0.3),
       decoration: BoxDecoration(
-        color: colour,
+        color: _timer == null ? widget.colour : lcarsLit,
         borderRadius: BorderRadius.horizontal(
           left: Radius.circular(height / 2),
         ),
@@ -416,7 +577,7 @@ class LcarsReadout extends StatelessWidget {
         children: [
           if (name != null)
             Text(
-              lcarsCaps(name!),
+              lcarsCaps(name),
               maxLines: 1,
               // Fitted to the bar, which a tile's font size does not grow.
               textScaler: TextScaler.noScaling,
@@ -450,8 +611,10 @@ class LcarsReadout extends StatelessWidget {
 }
 
 /// How far through something is, as a row of segments: those passed in the
-/// theme's colours, four at a time, and the rest unlit.
-class LcarsSegments extends StatelessWidget {
+/// theme's colours, four at a time, and the rest unlit. A value that moves a
+/// long way is counted to, a few segments at a time; one that creeps, as a
+/// song's place does, is simply drawn.
+class LcarsSegments extends StatefulWidget {
   const LcarsSegments({
     super.key,
     required this.theme,
@@ -471,9 +634,70 @@ class LcarsSegments extends StatelessWidget {
   final Color? colour;
 
   @override
+  State<LcarsSegments> createState() => LcarsSegmentsState();
+}
+
+class LcarsSegmentsState extends State<LcarsSegments>
+    with PauseWhenHidden<LcarsSegments> {
+  /// How far it moves at a time, and how often: the whole row in under
+  /// half a second.
+  static const _stride = 1 / 12;
+  static const _beat = Duration(milliseconds: 40);
+
+  double _drawn = 0;
+  Timer? _timer;
+
+  /// The value as it is drawn now, on its way to the widget's.
+  @visibleForTesting
+  double get drawn => _drawn;
+
+  double get _target => widget.value.clamp(0.0, 1.0);
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _chase();
+  }
+
+  @override
+  void didUpdateWidget(LcarsSegments old) {
+    super.didUpdateWidget(old);
+    _chase();
+  }
+
+  /// Called while building is still to come, so what it sets is drawn.
+  void _chase() {
+    final still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    if (still || !shown || (_target - _drawn).abs() <= _stride) {
+      _timer?.cancel();
+      _timer = null;
+      _drawn = _target;
+      return;
+    }
+    _timer ??= Timer.periodic(_beat, (_) {
+      final gap = _target - _drawn;
+      setState(() {
+        if (gap.abs() <= _stride) {
+          _drawn = _target;
+          _timer?.cancel();
+          _timer = null;
+        } else {
+          _drawn += gap.sign * _stride;
+        }
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) => CustomPaint(
-    size: Size(double.infinity, height),
-    painter: _SegmentsPainter(theme, value.clamp(0.0, 1.0), colour),
+    size: Size(double.infinity, widget.height),
+    painter: _SegmentsPainter(widget.theme, _drawn, widget.colour),
   );
 }
 
@@ -626,7 +850,8 @@ class LcarsRailBlock extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
-          splashColor: lcarsLit.withValues(alpha: 0.6),
+          splashFactory: NoSplash.splashFactory,
+          highlightColor: lcarsLit.withValues(alpha: 0.7),
           child: SizedBox(
             height: height,
             child: Stack(

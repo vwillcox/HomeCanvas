@@ -216,4 +216,116 @@ void main() {
       expect(tester.getRect(find.textContaining('Unknown widget')), framed);
     });
   });
+
+  group('what moves on a console', () {
+    Widget panel({bool still = false}) => console(
+      MediaQuery(
+        data: MediaQueryData(disableAnimations: still),
+        child: SizedBox(
+          width: 480,
+          height: 280,
+          child: LcarsPanel(theme: lcars, label: 'Clock 54', child: const SizedBox()),
+        ),
+      ),
+    );
+
+    int lit(WidgetTester tester) =>
+        tester.state<LcarsPanelState>(find.byType(LcarsPanel)).lit.value;
+
+    testWidgets('a panel comes up a length at a time, the elbow first',
+        (tester) async {
+      await tester.pumpWidget(panel());
+      final seen = <int>{lit(tester)};
+      for (var i = 0; i < 12; i++) {
+        await tester.pump(const Duration(milliseconds: 35));
+        seen.add(lit(tester));
+      }
+      expect(seen, [0, 1, 3, 7, LcarsPanel.allLit]);
+    });
+
+    testWidgets('then blinks one short length now and then, never the elbow',
+        (tester) async {
+      await tester.pumpWidget(panel());
+      await tester.pump(const Duration(seconds: 1));
+      expect(lit(tester), LcarsPanel.allLit);
+      final blinks = <int>{};
+      // Two minutes, looked at often enough to catch every blink.
+      for (var i = 0; i < 1200; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        if (lit(tester) != LcarsPanel.allLit) blinks.add(lit(tester));
+      }
+      expect(blinks, isNotEmpty);
+      for (final b in blinks) {
+        expect(b & 1, 1);
+        expect(const [0xD, 0xB, 0x7], contains(b));
+      }
+      // And it is lit again for all but a moment of that.
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(lit(tester), LcarsPanel.allLit);
+    });
+
+    testWidgets('a panel is simply lit where animations are off',
+        (tester) async {
+      await tester.pumpWidget(panel(still: true));
+      expect(lit(tester), LcarsPanel.allLit);
+      await tester.pump(const Duration(minutes: 2));
+      expect(lit(tester), LcarsPanel.allLit);
+      expect(tester.binding.hasScheduledFrame, isFalse);
+    });
+
+    testWidgets('a panel that cannot be seen is dark, and comes up again',
+        (tester) async {
+      Widget shown(bool on) => TickerMode(enabled: on, child: panel());
+      await tester.pumpWidget(shown(true));
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpWidget(shown(false));
+      expect(lit(tester), 0);
+      await tester.pump(const Duration(minutes: 2));
+      expect(lit(tester), 0);
+      await tester.pumpWidget(shown(true));
+      await tester.pump(const Duration(seconds: 1));
+      expect(lit(tester), LcarsPanel.allLit);
+    });
+
+    testWidgets('a readout flashes as its figure changes, and not before',
+        (tester) async {
+      final orange = lcars.block(1);
+      Widget readout(String value) => console(
+        LcarsReadout(colour: orange, name: 'Wind', value: value, width: 132),
+      );
+      Color colour() =>
+          (tester.widget<Container>(find.byType(Container)).decoration!
+                  as BoxDecoration)
+              .color!;
+
+      await tester.pumpWidget(readout('12 mph'));
+      expect(colour(), orange);
+      await tester.pumpWidget(readout('12 mph'));
+      expect(colour(), orange);
+      await tester.pumpWidget(readout('14 mph'));
+      expect(colour(), lcarsLit);
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(colour(), orange);
+    });
+
+    testWidgets('segments count to a value that jumps, and follow one that '
+        'creeps', (tester) async {
+      Widget segments(double value) => console(
+        SizedBox(width: 300, child: LcarsSegments(theme: lcars, value: value)),
+      );
+      double drawn() => tester
+          .state<LcarsSegmentsState>(find.byType(LcarsSegments))
+          .drawn;
+
+      await tester.pumpWidget(segments(0.8));
+      expect(drawn(), 0);
+      await tester.pump(const Duration(milliseconds: 120));
+      expect(drawn(), inExclusiveRange(0, 0.8));
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(drawn(), 0.8);
+      // A song a second further on.
+      await tester.pumpWidget(segments(0.805));
+      expect(drawn(), 0.805);
+    });
+  });
 }

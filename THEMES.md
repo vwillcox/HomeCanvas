@@ -117,6 +117,13 @@ colours:
   the small print;
 - Settings lists its tabs as a rail of blocks down the left.
 
+It is also the one theme that moves, and moves as a console does, in steps
+rather than fades: a panel's bars come up a length at a time when a page is
+shown, one short length blinks now and then, a readout flashes as its figure
+changes, and a row of segments counts up to its value. Each is a few redraws
+of one bar and nothing in between, so a still page still costs the Pi next to
+nothing, and all of it stops while the screen is dark.
+
 It follows the LCARS skin of TT Launcher, colour for colour.
 
 ### Nightstand
