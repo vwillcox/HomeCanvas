@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../config/app_config.dart';
+import '../look.dart';
 import '../services/audio_levels_service.dart';
+import 'lcars.dart';
 import 'pause_when_hidden.dart';
 import '../l10n/l10n.dart';
 
@@ -126,6 +128,11 @@ class _AudioVisualiserState extends State<AudioVisualiser>
   @override
   Widget build(BuildContext context) {
     final service = context.watch<AudioLevelsService>();
+    final look = context.look;
+    // A console draws it in its own blocks of colour rather than the sweep.
+    final blocks = look.isLcars && look.palette.isNotEmpty
+        ? look.palette
+        : null;
     // Nothing to capture with — a machine that isn't the panel. Take the space
     // back rather than reserving it for a picture that will never come.
     if (!service.supported) return const SizedBox.shrink();
@@ -142,7 +149,7 @@ class _AudioVisualiserState extends State<AudioVisualiser>
             child: Icon(
               Icons.graphic_eq,
               size: 22,
-              color: widget.palette.first.withValues(alpha: 0.45),
+              color: (blocks ?? widget.palette).first.withValues(alpha: 0.45),
             ),
           ),
         ),
@@ -158,9 +165,24 @@ class _AudioVisualiserState extends State<AudioVisualiser>
           height: widget.height,
           width: double.infinity,
           child: CustomPaint(
-            painter: widget.style == VisualiserStyle.wave
-                ? _WavePainter(wave: service.wave, palette: widget.palette)
-                : _BarsPainter(levels: service.levels, palette: widget.palette),
+            painter: switch ((widget.style, blocks)) {
+              (VisualiserStyle.wave, null) => _WavePainter(
+                wave: service.wave,
+                palette: widget.palette,
+              ),
+              (VisualiserStyle.wave, final blocks?) => _ConsoleWavePainter(
+                wave: service.wave,
+                blocks: blocks,
+              ),
+              (_, null) => _BarsPainter(
+                levels: service.levels,
+                palette: widget.palette,
+              ),
+              (_, final blocks?) => _ConsoleBarsPainter(
+                levels: service.levels,
+                blocks: blocks,
+              ),
+            },
           ),
         ),
       ),
@@ -307,4 +329,91 @@ class _WavePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_WavePainter old) => true;
+}
+
+/// How tall one segment of a console's meter is, with the black line under
+/// it, for a picture [height] tall: a dozen or so to a column.
+double _segment(double height) => math.max(6.0, height / 12);
+
+/// A console's spectrum: each band a column of flat segments, a black line
+/// between one and the next, in the theme's colours four columns at a time.
+/// No gradient and nothing rounded — a level is so many blocks lit.
+class _ConsoleBarsPainter extends CustomPainter {
+  _ConsoleBarsPainter({required this.levels, required this.blocks});
+
+  final List<double> levels;
+  final List<Color> blocks;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (levels.isEmpty || size.width <= 0) return;
+    final slot = size.width / levels.length;
+    final each = _segment(size.height);
+    final rows = (size.height / each).floor();
+    final paint = Paint();
+    for (var i = 0; i < levels.length; i++) {
+      // At least one, so a silence is a row of blocks rather than nothing.
+      final lit = math.max(1, (levels[i].clamp(0.0, 1.0) * rows).round());
+      final colour = blocks[(i ~/ 4) % blocks.length];
+      for (var r = 0; r < lit; r++) {
+        canvas.drawRect(
+          Rect.fromLTWH(
+            i * slot,
+            size.height - (r + 1) * each + lcarsLine,
+            slot - lcarsLine,
+            each - lcarsLine,
+          ),
+          // The top block of a column is near-white: the peak.
+          paint..color = r == lit - 1 && lit > 1 ? lcarsLit : colour,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ConsoleBarsPainter old) => true;
+}
+
+/// A console's waveform: flat columns mirrored about a centre bar, in the
+/// theme's colours, each as tall as the loudest of the samples it covers.
+class _ConsoleWavePainter extends CustomPainter {
+  _ConsoleWavePainter({required this.wave, required this.blocks});
+
+  final List<double> wave;
+  final List<Color> blocks;
+
+  static const _columns = 48;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (wave.length < 2 || size.width <= 0) return;
+    final columns = math.min(_columns, wave.length);
+    final slot = size.width / columns;
+    final middle = size.height / 2;
+    final each = _segment(size.height);
+    final paint = Paint();
+    for (var i = 0; i < columns; i++) {
+      final from = i * wave.length ~/ columns;
+      final to = math.max(from + 1, (i + 1) * wave.length ~/ columns);
+      var peak = 0.0;
+      for (var j = from; j < to; j++) {
+        peak = math.max(peak, wave[j].clamp(-1.0, 1.0).abs());
+      }
+      // In whole segments, so it steps as the bars do; the centre bar is
+      // always there, and anchors the band through a silence.
+      final half = lcarsLine + (peak * middle / each).round() * each;
+      canvas.drawRect(
+        Rect.fromLTRB(
+          i * slot,
+          math.max(0, middle - half),
+          (i + 1) * slot - lcarsLine,
+          math.min(size.height, middle + half),
+        ),
+        paint..color = blocks[(i ~/ 6) % blocks.length],
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ConsoleWavePainter old) => true;
 }

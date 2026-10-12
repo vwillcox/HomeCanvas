@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/dates.dart';
+import '../../l10n/l10n.dart';
 import '../../look.dart';
 import '../../widgets/lcars.dart';
 import '../dashboard_theme.dart';
@@ -342,4 +344,100 @@ class TileBlock extends StatelessWidget {
     padding: padding,
     child: child,
   );
+}
+
+/// Says when what [child] shows was fetched: "Updated 09:14".
+///
+/// On a console it is lettered on the bar of the panel the tile sits in (see
+/// [LcarsBarNote]) and takes nothing from the tile. Elsewhere, and in a
+/// panel drawn without its bars, it is a small line under [child], left out
+/// of a tile too short to spare the room.
+///
+/// A time rather than "5 min ago", which would have to be drawn again every
+/// minute to stay true.
+class Refreshed extends StatefulWidget {
+  const Refreshed({
+    super.key,
+    required this.theme,
+    required this.at,
+    required this.child,
+  });
+
+  final DashboardTheme theme;
+
+  /// Null for nothing fetched yet, and nothing said.
+  final DateTime? at;
+  final Widget child;
+
+  /// The oldest of [times], so that of several things fetched, one that has
+  /// stopped answering shows.
+  static DateTime? oldest(Iterable<DateTime?> times) {
+    DateTime? oldest;
+    for (final at in times) {
+      if (at != null && (oldest == null || at.isBefore(oldest))) oldest = at;
+    }
+    return oldest;
+  }
+
+  /// [at] as a time of day, with the day before it when that isn't [now]'s:
+  /// "09:14", "Sun 21:40".
+  static String clock(DateTime at, DateTime now) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    final time = '${two(at.hour)}:${two(at.minute)}';
+    final today =
+        at.year == now.year && at.month == now.month && at.day == now.day;
+    return today ? time : '${weekdayShort(at)} $time';
+  }
+
+  @override
+  State<Refreshed> createState() => _RefreshedState();
+}
+
+class _RefreshedState extends State<Refreshed> {
+  /// The bar of the console panel this tile is in, where there is one.
+  ValueNotifier<String?>? _bar;
+
+  @override
+  void dispose() {
+    _bar?.value = null;
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = widget.theme;
+    final at = widget.at;
+    final updated = at == null
+        ? null
+        : tr('dashboard.updated', 'Updated {time}', {
+            'time': Refreshed.clock(at, DateTime.now()),
+          });
+    final bar = _bar = t.isLcars ? LcarsBarNote.maybeOf(context) : null;
+    bar?.value = updated;
+    if (updated == null || bar != null) return widget.child;
+    return LayoutBuilder(
+      builder: (context, c) {
+        if (c.maxHeight < 150) return widget.child;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(child: widget.child),
+            const SizedBox(height: 4),
+            Text(
+              t.isLcars ? lcarsCaps(updated) : updated,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                color: t.textSecondary,
+                fontSize: 11,
+                height: 1.1,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 }

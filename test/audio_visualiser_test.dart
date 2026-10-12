@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 import 'package:home_canvas/config/app_config.dart';
+import 'package:home_canvas/dashboard/dashboard_theme.dart';
+import 'package:home_canvas/look.dart';
 import 'package:home_canvas/services/audio_levels_service.dart';
 import 'package:home_canvas/widgets/audio_visualiser.dart';
 
@@ -78,6 +80,41 @@ void main() {
         ),
       );
     }
+
+    testWidgets('a console draws it in its own blocks, either style', (
+      tester,
+    ) async {
+      final lcars = kBuiltInThemes.firstWhere((t) => t.isLcars);
+      String painter() => tester
+          .widget<CustomPaint>(
+            find.descendant(
+              of: find.byType(AudioVisualiser),
+              matching: find.byType(CustomPaint),
+            ),
+          )
+          .painter
+          .runtimeType
+          .toString();
+      Future<void> draw(VisualiserStyle style, {required bool console}) async {
+        final picture = ChangeNotifierProvider<AudioLevelsService>.value(
+          value: service,
+          child: MaterialApp(
+            home: Scaffold(body: AudioVisualiser(style: style)),
+          ),
+        );
+        await tester.pumpWidget(
+          console ? KioskLook(theme: lcars, child: picture) : picture,
+        );
+      }
+
+      for (final style in [VisualiserStyle.bars, VisualiserStyle.wave]) {
+        await draw(style, console: true);
+        expect(painter(), contains('Console'));
+        expect(tester.takeException(), isNull);
+        await draw(style, console: false);
+        expect(painter(), isNot(contains('Console')));
+      }
+    });
 
     testWidgets('a tap on the picture asks for the next style', (tester) async {
       var taps = 0;

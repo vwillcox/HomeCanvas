@@ -147,6 +147,13 @@ class FeedService extends ChangeNotifier {
   ));
 
   final Map<String, _Cached<FeedItem>> _feeds = {};
+
+  /// When each feed's headlines were fetched — not when it was last tried,
+  /// which is what its cache entry is stamped with.
+  final Map<String, DateTime> _refreshed = {};
+
+  /// When the headlines [feed] gives for [url] were fetched.
+  DateTime? refreshedAt(String url) => _refreshed[url];
   final Map<String, _Cached<CalendarEvent>> _calendars = {};
   final Set<String> _inFlight = {};
 
@@ -344,6 +351,7 @@ class FeedService extends ChangeNotifier {
         // one to drop frames from whatever was playing.
         _feeds[url] =
             _Cached(await compute(parseFeed, body), DateTime.now(), null);
+        _refreshed[url] = DateTime.now();
       }
       notifyListeners();
     } finally {
