@@ -188,9 +188,9 @@ class LcarsPanelState extends State<LcarsPanel>
   }
 
   @override
-  void didUpdateWidget(LcarsPanel old) {
-    super.didUpdateWidget(old);
-    if (old.framed != widget.framed) _run();
+  void didUpdateWidget(LcarsPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.framed != widget.framed) _run();
   }
 
   @override
@@ -710,8 +710,8 @@ class LcarsSegmentsState extends State<LcarsSegments>
   }
 
   @override
-  void didUpdateWidget(LcarsSegments old) {
-    super.didUpdateWidget(old);
+  void didUpdateWidget(LcarsSegments oldWidget) {
+    super.didUpdateWidget(oldWidget);
     _chase();
   }
 

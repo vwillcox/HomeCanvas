@@ -41,11 +41,9 @@ import 'local_network.dart';
 class DashboardService extends ChangeNotifier {
   DashboardService(
     this._config, {
-    PreviewData Function()? previewData,
-    Future<Map<String, String>> Function()? albums,
-  })  : _previewData = previewData,
-        _albums = albums,
-        themes = ThemeRepository(ThemeRepository.defaultDirectory());
+    this._previewData,
+    this._albums,
+  }) : themes = ThemeRepository(ThemeRepository.defaultDirectory());
 
   final ConfigService _config;
 
