@@ -13,6 +13,8 @@ import '../services/mpv_tuning.dart';
 import '../widgets/big_back_button.dart';
 import '../time_format.dart';
 import '../l10n/l10n.dart';
+import '../look.dart';
+import '../widgets/lcars.dart';
 
 const List<double> kPlaybackSpeeds = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
 
@@ -516,15 +518,18 @@ class VideoVolumeColumn extends StatelessWidget {
             child: SizedBox(
               width: 300,
               child: SliderTheme(
-                data: SliderTheme.of(context).copyWith(
-                  trackHeight: 8,
-                  activeTrackColor: muted ? Colors.white24 : accent,
-                  inactiveTrackColor: Colors.white24,
-                  thumbColor: muted ? Colors.white54 : accent,
-                  thumbShape:
-                      const RoundSliderThumbShape(enabledThumbRadius: 15),
-                  overlayShape:
-                      const RoundSliderOverlayShape(overlayRadius: 28),
+                data: sliderFor(
+                  context.look,
+                  SliderTheme.of(context).copyWith(
+                    trackHeight: 8,
+                    activeTrackColor: muted ? Colors.white24 : accent,
+                    inactiveTrackColor: Colors.white24,
+                    thumbColor: muted ? Colors.white54 : accent,
+                    thumbShape:
+                        const RoundSliderThumbShape(enabledThumbRadius: 15),
+                    overlayShape:
+                        const RoundSliderOverlayShape(overlayRadius: 28),
+                  ),
                 ),
                 child: Slider(
                   min: 0,

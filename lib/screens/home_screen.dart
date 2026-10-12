@@ -12,6 +12,7 @@ import '../services/now_playing_service.dart';
 import '../services/playback_source.dart';
 import '../services/spotify_service.dart';
 import '../widgets/glass.dart';
+import '../widgets/lcars.dart';
 import '../widgets/module_bar.dart';
 import '../widgets/now_playing_overlay.dart';
 import '../widgets/remote_image.dart';
@@ -548,15 +549,22 @@ class _MiniPlayer extends StatelessWidget {
                         // track, so no length to show progress through.
                         if (n.duration > Duration.zero) ...[
                           const SizedBox(height: 10),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(3),
-                            child: LinearProgressIndicator(
+                          if (context.look.isLcars)
+                            LcarsSegments(
+                              theme: context.look,
                               value: n.progress,
-                              minHeight: 4,
-                              backgroundColor: context.look.wash(0.12),
-                              valueColor: AlwaysStoppedAnimation(accent),
+                              height: 8,
+                            )
+                          else
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(3),
+                              child: LinearProgressIndicator(
+                                value: n.progress,
+                                minHeight: 4,
+                                backgroundColor: context.look.wash(0.12),
+                                valueColor: AlwaysStoppedAnimation(accent),
+                              ),
                             ),
-                          ),
                         ],
                       ],
                     ),

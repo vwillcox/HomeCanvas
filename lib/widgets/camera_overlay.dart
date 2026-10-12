@@ -10,6 +10,8 @@ import '../screens/camera_screen.dart';
 import '../services/camera_service.dart';
 import 'burn_in_drift.dart';
 import '../l10n/l10n.dart';
+import '../look.dart';
+import 'lcars.dart';
 
 /// The live view from the phone acting as a wireless camera.
 ///
@@ -451,10 +453,13 @@ class CameraControls extends StatelessWidget {
                   const Icon(Icons.zoom_out, color: Colors.white70, size: 32),
                   Expanded(
                     child: SliderTheme(
-                      data: SliderTheme.of(context).copyWith(
-                        trackHeight: 8,
-                        thumbShape: const RoundSliderThumbShape(
-                            enabledThumbRadius: 18),
+                      data: sliderFor(
+                        context.look,
+                        SliderTheme.of(context).copyWith(
+                          trackHeight: 8,
+                          thumbShape: const RoundSliderThumbShape(
+                              enabledThumbRadius: 18),
+                        ),
                       ),
                       child: Slider(
                         value: service.zoom

@@ -547,15 +547,22 @@ class _CollapsedContent extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 10),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(3),
-                  child: LinearProgressIndicator(
+                if (context.look.isLcars)
+                  LcarsSegments(
+                    theme: context.look,
                     value: n.progress,
-                    minHeight: 5,
-                    backgroundColor: context.look.wash(0.24),
-                    valueColor: AlwaysStoppedAnimation(context.look.accent),
+                    height: 9,
+                  )
+                else
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(3),
+                    child: LinearProgressIndicator(
+                      value: n.progress,
+                      minHeight: 5,
+                      backgroundColor: context.look.wash(0.24),
+                      valueColor: AlwaysStoppedAnimation(context.look.accent),
+                    ),
                   ),
-                ),
                 const SizedBox(height: 5),
                 Text(
                   '${_fmt(n.position)} / ${_fmt(n.duration)}',
@@ -840,13 +847,16 @@ class _ProgressBarState extends State<_ProgressBar> {
     }
 
     return SliderTheme(
-      data: SliderTheme.of(context).copyWith(
-        trackHeight: 10,
-        activeTrackColor: context.look.accent,
-        inactiveTrackColor: context.look.wash(0.24),
-        thumbColor: context.look.accent,
-        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 16),
-        overlayShape: const RoundSliderOverlayShape(overlayRadius: 30),
+      data: sliderFor(
+        context.look,
+        SliderTheme.of(context).copyWith(
+          trackHeight: 10,
+          activeTrackColor: context.look.accent,
+          inactiveTrackColor: context.look.wash(0.24),
+          thumbColor: context.look.accent,
+          thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 16),
+          overlayShape: const RoundSliderOverlayShape(overlayRadius: 30),
+        ),
       ),
       child: Slider(
         value: (_dragValue ?? n.progress).clamp(0.0, 1.0),
@@ -1282,14 +1292,19 @@ class _VolumeRow extends StatelessWidget {
         const SizedBox(width: 16),
         Expanded(
           child: SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              trackHeight: 10,
-              activeTrackColor: muted ? context.look.wash(0.24) : accent,
-              inactiveTrackColor: context.look.wash(0.24),
-              thumbColor: muted ? context.look.textSecondary : accent,
-              // Big thumb and overlay: this is driven by fingers.
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 18),
-              overlayShape: const RoundSliderOverlayShape(overlayRadius: 32),
+            data: sliderFor(
+              context.look,
+              SliderTheme.of(context).copyWith(
+                trackHeight: 10,
+                activeTrackColor: muted ? context.look.wash(0.24) : accent,
+                inactiveTrackColor: context.look.wash(0.24),
+                thumbColor: muted ? context.look.textSecondary : accent,
+                // Big thumb and overlay: this is driven by fingers.
+                thumbShape: const RoundSliderThumbShape(
+                  enabledThumbRadius: 18,
+                ),
+                overlayShape: const RoundSliderOverlayShape(overlayRadius: 32),
+              ),
             ),
             child: Slider(value: v, onChanged: service.setVolume),
           ),
