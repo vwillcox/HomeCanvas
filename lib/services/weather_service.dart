@@ -205,6 +205,10 @@ class WeatherService extends ChangeNotifier {
 
   Weather? _weather;
   Weather? get weather => _weather;
+
+  /// When [weather] was fetched.
+  DateTime? get refreshedAt => _refreshedAt;
+  DateTime? _refreshedAt;
   String? _error;
   String? get error => _error;
   bool _loading = false;
@@ -385,6 +389,7 @@ class WeatherService extends ChangeNotifier {
           windUnit: (units['wind_speed_10m'] ?? 'km/h').toString(),
           daily: daily,
         );
+        _refreshedAt = DateTime.now();
         _error = null;
       }
     } catch (e) {

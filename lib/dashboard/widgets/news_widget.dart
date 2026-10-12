@@ -25,6 +25,16 @@ class DashboardNewsWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final feeds = context.watch<FeedService>();
+    return Refreshed(
+      theme: w.theme,
+      // Of several feeds, the one fetched longest ago.
+      at: Refreshed.oldest(feedUrls(w).map(feeds.refreshedAt)),
+      child: _feeds(context),
+    );
+  }
+
+  Widget _feeds(BuildContext context) {
     final t = w.theme;
     // Absent in the editor's off-screen previews, which read nothing out.
     final reader = context.watch<ArticleReader?>();

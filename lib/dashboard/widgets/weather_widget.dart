@@ -5,6 +5,7 @@ import '../../services/weather_service.dart';
 import '../../widgets/weather_overlay.dart' show weatherIcon;
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
+import 'tile_bits.dart';
 import 'weather_forecast_sheet.dart';
 import '../../l10n/l10n.dart';
 import '../../l10n/dates.dart';
@@ -22,8 +23,16 @@ class DashboardWeatherWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = w.theme;
     final service = context.watch<WeatherService>();
+    return Refreshed(
+      theme: w.theme,
+      at: service.weather == null ? null : service.refreshedAt,
+      child: _forecast(context, service),
+    );
+  }
+
+  Widget _forecast(BuildContext context, WeatherService service) {
+    final t = w.theme;
     final weather = service.weather;
 
     if (weather == null) {
