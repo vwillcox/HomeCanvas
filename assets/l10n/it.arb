@@ -937,6 +937,7 @@
   "widget.markets.notFound": "Non trovato",
   "widget.markets.previousClose": "Chiusura precedente",
   "widget.markets.sinceYouPaid": "Da quando hai pagato {paid}",
+  "widget.markets.updated": "Aggiornato {time}",
   "widget.markets.unreachable": "Non raggiungibile",
   "widget.markets.volume": "Volume",
   "widget.markets.volume24h": "Volume (24h)",

@@ -122,6 +122,10 @@ class MarketsService extends ChangeNotifier {
   final Map<String, Quote> _quotes = {};
   final Map<String, String> _errors = {};
   final Map<String, DateTime> _fetched = {};
+
+  /// When each price held was fetched — unlike [_fetched], which is when it
+  /// was last tried, and is put back after a failure to try again sooner.
+  final Map<String, DateTime> _refreshed = {};
   final Set<String> _busy = {};
   bool _disposed = false;
 
@@ -138,17 +142,29 @@ class MarketsService extends ChangeNotifier {
 
   /// Holds [q] as if just fetched — for tests.
   @visibleForTesting
-  void debugSetStock(String symbol, String range, Quote q) =>
-      _debugSet(_stockKey(symbol, range), q);
+  void debugSetStock(String symbol, String range, Quote q, {DateTime? at}) =>
+      _debugSet(_stockKey(symbol, range), q, at);
 
   @visibleForTesting
-  void debugSetCoin(String entry, String currency, String period, Quote q) =>
-      _debugSet(_coinKey(entry, currency, period), q);
+  void debugSetCoin(
+    String entry,
+    String currency,
+    String period,
+    Quote q, {
+    DateTime? at,
+  }) => _debugSet(_coinKey(entry, currency, period), q, at);
 
-  void _debugSet(String key, Quote q) {
-    _quotes[key] = q;
+  void _debugSet(String key, Quote q, DateTime? at) {
+    _hold(key, q);
+    if (at != null) _refreshed[key] = at;
     _fetched[key] = DateTime.now();
     _changed();
+  }
+
+  /// Keeps [q] as the price for [key], fetched now.
+  void _hold(String key, Quote q) {
+    _quotes[key] = q;
+    _refreshed[key] = DateTime.now();
   }
 
   bool _due(String key, Duration maxAge, bool force) {
@@ -176,6 +192,10 @@ class MarketsService extends ChangeNotifier {
 
   String? stockError(String symbol, String range) =>
       _errors[_stockKey(symbol, range)];
+
+  /// When the price [stock] gives was fetched.
+  DateTime? stockRefreshed(String symbol, String range) =>
+      _refreshed[_stockKey(symbol, range)];
 
   /// [range] is Yahoo's: `1d`, `5d`, `1mo`, `3mo` or `1y`.
   Future<void> ensureStocks(
@@ -213,7 +233,7 @@ class MarketsService extends ChangeNotifier {
       if (quote == null) {
         _errors[key] = tr('widget.markets.notFound', 'Not found');
       } else {
-        _quotes[key] = quote;
+        _hold(key, quote);
         _errors.remove(key);
       }
       _done(key, maxAge, ok: true);
@@ -426,6 +446,10 @@ class MarketsService extends ChangeNotifier {
   String? coinError(String entry, String currency, String period) =>
       _errors[_coinKey(entry, currency, period)];
 
+  /// When the price [coin] gives was fetched.
+  DateTime? coinRefreshed(String entry, String currency, String period) =>
+      _refreshed[_coinKey(entry, currency, period)];
+
   /// Periods longer than the week `coins/markets` sketches, and how many
   /// days of history each asks `market_chart` for.
   static const _longPeriods = {'30d': 30, '90d': 90, '1y': 365};
@@ -533,7 +557,7 @@ class MarketsService extends ChangeNotifier {
         if (q == null) {
           _errors[key] = tr('widget.markets.notFound', 'Not found');
         } else {
-          _quotes[key] = q;
+          _hold(key, q);
           _errors.remove(key);
         }
         _done(key, maxAge, ok: true);
@@ -581,7 +605,7 @@ class MarketsService extends ChangeNotifier {
         final k = _coinKey(c, currency, period);
         final q = await _coinbase(c, currency, period);
         if (q != null) {
-          _quotes[k] = q;
+          _hold(k, q);
           _errors.remove(k);
           // Back to CoinGecko at the next check, for the fuller picture.
           _done(k, maxAge, ok: true);
