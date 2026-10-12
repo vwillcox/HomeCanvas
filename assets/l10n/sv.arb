@@ -937,6 +937,7 @@
   "widget.markets.notFound": "Hittades inte",
   "widget.markets.previousClose": "Föregående stängning",
   "widget.markets.sinceYouPaid": "Sedan du betalade {paid}",
+  "widget.markets.updated": "Uppdaterad {time}",
   "widget.markets.unreachable": "Går inte att nå",
   "widget.markets.volume": "Volym",
   "widget.markets.volume24h": "Volym (24 tim)",

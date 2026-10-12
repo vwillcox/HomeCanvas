@@ -937,6 +937,7 @@
   "widget.markets.notFound": "Nie znaleziono",
   "widget.markets.previousClose": "Poprzednie zamknięcie",
   "widget.markets.sinceYouPaid": "Od zapłaconych {paid}",
+  "widget.markets.updated": "Zaktualizowano {time}",
   "widget.markets.unreachable": "Niedostępne",
   "widget.markets.volume": "Wolumen",
   "widget.markets.volume24h": "Wolumen (24h)",

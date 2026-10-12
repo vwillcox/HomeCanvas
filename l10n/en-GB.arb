@@ -1325,6 +1325,7 @@
   "widget.markets.scrollForMore": "Scroll for {n, plural, one{# more} other{# more}}",
   "widget.markets.sinceYouPaid": "Since you paid {paid}",
   "widget.markets.unreachable": "Unreachable",
+  "widget.markets.updated": "Updated {time}",
   "widget.markets.volume": "Volume",
   "widget.markets.volume24h": "Volume (24h)",
   "widget.markets.your": "Your {coins}",

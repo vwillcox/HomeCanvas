@@ -105,7 +105,10 @@ class _MarketsTile extends StatefulWidget {
   final DashboardWidgetContext w;
   final List<_Pick> picks;
   final Future<void> Function(MarketsService s, {bool force}) fetch;
-  final ({Quote? quote, String? error}) Function(MarketsService s, String entry)
+  final ({Quote? quote, String? error, DateTime? at}) Function(
+    MarketsService s,
+    String entry,
+  )
   lookup;
 
   /// What to say when nothing has been chosen.
@@ -178,9 +181,49 @@ class _MarketsTileState extends State<_MarketsTile>
             },
           );
 
+    // When the prices were fetched, under the list: the oldest of them, so
+    // one that has stopped answering shows. A time rather than "5 min ago",
+    // which would have to be drawn again every minute to stay true.
+    DateTime? oldest;
+    for (final pick in widget.picks) {
+      final at = widget.lookup(service, pick.entry).at;
+      if (at != null && (oldest == null || at.isBefore(oldest))) oldest = at;
+    }
+    Widget withUpdated(Widget list) => oldest == null
+        ? list
+        : LayoutBuilder(
+            builder: (context, c) {
+              if (c.maxHeight < 150) return list;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(child: list),
+                  const SizedBox(height: 4),
+                  Text(
+                    _cased(
+                      t,
+                      tr('widget.markets.updated', 'Updated {time}', {
+                        'time': _clock(oldest!, DateTime.now()),
+                      }),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      color: t.textSecondary,
+                      fontSize: 11,
+                      height: 1.1,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ],
+              );
+            },
+          );
+
     final view = widget.w.option('view', 'list');
     if (view == 'cards' || view == 'single') {
-      return withTotal(LayoutBuilder(
+      return withUpdated(withTotal(LayoutBuilder(
         builder: (context, c) {
           // As many at once as fit with room for a chart — all of them when
           // they can — sharing the tile; the whole tile for one at a time.
@@ -224,10 +267,10 @@ class _MarketsTileState extends State<_MarketsTile>
           ),
           );
         },
-      ));
+      )));
     }
 
-    return withTotal(LayoutBuilder(
+    return withUpdated(withTotal(LayoutBuilder(
       builder: (context, c) {
         // A sparkline squeezed under 60px says nothing; the price matters more.
         final chart = showChart && c.maxWidth >= 300;
@@ -257,8 +300,18 @@ class _MarketsTileState extends State<_MarketsTile>
           ),
         );
       },
-    ));
+    )));
   }
+}
+
+/// [at] as a time of day, with the day before it when that isn't [now]'s:
+/// "09:14", "Sun 21:40".
+String _clock(DateTime at, DateTime now) {
+  String two(int n) => n.toString().padLeft(2, '0');
+  final time = '${two(at.hour)}:${two(at.minute)}';
+  final today =
+      at.year == now.year && at.month == now.month && at.day == now.day;
+  return today ? time : '${weekdayShort(at)} $time';
 }
 
 /// Words as the theme letters them: capitals on a console.
@@ -1529,8 +1582,11 @@ class StocksWidget extends StatelessWidget {
         maxAge: maxAge,
         force: force,
       ),
-      lookup: (s, entry) =>
-          (quote: s.stock(entry, range), error: s.stockError(entry, range)),
+      lookup: (s, entry) => (
+        quote: s.stock(entry, range),
+        error: s.stockError(entry, range),
+        at: s.stockRefreshed(entry, range),
+      ),
     );
   }
 }
@@ -1679,6 +1735,7 @@ class CryptoWidget extends StatelessWidget {
       lookup: (s, entry) => (
         quote: s.coin(entry, currency, period),
         error: s.coinError(entry, currency, period),
+        at: s.coinRefreshed(entry, currency, period),
       ),
     );
   }

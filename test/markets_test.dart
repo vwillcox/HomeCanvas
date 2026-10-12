@@ -499,6 +499,53 @@ void main() {
       expect(find.text('−0.31%'), findsOneWidget);
     });
 
+    testWidgets('says when its prices were fetched, the oldest of them', (
+      tester,
+    ) async {
+      final markets = MarketsService();
+      addTearDown(markets.dispose);
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      Quote quote(String symbol) =>
+          Quote(symbol: symbol, name: symbol, price: 100, currency: 'USD');
+      markets
+        ..debugSetStock(
+          'AAPL',
+          '1d',
+          quote('AAPL'),
+          at: today.add(const Duration(hours: 9, minutes: 14)),
+        )
+        ..debugSetStock(
+          'MSFT',
+          '1d',
+          quote('MSFT'),
+          at: today.add(const Duration(hours: 9, minutes: 5)),
+        );
+      final options = {
+        'stocks': [
+          {'symbol': 'AAPL', 'name': ''},
+          {'symbol': 'MSFT', 'name': ''},
+        ],
+        // Long enough that nothing is fetched for real.
+        'refreshMinutes': 1440,
+      };
+      await draw(tester, 'stocks', const Size(480, 400), markets,
+          options: options);
+      expect(find.text('Updated 09:05'), findsOneWidget);
+
+      // A price from another day says which.
+      final friday = DateTime(2026, 10, 9, 21, 40);
+      markets.debugSetStock('MSFT', '1d', quote('MSFT'), at: friday);
+      await tester.pump();
+      expect(find.text('Updated Fri 21:40'), findsOneWidget);
+
+      // A strip of a tile keeps its room for the prices.
+      await draw(tester, 'stocks', const Size(480, 120), markets,
+          options: options);
+      expect(find.textContaining('Updated'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('crypto fits every tile shape', (tester) async {
       final markets = MarketsService();
       addTearDown(markets.dispose);

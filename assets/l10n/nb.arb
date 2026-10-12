@@ -937,6 +937,7 @@
   "widget.markets.notFound": "Ikke funnet",
   "widget.markets.previousClose": "Forrige sluttkurs",
   "widget.markets.sinceYouPaid": "Siden du betalte {paid}",
+  "widget.markets.updated": "Oppdatert {time}",
   "widget.markets.unreachable": "Utilgjengelig",
   "widget.markets.volume": "Volum",
   "widget.markets.volume24h": "Volum (24t)",

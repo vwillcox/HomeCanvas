@@ -937,6 +937,7 @@
   "widget.markets.notFound": "Niet gevonden",
   "widget.markets.previousClose": "Vorige slotkoers",
   "widget.markets.sinceYouPaid": "Sinds je {paid} betaalde",
+  "widget.markets.updated": "Bijgewerkt {time}",
   "widget.markets.unreachable": "Onbereikbaar",
   "widget.markets.volume": "Volume",
   "widget.markets.volume24h": "Volume (24 uur)",
