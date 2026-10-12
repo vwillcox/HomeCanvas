@@ -74,15 +74,20 @@ String lcarsCaps(String s) => s.toUpperCase();
 /// widget, lettered in black on the bar's second length. A stock tile says
 /// there when its prices were fetched.
 ///
+/// A note is its words and a shorter way of saying them — "Updated 09:14"
+/// and "09:14" — for a bar too short for the first.
+///
 /// Null from [maybeOf] where there is no bar to letter — off a console, or
 /// in a panel drawn without its bars — and what would have gone on it has
 /// to be shown some other way.
 class LcarsBarNote extends InheritedWidget {
   const LcarsBarNote({super.key, required this.note, required super.child});
 
-  final ValueNotifier<String?> note;
+  final ValueNotifier<({String words, String brief})?> note;
 
-  static ValueNotifier<String?>? maybeOf(BuildContext context) =>
+  static ValueNotifier<({String words, String brief})?>? maybeOf(
+    BuildContext context,
+  ) =>
       context.getInheritedWidgetOfExactType<LcarsBarNote>()?.note;
 
   // The same notifier for as long as the panel lasts.
@@ -162,7 +167,7 @@ class LcarsPanelState extends State<LcarsPanel>
   static const _blink = Duration(milliseconds: 160);
 
   final _lit = ValueNotifier<int>(0);
-  final _note = ValueNotifier<String?>(null);
+  final _note = ValueNotifier<({String words, String brief})?>(null);
   Timer? _timer;
   bool _still = false;
 
@@ -319,7 +324,7 @@ class _PanelPainter extends CustomPainter {
   final ValueListenable<int> lit;
 
   /// Lettered on the second length, where it fits.
-  final ValueListenable<String?> note;
+  final ValueListenable<({String words, String brief})?> note;
   final Color first;
   final Color second;
   final Color third;
@@ -399,8 +404,9 @@ class _PanelPainter extends CustomPainter {
     );
     canvas.restore();
 
-    // Lettered at the end of a length, as a console letters its bars.
-    void letter(String? words, double from, double to) {
+    // Lettered at the end of a length, as a console letters its bars. With
+    // [brief], words that do not fit give way to it.
+    void letter(String? words, double from, double to, {String? brief}) {
       final room = to - from - 8;
       if (words == null || room < 24) return;
       final text = TextPainter(
@@ -419,6 +425,10 @@ class _PanelPainter extends CustomPainter {
         maxLines: 1,
         ellipsis: '…',
       )..layout(maxWidth: room);
+      if (brief != null && text.didExceedMaxLines) {
+        text.dispose();
+        return letter(brief, from, to);
+      }
       final y = down ? h - rail : 0.0;
       text.paint(
         canvas,
@@ -430,9 +440,10 @@ class _PanelPainter extends CustomPainter {
     letter(label, (sweep > s + bend ? sweep : s + bend) + 4, firstEnd);
     final note = this.note.value;
     letter(
-      note == null ? null : lcarsCaps(note),
+      note == null ? null : lcarsCaps(note.words),
       firstEnd + lcarsLine,
       secondEnd,
+      brief: note == null ? null : lcarsCaps(note.brief),
     );
   }
 
@@ -993,6 +1004,125 @@ class LcarsPageStrip extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// A slider's settings as a console draws one: the track cut into segments,
+/// lit as far as the thumb, and the thumb a near-white block standing proud
+/// of it with a black line either side. Nothing round, and no halo under
+/// the finger.
+///
+/// Applied to [data] rather than built from nothing, so a slider keeps the
+/// colours and the track height it was given.
+SliderThemeData lcarsSlider(SliderThemeData data) {
+  final track = data.trackHeight ?? 14;
+  return data.copyWith(
+    trackShape: const LcarsSliderTrack(),
+    thumbShape: LcarsSliderThumb(height: (track * 2.6).clamp(30.0, 48.0)),
+    thumbColor: lcarsLit,
+    overlayColor: Colors.transparent,
+  );
+}
+
+/// [data] as a console draws a slider, on a console; as it is anywhere else.
+SliderThemeData sliderFor(DashboardTheme look, SliderThemeData data) =>
+    look.isLcars ? lcarsSlider(data) : data;
+
+/// A slider's track as a row of segments: the active colour up to the
+/// thumb, the inactive one beyond it.
+class LcarsSliderTrack extends SliderTrackShape with BaseSliderTrackShape {
+  const LcarsSliderTrack();
+
+  @override
+  void paint(
+    PaintingContext context,
+    Offset offset, {
+    required RenderBox parentBox,
+    required SliderThemeData sliderTheme,
+    required Animation<double> enableAnimation,
+    required TextDirection textDirection,
+    required Offset thumbCenter,
+    Offset? secondaryOffset,
+    bool isDiscrete = false,
+    bool isEnabled = false,
+  }) {
+    final rect = getPreferredRect(
+      parentBox: parentBox,
+      offset: offset,
+      sliderTheme: sliderTheme,
+      isEnabled: isEnabled,
+      isDiscrete: isDiscrete,
+    );
+    if (rect.height <= 0 || rect.width <= 0) return;
+    final active = ColorTween(
+      begin: sliderTheme.disabledActiveTrackColor,
+      end: sliderTheme.activeTrackColor,
+    ).evaluate(enableAnimation)!;
+    final inactive = ColorTween(
+      begin: sliderTheme.disabledInactiveTrackColor,
+      end: sliderTheme.inactiveTrackColor,
+    ).evaluate(enableAnimation)!;
+    final count = (rect.width / (rect.height * 1.6)).floor().clamp(8, 64);
+    final each = rect.width / count;
+    final paint = Paint();
+    final ltr = textDirection == TextDirection.ltr;
+    for (var i = 0; i < count; i++) {
+      final left = rect.left + i * each;
+      final passed = ltr
+          ? left + each / 2 <= thumbCenter.dx
+          : left + each / 2 >= thumbCenter.dx;
+      context.canvas.drawRect(
+        Rect.fromLTWH(left, rect.top, each - 2, rect.height),
+        paint..color = passed ? active : inactive,
+      );
+    }
+  }
+}
+
+/// A slider's thumb as a block: flat, square, [height] tall, with the black
+/// line a console puts between any two blocks on either side of it.
+class LcarsSliderThumb extends SliderComponentShape {
+  const LcarsSliderThumb({this.width = 16, this.height = 36});
+
+  final double width;
+  final double height;
+
+  @override
+  Size getPreferredSize(bool isEnabled, bool isDiscrete) =>
+      Size(width + lcarsLine * 2, height);
+
+  @override
+  void paint(
+    PaintingContext context,
+    Offset center, {
+    required Animation<double> activationAnimation,
+    required Animation<double> enableAnimation,
+    required bool isDiscrete,
+    required TextPainter labelPainter,
+    required RenderBox parentBox,
+    required SliderThemeData sliderTheme,
+    required TextDirection textDirection,
+    required double value,
+    required double textScaleFactor,
+    required Size sizeWithOverflow,
+  }) {
+    final colour = ColorTween(
+      begin: sliderTheme.disabledThumbColor,
+      end: sliderTheme.thumbColor,
+    ).evaluate(enableAnimation)!;
+    final canvas = context.canvas;
+    canvas.drawRect(
+      Rect.fromCenter(
+        center: center,
+        width: width + lcarsLine * 2,
+        height: height,
+      ),
+      Paint()..color = lcarsInk,
+    );
+    canvas.drawRect(
+      Rect.fromCenter(center: center, width: width, height: height),
+      Paint()..color = colour,
     );
   }
 }

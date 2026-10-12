@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../look.dart';
 import '../services/article_reader.dart';
 import 'glass.dart';
+import 'lcars.dart';
 import '../l10n/l10n.dart';
 
 /// What is being read aloud, along the bottom of whatever screen is up:
@@ -142,15 +143,21 @@ class _Words extends StatelessWidget {
               const SizedBox(width: 12),
               SizedBox(
                 width: 120,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(2),
-                  child: LinearProgressIndicator(
-                    value: (reader.position + 1) / reader.total,
-                    minHeight: 3,
-                    backgroundColor: look.wash(0.15),
-                    valueColor: AlwaysStoppedAnimation(look.accent),
-                  ),
-                ),
+                child: look.isLcars
+                    ? LcarsSegments(
+                        theme: look,
+                        value: (reader.position + 1) / reader.total,
+                        height: 7,
+                      )
+                    : ClipRRect(
+                        borderRadius: BorderRadius.circular(2),
+                        child: LinearProgressIndicator(
+                          value: (reader.position + 1) / reader.total,
+                          minHeight: 3,
+                          backgroundColor: look.wash(0.15),
+                          valueColor: AlwaysStoppedAnimation(look.accent),
+                        ),
+                      ),
               ),
             ],
           ],

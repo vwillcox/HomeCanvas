@@ -395,7 +395,7 @@ class Refreshed extends StatefulWidget {
 
 class _RefreshedState extends State<Refreshed> {
   /// The bar of the console panel this tile is in, where there is one.
-  ValueNotifier<String?>? _bar;
+  ValueNotifier<({String words, String brief})?>? _bar;
 
   @override
   void dispose() {
@@ -407,13 +407,13 @@ class _RefreshedState extends State<Refreshed> {
   Widget build(BuildContext context) {
     final t = widget.theme;
     final at = widget.at;
-    final updated = at == null
+    final time = at == null ? null : Refreshed.clock(at, DateTime.now());
+    final updated = time == null
         ? null
-        : tr('dashboard.updated', 'Updated {time}', {
-            'time': Refreshed.clock(at, DateTime.now()),
-          });
+        : tr('dashboard.updated', 'Updated {time}', {'time': time});
     final bar = _bar = t.isLcars ? LcarsBarNote.maybeOf(context) : null;
-    bar?.value = updated;
+    // A bar too short for the words has the time alone.
+    bar?.value = updated == null ? null : (words: updated, brief: time!);
     if (updated == null || bar != null) return widget.child;
     return LayoutBuilder(
       builder: (context, c) {

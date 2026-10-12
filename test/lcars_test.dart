@@ -80,6 +80,24 @@ void main() {
       expect(shape.side.color, lcars.accent);
     });
 
+    test('a slider is segments lit as far as a block of a thumb', () {
+      expect(app.sliderTheme.trackShape, isA<LcarsSliderTrack>());
+      expect(app.sliderTheme.thumbShape, isA<LcarsSliderThumb>());
+      expect(app.sliderTheme.thumbColor, lcarsLit);
+      // A slider that sets its own colours and size keeps them, and still
+      // gets the shapes; on any other theme it is left alone.
+      const own = SliderThemeData(
+        trackHeight: 8,
+        activeTrackColor: Color(0xFF00FF00),
+        thumbShape: RoundSliderThumbShape(),
+      );
+      final dressed = sliderFor(lcars, own);
+      expect(dressed.thumbShape, isA<LcarsSliderThumb>());
+      expect(dressed.trackHeight, 8);
+      expect(dressed.activeTrackColor, own.activeTrackColor);
+      expect(sliderFor(kBuiltInThemes.first, own), own);
+    });
+
     test('other themes are left as they were', () {
       final glass = buildTheme(kBuiltInThemes.first);
       expect(glass.dialogTheme.shape, isNull);
@@ -215,6 +233,26 @@ void main() {
       await draw(tester, framed: false);
       expect(tester.getRect(find.textContaining('Unknown widget')), framed);
     });
+  });
+
+  testWidgets('a slider on a console draws, slides and reports', (
+    tester,
+  ) async {
+    var value = 0.2;
+    await tester.pumpWidget(
+      console(
+        StatefulBuilder(
+          builder: (context, setState) => Slider(
+            value: value,
+            onChanged: (v) => setState(() => value = v),
+          ),
+        ),
+      ),
+    );
+    expect(tester.takeException(), isNull);
+    await tester.tapAt(tester.getCenter(find.byType(Slider)));
+    await tester.pumpAndSettle();
+    expect(value, closeTo(0.5, 0.05));
   });
 
   group('what moves on a console', () {

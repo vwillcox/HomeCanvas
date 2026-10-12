@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'dashboard/dashboard_theme.dart';
+import 'widgets/lcars.dart';
 
 /// Fonts to draw what the chosen font has no glyph for — emoji, mainly.
 ///
@@ -259,21 +260,15 @@ ThemeData _console(ThemeData app, DashboardTheme t) {
       trackOutlineWidth: const WidgetStatePropertyAll(2),
       thumbIcon: const WidgetStatePropertyAll(null),
     ),
-    sliderTheme: SliderThemeData(
-      trackHeight: 14,
-      activeTrackColor: t.accent,
-      inactiveTrackColor: unlit(blue),
-      thumbColor: lit,
-      overlayColor: t.accent.withValues(alpha: 0.2),
-      // A square end where the bar is cut, as the rails are.
-      trackShape: const RectangularSliderTrackShape(),
-      thumbShape: const RoundSliderThumbShape(
-        enabledThumbRadius: 13,
-        elevation: 0,
-        pressedElevation: 0,
+    // Segments lit as far as a block of a thumb — see lcarsSlider.
+    sliderTheme: lcarsSlider(
+      SliderThemeData(
+        trackHeight: 14,
+        activeTrackColor: t.accent,
+        inactiveTrackColor: unlit(blue),
+        valueIndicatorColor: lit,
+        valueIndicatorTextStyle: label.copyWith(color: ink, fontSize: 18),
       ),
-      valueIndicatorColor: lit,
-      valueIndicatorTextStyle: label.copyWith(color: ink, fontSize: 18),
     ),
     progressIndicatorTheme: ProgressIndicatorThemeData(
       color: t.accent,

@@ -607,11 +607,18 @@ void main() {
           );
       String? onBar() => LcarsBarNote.maybeOf(
         tester.element(find.byType(LcarsBarNote)),
-      )?.value;
+      )?.value?.words;
 
       await tester.pumpWidget(panel(framed: true));
       await tester.pump(const Duration(seconds: 1));
       expect(onBar(), 'Updated 09:14');
+      // The time alone, for a bar too short for the words.
+      expect(
+        LcarsBarNote.maybeOf(
+          tester.element(find.byType(LcarsBarNote)),
+        )?.value?.brief,
+        '09:14',
+      );
       expect(find.textContaining('UPDATED'), findsNothing);
       expect(tester.takeException(), isNull);
 
