@@ -89,7 +89,17 @@ class AudioAnalyser {
 
   /// The quietest peak the waveform will scale up to, as a fraction of full
   /// scale. Below this it is a silence, not a quiet passage, and stays flat.
-  static const double minWavePeak = 0.02;
+  ///
+  /// About 48 dB down, in step with how far the bars' own window reaches.
+  /// It was 0.02 once, and a phone playing over Bluetooth with its own volume
+  /// low — peaks under a hundredth of full scale — drew a flat line while the
+  /// bars beside it danced. What is captured is the mix on its way out, not a
+  /// microphone, so there is no room noise down here to magnify.
+  static const double minWavePeak = 0.004;
+
+  /// Where the waveform's scale starts out. Low, since it rises to a loud
+  /// source in a few frames but takes seconds to come down to a quiet one.
+  static const double defaultWavePeak = 0.05;
 
   /// How quickly the waveform's scale rises to a loud passage, per frame.
   static const double waveAttack = 0.3;
@@ -112,7 +122,7 @@ class AudioAnalyser {
   final Float64List _tilt;
 
   double _reference = defaultReferenceDb;
-  double _waveReference = 0.25;
+  double _waveReference = defaultWavePeak;
 
   /// The level the top of the bars currently corresponds to, in tilted dBFS.
   double get referenceDb => _reference;
@@ -237,7 +247,11 @@ class AudioAnalyser {
       final v = frame[i].abs() / 32768.0;
       if (v > framePeak) framePeak = v;
     }
-    if (framePeak > _waveReference) {
+    if (framePeak > _waveReference * 2) {
+      // A jump — the first note, a loud entry — is met at once rather than
+      // drawn clipped flat against the top while the scale catches up.
+      _waveReference = framePeak;
+    } else if (framePeak > _waveReference) {
       _waveReference += (framePeak - _waveReference) * waveAttack;
     } else if (framePeak > minWavePeak) {
       _waveReference -= _waveReference * waveRelease;
@@ -273,7 +287,7 @@ class AudioAnalyser {
     _levels.fillRange(0, _levels.length, 0);
     _wave.fillRange(0, _wave.length, 0);
     _reference = defaultReferenceDb;
-    _waveReference = 0.25;
+    _waveReference = defaultWavePeak;
   }
 
   /// In-place iterative radix-2 Cooley–Tukey.

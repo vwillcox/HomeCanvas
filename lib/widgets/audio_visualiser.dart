@@ -374,15 +374,21 @@ class _ConsoleBarsPainter extends CustomPainter {
   bool shouldRepaint(_ConsoleBarsPainter old) => true;
 }
 
-/// A console's waveform: flat columns mirrored about a centre bar, in the
-/// theme's colours, each as tall as the loudest of the samples it covers.
+/// A console's waveform: flat columns standing up from a centre bar or
+/// hanging down from it, as the sound swings either way, in the theme's
+/// colours.
+///
+/// Signed, not mirrored, and not rounded to segments as the spectrum is.
+/// The analyser scales the wave to fill the band whatever the volume, so a
+/// column that only said how loud its samples were would be the same height
+/// at every frame — a still block. Which way each swings is what moves.
 class _ConsoleWavePainter extends CustomPainter {
   _ConsoleWavePainter({required this.wave, required this.blocks});
 
   final List<double> wave;
   final List<Color> blocks;
 
-  static const _columns = 48;
+  static const _columns = 64;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -390,26 +396,26 @@ class _ConsoleWavePainter extends CustomPainter {
     final columns = math.min(_columns, wave.length);
     final slot = size.width / columns;
     final middle = size.height / 2;
-    final each = _segment(size.height);
     final paint = Paint();
     for (var i = 0; i < columns; i++) {
+      // The furthest swing of the samples this column covers, with its sign.
       final from = i * wave.length ~/ columns;
       final to = math.max(from + 1, (i + 1) * wave.length ~/ columns);
-      var peak = 0.0;
+      var swing = 0.0;
       for (var j = from; j < to; j++) {
-        peak = math.max(peak, wave[j].clamp(-1.0, 1.0).abs());
+        final v = wave[j].clamp(-1.0, 1.0);
+        if (v.abs() > swing.abs()) swing = v;
       }
-      // In whole segments, so it steps as the bars do; the centre bar is
-      // always there, and anchors the band through a silence.
-      final half = lcarsLine + (peak * middle / each).round() * each;
+      final reach = swing * (middle - lcarsLine);
+      // The centre bar is always there, and anchors the band in a silence.
       canvas.drawRect(
         Rect.fromLTRB(
           i * slot,
-          math.max(0, middle - half),
+          math.min(middle - lcarsLine / 2, middle - reach),
           (i + 1) * slot - lcarsLine,
-          math.min(size.height, middle + half),
+          math.max(middle + lcarsLine / 2, middle - reach),
         ),
-        paint..color = blocks[(i ~/ 6) % blocks.length],
+        paint..color = blocks[(i ~/ 8) % blocks.length],
       );
     }
   }
