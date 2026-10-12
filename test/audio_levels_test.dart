@@ -124,7 +124,8 @@ void main() {
       // third of full scale, so the waveform is scaled the way the bars are.
       double loudestOf(List<double> w) =>
           w.map((v) => v.abs()).reduce(math.max);
-      for (final amp in [1.0, 0.3, 0.06]) {
+      // The last is a phone over Bluetooth with its own volume turned down.
+      for (final amp in [1.0, 0.3, 0.06, 0.008]) {
         final a = AudioAnalyser();
         // Long enough for the slow release to reach a very quiet source; the
         // rise is quick, so the louder ones settle almost immediately.

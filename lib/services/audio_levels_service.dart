@@ -248,8 +248,18 @@ class AudioLevelsService extends ChangeNotifier {
     );
     // Drained so a chatty build of pw-record cannot fill its pipe and wedge.
     unawaited(process.stderr.drain<void>().catchError((_) {}));
+    // The first moments of a capture can carry a full-scale click, which
+    // would set the waveform's scale by something that is not the music.
+    var skip = sampleRate * 2 * 3 ~/ 10;
     return PcmStream(
-      bytes: process.stdout,
+      bytes: process.stdout
+          .map((chunk) {
+            if (skip == 0) return chunk;
+            final drop = skip < chunk.length ? skip : chunk.length;
+            skip -= drop;
+            return chunk.sublist(drop);
+          })
+          .where((chunk) => chunk.isNotEmpty),
       stop: () async {
         process.kill();
         await process.exitCode;
