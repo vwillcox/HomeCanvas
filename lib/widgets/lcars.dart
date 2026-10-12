@@ -70,6 +70,26 @@ int lcarsIndex(String s) {
 /// Capitals, as everything on the console is lettered.
 String lcarsCaps(String s) => s.toUpperCase();
 
+/// The small print on the bar of the panel a widget sits in: set by the
+/// widget, lettered in black on the bar's second length. A stock tile says
+/// there when its prices were fetched.
+///
+/// Null from [maybeOf] where there is no bar to letter — off a console, or
+/// in a panel drawn without its bars — and what would have gone on it has
+/// to be shown some other way.
+class LcarsBarNote extends InheritedWidget {
+  const LcarsBarNote({super.key, required this.note, required super.child});
+
+  final ValueNotifier<String?> note;
+
+  static ValueNotifier<String?>? maybeOf(BuildContext context) =>
+      context.getInheritedWidgetOfExactType<LcarsBarNote>()?.note;
+
+  // The same notifier for as long as the panel lasts.
+  @override
+  bool updateShouldNotify(LcarsBarNote old) => old.note != note;
+}
+
 /// A panel: a bar down the left that sweeps round the top corner into a bar
 /// across the top — or, with [down], round the bottom corner and across the
 /// bottom — with its [label] lettered on the bar, and the [child] on black
@@ -142,6 +162,7 @@ class LcarsPanelState extends State<LcarsPanel>
   static const _blink = Duration(milliseconds: 160);
 
   final _lit = ValueNotifier<int>(0);
+  final _note = ValueNotifier<String?>(null);
   Timer? _timer;
   bool _still = false;
 
@@ -211,6 +232,7 @@ class LcarsPanelState extends State<LcarsPanel>
   void dispose() {
     _timer?.cancel();
     _lit.dispose();
+    _note.dispose();
     super.dispose();
   }
 
@@ -251,6 +273,7 @@ class LcarsPanelState extends State<LcarsPanel>
                 child: CustomPaint(
                   painter: _PanelPainter(
                     lit: _lit,
+                    note: _note,
                     first: theme.block(seed),
                     second: theme.block(seed + 2),
                     third: theme.block(seed + 4),
@@ -264,7 +287,11 @@ class LcarsPanelState extends State<LcarsPanel>
                 ),
               ),
             ),
-            RepaintBoundary(child: ClipRect(child: inside)),
+            RepaintBoundary(
+              child: ClipRect(
+                child: LcarsBarNote(note: _note, child: inside),
+              ),
+            ),
           ],
         );
       },
@@ -275,6 +302,7 @@ class LcarsPanelState extends State<LcarsPanel>
 class _PanelPainter extends CustomPainter {
   _PanelPainter({
     required this.lit,
+    required this.note,
     required this.first,
     required this.second,
     required this.third,
@@ -284,11 +312,14 @@ class _PanelPainter extends CustomPainter {
     required this.down,
     this.label,
     this.fontFamily,
-  }) : super(repaint: lit);
+  }) : super(repaint: Listenable.merge([lit, note]));
 
   /// Which lengths are lit, a bit each: the elbow, the second length, the
   /// third, and the foot of the side bar.
   final ValueListenable<int> lit;
+
+  /// Lettered on the second length, where it fits.
+  final ValueListenable<String?> note;
   final Color first;
   final Color second;
   final Color third;
@@ -368,39 +399,47 @@ class _PanelPainter extends CustomPainter {
     );
     canvas.restore();
 
-    final label = this.label;
-    if (label == null) return;
-    // At the end of the first length, as a console letters its bars.
-    final left = (sweep > s + bend ? sweep : s + bend) + 4;
-    final room = firstEnd - left - 8;
-    if (room < 24) return;
-    final text = TextPainter(
-      text: TextSpan(
-        text: label,
-        style: TextStyle(
-          color: lcarsInk,
-          fontFamily: fontFamily,
-          fontSize: rail * 0.68,
-          fontWeight: FontWeight.w700,
-          letterSpacing: rail * 0.04,
-          height: 1,
+    // Lettered at the end of a length, as a console letters its bars.
+    void letter(String? words, double from, double to) {
+      final room = to - from - 8;
+      if (words == null || room < 24) return;
+      final text = TextPainter(
+        text: TextSpan(
+          text: words,
+          style: TextStyle(
+            color: lcarsInk,
+            fontFamily: fontFamily,
+            fontSize: rail * 0.68,
+            fontWeight: FontWeight.w700,
+            letterSpacing: rail * 0.04,
+            height: 1,
+          ),
         ),
-      ),
-      textDirection: TextDirection.ltr,
-      maxLines: 1,
-      ellipsis: '…',
-    )..layout(maxWidth: room);
-    final y = down ? h - rail : 0.0;
-    text.paint(
-      canvas,
-      Offset(firstEnd - 8 - text.width, y + (rail - text.height) / 2),
+        textDirection: TextDirection.ltr,
+        maxLines: 1,
+        ellipsis: '…',
+      )..layout(maxWidth: room);
+      final y = down ? h - rail : 0.0;
+      text.paint(
+        canvas,
+        Offset(to - 8 - text.width, y + (rail - text.height) / 2),
+      );
+      text.dispose();
+    }
+
+    letter(label, (sweep > s + bend ? sweep : s + bend) + 4, firstEnd);
+    final note = this.note.value;
+    letter(
+      note == null ? null : lcarsCaps(note),
+      firstEnd + lcarsLine,
+      secondEnd,
     );
-    text.dispose();
   }
 
   @override
   bool shouldRepaint(_PanelPainter old) =>
       old.lit != lit ||
+      old.note != note ||
       old.first != first ||
       old.second != second ||
       old.third != third ||

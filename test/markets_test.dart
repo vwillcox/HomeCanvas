@@ -6,7 +6,9 @@ import 'package:home_canvas/dashboard/dashboard_model.dart';
 import 'package:home_canvas/dashboard/dashboard_theme.dart';
 import 'package:home_canvas/dashboard/widget_registry.dart';
 import 'package:home_canvas/dashboard/widgets/widgets.dart';
+import 'package:home_canvas/look.dart';
 import 'package:home_canvas/services/markets_service.dart';
+import 'package:home_canvas/widgets/lcars.dart';
 
 import 'new_widgets_fit_test.dart' show shapes, tile;
 
@@ -544,6 +546,83 @@ void main() {
           options: options);
       expect(find.textContaining('Updated'), findsNothing);
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('on a console the time is lettered on the panel\'s bar', (
+      tester,
+    ) async {
+      final lcars = kBuiltInThemes.firstWhere((t) => t.isLcars);
+      final markets = MarketsService();
+      addTearDown(markets.dispose);
+      final now = DateTime.now();
+      markets.debugSetStock(
+        'AAPL',
+        '1d',
+        const Quote(symbol: 'AAPL', name: 'Apple', price: 100, currency: 'USD'),
+        at: DateTime(now.year, now.month, now.day, 9, 14),
+      );
+      final w = DashboardWidgetContext(
+        theme: lcars,
+        config: DashboardWidgetConfig(
+          id: 'w',
+          type: 'stocks',
+          x: 0,
+          y: 0,
+          width: 3,
+          height: 2,
+          options: {
+            'stocks': [
+              {'symbol': 'AAPL', 'name': ''},
+            ],
+            'refreshMinutes': 1440,
+          },
+        ),
+      );
+      Widget panel({required bool framed, bool gone = false}) =>
+          ChangeNotifierProvider.value(
+            value: markets,
+            child: KioskLook(
+              theme: lcars,
+              child: MaterialApp(
+                home: Scaffold(
+                  body: SizedBox(
+                    width: 480,
+                    height: 400,
+                    child: LcarsPanel(
+                      theme: lcars,
+                      label: 'Stocks 67',
+                      framed: framed,
+                      child: gone
+                          ? const SizedBox()
+                          : Builder(
+                              builder: (context) => WidgetRegistry.find(
+                                'stocks',
+                              )!.build(context, w),
+                            ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+      String? onBar() => LcarsBarNote.maybeOf(
+        tester.element(find.byType(LcarsBarNote)),
+      )?.value;
+
+      await tester.pumpWidget(panel(framed: true));
+      await tester.pump(const Duration(seconds: 1));
+      expect(onBar(), 'Updated 09:14');
+      expect(find.textContaining('UPDATED'), findsNothing);
+      expect(tester.takeException(), isNull);
+
+      // The bar is wiped when the widget goes.
+      await tester.pumpWidget(panel(framed: true, gone: true));
+      expect(onBar(), isNull);
+
+      // With no bar to letter, it is a line under the list as elsewhere.
+      await tester.pumpWidget(panel(framed: false));
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('UPDATED 09:14'), findsOneWidget);
     });
 
     testWidgets('crypto fits every tile shape', (tester) async {
