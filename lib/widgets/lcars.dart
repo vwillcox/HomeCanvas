@@ -197,7 +197,7 @@ class LcarsPanelState extends State<LcarsPanel>
   }
 
   void _idle() {
-    _timer = Timer(Duration(seconds: 14 + _chance.nextInt(30)), () {
+    _timer = Timer(Duration(seconds: 8 + _chance.nextInt(16)), () {
       // One of the short lengths; never the elbow, which carries the name.
       _lit.value = LcarsPanel.allLit & ~(2 << _chance.nextInt(3));
       _timer = Timer(_blink, () {
