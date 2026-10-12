@@ -35,6 +35,38 @@ For how things work underneath, see [TECHNICAL.md](TECHNICAL.md).
 - An **Immich server** (v3.x) reachable on your network
 - A computer to build from, or build directly on the Pi
 
+### The panel it is built on
+
+What is on the wall here, with what each part cost in October 2026. Prices
+are one shop's each — PiShop or the maker's list price in dollars, The Pi Hut
+in pounds, BerryBase or Welectron in euros — with VAT in the pound and euro
+figures and no sales tax in the dollar ones. Memory prices have been moving
+the Pi's price all year, so check before you buy.
+
+| Part | What it is here | US$ | £ | € |
+|---|---|---|---|---|
+| Raspberry Pi 5, 4 GB | | 110 | 105.60 | 118.50 |
+| Raspberry Pi 5, 8 GB | the one in use | 175 | 168.00 | 184.90 |
+| Raspberry Pi 5, 16 GB | | 305 | 292.80 | 319.20 |
+| Raspberry Pi Touch Display 2, 10.1" | 1200×1920, used in landscape, on the DSI ribbon it comes with | 97 (80 list) | 76.80 | 83.90 |
+| NVMe SSD | ADATA Legend 700, 256 GB; the Pi boots from it, with no SD card | 55 | 58–66 | — |
+| M.2 adapter | priced as Raspberry Pi's M.2 HAT+ | 12 | 11.50 | 12.50 |
+| Fan | on the Pi's fan header; priced as Raspberry Pi's Active Cooler | 10.95 | 4.80 | 5.90 |
+| Power supply | priced as Raspberry Pi's 27W USB-C supply | 11.95 | 11.50 | 12.40 |
+| USB speaker with a microphone | Gembird; what the kiosk plays through and listens with | — | — | — |
+| USB Ethernet adapter | Realtek RTL8156, 2.5 GbE; optional, the Pi has a port and Wi-Fi of its own | 30–35 | — | about 32 |
+| USB Bluetooth adapter | optional; see [the note on sharing one radio](#indoor-temperature-sensor) | — | — | — |
+
+One Pi is needed, not three: any of the 4, 8 and 16 GB boards will do. The
+kiosk itself uses about 250 MB, and the whole of this Pi about 3 GB of its
+eight. With the 8 GB board, the first six parts come to about **$360**,
+**£330**, or **€300 and the SSD**. A dash is a part with no price found
+for it: the speaker and the Bluetooth adapter are unbranded parts sold under
+many names, and the SSD was not listed by a euro shop.
+
+This Pi is run at 2.8 GHz rather than its stock 2.4, which is why it has a
+fan; nothing in HomeCanvas needs that.
+
 ---
 
 ## Install
