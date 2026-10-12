@@ -21,17 +21,15 @@ class BrightnessService extends ChangeNotifier {
   BrightnessService(
     this._config, {
     Dio? dio,
-    String? backlightDir,
-    String base = 'http://127.0.0.1:8765',
+    this._backlightDir,
+    this._base = 'http://127.0.0.1:8765',
     Future<void> Function()? save,
-  })  : _base = base,
-        _save = save ?? _config.save,
+  })  : _save = save ?? _config.save,
         _dio = dio ??
             Dio(BaseOptions(
               connectTimeout: const Duration(seconds: 2),
               receiveTimeout: const Duration(seconds: 2),
-            )),
-        _backlightDir = backlightDir;
+            ));
 
   /// Below this the panel is on but unreadable — as good as off, and "off"
   /// is the screen settings' job.
