@@ -30,6 +30,7 @@ import '../services/youtube_site.dart';
 import '../services/yt_dlp.dart';
 import 'video_sign_in.dart';
 import '../services/tv_service.dart';
+import '../services/voice_service.dart';
 import '../services/weather_service.dart';
 import '../widgets/weather_overlay.dart';
 import '../widgets/glass.dart';
@@ -1959,7 +1960,55 @@ class _ScreenSettingsTile extends StatelessWidget {
             },
           ),
         ],
+        const _VoiceControlTile(),
       ],
+    );
+  }
+}
+
+/// "Hey canvas": the switch, and whether it is in fact listening.
+class _VoiceControlTile extends StatelessWidget {
+  const _VoiceControlTile();
+
+  @override
+  Widget build(BuildContext context) {
+    final service = context.watch<ConfigService>();
+    final voice = context.watch<VoiceService>();
+    final s = service.config.screen;
+    final String state;
+    if (!s.voiceControl) {
+      state = tr(
+        'settings.voiceOff',
+        'Say “hey canvas”, then “show stocks”, “next page” or “open the remote”. Heard and understood on this device; nothing is sent anywhere. The microphone is closed while this is off.',
+      );
+    } else {
+      state = switch (voice.status) {
+        VoiceStatus.unavailable => tr(
+          'settings.voiceNotInstalled',
+          'Voice control is not installed on this device — see INSTALL.md.',
+        ),
+        VoiceStatus.starting when voice.error != null => tr(
+          'settings.voiceNoMicrophone',
+          'Not listening: {error}. Trying again.',
+          {'error': voice.error!},
+        ),
+        VoiceStatus.starting => tr('settings.voiceStarting', 'Starting…'),
+        _ => tr(
+          'settings.voiceListening',
+          'Listening for “hey canvas”. Heard and understood on this device; nothing is sent anywhere.',
+        ),
+      };
+    }
+    return SwitchListTile(
+      secondary: const Icon(Icons.mic_none_rounded),
+      title: Text(tr('settings.voiceControl', 'Voice control')),
+      subtitle: Text(state),
+      isThreeLine: true,
+      value: s.voiceControl,
+      onChanged: (v) {
+        s.voiceControl = v;
+        service.save();
+      },
     );
   }
 }

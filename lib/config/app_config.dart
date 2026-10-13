@@ -644,11 +644,16 @@ class ScreenSettings {
   /// BrightnessService.
   int brightness;
 
+  /// Listen for "hey canvas" and do what is asked — see VoiceService. Off
+  /// means the microphone is not open at all.
+  bool voiceControl;
+
   ScreenSettings({
     this.autoOffEnabled = false,
     this.idleMinutes = 15,
     this.wakeOnMusic = true,
     this.brightness = 100,
+    this.voiceControl = false,
   });
 
   factory ScreenSettings.fromJson(Map<String, dynamic> j) => ScreenSettings(
@@ -656,6 +661,7 @@ class ScreenSettings {
         idleMinutes: (j['idleMinutes'] as num?)?.toInt() ?? 15,
         wakeOnMusic: j['wakeOnMusic'] as bool? ?? true,
         brightness: ((j['brightness'] as num?)?.round() ?? 100).clamp(5, 100),
+        voiceControl: j['voiceControl'] as bool? ?? false,
       );
 
   Map<String, dynamic> toJson() => {
@@ -663,6 +669,7 @@ class ScreenSettings {
         'idleMinutes': idleMinutes,
         'wakeOnMusic': wakeOnMusic,
         'brightness': brightness,
+        'voiceControl': voiceControl,
       };
 }
 

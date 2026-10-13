@@ -35,6 +35,7 @@ void main() {
         return true;
       },
       screenLit: lit.add,
+      voice: (heard) => heard == 'show stocks' ? 'page 7' : null,
     );
     await control.start();
   });
@@ -120,5 +121,17 @@ void main() {
     expect((await call('POST', '/format-disk')).$1, 404);
     expect(ran, isEmpty);
     expect(dnd, isFalse);
+  });
+
+  test('passes on what was said, and says what it did', () async {
+    final (code, body) = await call('POST', '/voice?say=show+stocks');
+    expect(code, 200);
+    expect(body, {'ok': true, 'did': 'page 7'});
+  });
+
+  test('says so when what was said meant nothing', () async {
+    final (code, body) = await call('POST', '/voice?say=make+tea');
+    expect(code, 404);
+    expect(body['heard'], 'make tea');
   });
 }

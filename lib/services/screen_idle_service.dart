@@ -80,6 +80,13 @@ class ScreenIdleService {
   /// happens at all.
   Future<void> wakeForNotification() async {
     if (_configService.config.shareInbox.dndMuted) return;
+    await wake();
+  }
+
+  /// Someone in the room asked for the panel — spoke to it. Do Not Disturb
+  /// is about what arrives, not about who is standing here, so it does not
+  /// come into it.
+  Future<void> wake() async {
     // Treat it as use, so the idle timer starts again from now rather than
     // switching the panel straight back off.
     _lastInteraction = DateTime.now();

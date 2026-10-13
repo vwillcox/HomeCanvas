@@ -53,9 +53,19 @@ class ModuleBar extends StatefulWidget {
   State<ModuleBar> createState() => _ModuleBarState();
 }
 
+/// The TV remote app's window, as the compositor knows it.
+const String tvRemoteAppId = 'com.vwillcox.vidaa_remote';
+
+/// Brings the TV remote app to the front. Quietly nothing without wlrctl,
+/// or with the remote not running.
+Future<void> focusTvRemote() async {
+  try {
+    await Process.run('wlrctl', ['toplevel', 'focus', 'app_id:$tvRemoteAppId']);
+  } catch (_) {}
+}
+
 class _ModuleBarState extends State<ModuleBar>
     with PauseWhenHidden, ShownTimers {
-  static const String _remoteAppId = 'com.vwillcox.vidaa_remote';
 
   /// Whether the TV remote app is running, so its button only appears when
   /// it can actually flip to it.
@@ -79,7 +89,7 @@ class _ModuleBarState extends State<ModuleBar>
           r.exitCode == 0 &&
           (r.stdout as String)
               .split('\n')
-              .any((line) => line.startsWith('$_remoteAppId:'));
+              .any((line) => line.startsWith('$tvRemoteAppId:'));
     } catch (_) {
       running = false;
     }
@@ -98,7 +108,7 @@ class _ModuleBarState extends State<ModuleBar>
     if (widget.current == KioskModule.dashboard) return;
     Navigator.of(
       context,
-    ).push(MaterialPageRoute(builder: (_) => const DashboardScreen()));
+    ).push(DashboardScreen.route());
   }
 
   @override
@@ -144,11 +154,7 @@ class _ModuleBarState extends State<ModuleBar>
               icon: Icons.settings_remote,
               tooltip: tr('modules.tvRemote', 'TV Remote'),
               colour: c,
-              onPressed: () => Process.run('wlrctl', [
-                'toplevel',
-                'focus',
-                'app_id:$_remoteAppId',
-              ]),
+              onPressed: focusTvRemote,
             ),
           // A hairline between "where to go" and "what to switch".
           Container(

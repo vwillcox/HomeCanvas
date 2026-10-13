@@ -134,4 +134,35 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     expect(DashboardScreen.isOpen, isFalse);
   });
+
+  testWidgets('a page is turned when asked aloud, either way', (tester) async {
+    await open(tester);
+    await wait(tester, const Duration(seconds: 1));
+    DashboardScreen.requestedTurn.value = 1;
+    await wait(tester, const Duration(milliseconds: 600));
+    expect(showing(1), isTrue);
+    expect(DashboardScreen.requestedTurn.value, isNull);
+    DashboardScreen.requestedTurn.value = -1;
+    await wait(tester, const Duration(milliseconds: 600));
+    expect(showing(0), isTrue);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('the pages are held and let go when asked aloud', (tester) async {
+    await open(tester);
+    await wait(tester, const Duration(seconds: 3));
+    DashboardScreen.requestedPause.value = true;
+    await wait(tester, const Duration(seconds: 20));
+    expect(showing(0), isTrue, reason: 'held while paused');
+    expect(find.byIcon(Icons.play_arrow_rounded), findsOneWidget);
+    // Asked for again, it stays held rather than flipping back.
+    DashboardScreen.requestedPause.value = true;
+    await wait(tester, const Duration(seconds: 6));
+    expect(showing(0), isTrue);
+
+    DashboardScreen.requestedPause.value = false;
+    await wait(tester, const Duration(milliseconds: 2600));
+    expect(showing(1), isTrue);
+    await tester.pumpWidget(const SizedBox());
+  });
 }

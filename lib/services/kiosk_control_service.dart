@@ -53,6 +53,9 @@ class KioskState {
 ///                               on the panel (named for the first of them)
 ///     POST /screen?lit=true     the screen was lit or darkened — from
 ///                               screen_control.py, so the kiosk can rest
+///     POST /voice?say=…         something said to the panel, as words:
+///                               "show stocks", "next page" — from the
+///                               listener, or typed, to try a phrase out
 class KioskControlService {
   KioskControlService({
     required this.state,
@@ -60,6 +63,7 @@ class KioskControlService {
     required this.setDnd,
     this.playVideo,
     this.screenLit,
+    this.voice,
     this.port = defaultPort,
   });
 
@@ -76,6 +80,10 @@ class KioskControlService {
 
   /// Told whether the screen is lit — see `ScreenState`.
   final void Function(bool lit)? screenLit;
+
+  /// Does what was said, and says what that was; null when it was not
+  /// understood — see `VoiceCommands`.
+  final String? Function(String heard)? voice;
 
   HttpServer? _server;
 
@@ -162,6 +170,17 @@ class KioskControlService {
         }
         screenLit!(lit == 'true');
         return reply(HttpStatus.ok, {'ok': true});
+      }
+      if (path == '/voice' && voice != null) {
+        final heard = request.uri.queryParameters['say'] ?? '';
+        final did = voice!(heard);
+        if (did == null) {
+          return reply(HttpStatus.notFound, {
+            'error': 'not understood',
+            'heard': heard,
+          });
+        }
+        return reply(HttpStatus.ok, {'ok': true, 'did': did});
       }
       if (path == '/youtube' && playVideo != null) {
         final url = request.uri.queryParameters['url'] ?? '';

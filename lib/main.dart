@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:path/path.dart' as p;
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:provider/provider.dart';
@@ -39,6 +41,7 @@ import 'services/timer_sounds.dart';
 import 'dashboard/widgets/widgets.dart';
 import 'services/audio_levels_service.dart';
 import 'services/background_pause.dart';
+import 'services/kiosk_browser.dart';
 import 'services/kiosk_control_service.dart';
 import 'services/floatplane_site.dart';
 import 'services/nebula_site.dart';
@@ -58,6 +61,10 @@ import 'services/locked_folder_service.dart';
 import 'services/media_cache.dart';
 import 'services/now_playing_service.dart';
 import 'services/screen_idle_service.dart';
+import 'services/voice_commands.dart';
+import 'services/voice_service.dart';
+import 'widgets/voice_indicator.dart';
+import 'widgets/konami_overlay.dart';
 import 'services/screen_state.dart';
 import 'services/share_inbox_service.dart';
 import 'services/spotify_service.dart';
@@ -67,10 +74,11 @@ import 'services/tts_service.dart';
 import 'services/tv_service.dart';
 import 'services/unifi_service.dart';
 import 'services/weather_service.dart';
-import 'widgets/module_bar.dart' show openLockedFolder;
+import 'widgets/module_bar.dart' show focusTvRemote, openLockedFolder;
 import 'screens/about_screen.dart';
 import 'screens/album_screen.dart';
 import 'screens/dashboard_screen.dart';
+import 'dashboard/widgets/weather_forecast_sheet.dart';
 import 'screens/gallery_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/locked_folder_screen.dart';
@@ -396,6 +404,20 @@ void main() async {
     return lat == null || lon == null ? null : (lat: lat, lon: lon);
   }
 
+  // "Hey canvas", and what is said after it: heard by a listener this
+  // starts while voice control is switched on, and done here. The screen
+  // is lit on the wake words, before anything is asked for.
+  final voice = VoiceService(
+    enabled: () => config.config.screen.voiceControl,
+    act: (heard) => runVoiceCommand(heard, config, screenIdle),
+    onWake: () {
+      unawaited(screenIdle.wake());
+      unawaited(_listeningBeep());
+    },
+  );
+  config.addListener(voice.sync);
+  voice.sync();
+
   runApp(
     MultiProvider(
       providers: [
@@ -429,6 +451,7 @@ void main() async {
         // Idle until the visualiser asks it for something: creating it costs
         // nothing, and it starts no capture until a widget attaches.
         ChangeNotifierProvider(create: (_) => AudioLevelsService()),
+        ChangeNotifierProvider.value(value: voice),
         ChangeNotifierProvider.value(value: notes),
         ChangeNotifierProvider<RemindersService?>.value(value: reminders),
         ChangeNotifierProvider.value(value: shopping),
@@ -490,6 +513,7 @@ void main() async {
         unawaited(config.save());
       },
       screenLit: screen.set,
+      voice: (heard) => runVoiceCommand(heard, config, screenIdle),
     ).start(),
   );
 }
@@ -508,7 +532,130 @@ void showRemindersPage(ConfigService config) {
   final navigator = rootNavigatorKey.currentState;
   if (navigator == null) return;
   navigator.popUntil((route) => route.isFirst);
-  navigator.push(MaterialPageRoute(builder: (_) => const DashboardScreen()));
+  navigator.push(DashboardScreen.route());
+}
+
+/// A very quiet beep: "hey canvas" was heard, and the panel is listening.
+/// For when nobody is looking at it to see it say so.
+///
+/// Played with `pw-play` rather than a player of the kiosk's own, which
+/// takes a moment to open a file — and the moment is the point. The sound
+/// is quiet in the file itself, and so stays quiet whatever plays it.
+bool _beepWritten = false;
+
+Future<void> _listeningBeep() async {
+  try {
+    final file = File(p.join(HomeCanvasCache.root, 'listening.wav'));
+    // Written out afresh each time the kiosk starts, so a new build's
+    // sound replaces the old one.
+    if (!_beepWritten) {
+      final bytes = await rootBundle.load('assets/sounds/listening.wav');
+      await file.writeAsBytes(bytes.buffer.asUint8List(), flush: true);
+      _beepWritten = true;
+    }
+    await Process.run('pw-play', [file.path]);
+  } catch (_) {
+    // No PipeWire, no beep: the screen still says it is listening.
+  }
+}
+
+/// The dashboard itself on screen, whatever was on top of it or in its
+/// place — Settings, a forecast, the albums. Null when it cannot be shown.
+NavigatorState? _toDashboard(ConfigService config) {
+  final navigator = rootNavigatorKey.currentState;
+  if (navigator == null || !config.config.dashboard.enabled) return null;
+  var there = false;
+  navigator.popUntil((route) {
+    there = route.settings.name == DashboardScreen.routeName;
+    return there || route.isFirst;
+  });
+  if (!there) navigator.push(DashboardScreen.route());
+  return navigator;
+}
+
+/// Does what was said to the panel — [heard], as words — and says what that
+/// was, or null when it asked for nothing the panel knows. The listener
+/// only hears; `VoiceCommands` decides what was meant.
+String? runVoiceCommand(
+  String heard,
+  ConfigService config,
+  ScreenIdleService screen,
+) {
+  final navigator = rootNavigatorKey.currentState;
+  final context = rootNavigatorKey.currentContext;
+  if (navigator == null || context == null) return null;
+  final settings = config.config.dashboard;
+  final action = VoiceCommands.of(settings).resolve(heard);
+  if (action == null) return null;
+
+  // Spoken to, so looked at: lit, and counted as use.
+  unawaited(screen.wake());
+  // The TV remote is another program's window, and may be in front.
+  if (action case VoiceGo(place: VoicePlace.remote)) {
+    unawaited(focusTvRemote());
+    return 'remote';
+  }
+  unawaited(KioskBrowser.focusKiosk());
+
+  switch (action) {
+    case VoiceKonami():
+      KonamiOverlay.said.value++;
+      return '+30 lives';
+    case VoiceShowPage(:final page):
+      if (!settings.enabled) return null;
+      // A page asked for by name is wanted for longer than its turn: held
+      // there until "resume", or a tap on the page dots. An open dashboard
+      // is told; one about to open reads it from the settings.
+      final hold = settings.pageSeconds > 0;
+      if (hold && DashboardScreen.isOpen) {
+        DashboardScreen.requestedPause.value = true;
+      } else if (hold && !settings.pagesPaused) {
+        settings.pagesPaused = true;
+        unawaited(config.save());
+      }
+      if (_toDashboard(config) == null) return null;
+      DashboardScreen.requestedPage.value = page;
+      return 'page ${page + 1}';
+    case VoiceTurnPage(:final by):
+      // Onto the dashboard first, if it is not showing: there is no page
+      // to turn from anywhere else.
+      final turn = DashboardScreen.isOpen;
+      if (_toDashboard(config) == null) return null;
+      if (turn) DashboardScreen.requestedTurn.value = by;
+      return by > 0 ? 'next page' : 'previous page';
+    case VoicePausePages(:final paused):
+      if (DashboardScreen.isOpen) {
+        DashboardScreen.requestedPause.value = paused;
+      } else {
+        settings.pagesPaused = paused;
+        unawaited(config.save());
+      }
+      return paused ? 'pages paused' : 'pages resumed';
+    case VoiceCamera(:final open):
+      final camera = context.read<CameraService>();
+      if (!camera.isConfigured) return null;
+      if (camera.isOpen != open) camera.toggleOpen();
+      return open ? 'camera' : 'camera closed';
+    case VoiceGo(:final place):
+      switch (place) {
+        case VoicePlace.back:
+          unawaited(navigator.maybePop());
+          return 'back';
+        case VoicePlace.photos:
+          navigator.popUntil((route) => route.isFirst);
+          return 'photos';
+        case VoicePlace.dashboard:
+          return _toDashboard(config) == null ? null : 'dashboard';
+        case VoicePlace.forecast:
+          final theme = context.read<DashboardService>().themes.byId(
+            settings.themeId,
+          );
+          unawaited(showWeatherForecast(context, theme));
+          return 'forecast';
+        case VoicePlace.remote:
+          return 'remote';
+      }
+  }
 }
 
 /// Carries out a command from [KioskControlService], the way the kiosk's own
@@ -523,9 +670,7 @@ void runKioskCommand(KioskCommand command, ConfigService config) {
     case KioskCommand.dashboard:
       if (!config.config.dashboard.enabled) return;
       navigator.popUntil((route) => route.isFirst);
-      navigator.push(
-        MaterialPageRoute(builder: (_) => const DashboardScreen()),
-      );
+      navigator.push(DashboardScreen.route());
     case KioskCommand.settings:
       navigator.push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
     case KioskCommand.lockedFolder:
@@ -610,6 +755,9 @@ class HomeCanvasApp extends StatelessWidget {
               IncomingShareOverlay(navigatorKey: rootNavigatorKey),
               // What is being read aloud, with its controls, over any screen.
               const ReadingBar(),
+              // "Hey canvas" heard, and what was made of the rest.
+              const VoiceIndicator(),
+              const KonamiOverlay(),
               CameraOverlay(navigatorKey: rootNavigatorKey),
               // Draws tiles off screen for the dashboard editor's preview.
               const TileRenderHost(),

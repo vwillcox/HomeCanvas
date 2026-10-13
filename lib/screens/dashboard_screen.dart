@@ -49,6 +49,24 @@ class DashboardScreen extends StatefulWidget {
   /// or by the next one to open.
   static final ValueNotifier<int?> requestedPage = ValueNotifier(null);
 
+  /// A page turn asked for from outside — by voice: 1 for the next page,
+  /// -1 for the one before. Taken up by an open dashboard, and nothing else.
+  static final ValueNotifier<int?> requestedTurn = ValueNotifier(null);
+
+  /// The automatic page turn held or let go from outside, as the page dots
+  /// do it. Taken up by an open dashboard.
+  static final ValueNotifier<bool?> requestedPause = ValueNotifier(null);
+
+  /// The dashboard's route, by name, so whatever is on top of it can be
+  /// cleared away to show it — see [route].
+  static const String routeName = 'dashboard';
+
+  /// The way to the dashboard from anywhere in the kiosk.
+  static Route<void> route() => MaterialPageRoute(
+    settings: const RouteSettings(name: routeName),
+    builder: (_) => const DashboardScreen(),
+  );
+
   /// Whether a dashboard is on screen to take a [requestedPage] up.
   static bool get isOpen => _open > 0;
   static int _open = 0;
@@ -110,6 +128,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     super.initState();
     DashboardScreen._open++;
     DashboardScreen.requestedPage.addListener(_pageRequested);
+    DashboardScreen.requestedTurn.addListener(_turnRequested);
+    DashboardScreen.requestedPause.addListener(_pauseRequested);
     // Opened for a page: gone to once the page view is laid out.
     if (DashboardScreen.requestedPage.value != null) _pageRequested();
     _player.isOpen.addListener(_playerOpened);
@@ -168,10 +188,26 @@ class _DashboardScreenState extends State<DashboardScreen>
     });
   }
 
+  void _turnRequested() {
+    final by = DashboardScreen.requestedTurn.value;
+    if (by == null || !mounted || !_pages.hasClients) return;
+    DashboardScreen.requestedTurn.value = null;
+    _goTo(_page + by, _pageCount);
+  }
+
+  void _pauseRequested() {
+    final paused = DashboardScreen.requestedPause.value;
+    if (paused == null || !mounted) return;
+    DashboardScreen.requestedPause.value = null;
+    if (paused != _paused) _togglePause();
+  }
+
   @override
   void dispose() {
     DashboardScreen._open--;
     DashboardScreen.requestedPage.removeListener(_pageRequested);
+    DashboardScreen.requestedTurn.removeListener(_turnRequested);
+    DashboardScreen.requestedPause.removeListener(_pauseRequested);
     // Releasing it here rather than on the way in to the next screen means
     // the timer restarts from now, not from whenever the dashboard opened.
     _screenIdle?.dashboardShowing = false;
