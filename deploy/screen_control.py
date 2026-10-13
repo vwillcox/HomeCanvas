@@ -401,10 +401,17 @@ class Waker:
     # so cheap enough to do often.
     RECHECK = 2.0
 
+    # How often to look for pointer devices that have come or gone: a mouse's
+    # receiver plugged in, or the panel coming back after a fault.
+    RESCAN = 10.0
+
     def __init__(self):
         self.touch = WakeTouch()
         self._lock = threading.Lock()
         self._checked = 0.0
+        # The devices being read, by path.
+        self._open = {}
+        self._scanned = float("-inf")
 
     def note_power(self, on):
         """Record a state we set ourselves, so the watcher stays in step."""
@@ -424,36 +431,82 @@ class Waker:
             if level is not None and not self.touch.waking:
                 self.touch.screen(level > 0, now)
 
-    def _set_grab(self, fds, want):
+    def _set_grab(self, want):
         if want == self.touch.grabbed:
             return
-        for fd in fds:
+        for fd in list(self._open.values()):
             try:
                 fcntl.ioctl(fd, EVIOCGRAB, 1 if want else 0)
             except OSError as exc:
                 log(f"could not {'grab' if want else 'release'} touch: {exc}")
         self.touch.grabbed = want
 
-    def run(self):
-        devices = pointer_devices()
-        if not devices:
+    def _rescan(self, sel, now):
+        """Starts reading any pointer device that is not being read yet."""
+        if now - self._scanned < self.RESCAN:
             return
-        sel = selectors.DefaultSelector()
-        opened = []
-        for path in devices:
+        self._scanned = now
+        for path in pointer_devices():
+            if path in self._open:
+                continue
             try:
                 fd = open(path, "rb", buffering=0)
             except OSError:
                 continue  # Needs membership of the `input` group.
-            opened.append(fd)
+            if self.touch.grabbed:
+                # Arrived while the screen is off: held like the rest.
+                try:
+                    fcntl.ioctl(fd, EVIOCGRAB, 1)
+                except OSError:
+                    pass
+            self._open[path] = fd
             sel.register(fd, selectors.EVENT_READ)
-        if not opened:
-            return
+
+    def _drop(self, sel, fd):
+        """Stops reading a device that has gone — unplugged, most likely."""
+        for path, known in list(self._open.items()):
+            if known is fd:
+                del self._open[path]
+                log(f"{path} has gone; no longer watching it")
+        try:
+            sel.unregister(fd)
+        except (KeyError, ValueError, OSError):
+            pass
+        try:
+            fd.close()
+        except OSError:
+            pass
+        # Whatever took its place is looked for straight away.
+        self._scanned = float("-inf")
+
+    def _read(self, sel, fd):
+        """A device's waiting events, or None when it turns out to be gone.
+
+        A device that has been unplugged is readable for ever after, and
+        every read of it fails. Left registered, that is a loop with nothing
+        to wait for: a mouse's receiver pulled out once held a whole core
+        for four days.
+        """
+        try:
+            raw = fd.read(EVENT.size * 64)
+        except OSError:
+            raw = b""
+        if not raw:
+            self._drop(sel, fd)
+            return None
+        return [
+            EVENT.unpack_from(raw, i)[2:]
+            for i in range(0, len(raw) - EVENT.size + 1, EVENT.size)
+        ]
+
+    def run(self):
+        sel = selectors.DefaultSelector()
         while True:
             now = time.monotonic()
+            self._rescan(sel, now)
             self._resync(now)
             with self._lock:
-                self._set_grab(opened, self.touch.want_grab(now))
+                self._set_grab(self.touch.want_grab(now))
             # Short while anything is changing hands — waiting for the panel
             # to be still enough to take, or for the waking finger to lift —
             # so it is acted on promptly. Otherwise as long as the backlight
@@ -461,15 +514,15 @@ class Waker:
             # was short for the whole time the screen was off, which is to
             # say twenty wake-ups a second all night.
             busy = self.touch.waking or (self.touch.off and not self.touch.grabbed)
+            if not self._open:
+                # Nothing to select on, which some selectors will not wait
+                # for; a device to watch may yet appear.
+                time.sleep(self.RECHECK)
+                continue
             for key, _ in sel.select(timeout=0.05 if busy else self.RECHECK):
-                try:
-                    raw = key.fileobj.read(EVENT.size * 64)
-                except OSError:
+                batch = self._read(sel, key.fileobj)
+                if batch is None:
                     continue
-                batch = [
-                    EVENT.unpack_from(raw, i)[2:]
-                    for i in range(0, len(raw) - EVENT.size + 1, EVENT.size)
-                ]
                 with self._lock:
                     wake = self.touch.events(batch, time.monotonic())
                 if wake:

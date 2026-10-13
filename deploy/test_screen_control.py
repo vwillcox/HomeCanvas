@@ -127,5 +127,65 @@ class EventLayout(unittest.TestCase):
         self.assertEqual(sc.EVENT.size, struct.calcsize("llHHi"))
 
 
+class _Gone:
+    """A device that has been unplugged: every read fails."""
+
+    closed = False
+
+    def read(self, _):
+        raise OSError(19, "No such device")
+
+    def close(self):
+        self.closed = True
+
+
+class _Selector:
+    def __init__(self):
+        self.unregistered = []
+
+    def unregister(self, fd):
+        self.unregistered.append(fd)
+
+
+class ADeviceThatGoesAway(unittest.TestCase):
+    def setUp(self):
+        self._log, sc.log = sc.log, lambda _: None
+
+    def tearDown(self):
+        sc.log = self._log
+
+    def test_an_unplugged_device_is_dropped_not_read_for_ever(self):
+        # Left registered it is always readable and never read: a busy loop.
+        waker, sel, gone = sc.Waker(), _Selector(), _Gone()
+        waker._open["/dev/input/event5"] = gone
+        self.assertIsNone(waker._read(sel, gone))
+        self.assertEqual(sel.unregistered, [gone])
+        self.assertTrue(gone.closed)
+        self.assertEqual(waker._open, {})
+
+    def test_and_its_replacement_is_looked_for_at_once(self):
+        waker, gone = sc.Waker(), _Gone()
+        waker._open["/dev/input/event5"] = gone
+        waker._scanned = 100.0
+        waker._read(_Selector(), gone)
+        self.assertEqual(waker._scanned, float("-inf"))
+
+    def test_a_working_device_is_read_and_kept(self):
+        r, w = os.pipe()
+        try:
+            os.write(w, sc.EVENT.pack(0, 0, sc.EV_KEY, sc.BTN_TOUCH, 1))
+            with open(r, "rb", buffering=0, closefd=False) as fd:
+                waker, sel = sc.Waker(), _Selector()
+                waker._open["/dev/input/event10"] = fd
+                self.assertEqual(
+                    waker._read(sel, fd), [(sc.EV_KEY, sc.BTN_TOUCH, 1)]
+                )
+                self.assertEqual(sel.unregistered, [])
+                self.assertIn("/dev/input/event10", waker._open)
+        finally:
+            os.close(r)
+            os.close(w)
+
+
 if __name__ == "__main__":
     unittest.main()
