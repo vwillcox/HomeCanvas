@@ -31,6 +31,14 @@ class VoiceCamera extends VoiceAction {
   final bool open;
 }
 
+/// What can be asked of whatever is playing: Spotify, or a phone's music.
+enum VoiceMusicAsk { play, pause, next, previous, louder, quieter, mute, unmute }
+
+class VoiceMusic extends VoiceAction {
+  const VoiceMusic(this.ask);
+  final VoiceMusicAsk ask;
+}
+
 /// Up, up, down, down, left, right, left, right, B, A.
 class VoiceKonami extends VoiceAction {
   const VoiceKonami();
@@ -140,7 +148,7 @@ class VoiceCommands {
   /// Words that carry nothing: "show me the stocks, please".
   static const _filler = {
     'the', 'a', 'an', 'my', 'me', 'us', 'our', 'please', 'to', 'of', 'on', //
-    'up', 'and', 'for', 'with', 'i', 'id', 'would', 'can', 'could', 'you',
+    'and', 'for', 'with', 'i', 'id', 'would', 'can', 'could', 'you',
     'widget', 'widgets', 'tile', 'tiles', 'screen', 'panel', 'now', 'over',
   };
 
@@ -191,7 +199,57 @@ class VoiceCommands {
     'television remote': VoiceGo(VoicePlace.remote),
     'forecast': VoiceGo(VoicePlace.forecast),
     'weather forecast': VoiceGo(VoicePlace.forecast),
-    'pause': VoicePausePages(true),
+    // The music. "Play", "pause", "stop" and "skip" on their own are the
+    // music's; the pages are held and let go with "hold" and "resume".
+    'play': VoiceMusic(VoiceMusicAsk.play),
+    'play music': VoiceMusic(VoiceMusicAsk.play),
+    'play spotify': VoiceMusic(VoiceMusicAsk.play),
+    'play song': VoiceMusic(VoiceMusicAsk.play),
+    'play something': VoiceMusic(VoiceMusicAsk.play),
+    'resume music': VoiceMusic(VoiceMusicAsk.play),
+    'start music': VoiceMusic(VoiceMusicAsk.play),
+    'unpause': VoiceMusic(VoiceMusicAsk.play),
+    'pause': VoiceMusic(VoiceMusicAsk.pause),
+    'pause music': VoiceMusic(VoiceMusicAsk.pause),
+    'pause spotify': VoiceMusic(VoiceMusicAsk.pause),
+    'pause song': VoiceMusic(VoiceMusicAsk.pause),
+    'pause it': VoiceMusic(VoiceMusicAsk.pause),
+    'stop': VoiceMusic(VoiceMusicAsk.pause),
+    'stop music': VoiceMusic(VoiceMusicAsk.pause),
+    'stop spotify': VoiceMusic(VoiceMusicAsk.pause),
+    'stop playing': VoiceMusic(VoiceMusicAsk.pause),
+    'stop it': VoiceMusic(VoiceMusicAsk.pause),
+    'skip': VoiceMusic(VoiceMusicAsk.next),
+    'skip this': VoiceMusic(VoiceMusicAsk.next),
+    'skip it': VoiceMusic(VoiceMusicAsk.next),
+    'skip song': VoiceMusic(VoiceMusicAsk.next),
+    'skip track': VoiceMusic(VoiceMusicAsk.next),
+    'skip this one': VoiceMusic(VoiceMusicAsk.next),
+    'skip this song': VoiceMusic(VoiceMusicAsk.next),
+    'skip this track': VoiceMusic(VoiceMusicAsk.next),
+    'next song': VoiceMusic(VoiceMusicAsk.next),
+    'next track': VoiceMusic(VoiceMusicAsk.next),
+    'next tune': VoiceMusic(VoiceMusicAsk.next),
+    'previous song': VoiceMusic(VoiceMusicAsk.previous),
+    'previous track': VoiceMusic(VoiceMusicAsk.previous),
+    'last song': VoiceMusic(VoiceMusicAsk.previous),
+    'last track': VoiceMusic(VoiceMusicAsk.previous),
+    'skip back': VoiceMusic(VoiceMusicAsk.previous),
+    'song before': VoiceMusic(VoiceMusicAsk.previous),
+    'volume up': VoiceMusic(VoiceMusicAsk.louder),
+    'it up': VoiceMusic(VoiceMusicAsk.louder),
+    'music up': VoiceMusic(VoiceMusicAsk.louder),
+    'louder': VoiceMusic(VoiceMusicAsk.louder),
+    'volume down': VoiceMusic(VoiceMusicAsk.quieter),
+    'it down': VoiceMusic(VoiceMusicAsk.quieter),
+    'music down': VoiceMusic(VoiceMusicAsk.quieter),
+    'quieter': VoiceMusic(VoiceMusicAsk.quieter),
+    'mute': VoiceMusic(VoiceMusicAsk.mute),
+    'mute music': VoiceMusic(VoiceMusicAsk.mute),
+    'mute it': VoiceMusic(VoiceMusicAsk.mute),
+    'unmute': VoiceMusic(VoiceMusicAsk.unmute),
+    'unmute music': VoiceMusic(VoiceMusicAsk.unmute),
+    'unmute it': VoiceMusic(VoiceMusicAsk.unmute),
     'pause pages': VoicePausePages(true),
     'hold': VoicePausePages(true),
     'hold page': VoicePausePages(true),

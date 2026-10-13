@@ -218,7 +218,7 @@ void main() {
       expect(heard<VoiceGo>('show the forecast').place, VoicePlace.forecast);
     });
 
-    test('the TV remote is the remote app, not the page its tile is on', () {
+    test('the TV remote is the remote itself, not the page its tile is on', () {
       for (final said in [
         'open the remote',
         'show the remote panel',
@@ -231,8 +231,38 @@ void main() {
       expect(_page('show the telly'), 0);
     });
 
+    test('the music: play, pause, skip, and how loud', () {
+      VoiceMusicAsk ask(String said) => heard<VoiceMusic>(said).ask;
+      for (final said in ['play', 'play music', 'play spotify', 'resume the music']) {
+        expect(ask(said), VoiceMusicAsk.play, reason: said);
+      }
+      for (final said in ['pause', 'pause the music', 'stop', 'stop the music']) {
+        expect(ask(said), VoiceMusicAsk.pause, reason: said);
+      }
+      for (final said in ['skip', 'skip this song', 'next track', 'next song']) {
+        expect(ask(said), VoiceMusicAsk.next, reason: said);
+      }
+      for (final said in ['previous track', 'go to the last song', 'skip back']) {
+        expect(ask(said), VoiceMusicAsk.previous, reason: said);
+      }
+      expect(ask('volume up'), VoiceMusicAsk.louder);
+      expect(ask('turn it up'), VoiceMusicAsk.louder);
+      expect(ask('louder'), VoiceMusicAsk.louder);
+      expect(ask('turn the volume down'), VoiceMusicAsk.quieter);
+      expect(ask('mute'), VoiceMusicAsk.mute);
+      expect(ask('unmute the music'), VoiceMusicAsk.unmute);
+    });
+
+    test('next and previous alone are still the pages', () {
+      expect(heard<VoiceTurnPage>('next').by, 1);
+      expect(heard<VoiceTurnPage>('previous').by, -1);
+      // And the music is still somewhere to go, as well as something to stop.
+      expect(_page('show music'), 0);
+      expect(_page('bring up the stocks'), 4);
+    });
+
     test('hold the pages and let them go', () {
-      for (final said in ['pause', 'stay on this page', 'hold this page']) {
+      for (final said in ['pause pages', 'stay on this page', 'hold this page']) {
         expect(heard<VoicePausePages>(said).paused, isTrue);
       }
       for (final said in ['resume', 'carry on', 'continue']) {

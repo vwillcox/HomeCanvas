@@ -1867,6 +1867,7 @@
   "widget.tv.askedTheListWillAppear": "Asked — the list will appear here as soon as the television answers.",
   "widget.tv.close": "Close",
   "widget.tv.closeTheInputs": "Close the inputs",
+  "widget.tv.closeTheRemote": "Close the remote",
   "widget.tv.connect": "Connect",
   "widget.tv.couldNotConnectTo": "Could not connect to {host}",
   "widget.tv.description": "Controls a Hisense VIDAA television: power, volume, channel and a direction pad. Set the address in Settings → Television.",

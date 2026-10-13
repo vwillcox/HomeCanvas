@@ -74,11 +74,12 @@ import 'services/tts_service.dart';
 import 'services/tv_service.dart';
 import 'services/unifi_service.dart';
 import 'services/weather_service.dart';
-import 'widgets/module_bar.dart' show focusTvRemote, openLockedFolder;
+import 'widgets/module_bar.dart' show openLockedFolder;
 import 'screens/about_screen.dart';
 import 'screens/album_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'dashboard/widgets/weather_forecast_sheet.dart';
+import 'dashboard/widgets/tv_remote_sheet.dart';
 import 'screens/gallery_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/locked_folder_screen.dart';
@@ -590,14 +591,44 @@ String? runVoiceCommand(
 
   // Spoken to, so looked at: lit, and counted as use.
   unawaited(screen.wake());
-  // The TV remote is another program's window, and may be in front.
-  if (action case VoiceGo(place: VoicePlace.remote)) {
-    unawaited(focusTvRemote());
-    return 'remote';
-  }
+  // The TV remote app, or a browser, may be in front of the kiosk.
   unawaited(KioskBrowser.focusKiosk());
 
   switch (action) {
+    case VoiceMusic(:final ask):
+      // Whatever the panel's own player would be showing: Spotify when it
+      // has something, a phone over Bluetooth otherwise.
+      final spotify = context.read<SpotifyService>();
+      final PlaybackSource music = spotify.available
+          ? spotify
+          : context.read<NowPlayingService>();
+      if (!music.available) return null;
+      final playing = music.now.isPlaying;
+      switch (ask) {
+        case VoiceMusicAsk.play:
+          if (!playing) unawaited(music.playPause());
+          return 'playing';
+        case VoiceMusicAsk.pause:
+          if (playing) unawaited(music.playPause());
+          return 'paused';
+        case VoiceMusicAsk.next:
+          unawaited(music.next());
+          return 'next track';
+        case VoiceMusicAsk.previous:
+          unawaited(music.previous());
+          return 'previous track';
+        case VoiceMusicAsk.louder || VoiceMusicAsk.quieter:
+          if (!music.hasVolume) return null;
+          final step = ask == VoiceMusicAsk.louder ? 0.1 : -0.1;
+          unawaited(music.setVolume((music.volume + step).clamp(0.0, 1.0)));
+          return ask == VoiceMusicAsk.louder ? 'louder' : 'quieter';
+        case VoiceMusicAsk.mute || VoiceMusicAsk.unmute:
+          if (!music.hasVolume) return null;
+          if (music.muted != (ask == VoiceMusicAsk.mute)) {
+            unawaited(music.toggleMute());
+          }
+          return ask == VoiceMusicAsk.mute ? 'muted' : 'unmuted';
+      }
     case VoiceKonami():
       KonamiOverlay.said.value++;
       return '+30 lives';
@@ -653,6 +684,12 @@ String? runVoiceCommand(
           unawaited(showWeatherForecast(context, theme));
           return 'forecast';
         case VoicePlace.remote:
+          // The dashboard's TV remote widget, as large as the panel —
+          // not the remote app, which is a different remote.
+          final theme = context.read<DashboardService>().themes.byId(
+            settings.themeId,
+          );
+          unawaited(showTvRemote(context, theme, settings));
           return 'remote';
       }
   }
