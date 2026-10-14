@@ -9,9 +9,10 @@ import 'glass.dart';
 /// That the panel heard "hey canvas", and what it made of the rest — at
 /// the top of whatever screen is up, for a few seconds.
 ///
-/// There is no voice to answer with, so this is the answer: listening, then
-/// the words as they were heard, or that nothing was made of them. Seeing
-/// "show socks" is how you find out why the stocks did not appear.
+/// Mostly this is the answer: listening, then the words as they were heard,
+/// or that nothing was made of them. Seeing "show socks" is how you find
+/// out why the stocks did not appear. What Home Assistant says back, when
+/// it was asked, is shown under the words.
 class VoiceIndicator extends StatelessWidget {
   const VoiceIndicator({super.key});
 
@@ -22,9 +23,11 @@ class VoiceIndicator extends StatelessWidget {
     final status = voice.status;
     final showing =
         status == VoiceStatus.awake ||
+        status == VoiceStatus.asking ||
         status == VoiceStatus.done ||
         status == VoiceStatus.missed;
     final words = switch (status) {
+      VoiceStatus.asking => '${voice.heard}…',
       VoiceStatus.done => voice.heard,
       VoiceStatus.missed when voice.heard.isEmpty => tr(
         'voice.heardNothing',
@@ -37,6 +40,7 @@ class VoiceIndicator extends StatelessWidget {
       ),
       _ => tr('voice.listening', 'Listening…'),
     };
+    final answer = status == VoiceStatus.done ? voice.answer : '';
     return Positioned(
       left: 0,
       right: 0,
@@ -72,15 +76,34 @@ class VoiceIndicator extends StatelessWidget {
                         ),
                         const SizedBox(width: 14),
                         Flexible(
-                          child: Text(
-                            words,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: look.textPrimary,
-                              fontSize: 22,
-                              fontWeight: FontWeight.w600,
-                            ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                words,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: answer.isEmpty
+                                      ? look.textPrimary
+                                      : look.textSecondary,
+                                  fontSize: answer.isEmpty ? 22 : 17,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              if (answer.isNotEmpty)
+                                Text(
+                                  answer,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: look.textPrimary,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
                       ],

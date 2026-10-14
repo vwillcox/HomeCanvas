@@ -122,6 +122,65 @@ void main() {
     voice.dispose();
   });
 
+  testWidgets('what it makes nothing of is asked elsewhere, and the answer shown', (tester) async {
+    final asked = <String>[];
+    final ha = VoiceService(
+      enabled: () => true,
+      act: (_) => null,
+      ask: (heard) async {
+        asked.add(heard);
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+        return heard.contains('lamp') ? 'Turned on the lamp' : null;
+      },
+      open: open,
+    );
+    ha.sync();
+    await tester.pump();
+    lines.add('{"event": "wake"}');
+    lines.add('{"event": "heard", "text": "hey canvas turn on the lump", "other": "hey canvas turn on the lamp"}');
+    await tester.pump();
+    expect(ha.status, VoiceStatus.asking);
+    await tester.pump(const Duration(milliseconds: 250));
+    expect(asked, ['hey canvas turn on the lump', 'hey canvas turn on the lamp']);
+    expect(ha.status, VoiceStatus.done);
+    expect(ha.heard, 'hey canvas turn on the lamp');
+    expect(ha.answer, 'Turned on the lamp');
+    // An answer is up longer than words alone, to be read.
+    await tester.pump(const Duration(seconds: 5));
+    expect(ha.status, VoiceStatus.done);
+    await tester.pump(const Duration(seconds: 4));
+    expect(ha.status, VoiceStatus.listening);
+
+    lines.add('{"event": "heard", "text": "make the tea"}');
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 150));
+    expect(ha.status, VoiceStatus.missed);
+    expect(ha.answer, isEmpty);
+    ha.dispose();
+  });
+
+  testWidgets('an answer that comes back after something newer is dropped', (tester) async {
+    final ha = VoiceService(
+      enabled: () => true,
+      act: (heard) => heard == 'next page' ? 'next page' : null,
+      ask: (heard) async {
+        await Future<void>.delayed(const Duration(seconds: 1));
+        return 'Turned on the lamp';
+      },
+      open: open,
+    );
+    ha.sync();
+    await tester.pump();
+    lines.add('{"event": "heard", "text": "turn on the lamp"}');
+    await tester.pump();
+    lines.add('{"event": "heard", "text": "next page"}');
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
+    expect(ha.heard, 'next page');
+    expect(ha.answer, isEmpty);
+    ha.dispose();
+  });
+
   testWidgets('a listener that dies is started again, while it is wanted', (tester) async {
     on = true;
     voice.sync();

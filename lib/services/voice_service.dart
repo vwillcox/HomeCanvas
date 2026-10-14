@@ -36,6 +36,10 @@ enum VoiceStatus {
   /// The wake words were heard; listening for what follows.
   awake,
 
+  /// What followed meant nothing to the panel, and is being asked of
+  /// something that may know: Home Assistant.
+  asking,
+
   /// What followed was done.
   done,
 
@@ -60,6 +64,7 @@ class VoiceService extends ChangeNotifier {
     required this.enabled,
     required this.act,
     this.onWake,
+    this.ask,
     VoiceListenerOpener? open,
     this.linger = const Duration(seconds: 4),
   }) : _open = open ?? _startListener;
@@ -72,6 +77,10 @@ class VoiceService extends ChangeNotifier {
 
   /// The wake words were heard — before anything is said after them.
   final VoidCallback? onWake;
+
+  /// Asked what [act] made nothing of, elsewhere — Home Assistant — and
+  /// gives back its answer; null when it made nothing of it either.
+  final Future<String?> Function(String heard)? ask;
 
   /// How long what was heard stays on show.
   final Duration linger;
@@ -93,6 +102,14 @@ class VoiceService extends ChangeNotifier {
   /// What was last heard after the wake words, as the listener made it out.
   String get heard => _heard;
   String _heard = '';
+
+  /// What was said back, when it was asked elsewhere; empty otherwise.
+  String get answer => _answer;
+  String _answer = '';
+
+  /// Counts what was heard, so an answer that comes back after something
+  /// newer was said is not shown over it.
+  int _said = 0;
 
   /// Why it is not listening, when it should be.
   String? get error => _error;
@@ -143,6 +160,7 @@ class VoiceService extends ChangeNotifier {
 
   Future<void> _stop(VoiceStatus status) async {
     _generation++;
+    _said++;
     _retry?.cancel();
     _retry = null;
     _settle?.cancel();
@@ -185,11 +203,15 @@ class VoiceService extends ChangeNotifier {
         _set(VoiceStatus.listening);
       case 'wake':
         _settle?.cancel();
+        _said++;
         _heard = '';
+        _answer = '';
         _set(VoiceStatus.awake);
         onWake?.call();
       case 'heard':
+        final said = ++_said;
         _heard = '${event['text'] ?? ''}'.trim();
+        _answer = '';
         // Two recognisers listen, and where the first one's words mean
         // nothing the second's may: "show socks", and "show stocks".
         final other = '${event['other'] ?? ''}'.trim();
@@ -198,12 +220,13 @@ class VoiceService extends ChangeNotifier {
           did = act(other);
           if (did != null) _heard = other;
         }
-        debugPrint('Voice: heard "$_heard" — ${did ?? 'not understood'}');
-        _set(did == null ? VoiceStatus.missed : VoiceStatus.done);
         _settle?.cancel();
-        _settle = Timer(linger, () {
-          if (_sub != null) _set(VoiceStatus.listening);
-        });
+        if (did == null && _heard.isNotEmpty && ask != null) {
+          unawaited(_askElsewhere(said, [_heard, if (other.isNotEmpty) other]));
+          return;
+        }
+        debugPrint('Voice: heard "$_heard" — ${did ?? 'not understood'}');
+        _finish(did != null);
       case 'error':
         // It says why and then stops; the stopping is what is acted on.
         _error = '${event['message'] ?? ''}';
@@ -211,9 +234,44 @@ class VoiceService extends ChangeNotifier {
     }
   }
 
+  /// Asks [texts] of [ask] in turn, until one is understood.
+  Future<void> _askElsewhere(int said, List<String> texts) async {
+    _set(VoiceStatus.asking);
+    String? answer;
+    var heard = texts.first;
+    for (final text in texts) {
+      answer = await ask!(text);
+      // Something newer was said meanwhile, or it was switched off.
+      if (said != _said) return;
+      if (answer != null) {
+        heard = text;
+        break;
+      }
+    }
+    _heard = heard;
+    _answer = answer ?? '';
+    debugPrint('Voice: heard "$_heard" — ${answer ?? 'not understood'}');
+    _finish(answer != null, longer: answer != null);
+  }
+
+  /// Shows how it went for a while — an answer longer, to be read — then
+  /// goes back to listening.
+  void _finish(bool understood, {bool longer = false}) {
+    _set(understood ? VoiceStatus.done : VoiceStatus.missed);
+    _settle?.cancel();
+    _settle = Timer(longer ? linger * 2 : linger, () {
+      if (_sub != null) _set(VoiceStatus.listening);
+    });
+  }
+
   void _set(VoiceStatus status) {
     // Heard twice running is still news: the words will have changed.
-    const news = {VoiceStatus.awake, VoiceStatus.done, VoiceStatus.missed};
+    const news = {
+      VoiceStatus.awake,
+      VoiceStatus.asking,
+      VoiceStatus.done,
+      VoiceStatus.missed,
+    };
     if (_status == status && !news.contains(status)) return;
     _status = status;
     notifyListeners();

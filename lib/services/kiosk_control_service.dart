@@ -55,7 +55,9 @@ class KioskState {
 ///                               screen_control.py, so the kiosk can rest
 ///     POST /voice?say=…         something said to the panel, as words:
 ///                               "show stocks", "next page" — from the
-///                               listener, or typed, to try a phrase out
+///                               listener, or typed, to try a phrase out;
+///                               what the panel does not know is asked of
+///                               Home Assistant, and its answer given back
 class KioskControlService {
   KioskControlService({
     required this.state,
@@ -83,7 +85,7 @@ class KioskControlService {
 
   /// Does what was said, and says what that was; null when it was not
   /// understood — see `VoiceCommands`.
-  final String? Function(String heard)? voice;
+  final FutureOr<String?> Function(String heard)? voice;
 
   HttpServer? _server;
 
@@ -173,7 +175,7 @@ class KioskControlService {
       }
       if (path == '/voice' && voice != null) {
         final heard = request.uri.queryParameters['say'] ?? '';
-        final did = voice!(heard);
+        final did = await voice!(heard);
         if (did == null) {
           return reply(HttpStatus.notFound, {
             'error': 'not understood',

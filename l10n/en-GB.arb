@@ -430,6 +430,7 @@
   "visualiser.visualiserBarsTapToChange": "Visualiser: bars. Tap to change.",
   "visualiser.visualiserOffTapToTurn": "Visualiser off. Tap to turn it on.",
   "visualiser.visualiserWaveformTapToChange": "Visualiser: waveform. Tap to change.",
+  "voice.done": "Done",
   "voice.heardNothing": "Didn’t catch that",
   "voice.listening": "Listening…",
   "voice.notUnderstood": "Didn’t understand “{heard}”",

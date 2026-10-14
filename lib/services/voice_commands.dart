@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import '../dashboard/dashboard_model.dart';
 import '../dashboard/schedule.dart';
 import '../dashboard/widget_registry.dart';
@@ -283,6 +285,63 @@ class VoiceCommands {
     for (final w in words(text))
       if (!_filler.contains(w) && w != 'page' && w != 'pages') w,
   ];
+
+  /// What "hey" has been heard as, and what "canvas" has been heard as
+  /// that is not within a letter or two of it — as `woken()` in
+  /// deploy/voice_listener.py has them.
+  static const _heys = {
+    'hey', 'hay', 'hi', 'he', 'a', 'eh', 'hate', 'hedy', 'hake', 'hae', //
+  };
+  static const _lookalikes = {
+    'cambus', 'campus', 'congress', 'douglas', 'countless', 'compass', //
+  };
+
+  /// [heard] without the wake words in front, for something that wants
+  /// only the request — Home Assistant's Assist, which would make nothing
+  /// of "hey canvas turn on the lamp". As the listener finds them: "canvas"
+  /// near the start, or a "hey" and something like it straight after.
+  /// Heard without them — said after a pause — it is all request. The rest
+  /// is left as it was heard, "what's" and all: Assist reads it as written.
+  static String afterWake(String heard) {
+    final said = words(heard);
+    var ends = 0;
+    for (final (i, w) in said.take(4).indexed) {
+      if (w == 'canvas' || w == 'canvass' || w == 'canvases') {
+        ends = i + 1;
+        break;
+      }
+    }
+    if (ends == 0 &&
+        said.length >= 2 &&
+        _heys.contains(said[0]) &&
+        (_slips(said[1], 'canvas') <= 2 || _lookalikes.contains(said[1]))) {
+      ends = 2;
+    }
+    // As many of the words as heard as make up the wake words.
+    final heardAs = heard.trim().split(RegExp(r'\s+'));
+    var dropped = 0;
+    while (ends > 0 && dropped < heardAs.length) {
+      ends -= words(heardAs[dropped++]).length;
+    }
+    return heardAs
+        .sublist(dropped)
+        .join(' ')
+        .replaceFirst(RegExp(r'^[^A-Za-z0-9]+'), '');
+  }
+
+  /// How many letters apart [a] and [b] are.
+  static int _slips(String a, String b) {
+    var row = [for (var j = 0; j <= b.length; j++) j];
+    for (var i = 1; i <= a.length; i++) {
+      final next = [i];
+      for (var j = 1; j <= b.length; j++) {
+        final swap = row[j - 1] + (a[i - 1] == b[j - 1] ? 0 : 1);
+        next.add([row[j] + 1, next[j - 1] + 1, swap].reduce(min));
+      }
+      row = next;
+    }
+    return row.last;
+  }
 
   /// What [heard] asks for, or null when it asks for nothing known.
   ///

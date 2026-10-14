@@ -305,4 +305,19 @@ void main() {
     expect(phrases, containsAll(['stocks', 'videos', 'media', 'next page']));
     expect(phrases.toSet().length, phrases.length);
   });
+
+  test('the wake words taken off, for Home Assistant', () {
+    expect(
+      VoiceCommands.afterWake('Hey Canvas, turn on the lamp.'),
+      'turn on the lamp.',
+    );
+    expect(VoiceCommands.afterWake('hey congress what time is it'), 'what time is it');
+    expect(VoiceCommands.afterWake('hay canvass turn off the fan'), 'turn off the fan');
+    expect(VoiceCommands.afterWake('a canvas turn off the fan'), 'turn off the fan');
+    expect(VoiceCommands.afterWake('hey convas lights off'), 'lights off');
+    // Said after a pause, without them: all of it is the request.
+    expect(VoiceCommands.afterWake("what's the temperature"), "what's the temperature");
+    expect(VoiceCommands.afterWake('hi there'), 'hi there');
+    expect(VoiceCommands.afterWake('Hey, Canvas, what’s on?'), 'what’s on?');
+  });
 }

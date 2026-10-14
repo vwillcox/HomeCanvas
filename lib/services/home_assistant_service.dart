@@ -196,6 +196,42 @@ class HomeAssistantService extends ChangeNotifier {
     }
   }
 
+  /// Asks Home Assistant's Assist to do or answer [text] — "turn off the
+  /// lamp", "what's the indoor temperature" — and gives back what it said.
+  ///
+  /// Null when it understood none of it, or could not be asked: the panel
+  /// then says it did not understand, as it would have anyway. Anything
+  /// else it says, "no weather is exposed" included, is an answer and shown
+  /// as one: it is how you find out what Assist cannot yet reach.
+  ///
+  /// Assist runs in Home Assistant on the same Pi, so nothing said leaves
+  /// it unless Home Assistant has been set up to send it somewhere.
+  Future<String?> converse(String text, {String language = 'en'}) async {
+    if (!configured || text.trim().isEmpty) return null;
+    try {
+      final r = await _dio.post(
+        '$_base/api/conversation/process',
+        data: {'text': text, 'language': language},
+        options: _auth,
+      );
+      final reply = (r.data as Map?)?['response'];
+      if (reply is! Map) return null;
+      final data = reply['data'];
+      if (reply['response_type'] == 'error' &&
+          data is Map &&
+          data['code'] == 'no_intent_match') {
+        return null;
+      }
+      // Something may have been switched: the next refresh reads it.
+      _fetched = null;
+      final speech = '${reply['speech']?['plain']?['speech'] ?? ''}'.trim();
+      return speech.isEmpty ? tr('voice.done', 'Done') : speech;
+    } catch (e) {
+      debugPrint('Home Assistant: Assist: $e');
+      return null;
+    }
+  }
+
   /// For the editor's entity picker: id → "Friendly name (id)", grouped by
   /// kind, the plumbing left out.
   Future<Map<String, String>> choices() async {

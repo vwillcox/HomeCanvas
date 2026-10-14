@@ -405,12 +405,25 @@ void main() async {
     return lat == null || lon == null ? null : (lat: lat, lon: lon);
   }
 
+  // What the panel makes nothing of is asked of Home Assistant's Assist —
+  // the lights, the heating, "what's the temperature indoors" — and its
+  // answer is shown, and said at the speech volume unless Do Not Disturb
+  // is on.
+  Future<String?> askHomeAssistant(String heard) async {
+    final answer = await homeAssistant.converse(VoiceCommands.afterWake(heard));
+    if (answer != null && !inbox().dndMuted) {
+      unawaited(speech.speak(answer, volume: inbox().speechOut));
+    }
+    return answer;
+  }
+
   // "Hey canvas", and what is said after it: heard by a listener this
   // starts while voice control is switched on, and done here. The screen
   // is lit on the wake words, before anything is asked for.
   final voice = VoiceService(
     enabled: () => config.config.screen.voiceControl,
     act: (heard) => runVoiceCommand(heard, config, screenIdle),
+    ask: askHomeAssistant,
     onWake: () {
       unawaited(screenIdle.wake());
       unawaited(_listeningBeep());
@@ -514,7 +527,9 @@ void main() async {
         unawaited(config.save());
       },
       screenLit: screen.set,
-      voice: (heard) => runVoiceCommand(heard, config, screenIdle),
+      voice: (heard) async =>
+          runVoiceCommand(heard, config, screenIdle) ??
+          await askHomeAssistant(heard),
     ).start(),
   );
 }
