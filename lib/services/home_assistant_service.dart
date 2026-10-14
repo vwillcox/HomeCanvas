@@ -292,6 +292,47 @@ class HomeAssistantService extends ChangeNotifier {
     }
   }
 
+  /// The numeric states of [entityIds] since [start], oldest first, by
+  /// entity — what Home Assistant's history graph is drawn from. Readings
+  /// that are not numbers, "unavailable" among them, are left out. Empty
+  /// when it could not be asked.
+  Future<Map<String, List<(DateTime, double)>>> history(
+    List<String> entityIds,
+    DateTime start,
+  ) async {
+    if (!configured || entityIds.isEmpty) return const {};
+    try {
+      final r = await _dio.get(
+        '$_base/api/history/period/${start.toUtc().toIso8601String()}',
+        queryParameters: {
+          'filter_entity_id': entityIds.join(','),
+          // Without it, a day from [start] and no more.
+          'end_time': DateTime.now().toUtc().toIso8601String(),
+          'minimal_response': '',
+          'no_attributes': '',
+        },
+        options: _auth,
+      );
+      final out = <String, List<(DateTime, double)>>{};
+      for (final series in (r.data as List? ?? const [])) {
+        if (series is! List || series.isEmpty) continue;
+        final id = '${(series.first as Map)['entity_id']}';
+        out[id] = [
+          for (final s in series)
+            if (s is Map)
+              if (double.tryParse('${s['state']}') case final double v)
+                if (DateTime.tryParse('${s['last_changed']}')
+                    case final DateTime at)
+                  (at.toLocal(), v),
+        ];
+      }
+      return out;
+    } catch (e) {
+      debugPrint('Home Assistant: history: $e');
+      return const {};
+    }
+  }
+
   /// Calls [domain].[service] on [entityIds] — "light.turn_off" on a room's
   /// lights — and reads the states again soon after.
   Future<void> callService(

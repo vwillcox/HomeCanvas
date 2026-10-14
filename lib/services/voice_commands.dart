@@ -116,7 +116,8 @@ class VoiceCommands {
     'certs': ['certs'],
     'github': ['git hub'],
     'omarchy': ['shortcuts', 'keyboard shortcuts'],
-    'grid_carbon': ['energy', 'electricity'],
+    'grid_carbon': ['carbon intensity', 'grid'],
+    'ha_energy': ['energy', 'power', 'meter', 'bright', 'smart meter'],
     'fuel': ['petrol', 'diesel'],
     'planes': ['flights', 'aircraft', 'aeroplanes'],
     'trains': ['travel', 'railway'],
@@ -143,6 +144,7 @@ class VoiceCommands {
     'homey_house': ['smart home'],
     'homey_lights': ['smart home'],
     'home_assistant': ['smart home'],
+    'ha_bridge': ['bridge', 'console', 'lcars', 'rooms'],
   };
 
   static const _konami = 'up up down down left right left right';
