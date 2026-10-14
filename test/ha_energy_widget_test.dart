@@ -8,6 +8,7 @@ import 'package:home_canvas/dashboard/widget_registry.dart';
 import 'package:home_canvas/dashboard/widgets/ha_energy_widget.dart';
 import 'package:home_canvas/dashboard/widgets/widgets.dart';
 import 'package:home_canvas/services/config_service.dart';
+import 'package:home_canvas/services/glowmarkt_service.dart';
 import 'package:home_canvas/services/home_assistant_service.dart';
 
 DateTime at(int day, int hour, [int minute = 0]) =>
@@ -72,8 +73,85 @@ void main() {
     });
   });
 
+  group('weeks, months and years', () {
+    final now = at(14, 15);
+    List<(DateTime, double)> days(int from, int to, double kwh) => [
+      for (var d = from; d <= to; d++) (DateTime(2026, 10, d), kwh),
+    ];
+
+    test('a week is the last seven days, against the seven before', () {
+      final r = EnergyRange.week(days(1, 14, 2.0), days(1, 14, 0.8), now);
+      expect(r.bars, List.filled(7, 2.0));
+      expect(r.total, 14.0);
+      expect(r.cost, closeTo(5.6, 1e-9));
+      expect(r.before, 14.0);
+      // 14 October 2026 is a Wednesday: the last bar is lettered W.
+      expect(r.axis.last, (6, 'W'));
+    });
+
+    test('a day not read yet is a gap, not nothing used', () {
+      final r = EnergyRange.week(days(1, 12, 3.0), null, now);
+      expect(r.bars.sublist(5), [null, null]);
+      expect(r.cost, isNull);
+    });
+
+    test('a month a day at a time, against last month’s total', () {
+      final r = EnergyRange.month(
+        days(1, 13, 5.0),
+        null,
+        [for (var d = 1; d <= 30; d++) (DateTime(2026, 9, d), 160.0 / 30)],
+        [for (var d = 1; d <= 30; d++) (DateTime(2026, 9, d), 55.0 / 30)],
+        now,
+      );
+      expect(r.bars.length, 31);
+      expect(r.bars[12], 5.0);
+      expect(r.bars[13], isNull);
+      expect(r.total, 65.0);
+      expect(r.before, closeTo(160.0, 1e-9));
+      expect(r.costBefore, closeTo(55.0, 1e-9));
+      expect(r.now, 13);
+    });
+
+    test('a year as twelve months, against the twelve before', () {
+      final months = [
+        for (var i = 11; i >= 0; i--) (DateTime(2026, 10 - i), 200.0),
+      ];
+      final r = EnergyRange.year(
+        months,
+        null,
+        [(DateTime(2025, 1), 2000.0)],
+        null,
+        now,
+      );
+      expect(r.bars, List.filled(12, 200.0));
+      expect(r.total, 2400.0);
+      expect(r.before, 2000.0);
+      expect(r.axis.first, (0, 'N'));
+      expect(r.axis.last, (11, 'O'));
+    });
+
+    test(
+      'today in half hours, where Glowmarkt has more than Home Assistant',
+      () {
+        final halves = [
+          (at(14, 0), 0.1),
+          (at(14, 0, 30), 0.1),
+          (at(14, 7, 30), 0.4),
+        ];
+        final r = EnergyRange.day(null, halves, null, null, 2.2, 1.0, now);
+        expect(r.bars.length, 48);
+        expect(r.bars[15], 0.4);
+        expect(r.bars[40], isNull, reason: 'still to come');
+        expect(r.total, 2.2, reason: 'Home Assistant’s total is ahead');
+        expect(r.axis.map((a) => a.$1), [0, 12, 24, 36]);
+      },
+    );
+  });
+
   group('the widget', () {
     setUpAll(registerBuiltInWidgets);
+
+    late ConfigService config;
 
     Future<void> draw(
       WidgetTester tester,
@@ -96,8 +174,11 @@ void main() {
         ),
       );
       await tester.pumpWidget(
-        ChangeNotifierProvider.value(
-          value: ha,
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: ha),
+            Provider.value(value: GlowmarktService(config)),
+          ],
           child: MaterialApp(
             home: Scaffold(
               body: Align(
@@ -120,7 +201,7 @@ void main() {
     testWidgets('finds the Glow meter by itself, and fits every size', (
       tester,
     ) async {
-      final config = ConfigService();
+      config = ConfigService();
       config.config.homeAssistant
         ..baseUrl = 'http://ha.local:8123'
         ..token = 'x';
@@ -147,6 +228,19 @@ void main() {
       expect(find.text('4.3 kWh'), findsOneWidget);
       expect(find.text('£1.83'), findsOneWidget);
       expect(find.textContaining('32.4p a kWh · 47.3p a day'), findsOneWidget);
+      // Without a Bright login there is only today: no tabs to tap.
+      expect(find.text('Week'), findsNothing);
+
+      config.config.bright
+        ..username = 'me@example.org'
+        ..password = 'x';
+      for (final theme in ['glass', 'lcars']) {
+        await draw(tester, ha, const Size(620, 420), theme);
+        expect(tester.takeException(), isNull, reason: theme);
+      }
+      expect(find.text('WEEK'), findsOneWidget);
+      await draw(tester, ha, const Size(620, 420), 'glass');
+      expect(find.text('Week'), findsOneWidget);
       await tester.pumpWidget(const SizedBox());
       // There is no Home Assistant here: let the history request time out.
       await tester.pump(const Duration(seconds: 15));

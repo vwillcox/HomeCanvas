@@ -30,6 +30,7 @@ import 'services/chores_service.dart';
 import 'services/govee_service.dart';
 import 'services/code_widgets.dart';
 import 'services/custom_widgets.dart';
+import 'services/glowmarkt_service.dart';
 import 'services/home_assistant_service.dart';
 import 'services/homey_service.dart';
 import 'services/railcam_service.dart';
@@ -489,6 +490,7 @@ void main() async {
         // Made when a Stocks or Crypto widget first asks.
         ChangeNotifierProvider(create: (_) => MarketsService()),
         ChangeNotifierProvider.value(value: homeAssistant),
+        Provider<GlowmarktService>.value(value: GlowmarktService(config)),
         ChangeNotifierProvider.value(value: homey),
         ChangeNotifierProvider.value(value: customWidgets),
         // Made when a Lights widget first asks; it then listens for Govee

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../l10n/l10n.dart';
+import '../../services/glowmarkt_service.dart';
 import '../../services/home_assistant_service.dart';
 import '../../widgets/lcars.dart';
 import '../../widgets/pause_when_hidden.dart';
@@ -105,6 +106,215 @@ class EnergyDay {
   }
 }
 
+/// Which stretch of time the widget shows.
+enum EnergyView { day, week, month, year }
+
+/// A stretch of electricity as the widget draws it: a bar for each part of
+/// it, what it all came to, and the stretch before to set it against.
+@immutable
+class EnergyRange {
+  const EnergyRange({
+    required this.bars,
+    required this.axis,
+    required this.total,
+    this.now,
+    this.cost,
+    this.before,
+    this.costBefore,
+  });
+
+  /// kWh in each part; null where the meter's reading has not arrived.
+  final List<double?> bars;
+
+  /// Under the bars: an index, and what to letter there.
+  final List<(int, String)> axis;
+
+  /// The part we are in, or null when it is all past.
+  final int? now;
+
+  final double total;
+  final double? cost;
+  final double? before;
+  final double? costBefore;
+
+  static double _sum(Iterable<(DateTime, double)> r) =>
+      r.fold(0.0, (a, b) => a + b.$2);
+
+  static bool _sameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  /// The last seven days, today among them, from days of readings going
+  /// back at least fourteen — the seven before are what it is set against.
+  static EnergyRange week(
+    List<(DateTime, double)> days,
+    List<(DateTime, double)>? costs,
+    DateTime now,
+  ) {
+    final today = DateTime(now.year, now.month, now.day);
+    final shown = [
+      for (var i = 6; i >= 0; i--) today.subtract(Duration(days: i)),
+    ];
+    double? on(List<(DateTime, double)> r, DateTime d) {
+      for (final (at, v) in r) {
+        if (_sameDay(at, d)) return v;
+      }
+      return null;
+    }
+
+    final start = shown.first;
+    final earlier = start.subtract(const Duration(days: 7));
+    bool thisWeek((DateTime, double) r) => !r.$1.isBefore(start);
+    bool lastWeek((DateTime, double) r) =>
+        !r.$1.isBefore(earlier) && r.$1.isBefore(start);
+    const letters = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    return EnergyRange(
+      bars: [for (final d in shown) on(days, d)],
+      axis: [for (final (i, d) in shown.indexed) (i, letters[d.weekday - 1])],
+      now: 6,
+      total: _sum(days.where(thisWeek)),
+      cost: costs == null ? null : _sum(costs.where(thisWeek)),
+      before: days.any(lastWeek) ? _sum(days.where(lastWeek)) : null,
+      costBefore: costs == null || !costs.any(lastWeek)
+          ? null
+          : _sum(costs.where(lastWeek)),
+    );
+  }
+
+  /// This month, a day at a time, against last month's whole total — from
+  /// [lastDays], its days.
+  static EnergyRange month(
+    List<(DateTime, double)> days,
+    List<(DateTime, double)>? costs,
+    List<(DateTime, double)> lastDays,
+    List<(DateTime, double)>? lastCosts,
+    DateTime now,
+  ) {
+    final length = DateTime(now.year, now.month + 1, 0).day;
+    final bars = List<double?>.filled(length, null);
+    for (final (at, v) in days) {
+      if (at.year == now.year && at.month == now.month) bars[at.day - 1] = v;
+    }
+    bool here((DateTime, double) r) =>
+        r.$1.year == now.year && r.$1.month == now.month;
+    final last = DateTime(now.year, now.month - 1);
+    bool lastMonth((DateTime, double) r) =>
+        r.$1.year == last.year && r.$1.month == last.month;
+    return EnergyRange(
+      bars: bars,
+      axis: [
+        for (final d in [1, 8, 15, 22, 29])
+          if (d <= length) (d - 1, '$d'),
+      ],
+      now: now.day - 1,
+      total: _sum(days.where(here)),
+      cost: costs == null ? null : _sum(costs.where(here)),
+      before: lastDays.any(lastMonth) ? _sum(lastDays.where(lastMonth)) : null,
+      costBefore: lastCosts == null || !lastCosts.any(lastMonth)
+          ? null
+          : _sum(lastCosts.where(lastMonth)),
+    );
+  }
+
+  /// The last twelve months, this one among them, against the twelve
+  /// before.
+  static EnergyRange year(
+    List<(DateTime, double)> months,
+    List<(DateTime, double)>? costs,
+    List<(DateTime, double)> monthsBefore,
+    List<(DateTime, double)>? costsBefore,
+    DateTime now,
+  ) {
+    final shown = [
+      for (var i = 11; i >= 0; i--) DateTime(now.year, now.month - i),
+    ];
+    double? on(DateTime m) {
+      for (final (at, v) in months) {
+        if (at.year == m.year && at.month == m.month) return v;
+      }
+      return null;
+    }
+
+    const letters = [
+      'J',
+      'F',
+      'M',
+      'A',
+      'M',
+      'J',
+      'J',
+      'A',
+      'S',
+      'O',
+      'N',
+      'D',
+    ];
+    return EnergyRange(
+      bars: [for (final m in shown) on(m)],
+      axis: [for (final (i, m) in shown.indexed) (i, letters[m.month - 1])],
+      now: 11,
+      total: _sum(months),
+      cost: costs == null ? null : _sum(costs),
+      before: monthsBefore.isEmpty ? null : _sum(monthsBefore),
+      costBefore: costsBefore == null || costsBefore.isEmpty
+          ? null
+          : _sum(costsBefore),
+    );
+  }
+
+  /// Today: half hours from Glowmarkt where they have come, or failing
+  /// those Home Assistant's hours; its total from Home Assistant's meter,
+  /// which is ahead of Glowmarkt's half hours, against yesterday's.
+  static EnergyRange day(
+    EnergyDay? ha,
+    List<(DateTime, double)>? halves,
+    List<(DateTime, double)>? days,
+    List<(DateTime, double)>? dayCosts,
+    double? today,
+    double? costToday,
+    DateTime now,
+  ) {
+    final midnight = DateTime(now.year, now.month, now.day);
+    final yesterday = midnight.subtract(const Duration(days: 1));
+    double? on(List<(DateTime, double)>? r, DateTime d) {
+      for (final (at, v) in r ?? const <(DateTime, double)>[]) {
+        if (_sameDay(at, d)) return v;
+      }
+      return null;
+    }
+
+    final fromGlow = [
+      for (final (at, v) in halves ?? const <(DateTime, double)>[])
+        if (_sameDay(at, now)) (at, v),
+    ];
+    final glowSum = _sum(fromGlow);
+    final haSum = ha?.hours.fold(0.0, (a, b) => a + b) ?? 0;
+    final List<double?> bars;
+    final int slot;
+    if (fromGlow.isNotEmpty && glowSum >= haSum) {
+      bars = List<double?>.filled(48, null);
+      for (final (at, v) in fromGlow) {
+        bars[at.difference(midnight).inMinutes ~/ 30] = v;
+      }
+      slot = now.difference(midnight).inMinutes ~/ 30;
+    } else {
+      bars = [...?ha?.hours] + (ha == null ? List.filled(24, 0.0) : []);
+      slot = now.hour;
+    }
+    final per = bars.length ~/ 24;
+    return EnergyRange(
+      bars: [for (final (i, b) in bars.indexed) i > slot ? null : b],
+      axis: [
+        for (final h in [0, 6, 12, 18]) (h * per, h.toString().padLeft(2, '0')),
+      ],
+      now: slot,
+      total: today ?? ha?.today ?? glowSum,
+      cost: costToday ?? ha?.costToday,
+      before: ha?.yesterday ?? on(days, yesterday),
+      costBefore: ha?.costYesterday ?? on(dayCosts, yesterday),
+    );
+  }
+}
+
 class HaEnergyWidget extends StatefulWidget {
   const HaEnergyWidget({super.key, required this.w});
 
@@ -116,7 +326,12 @@ class HaEnergyWidget extends StatefulWidget {
 
 class _HaEnergyWidgetState extends State<HaEnergyWidget>
     with PauseWhenHidden, ShownTimers {
-  EnergyDay? _day;
+  late EnergyView _view = EnergyView.values.firstWhere(
+    (v) => v.name == widget.w.option('view', 'day'),
+    orElse: () => EnergyView.day,
+  );
+  final Map<EnergyView, EnergyRange> _ranges = {};
+  EnergyDay? _haDay;
 
   @override
   void initState() {
@@ -138,33 +353,129 @@ class _HaEnergyWidgetState extends State<HaEnergyWidget>
     return null;
   }
 
+  double? _state(HomeAssistantService ha, String key, String like) {
+    final id = _pick(ha, key, like);
+    final e = id == null ? null : ha.entity(id);
+    return e == null ? null : double.tryParse(e.state);
+  }
+
   Future<void> _refresh() async {
     if (!mounted) return;
     final ha = context.read<HomeAssistantService>();
-    await ha.refresh();
-    final usage = _pick(ha, 'usage', '_usage_today');
-    if (usage == null || !mounted) return;
-    final cost = _pick(ha, 'cost', '_cost_today');
+    final glow = context.read<GlowmarktService>();
+    final view = _view;
     final now = DateTime.now();
-    final history = await ha.history([
-      usage,
-      ?cost,
-    ], DateTime(now.year, now.month, now.day - 1));
-    if (!mounted || history.isEmpty) return;
-    setState(() {
-      _day = EnergyDay.from(
-        history[usage] ?? const [],
-        cost == null ? const [] : history[cost] ?? const [],
-        now,
-      );
-    });
+    final today = DateTime(now.year, now.month, now.day);
+    await ha.refresh();
+    if (!mounted) return;
+
+    Future<(List<(DateTime, double)>?, List<(DateTime, double)>?)> both(
+      GlowPeriod p,
+      DateTime from,
+      DateTime to,
+    ) async => (
+      await glow.readings(p, from, to),
+      await glow.readings(p, from, to, cost: true),
+    );
+
+    EnergyRange? range;
+    switch (view) {
+      case EnergyView.day:
+        final usage = _pick(ha, 'usage', '_usage_today');
+        final cost = _pick(ha, 'cost', '_cost_today');
+        if (usage != null) {
+          final history = await ha.history([
+            usage,
+            ?cost,
+          ], today.subtract(const Duration(days: 1)));
+          if (history.isNotEmpty) {
+            _haDay = EnergyDay.from(
+              history[usage] ?? const [],
+              cost == null ? const [] : history[cost] ?? const [],
+              now,
+            );
+          }
+        }
+        final halves = await glow.readings(GlowPeriod.halfHour, today, now);
+        final (days, dayCosts) = await both(
+          GlowPeriod.day,
+          today.subtract(const Duration(days: 1)),
+          now,
+        );
+        range = EnergyRange.day(
+          _haDay,
+          halves,
+          days,
+          dayCosts,
+          _state(ha, 'usage', '_usage_today'),
+          _state(ha, 'cost', '_cost_today'),
+          now,
+        );
+      case EnergyView.week:
+        final (days, costs) = await both(
+          GlowPeriod.day,
+          today.subtract(const Duration(days: 13)),
+          now,
+        );
+        if (days != null) range = EnergyRange.week(days, costs, now);
+      case EnergyView.month:
+        final (days, costs) = await both(
+          GlowPeriod.day,
+          DateTime(now.year, now.month),
+          now,
+        );
+        // Last month by its days: Glowmarkt's monthly totals are slow,
+        // and sometimes never come.
+        final (lastDays, lastCosts) = await both(
+          GlowPeriod.day,
+          DateTime(now.year, now.month - 1),
+          DateTime(now.year, now.month).subtract(const Duration(seconds: 1)),
+        );
+        if (days != null) {
+          range = EnergyRange.month(
+            days,
+            costs,
+            lastDays ?? const [],
+            lastCosts,
+            now,
+          );
+        }
+      case EnergyView.year:
+        final start = DateTime(now.year, now.month - 11);
+        final (months, costs) = await both(GlowPeriod.month, start, now);
+        // The twelve months before, as one more question: Glowmarkt
+        // answers no more than a year of months at once.
+        final (before, costsBefore) = await both(
+          GlowPeriod.month,
+          DateTime(now.year, now.month - 23),
+          start.subtract(const Duration(seconds: 1)),
+        );
+        if (months != null) {
+          range = EnergyRange.year(
+            months,
+            costs,
+            before ?? const [],
+            costsBefore,
+            now,
+          );
+        }
+    }
+    if (!mounted || range == null) return;
+    setState(() => _ranges[view] = range!);
+  }
+
+  void _show(EnergyView view) {
+    if (view == _view) return;
+    setState(() => _view = view);
+    unawaited(_refresh());
   }
 
   @override
   Widget build(BuildContext context) {
     final t = widget.w.theme;
     final ha = context.watch<HomeAssistantService>();
-    if (!ha.configured) {
+    final glow = context.read<GlowmarktService>();
+    if (!ha.configured && !glow.configured) {
       return TileMessage(
         tr(
           'widget.home_assistant.connectHomeAssistantInSettings',
@@ -173,8 +484,7 @@ class _HaEnergyWidgetState extends State<HaEnergyWidget>
         theme: t,
       );
     }
-    final usageId = _pick(ha, 'usage', '_usage_today');
-    if (usageId == null) {
+    if (_pick(ha, 'usage', '_usage_today') == null && !glow.configured) {
       return TileMessage(
         ha.all.isEmpty
             ? ha.error ??
@@ -189,17 +499,58 @@ class _HaEnergyWidgetState extends State<HaEnergyWidget>
         theme: t,
       );
     }
-    double? now(String key, String like) {
-      final id = _pick(ha, key, like);
-      final e = id == null ? null : ha.entity(id);
-      return e == null ? null : double.tryParse(e.state);
-    }
-
-    final day = _day;
-    final today = now('usage', '_usage_today') ?? day?.today ?? 0;
-    final cost = now('cost', '_cost_today') ?? day?.costToday;
-    final rate = now('rate', '_meter_rate');
-    final standing = now('standing', '_standing_charge');
+    final views = [
+      EnergyView.day,
+      // Longer than a day is Glowmarkt's: Home Assistant only has the
+      // meter from the day it was set up.
+      if (glow.configured) ...[
+        EnergyView.week,
+        EnergyView.month,
+        EnergyView.year,
+      ],
+    ];
+    final view = views.contains(_view) ? _view : EnergyView.day;
+    // Today can be drawn before anything is fetched, from the meter's
+    // figures as Home Assistant has them now.
+    final range =
+        _ranges[view] ??
+        (view == EnergyView.day
+            ? EnergyRange.day(
+                _haDay,
+                null,
+                null,
+                null,
+                _state(ha, 'usage', '_usage_today'),
+                _state(ha, 'cost', '_cost_today'),
+                DateTime.now(),
+              )
+            : null);
+    final rate = _state(ha, 'rate', '_meter_rate');
+    final standing = _state(ha, 'standing', '_standing_charge');
+    final names = {
+      EnergyView.day: (
+        tr('widget.ha_energy.today', 'Today'),
+        tr('widget.ha_energy.yesterday', 'Yesterday'),
+      ),
+      EnergyView.week: (
+        tr('widget.ha_energy.week', 'This week'),
+        tr('widget.ha_energy.weekBefore', 'Week before'),
+      ),
+      EnergyView.month: (
+        tr('widget.ha_energy.month', 'This month'),
+        tr('widget.ha_energy.lastMonth', 'Last month'),
+      ),
+      EnergyView.year: (
+        tr('widget.ha_energy.year', 'Twelve months'),
+        tr('widget.ha_energy.yearBefore', 'Twelve before'),
+      ),
+    };
+    final tabs = {
+      EnergyView.day: tr('widget.ha_energy.tabDay', 'Day'),
+      EnergyView.week: tr('widget.ha_energy.tabWeek', 'Week'),
+      EnergyView.month: tr('widget.ha_energy.tabMonth', 'Month'),
+      EnergyView.year: tr('widget.ha_energy.tabYear', 'Year'),
+    };
     return LayoutBuilder(
       builder: (context, c) {
         final big = (math.min(
@@ -207,19 +558,24 @@ class _HaEnergyWidgetState extends State<HaEnergyWidget>
           c.maxWidth * 0.12,
         )).clamp(18.0, 72.0);
         final small = (big * 0.36).clamp(11.0, 22.0);
-        final chart = c.maxHeight > big * 3.2;
+        final chart = c.maxHeight > big * 4;
+        final showTabs = views.length > 1 && c.maxHeight > big * 2.4;
+        final (nowName, beforeName) = names[view]!;
         final figures = [
-          (tr('widget.ha_energy.today', 'Today'), _kwh(today)),
-          if (cost != null)
-            (tr('widget.ha_energy.cost', 'Cost'), _pounds(cost)),
-          if (day?.yesterday != null)
-            (
-              tr('widget.ha_energy.yesterday', 'Yesterday'),
-              _kwh(day!.yesterday!) +
-                  (day.costYesterday == null
-                      ? ''
-                      : ' · ${_pounds(day.costYesterday!)}'),
-            ),
+          if (range != null) ...[
+            (nowName, _kwh(range.total)),
+            if (range.cost != null)
+              (tr('widget.ha_energy.cost', 'Cost'), _pounds(range.cost!)),
+            if (range.before != null)
+              (
+                beforeName,
+                _kwh(range.before!) +
+                    (range.costBefore == null
+                        ? ''
+                        : ' · ${_pounds(range.costBefore!)}'),
+              ),
+          ] else
+            (nowName, '—'),
         ];
         final tariff = [
           if (rate != null)
@@ -234,6 +590,16 @@ class _HaEnergyWidgetState extends State<HaEnergyWidget>
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (showTabs) ...[
+              _Tabs(
+                theme: t,
+                labels: [for (final v in views) tabs[v]!],
+                chosen: views.indexOf(view),
+                height: (small * 2).clamp(26.0, 44.0),
+                onTap: (i) => _show(views[i]),
+              ),
+              SizedBox(height: small * 0.6),
+            ],
             if (t.isLcars)
               Wrap(
                 spacing: 8,
@@ -283,31 +649,31 @@ class _HaEnergyWidgetState extends State<HaEnergyWidget>
                     ),
                 ],
               ),
-            if (chart) ...[
+            if (chart && range != null) ...[
               SizedBox(height: big * 0.3),
               Expanded(
                 child: CustomPaint(
-                  painter: _HoursPainter(
-                    hours: day?.hours ?? List.filled(24, 0),
-                    hour: DateTime.now().hour,
+                  painter: _BarsPainter(
+                    bars: range.bars,
+                    now: range.now,
                     theme: t,
                   ),
                 ),
               ),
               SizedBox(height: small * 0.3),
-              Row(
-                children: [
-                  for (final h in ['00', '06', '12', '18'])
-                    Expanded(
-                      child: Text(
-                        h,
-                        style: TextStyle(
-                          color: t.textSecondary,
-                          fontSize: small * 0.85,
-                        ),
-                      ),
+              SizedBox(
+                height: small * 1.3,
+                child: CustomPaint(
+                  painter: _AxisPainter(
+                    count: range.bars.length,
+                    labels: range.axis,
+                    style: TextStyle(
+                      color: t.textSecondary,
+                      fontSize: small * 0.85,
+                      fontFamily: DefaultTextStyle.of(context).style.fontFamily,
                     ),
-                ],
+                  ),
+                ),
               ),
             ] else
               const Spacer(),
@@ -330,33 +696,105 @@ class _HaEnergyWidgetState extends State<HaEnergyWidget>
   }
 
   static String _kwh(double v) => '${v.toStringAsFixed(v >= 100 ? 0 : 1)} kWh';
-  static String _pounds(double v) => '£${v.toStringAsFixed(2)}';
+  static String _pounds(double v) =>
+      v >= 1000 ? '£${v.round()}' : '£${v.toStringAsFixed(2)}';
 }
 
-/// Today's hours as bars: those gone in the quieter colour, this one in the
-/// accent, those to come as a line along the bottom.
-class _HoursPainter extends CustomPainter {
-  _HoursPainter({required this.hours, required this.hour, required this.theme});
+/// Day, week, month, year: blocks on a console, words elsewhere.
+class _Tabs extends StatelessWidget {
+  const _Tabs({
+    required this.theme,
+    required this.labels,
+    required this.chosen,
+    required this.height,
+    required this.onTap,
+  });
 
-  final List<double> hours;
-  final int hour;
+  final DashboardTheme theme;
+  final List<String> labels;
+  final int chosen;
+  final double height;
+  final ValueChanged<int> onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        for (final (i, label) in labels.indexed) ...[
+          if (i > 0) SizedBox(width: theme.isLcars ? lcarsLine : 8),
+          Expanded(
+            child: theme.isLcars
+                ? LcarsBlock(
+                    colour: i == chosen ? lcarsLit : theme.block(i + 2),
+                    height: height,
+                    ends: i == 0
+                        ? LcarsEnds.start
+                        : i == labels.length - 1
+                        ? LcarsEnds.end
+                        : LcarsEnds.none,
+                    onTap: () => onTap(i),
+                    child: Text(
+                      lcarsCaps(label),
+                      style: TextStyle(fontSize: height * 0.5),
+                    ),
+                  )
+                : Material(
+                    color: i == chosen
+                        ? theme.accent
+                        : theme.textSecondary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(height / 2),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(height / 2),
+                      onTap: () => onTap(i),
+                      child: SizedBox(
+                        height: height,
+                        child: Center(
+                          child: Text(
+                            label,
+                            style: TextStyle(
+                              color: i == chosen
+                                  ? theme.onAccent
+                                  : theme.textPrimary,
+                              fontSize: height * 0.42,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// The bars: those gone in the quieter colour, the one we are in in the
+/// accent, those to come — or not yet read — as a line along the bottom.
+class _BarsPainter extends CustomPainter {
+  _BarsPainter({required this.bars, required this.now, required this.theme});
+
+  final List<double?> bars;
+  final int? now;
   final DashboardTheme theme;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final top = hours.reduce(math.max);
+    if (bars.isEmpty) return;
+    final top = bars.whereType<double>().fold(0.0, math.max);
     final scale = top <= 0 ? 0.0 : size.height / (top * 1.08);
-    final w = size.width / 24;
-    for (var i = 0; i < 24; i++) {
-      final future = i > hour;
-      final h = future ? 2.0 : (hours[i] * scale).clamp(2.0, size.height);
+    final w = size.width / bars.length;
+    for (var i = 0; i < bars.length; i++) {
+      final v = bars[i];
+      final h = v == null ? 2.0 : (v * scale).clamp(2.0, size.height);
       final paint = Paint()
-        ..color = i == hour
+        ..color = i == now
             ? theme.accent
-            : future
+            : v == null
             ? theme.textSecondary.withValues(alpha: 0.15)
             : theme.isLcars
-            ? theme.block(i ~/ 6 + 1)
+            ? theme.block(i * 4 ~/ bars.length + 1)
             : theme.textSecondary.withValues(alpha: 0.45);
       canvas.drawRRect(
         RRect.fromRectAndCorners(
@@ -371,8 +809,40 @@ class _HoursPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_HoursPainter old) =>
-      !listEquals(old.hours, hours) || old.hour != hour || old.theme != theme;
+  bool shouldRepaint(_BarsPainter old) =>
+      !listEquals(old.bars, bars) || old.now != now || old.theme != theme;
+}
+
+/// What is lettered under the bars, each under the bar it names.
+class _AxisPainter extends CustomPainter {
+  _AxisPainter({
+    required this.count,
+    required this.labels,
+    required this.style,
+  });
+
+  final int count;
+  final List<(int, String)> labels;
+  final TextStyle style;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width / count;
+    for (final (i, text) in labels) {
+      final p = TextPainter(
+        text: TextSpan(text: text, style: style),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      final x = (i * w + (w - p.width) / 2).clamp(0.0, size.width - p.width);
+      p.paint(canvas, Offset(x, 0));
+    }
+  }
+
+  @override
+  bool shouldRepaint(_AxisPainter old) =>
+      old.count != count ||
+      !listEquals(old.labels, labels) ||
+      old.style != style;
 }
 
 const _meterHelp =
@@ -384,9 +854,11 @@ final haEnergyWidgetType = DashboardWidgetType(
   category: WidgetCategory.house,
   name: 'Electricity',
   description:
-      'Electricity used today and what it has cost, against yesterday, hour '
-      'by hour — from your smart meter through Home Assistant, as the '
-      'Bright app shows it. About half an hour behind, as the meter is.',
+      'Electricity used and what it cost — today, this week, this month or '
+      'the last twelve, each against the one before, as bars. From your '
+      'smart meter: today through Home Assistant, and the longer views from '
+      'Bright, with its login in Settings. About half an hour behind, as '
+      'the meter is.',
   glyph: '🔌',
   defaultWidth: 4,
   defaultHeight: 3,
@@ -394,6 +866,19 @@ final haEnergyWidgetType = DashboardWidgetType(
   minHeight: 1,
   fitsItself: true,
   options: const [
+    WidgetOption(
+      key: 'view',
+      label: 'Shows first',
+      kind: OptionKind.choice,
+      defaultValue: 'day',
+      choices: {
+        'day': 'Today',
+        'week': 'This week',
+        'month': 'This month',
+        'year': 'The last twelve months',
+      },
+      help: 'Tap the widget’s Day, Week, Month and Year to change it.',
+    ),
     WidgetOption(
       key: 'usage',
       label: 'Used today',
@@ -428,9 +913,9 @@ final haEnergyWidgetType = DashboardWidgetType(
     ),
   ],
   preview: const [
+    PreviewLine('DAY  WEEK  MONTH  YEAR', scale: 0.1),
     PreviewLine('4.2 kWh  £1.83', scale: 0.2, accent: true),
     PreviewLine('▁▁▂▁▁▁▂▅▃▂▂▃▂▂▃▅▇▆▄', scale: 0.14),
-    PreviewLine('32.4p a kWh · 47.3p a day', scale: 0.1),
   ],
   build: (context, w) => HaEnergyWidget(w: w),
 );

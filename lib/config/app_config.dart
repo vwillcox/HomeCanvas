@@ -514,6 +514,25 @@ class HomeySettings {
   Map<String, dynamic> toJson() => {'address': address, 'apiKey': apiKey};
 }
 
+/// A Bright account — Hildebrand Glow's app for a smart meter — for the
+/// meter's history: days, weeks, months and years of it, which Home
+/// Assistant only has from the day it was set up.
+class BrightSettings {
+  String username;
+  String password;
+
+  BrightSettings({this.username = '', this.password = ''});
+
+  bool get isConfigured => username.isNotEmpty && password.isNotEmpty;
+
+  factory BrightSettings.fromJson(Map<String, dynamic> j) => BrightSettings(
+        username: (j['username'] as String? ?? '').trim(),
+        password: j['password'] as String? ?? '',
+      );
+
+  Map<String, dynamic> toJson() => {'username': username, 'password': password};
+}
+
 /// A UniFi console — a Dream Router, Dream Machine or Cloud Key.
 class UnifiSettings {
   bool enabled;
@@ -807,6 +826,7 @@ class AppConfig {
   NowPlayingSettings nowPlaying;
   HomeAssistantSettings homeAssistant;
   HomeySettings homey;
+  BrightSettings bright;
   SpotifySettings spotify;
   ShareInboxSettings shareInbox;
   ScreenSettings screen;
@@ -835,6 +855,7 @@ class AppConfig {
     NowPlayingSettings? nowPlaying,
     HomeAssistantSettings? homeAssistant,
     HomeySettings? homey,
+    BrightSettings? bright,
     SpotifySettings? spotify,
     ShareInboxSettings? shareInbox,
     ScreenSettings? screen,
@@ -853,6 +874,7 @@ class AppConfig {
         nowPlaying = nowPlaying ?? NowPlayingSettings(),
         homeAssistant = homeAssistant ?? HomeAssistantSettings(),
         homey = homey ?? HomeySettings(),
+        bright = bright ?? BrightSettings(),
         spotify = spotify ?? SpotifySettings(),
         shareInbox = shareInbox ?? ShareInboxSettings(),
         screen = screen ?? ScreenSettings(),
@@ -946,6 +968,9 @@ class AppConfig {
       homey: j['homey'] is Map<String, dynamic>
           ? HomeySettings.fromJson(j['homey'] as Map<String, dynamic>)
           : HomeySettings(),
+      bright: j['bright'] is Map<String, dynamic>
+          ? BrightSettings.fromJson(j['bright'] as Map<String, dynamic>)
+          : BrightSettings(),
       spotify: j['spotify'] is Map<String, dynamic>
           ? SpotifySettings.fromJson(j['spotify'] as Map<String, dynamic>)
           : SpotifySettings(),
@@ -992,6 +1017,7 @@ class AppConfig {
         'nowPlaying': nowPlaying.toJson(),
         'homeAssistant': homeAssistant.toJson(),
         'homey': homey.toJson(),
+        'bright': bright.toJson(),
         'spotify': spotify.toJson(),
         'shareInbox': shareInbox.toJson(),
         'screen': screen.toJson(),
