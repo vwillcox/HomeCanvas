@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
@@ -32,7 +33,9 @@ class HaEntity {
 
   /// The reading, in words, as Home Assistant's own cards would put it.
   String get display {
-    if (unavailable) return tr('widget.home_assistant.unavailable', 'Unavailable');
+    if (unavailable) {
+      return tr('widget.home_assistant.unavailable', 'Unavailable');
+    }
     final a = attributes;
     switch (domain) {
       case 'sensor':
@@ -49,16 +52,34 @@ class HaEntity {
       case 'binary_sensor':
         final on = state == 'on';
         return switch ('${a['device_class'] ?? ''}') {
-          'door' ||
-          'window' ||
-          'opening' ||
-          'garage_door' => on ? tr('widget.home_assistant.open', 'Open') : tr('widget.home_assistant.closed', 'Closed'),
-          'motion' || 'occupancy' || 'presence' => on ? tr('widget.home_assistant.detected', 'Detected') : tr('widget.home_assistant.clear', 'Clear'),
-          'moisture' => on ? tr('widget.home_assistant.wet', 'Wet') : tr('widget.home_assistant.dry', 'Dry'),
-          'battery' => on ? tr('widget.home_assistant.low', 'Low') : tr('widget.home_assistant.ok', 'OK'),
-          'connectivity' => on ? tr('widget.home_assistant.connected', 'Connected') : tr('widget.home_assistant.disconnected', 'Disconnected'),
-          'problem' => on ? tr('widget.home_assistant.problem', 'Problem') : tr('widget.home_assistant.ok', 'OK'),
-          _ => on ? tr('widget.home_assistant.on', 'On') : tr('widget.home_assistant.off', 'Off'),
+          'door' || 'window' || 'opening' || 'garage_door' =>
+            on
+                ? tr('widget.home_assistant.open', 'Open')
+                : tr('widget.home_assistant.closed', 'Closed'),
+          'motion' || 'occupancy' || 'presence' =>
+            on
+                ? tr('widget.home_assistant.detected', 'Detected')
+                : tr('widget.home_assistant.clear', 'Clear'),
+          'moisture' =>
+            on
+                ? tr('widget.home_assistant.wet', 'Wet')
+                : tr('widget.home_assistant.dry', 'Dry'),
+          'battery' =>
+            on
+                ? tr('widget.home_assistant.low', 'Low')
+                : tr('widget.home_assistant.ok', 'OK'),
+          'connectivity' =>
+            on
+                ? tr('widget.home_assistant.connected', 'Connected')
+                : tr('widget.home_assistant.disconnected', 'Disconnected'),
+          'problem' =>
+            on
+                ? tr('widget.home_assistant.problem', 'Problem')
+                : tr('widget.home_assistant.ok', 'OK'),
+          _ =>
+            on
+                ? tr('widget.home_assistant.on', 'On')
+                : tr('widget.home_assistant.off', 'Off'),
         };
       case 'person' || 'device_tracker':
         return state == 'home'
@@ -106,6 +127,16 @@ class HaEntity {
   }
 }
 
+/// One of Home Assistant's areas — a room, mostly — and what is in it.
+@immutable
+class HaArea {
+  const HaArea({required this.id, required this.name, required this.entities});
+
+  final String id;
+  final String name;
+  final List<String> entities;
+}
+
 /// Reads and switches Home Assistant entities for the dashboard, using the
 /// connection set up in Settings for the indoor temperature.
 class HomeAssistantService extends ChangeNotifier {
@@ -141,7 +172,10 @@ class HomeAssistantService extends ChangeNotifier {
   /// within a few seconds of another.
   Future<void> refresh() {
     if (!configured) {
-      _error = tr('widget.home_assistant.setUpHomeAssistantIn', 'Set up Home Assistant in Settings first');
+      _error = tr(
+        'widget.home_assistant.setUpHomeAssistantIn',
+        'Set up Home Assistant in Settings first',
+      );
       notifyListeners();
       return Future.value();
     }
@@ -163,10 +197,19 @@ class HomeAssistantService extends ChangeNotifier {
       _error = null;
     } on DioException catch (e) {
       _error = e.response?.statusCode == 401
-          ? tr('widget.home_assistant.homeAssistantDidNotAccept', 'Home Assistant did not accept the token')
-          : tr('widget.home_assistant.couldNotReachHomeAssistant', 'Could not reach Home Assistant');
+          ? tr(
+              'widget.home_assistant.homeAssistantDidNotAccept',
+              'Home Assistant did not accept the token',
+            )
+          : tr(
+              'widget.home_assistant.couldNotReachHomeAssistant',
+              'Could not reach Home Assistant',
+            );
     } catch (e) {
-      _error = tr('widget.home_assistant.unexpectedAnswerFromHomeAssistant', 'Unexpected answer from Home Assistant');
+      _error = tr(
+        'widget.home_assistant.unexpectedAnswerFromHomeAssistant',
+        'Unexpected answer from Home Assistant',
+      );
     }
     notifyListeners();
   }
@@ -191,7 +234,85 @@ class HomeAssistantService extends ChangeNotifier {
       _fetched = null; // the next refresh reads the real state
     } catch (_) {
       _states[e.id] = e;
-      _error = tr('widget.home_assistant.homeAssistantDidNotTake', 'Home Assistant did not take the change');
+      _error = tr(
+        'widget.home_assistant.homeAssistantDidNotTake',
+        'Home Assistant did not take the change',
+      );
+      notifyListeners();
+    }
+  }
+
+  /// Home Assistant's areas, each with the entities in it, as of the last
+  /// [refreshAreas]. Entities hidden in Home Assistant are left out, so
+  /// what it keeps off its own dashboards stays off this one too.
+  List<HaArea> get areas => _areas;
+  List<HaArea> _areas = const [];
+  DateTime? _areasFetched;
+
+  /// The areas are asked for with a template: the REST API has no other
+  /// way to them. Changed rarely, so asked at most every five minutes.
+  static const _areasTemplate =
+      '{% set ns = namespace(out=[]) %}'
+      '{% for a in areas() %}'
+      '{% set ns.out = ns.out + [{"id": a, "name": area_name(a), '
+      '"entities": area_entities(a) | reject("is_hidden_entity") | list}] %}'
+      '{% endfor %}'
+      '{{ ns.out | to_json }}';
+
+  Future<void> refreshAreas() async {
+    if (!configured) return;
+    if (_areasFetched != null &&
+        DateTime.now().difference(_areasFetched!) <
+            const Duration(minutes: 5)) {
+      return;
+    }
+    _areasFetched = DateTime.now();
+    try {
+      final r = await _dio.post(
+        '$_base/api/template',
+        data: {'template': _areasTemplate},
+        options: _auth,
+      );
+      final list = r.data is String ? jsonDecode(r.data as String) : r.data;
+      _areas = [
+        for (final a in (list as List? ?? const []))
+          if (a is Map)
+            HaArea(
+              id: '${a['id']}',
+              name: '${a['name']}',
+              entities: [
+                for (final e in (a['entities'] as List? ?? const [])) '$e',
+              ],
+            ),
+      ];
+      notifyListeners();
+    } catch (e) {
+      _areasFetched = null; // asked again on the next refresh
+      debugPrint('Home Assistant: areas: $e');
+    }
+  }
+
+  /// Calls [domain].[service] on [entityIds] — "light.turn_off" on a room's
+  /// lights — and reads the states again soon after.
+  Future<void> callService(
+    String domain,
+    String service,
+    List<String> entityIds,
+  ) async {
+    if (!configured || entityIds.isEmpty) return;
+    try {
+      await _dio.post(
+        '$_base/api/services/$domain/$service',
+        data: {'entity_id': entityIds},
+        options: _auth,
+      );
+      _fetched = null;
+      await refresh();
+    } catch (_) {
+      _error = tr(
+        'widget.home_assistant.homeAssistantDidNotTake',
+        'Home Assistant did not take the change',
+      );
       notifyListeners();
     }
   }
@@ -250,6 +371,13 @@ class HomeAssistantService extends ChangeNotifier {
     final list = _states.values.where((e) => !skip.contains(e.domain)).toList()
       ..sort((a, b) => a.id.compareTo(b.id));
     return {for (final e in list) e.id: '${e.name} (${e.id})'};
+  }
+
+  @visibleForTesting
+  void debugSetAreas(List<HaArea> areas) {
+    _areas = areas;
+    _areasFetched = DateTime.now();
+    notifyListeners();
   }
 
   @visibleForTesting

@@ -87,8 +87,7 @@ class LcarsBarNote extends InheritedWidget {
 
   static ValueNotifier<({String words, String brief})?>? maybeOf(
     BuildContext context,
-  ) =>
-      context.getInheritedWidgetOfExactType<LcarsBarNote>()?.note;
+  ) => context.getInheritedWidgetOfExactType<LcarsBarNote>()?.note;
 
   // The same notifier for as long as the panel lasts.
   @override
@@ -626,19 +625,26 @@ class _LcarsReadoutState extends State<LcarsReadout>
       child: Row(
         children: [
           if (name != null)
-            Text(
-              lcarsCaps(name),
-              maxLines: 1,
-              // Fitted to the bar, which a tile's font size does not grow.
-              textScaler: TextScaler.noScaling,
-              style: TextStyle(
-                color: lcarsInk.withValues(alpha: 0.65),
-                fontSize: size,
-                height: 1,
-                letterSpacing: size * 0.05,
+            // Shortened rather than pushing the figure off the end: a
+            // readout's width is set, and some names are long.
+            Flexible(
+              flex: 3,
+              child: Text(
+                lcarsCaps(name),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                // Fitted to the bar, which a tile's font size does not grow.
+                textScaler: TextScaler.noScaling,
+                style: TextStyle(
+                  color: lcarsInk.withValues(alpha: 0.65),
+                  fontSize: size,
+                  height: 1,
+                  letterSpacing: size * 0.05,
+                ),
               ),
             ),
           Expanded(
+            flex: 2,
             child: Text(
               lcarsCaps(value),
               maxLines: 1,

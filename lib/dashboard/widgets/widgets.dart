@@ -10,6 +10,7 @@ import 'clock_widget.dart';
 import 'countdowns_widget.dart';
 import 'history_widget.dart';
 import 'github_widget.dart';
+import 'ha_bridge_widget.dart';
 import 'home_assistant_widget.dart';
 import 'custom/custom_registry.dart';
 import 'homey_widgets.dart';
@@ -97,6 +98,7 @@ void registerBuiltInWidgets() {
     lightsWidgetType,
     rainWidgetType,
     homeAssistantWidgetType,
+    haBridgeWidgetType,
     homeyWidgetType,
     homeyRoomWidgetType,
     homeyLightsWidgetType,
