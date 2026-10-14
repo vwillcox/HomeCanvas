@@ -140,7 +140,10 @@ void main() {
       final action = _panel().resolve('hay campus next page');
       expect(action, isA<VoiceTurnPage>());
       // The whole of it first: "back a page" is not "page".
-      expect((_panel().resolve('hey canvas go back a page') as VoiceTurnPage).by, -1);
+      expect(
+        (_panel().resolve('hey canvas go back a page') as VoiceTurnPage).by,
+        -1,
+      );
     });
 
     test('nothing, for something that is not there', () {
@@ -178,14 +181,19 @@ void main() {
       );
       final pages = [const DashboardPage(name: 'Main'), evening];
       expect(
-        _page('show evening',
-            on: _panel(now: DateTime(2026, 10, 13, 20), pages: pages)),
+        _page(
+          'show evening',
+          on: _panel(now: DateTime(2026, 10, 13, 20), pages: pages),
+        ),
         1,
       );
       final morning = _panel(now: DateTime(2026, 10, 13, 9), pages: pages);
       expect(morning.resolve('show evening'), isNull);
-      expect(morning.resolve('show videos'), isNull,
-          reason: 'its widgets go with it');
+      expect(
+        morning.resolve('show videos'),
+        isNull,
+        reason: 'its widgets go with it',
+      );
     });
   });
 
@@ -233,16 +241,35 @@ void main() {
 
     test('the music: play, pause, skip, and how loud', () {
       VoiceMusicAsk ask(String said) => heard<VoiceMusic>(said).ask;
-      for (final said in ['play', 'play music', 'play spotify', 'resume the music']) {
+      for (final said in [
+        'play',
+        'play music',
+        'play spotify',
+        'resume the music',
+      ]) {
         expect(ask(said), VoiceMusicAsk.play, reason: said);
       }
-      for (final said in ['pause', 'pause the music', 'stop', 'stop the music']) {
+      for (final said in [
+        'pause',
+        'pause the music',
+        'stop',
+        'stop the music',
+      ]) {
         expect(ask(said), VoiceMusicAsk.pause, reason: said);
       }
-      for (final said in ['skip', 'skip this song', 'next track', 'next song']) {
+      for (final said in [
+        'skip',
+        'skip this song',
+        'next track',
+        'next song',
+      ]) {
         expect(ask(said), VoiceMusicAsk.next, reason: said);
       }
-      for (final said in ['previous track', 'go to the last song', 'skip back']) {
+      for (final said in [
+        'previous track',
+        'go to the last song',
+        'skip back',
+      ]) {
         expect(ask(said), VoiceMusicAsk.previous, reason: said);
       }
       expect(ask('volume up'), VoiceMusicAsk.louder);
@@ -262,7 +289,11 @@ void main() {
     });
 
     test('hold the pages and let them go', () {
-      for (final said in ['pause pages', 'stay on this page', 'hold this page']) {
+      for (final said in [
+        'pause pages',
+        'stay on this page',
+        'hold this page',
+      ]) {
         expect(heard<VoicePausePages>(said).paused, isTrue);
       }
       for (final said in ['resume', 'carry on', 'continue']) {
@@ -311,13 +342,56 @@ void main() {
       VoiceCommands.afterWake('Hey Canvas, turn on the lamp.'),
       'turn on the lamp.',
     );
-    expect(VoiceCommands.afterWake('hey congress what time is it'), 'what time is it');
-    expect(VoiceCommands.afterWake('hay canvass turn off the fan'), 'turn off the fan');
-    expect(VoiceCommands.afterWake('a canvas turn off the fan'), 'turn off the fan');
+    expect(
+      VoiceCommands.afterWake('hey congress what time is it'),
+      'what time is it',
+    );
+    expect(
+      VoiceCommands.afterWake('hay canvass turn off the fan'),
+      'turn off the fan',
+    );
+    expect(
+      VoiceCommands.afterWake('a canvas turn off the fan'),
+      'turn off the fan',
+    );
     expect(VoiceCommands.afterWake('hey convas lights off'), 'lights off');
     // Said after a pause, without them: all of it is the request.
-    expect(VoiceCommands.afterWake("what's the temperature"), "what's the temperature");
+    expect(
+      VoiceCommands.afterWake("what's the temperature"),
+      "what's the temperature",
+    );
     expect(VoiceCommands.afterWake('hi there'), 'hi there');
     expect(VoiceCommands.afterWake('Hey, Canvas, what’s on?'), 'what’s on?');
+  });
+
+  test('questions and switching are left for Home Assistant, not pages', () {
+    for (final said in [
+      "what's the weather?",
+      'hey canvas what is the weather like',
+      'how are the stocks doing',
+      'turn lounge one off',
+      'hey canvas, lounge one off',
+      'turn the lamp on',
+      'switch off the videos',
+      'add milk to the shopping list',
+    ]) {
+      expect(_panel().resolve(said), isNull, reason: said);
+    }
+    // What the panel does itself still works, said however.
+    expect(_panel().resolve('show the weather'), isNotNull);
+    expect(_panel().resolve('hey canvas stocks'), isA<VoiceShowPage>());
+    expect(_panel().resolve('turn to page two'), isA<VoiceShowPage>());
+    expect(_panel().resolve('next page'), isA<VoiceTurnPage>());
+    expect(_panel().resolve('turn it down'), isA<VoiceMusic>());
+    expect(_panel().resolve('stop the music'), isA<VoiceMusic>());
+  });
+
+  test('"turn", misheard at the start, is put right for Home Assistant', () {
+    expect(
+      VoiceCommands.forAssist('Hey Canvas, term lounge one off.'),
+      'turn lounge one off.',
+    );
+    expect(VoiceCommands.forAssist('turned on the lamp'), 'turn on the lamp');
+    expect(VoiceCommands.forAssist('tomorrow’s weather'), 'tomorrow’s weather');
   });
 }

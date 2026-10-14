@@ -34,7 +34,16 @@ class VoiceCamera extends VoiceAction {
 }
 
 /// What can be asked of whatever is playing: Spotify, or a phone's music.
-enum VoiceMusicAsk { play, pause, next, previous, louder, quieter, mute, unmute }
+enum VoiceMusicAsk {
+  play,
+  pause,
+  next,
+  previous,
+  louder,
+  quieter,
+  mute,
+  unmute,
+}
 
 class VoiceMusic extends VoiceAction {
   const VoiceMusic(this.ask);
@@ -354,14 +363,53 @@ class VoiceCommands {
     // The directions are enough: "B, A" is two letters, and a recogniser
     // makes "be a", "bee hay" or nothing of them.
     if (said.join(' ').contains(_konami)) return const VoiceKonami();
+    final pages = !_forElsewhere(words(afterWake(heard)));
     for (var from = 0; from < said.length; from++) {
-      final action = _resolve(said.sublist(from));
+      final action = _resolve(said.sublist(from), pages: pages);
       if (action != null) return action;
     }
     return null;
   }
 
-  VoiceAction? _resolve(List<String> said) {
+  /// Words that start a question: "what's the weather" is asked, not a
+  /// request for the page the weather is on.
+  static const _questions = {
+    'what', 'whats', 'how', 'hows', 'is', 'are', 'who', 'whos', 'where', //
+    'when', 'why', 'will', 'does', 'do', 'did', 'tell',
+  };
+
+  /// Words that switch something: "lounge one off", "dim the lamp".
+  static const _switching = {
+    'off', 'set', 'dim', 'brighten', 'lock', 'unlock', 'add', //
+  };
+
+  /// Whether [said], without the wake words, is a question or a switching
+  /// of something — for Home Assistant, should the panel have no command
+  /// of its own by those words. Such a thing is never taken for a page,
+  /// which any word of it might otherwise name: "what's the weather" is
+  /// not the weather widget's page.
+  static bool _forElsewhere(List<String> said) {
+    if (said.isEmpty) return false;
+    if (_questions.contains(said.first)) return true;
+    if (said.any(_switching.contains)) return true;
+    // "Turn the lamp on", "switch on the fan" — but not "switch to the
+    // stocks" or "turn to page three", which are the panel's.
+    return (said.first == 'turn' || said.first == 'switch') &&
+        (said.last == 'on' || (said.length > 1 && said[1] == 'on'));
+  }
+
+  /// [heard] as Home Assistant's Assist should have it: without the wake
+  /// words, and with what "turn" is most often misheard as at the start
+  /// put right — "term lounge one off".
+  static String forAssist(String heard) {
+    final request = afterWake(heard);
+    return request.replaceFirst(
+      RegExp(r'^(term|tern|turned|tum|tom)\b', caseSensitive: false),
+      'turn',
+    );
+  }
+
+  VoiceAction? _resolve(List<String> said, {bool pages = true}) {
     // "Hey canvas" itself, heard as itself.
     while (said.isNotEmpty && _wake.contains(said.first)) {
       said = said.sublist(1);
@@ -379,6 +427,7 @@ class VoiceCommands {
         _fixed[asked.where((w) => w != 'page' && w != 'pages').join(' ')];
     if (fixed != null) return fixed;
 
+    if (!pages) return null;
     final page = _pageFor(asked.where((w) => w != 'page' && w != 'pages'));
     return page == null ? null : VoiceShowPage(page);
   }
@@ -435,7 +484,8 @@ class VoiceCommands {
     var bestScore = 0;
     for (final (page, name) in _answersTo()) {
       final score = _score(want, name.map(_stem).toList());
-      if (score > bestScore || (score == bestScore && score > 0 && page < best!)) {
+      if (score > bestScore ||
+          (score == bestScore && score > 0 && page < best!)) {
         best = page;
         bestScore = score;
       }

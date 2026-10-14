@@ -410,7 +410,7 @@ void main() async {
   // answer is shown, and said at the speech volume unless Do Not Disturb
   // is on.
   Future<String?> askHomeAssistant(String heard) async {
-    final answer = await homeAssistant.converse(VoiceCommands.afterWake(heard));
+    final answer = await homeAssistant.converse(VoiceCommands.forAssist(heard));
     if (answer != null && !inbox().dndMuted) {
       unawaited(speech.speak(answer, volume: inbox().speechOut));
     }
