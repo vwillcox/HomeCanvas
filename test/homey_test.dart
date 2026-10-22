@@ -933,7 +933,15 @@ void main() {
       await tester.runAsync(() async {
         // The bar's filled part is found by its box, which is not what is hit.
         await tester.tap(what, warnIfMissed: false);
-        await _settle();
+        // Until the Homey has heard nothing new for a while: dimming is two
+        // requests in turn, and a fixed wait missed the second when the
+        // machine running the tests was busy.
+        var heard = -1;
+        final until = DateTime.now().add(const Duration(seconds: 2));
+        while (heard != http.asked.length && DateTime.now().isBefore(until)) {
+          heard = http.asked.length;
+          await _settle();
+        }
       });
       await tester.pump(const Duration(milliseconds: 250));
     }
