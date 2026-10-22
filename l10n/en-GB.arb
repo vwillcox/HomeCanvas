@@ -1572,6 +1572,7 @@
   "widget.planes.unreachable": "Could not reach adsb.lol",
   "widget.planes.w": "W",
   "widget.railcam.description": "Lineside cameras from railcam.uk: pick any of its 300 and touch one to watch it live on the panel — or have them playing in the tile, small and silent. Needs your own railcam.uk account — supporters’ cameras, a supporter’s.",
+  "widget.railcam.down": "railcam.uk is not answering just now. The cameras will come back by themselves when it does.",
   "widget.railcam.name": "Railcam",
   "widget.railcam.needsAccount": "Enter your railcam.uk username and password in this widget’s settings in the editor.",
   "widget.railcam.noAccess": "Railcam would not show this camera to your account. Some are for supporters only.",

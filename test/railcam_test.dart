@@ -57,6 +57,9 @@ class _Site implements HttpClientAdapter {
   final List<String> asked = [];
   var signIns = 0;
 
+  /// Not answering at all, as when railcam.uk is down.
+  var down = false;
+
   /// As PHP does: a request without a session is handed a new one, and it
   /// is the session the form was posted from that is signed in.
   var _sessions = 0;
@@ -70,6 +73,12 @@ class _Site implements HttpClientAdapter {
   ) async {
     final path = options.uri.path;
     asked.add('${options.method} $path');
+    if (down) {
+      throw DioException.connectionError(
+        requestOptions: options,
+        reason: 'Connection refused',
+      );
+    }
     final had = RegExp(
       r'PHPSESSID=(\w+)',
     ).firstMatch('${options.headers['Cookie'] ?? ''}')?[1];
@@ -349,6 +358,52 @@ void main() {
     await railcam.ensure();
     expect(site.signIns, 2);
     expect(railcam.error, isNull);
+  });
+
+  test('the site down: said so, and over when it answers again', () async {
+    final site = _Site()..down = true;
+    final railcam = _service(site)..useAccount('me', 'right');
+    addTearDown(railcam.dispose);
+
+    await railcam.ensure();
+    expect(railcam.unreachable, isTrue);
+    expect(railcam.error, contains('Could not reach'));
+    await expectLater(
+      railcam.find(
+        const RailcamLink('RCCrewe1'),
+        maxHeight: 1080,
+        youtube: _noYouTube,
+      ),
+      throwsA(isA<VideoException>()),
+    );
+
+    site.down = false;
+    await railcam.find(
+      const RailcamLink('RCCrewe1'),
+      maxHeight: 1080,
+      youtube: _noYouTube,
+    );
+    expect(railcam.unreachable, isFalse);
+    expect(railcam.error, isNull);
+  });
+
+  test('a server in trouble is unreachable; a page not found is not', () {
+    DioException answered(int status) => DioException.badResponse(
+      statusCode: status,
+      requestOptions: RequestOptions(),
+      response: Response(requestOptions: RequestOptions(), statusCode: status),
+    );
+    expect(RailcamService.isUnreachable(answered(503)), isTrue);
+    expect(RailcamService.isUnreachable(answered(404)), isFalse);
+    expect(
+      RailcamService.isUnreachable(
+        DioException.connectionTimeout(
+          timeout: const Duration(seconds: 10),
+          requestOptions: RequestOptions(),
+        ),
+      ),
+      isTrue,
+    );
   });
 
   test('no account: asked for one rather than refused', () async {

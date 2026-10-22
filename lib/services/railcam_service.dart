@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show IOException;
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
@@ -125,6 +126,10 @@ class RailcamService extends ChangeNotifier {
   String? _error;
   bool _disposed = false;
 
+  /// The site did not answer at all — down, or the way to it is — rather
+  /// than answering no. Cleared by the next answer of any kind.
+  bool _unreachable = false;
+
   @override
   void dispose() {
     _disposed = true;
@@ -140,6 +145,10 @@ class RailcamService extends ChangeNotifier {
   /// site's map until the account is signed in.
   List<RailCam>? get cams => _cams;
   String? get error => _error;
+
+  /// The site is not answering just now. The tiles wait for it rather than
+  /// each asking on its own; [ensure] keeps asking, every couple of minutes.
+  bool get unreachable => _unreachable;
   bool get hasAccount => _username.isNotEmpty && _password.isNotEmpty;
 
   RailCam? cam(String id) {
@@ -182,7 +191,9 @@ class RailcamService extends ChangeNotifier {
     if (_busy ||
         (last != null &&
             DateTime.now().difference(last) <
-                (_full
+                (_unreachable
+                    ? const Duration(minutes: 2)
+                    : _full
                     ? const Duration(hours: 24)
                     : const Duration(minutes: 15)))) {
       return;
@@ -218,7 +229,7 @@ class RailcamService extends ChangeNotifier {
       _error = error;
     } catch (e) {
       debugPrint('Railcam: $e');
-      _error = tr('widget.railcam.unreachable', 'Could not reach railcam.uk');
+      _error = _unreachableText;
     } finally {
       _fetched = DateTime.now();
       _busy = false;
@@ -252,9 +263,7 @@ class RailcamService extends ChangeNotifier {
         html = await _asMember(link.url);
       } on DioException catch (e) {
         debugPrint('Railcam: ${link.id}: $e');
-        throw VideoException(
-          tr('widget.railcam.unreachable', 'Could not reach railcam.uk'),
-        );
+        throw VideoException(_unreachableText);
       }
       page = parsePlayer(html ?? '');
       if (html == null || page.noAccess) {
@@ -399,7 +408,7 @@ class RailcamService extends ChangeNotifier {
   /// The page at [path], or null when the site answers with a redirect.
   Future<String?> _get(String path) async {
     final sent = Map.of(_cookies);
-    final r = await _dio.get<List<int>>(path, options: _withCookies());
+    final r = await _reach(_dio.get<List<int>>(path, options: _withCookies()));
     _keepCookies(r, sent);
     if ((r.statusCode ?? 0) >= 300) return null;
     return utf8.decode(r.data ?? const [], allowMalformed: true);
@@ -426,6 +435,41 @@ class RailcamService extends ChangeNotifier {
     }
   }
 
+  /// [request], noting whether the site answered at all.
+  Future<Response<T>> _reach<T>(Future<Response<T>> request) async {
+    try {
+      final r = await request;
+      _setUnreachable(false);
+      return r;
+    } on DioException catch (e) {
+      _setUnreachable(isUnreachable(e));
+      rethrow;
+    }
+  }
+
+  void _setUnreachable(bool value) {
+    if (value == _unreachable) return;
+    _unreachable = value;
+    if (!value && _error == _unreachableText) _error = null;
+    _changed();
+  }
+
+  /// No answer, or one from a server in trouble: a 5xx is the site down
+  /// behind its front door, not a no to this account.
+  @visibleForTesting
+  static bool isUnreachable(DioException e) => switch (e.type) {
+    DioExceptionType.connectionError ||
+    DioExceptionType.connectionTimeout ||
+    DioExceptionType.sendTimeout ||
+    DioExceptionType.receiveTimeout => true,
+    DioExceptionType.badResponse => (e.response?.statusCode ?? 0) >= 500,
+    DioExceptionType.unknown => e.error is IOException,
+    _ => false,
+  };
+
+  String get _unreachableText =>
+      tr('widget.railcam.unreachable', 'Could not reach railcam.uk');
+
   /// Signs in with the site's own form. One attempt at a time, however many
   /// pages are waiting on it.
   Future<bool> _signIn() {
@@ -435,16 +479,18 @@ class RailcamService extends ChangeNotifier {
 
   Future<bool> _postSignIn() async {
     final sent = Map.of(_cookies);
-    final r = await _dio.post<List<int>>(
-      '/account/login.php',
-      data: {
-        'username': _username,
-        'password': _password,
-        'loginformused': '1',
-        'forgotpassword': '',
-      },
-      options: _withCookies().copyWith(
-        contentType: Headers.formUrlEncodedContentType,
+    final r = await _reach(
+      _dio.post<List<int>>(
+        '/account/login.php',
+        data: {
+          'username': _username,
+          'password': _password,
+          'loginformused': '1',
+          'forgotpassword': '',
+        },
+        options: _withCookies().copyWith(
+          contentType: Headers.formUrlEncodedContentType,
+        ),
       ),
     );
     _keepCookies(r, sent);

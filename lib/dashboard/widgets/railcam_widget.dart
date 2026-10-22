@@ -77,8 +77,9 @@ class _RailcamWidgetState extends State<RailcamWidget>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _sync());
-    // The service fetches its list once a day; this only gives it the chance.
-    everyWhileShown(const Duration(hours: 1), _sync);
+    // The service fetches its list once a day, or every couple of minutes
+    // while the site is not answering; this only gives it the chance.
+    everyWhileShown(const Duration(minutes: 1), _sync);
   }
 
   @override
@@ -135,6 +136,19 @@ class _RailcamWidgetState extends State<RailcamWidget>
         tr(
           'widget.railcam.pick',
           'Pick cameras in this widget’s settings in the editor.',
+        ),
+        theme: t,
+      );
+    }
+    // The pictures and streams are all the site's: a grid of empty cells,
+    // each trying on its own, says less than this does. They come back by
+    // themselves when it answers again.
+    if (service.unreachable) {
+      return TileMessage(
+        tr(
+          'widget.railcam.down',
+          'railcam.uk is not answering just now. The cameras will come back '
+              'by themselves when it does.',
         ),
         theme: t,
       );
