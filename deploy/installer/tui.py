@@ -13,6 +13,7 @@ in the Pi's own terminal, over SSH, and in a bare console.
 import curses
 import locale
 import os
+import sys
 import textwrap
 import time
 
@@ -30,7 +31,24 @@ def run(main):
     ends."""
     locale.setlocale(locale.LC_ALL, "")
     os.environ.setdefault("ESCDELAY", "25")
+    use_known_terminal()
     return curses.wrapper(lambda scr: main(UI(scr)))
+
+
+def use_known_terminal():
+    """Falls back to a terminal this machine knows when it has no entry for
+    the one in TERM — kitty, ghostty and wezterm over SSH set their own, which
+    a Pi has never heard of."""
+    fd = sys.__stdout__.fileno()
+    for term in (os.environ.get("TERM"), "xterm-256color", "xterm", "vt100"):
+        if not term:
+            continue
+        try:
+            curses.setupterm(term=term, fd=fd)
+        except curses.error:
+            continue
+        os.environ["TERM"] = term
+        return
 
 
 def nearest_256(r, g, b):
