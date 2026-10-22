@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.0.3.1
+
+A small fix to the installer.
+
+### Fixed
+
+- **The installer starts over SSH from kitty, ghostty and wezterm.** These
+  terminals name themselves in a way the Pi doesn't recognise, and the
+  installer stopped with "setupterm: could not find terminal". It now falls
+  back to a terminal the Pi knows.
+
+### Updating
+
+Run the installer again:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/vwillcox/HomeCanvas/main/install.sh | bash
+```
+
 ## 1.0.3
 
 Voice control: say "hey canvas", or a wake word of your own, and the panel
