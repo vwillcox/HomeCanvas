@@ -13,6 +13,7 @@ import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'tile_bits.dart';
 import '../../l10n/l10n.dart';
+import '../../services/http_client.dart';
 
 /// One thing with an update waiting.
 @immutable
@@ -66,12 +67,8 @@ class _UpdatesWidgetState extends State<UpdatesWidget>
   /// kept for six, and shared by every tile.
   static (String, DateTime)? _latestImmich;
   static String? _runningImmich;
-  static final Dio _github = Dio(
-    BaseOptions(
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 15),
-      headers: {'Accept': 'application/vnd.github+json'},
-    ),
+  static final Dio _github = httpClient(
+    headers: {'Accept': 'application/vnd.github+json'},
   );
 
   Timer? _timer;

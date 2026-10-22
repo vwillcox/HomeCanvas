@@ -10,6 +10,7 @@ import 'config_service.dart';
 import 'retry_schedule.dart';
 import 'throughput_history.dart';
 import 'unifi_models.dart';
+import 'http_client.dart';
 
 /// Reads a UniFi console — a Dream Router, Dream Machine or Cloud Key.
 ///
@@ -105,15 +106,13 @@ class UnifiService extends ChangeNotifier {
   Dio _client() {
     final existing = _dio;
     if (existing != null) return existing;
-    final dio = Dio(
-      BaseOptions(
-        connectTimeout: const Duration(seconds: 8),
-        receiveTimeout: const Duration(seconds: 12),
-        headers: {'X-API-KEY': settings.apiKey, 'Accept': 'application/json'},
-        // 4xx should be readable rather than thrown: a 401 means the key is
-        // wrong, which is worth saying plainly instead of "request failed".
-        validateStatus: (code) => code != null && code < 500,
-      ),
+    final dio = httpClient(
+      connect: const Duration(seconds: 8),
+      receive: const Duration(seconds: 12),
+      headers: {'X-API-KEY': settings.apiKey, 'Accept': 'application/json'},
+      // 4xx should be readable rather than thrown: a 401 means the key is
+      // wrong, which is worth saying plainly instead of "request failed".
+      validateStatus: (code) => code != null && code < 500,
     );
     if (settings.allowSelfSignedCert) {
       // A UniFi console presents a certificate for its .id.ui.direct name, not

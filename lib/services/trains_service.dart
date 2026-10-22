@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../l10n/l10n.dart';
 import '../map_text.dart';
+import 'http_client.dart';
 
 /// One departure from the station, as a station board shows it.
 @immutable
@@ -137,11 +138,9 @@ class TrainsClient {
   TrainsClient({Dio? dio, this.base = 'https://data.rtt.io'})
     : _dio =
           dio ??
-          Dio(
-            BaseOptions(
-              connectTimeout: const Duration(seconds: 8),
-              receiveTimeout: const Duration(seconds: 12),
-            ),
+          httpClient(
+            connect: const Duration(seconds: 8),
+            receive: const Duration(seconds: 12),
           );
 
   final Dio _dio;

@@ -11,6 +11,7 @@ import '../../widgets/pause_when_hidden.dart';
 import '../../widgets/shown_timers.dart';
 import '../../l10n/l10n.dart';
 import '../../map_text.dart';
+import '../../services/http_client.dart';
 
 /// Something that happened on this date.
 @immutable
@@ -55,13 +56,9 @@ class _HistoryWidgetState extends State<HistoryWidget>
     with PauseWhenHidden, ShownTimers {
   /// A day's events, fetched once and shared by every tile.
   static final Map<String, List<HistoryEvent>> _byDay = {};
-  static final Dio _dio = Dio(
-    BaseOptions(
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 15),
-      // Wikimedia asks every client to say who it is.
-      headers: {'User-Agent': 'HomeCanvas/1.0 (home dashboard)'},
-    ),
+  static final Dio _dio = httpClient(
+    // Wikimedia asks every client to say who it is.
+    headers: const {'User-Agent': homeCanvasAgent},
   );
 
   List<HistoryEvent> _events = const [];

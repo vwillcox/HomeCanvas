@@ -10,6 +10,7 @@ import 'plain_text.dart';
 
 import 'retry_schedule.dart';
 import '../l10n/l10n.dart';
+import 'http_client.dart';
 
 /// One entry from an RSS or Atom feed.
 class FeedItem {
@@ -139,13 +140,11 @@ class FeedService extends ChangeNotifier {
 
   final Duration _refreshInterval;
 
-  final Dio _dio = Dio(
-    BaseOptions(
-      connectTimeout: const Duration(seconds: 8),
-      receiveTimeout: const Duration(seconds: 12),
-      responseType: ResponseType.plain,
-      headers: const {'User-Agent': 'HomeCanvas/1.0'},
-    ),
+  final Dio _dio = httpClient(
+    connect: const Duration(seconds: 8),
+    receive: const Duration(seconds: 12),
+    responseType: ResponseType.plain,
+    headers: const {'User-Agent': homeCanvasAgent},
   );
 
   final Map<String, _Cached<FeedItem>> _feeds = {};

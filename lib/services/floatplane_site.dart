@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'cookie_file.dart';
 import 'video_link.dart';
 import 'video_site.dart';
+import 'http_client.dart';
 
 /// Floatplane: the latest from the creators the account subscribes to.
 ///
@@ -38,17 +39,14 @@ class FloatplaneSite extends VideoSite {
   @override
   set storedSignedIn(bool value) => config.config.floatplane.signedIn = value;
 
-  final Dio _dio = Dio(
-    BaseOptions(
-      baseUrl: 'https://www.floatplane.com',
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 20),
-      headers: {
-        // Floatplane asks clients of its API to say who they are.
-        'User-Agent': 'HomeCanvas (+https://github.com/vwillcox/HomeCanvas)',
-        'Accept': 'application/json',
-      },
-    ),
+  final Dio _dio = httpClient(
+    baseUrl: 'https://www.floatplane.com',
+    receive: const Duration(seconds: 20),
+    // Floatplane asks clients of its API to say who they are.
+    headers: {
+      'User-Agent': 'HomeCanvas (+https://github.com/vwillcox/HomeCanvas)',
+      'Accept': 'application/json',
+    },
   );
 
   @override

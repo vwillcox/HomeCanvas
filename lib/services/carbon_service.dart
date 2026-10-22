@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import 'config_service.dart';
+import 'http_client.dart';
 
 /// Half an hour of the grid's forecast carbon intensity.
 @immutable
@@ -109,12 +110,7 @@ class CarbonService extends ChangeNotifier {
   CarbonService(this._config);
 
   final ConfigService _config;
-  final Dio _dio = Dio(
-    BaseOptions(
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 15),
-    ),
-  );
+  final Dio _dio = httpClient();
 
   static const refreshEvery = Duration(minutes: 30);
 

@@ -15,6 +15,7 @@ import 'now_playing_service.dart' show NowPlaying;
 import 'playback_source.dart';
 import 'screen_state.dart';
 import '../l10n/l10n.dart';
+import 'http_client.dart';
 
 /// A Spotify Connect device the account can play on.
 class SpotifyDevice {
@@ -119,11 +120,9 @@ class SpotifyService extends ChangeNotifier implements PlaybackSource {
   }
 
   final ConfigService _configService;
-  final Dio _dio = Dio(
-    BaseOptions(
-      connectTimeout: const Duration(seconds: 6),
-      receiveTimeout: const Duration(seconds: 8),
-    ),
+  final Dio _dio = httpClient(
+    connect: const Duration(seconds: 6),
+    receive: const Duration(seconds: 8),
   );
 
   SpotifyService(this._configService);

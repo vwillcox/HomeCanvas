@@ -8,6 +8,7 @@ import 'config_service.dart';
 import 'retry_schedule.dart';
 import '../l10n/l10n.dart';
 import '../l10n/dates.dart';
+import 'http_client.dart';
 
 /// One day in the 7-day forecast.
 class DailyForecast {
@@ -229,12 +230,9 @@ class WeatherService extends ChangeNotifier {
   }
 
   /// One client, so its connections are reused between fetches.
-  final Dio _client = Dio(
-    BaseOptions(
-      connectTimeout: const Duration(seconds: 12),
-      receiveTimeout: const Duration(seconds: 15),
-      validateStatus: (s) => s != null && s < 500,
-    ),
+  final Dio _client = httpClient(
+    connect: const Duration(seconds: 12),
+    validateStatus: (s) => s != null && s < 500,
   );
 
   Dio _dio() => _client;

@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import '../l10n/l10n.dart';
+import 'http_client.dart';
 
 /// One line's state, as TfL reports it.
 @immutable
@@ -117,11 +118,9 @@ class TflService extends ChangeNotifier {
   TflService({Dio? dio})
     : _dio =
           dio ??
-          Dio(
-            BaseOptions(
-              connectTimeout: const Duration(seconds: 8),
-              receiveTimeout: const Duration(seconds: 10),
-            ),
+          httpClient(
+            connect: const Duration(seconds: 8),
+            receive: const Duration(seconds: 10),
           );
 
   final Dio _dio;

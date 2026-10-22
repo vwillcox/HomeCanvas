@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import '../l10n/l10n.dart';
 import '../map_text.dart';
+import 'http_client.dart';
 
 /// One aircraft in the sky near home.
 @immutable
@@ -81,17 +82,7 @@ class FlightRoute {
 /// a day: routes don't change, and adsbdb is run by one person.
 class PlanesService extends ChangeNotifier {
   PlanesService({required this.home, Dio? dio})
-    : _dio =
-          dio ??
-          Dio(
-            BaseOptions(
-              connectTimeout: const Duration(seconds: 10),
-              receiveTimeout: const Duration(seconds: 15),
-              headers: const {
-                'User-Agent': 'HomeCanvas/1.0 (home dashboard panel)',
-              },
-            ),
-          );
+    : _dio = dio ?? httpClient(headers: const {'User-Agent': homeCanvasAgent});
 
   final Dio _dio;
 

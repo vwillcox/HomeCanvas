@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'http_client.dart';
 
 /// What a GitHub tile wants fetched besides the repository itself — each is
 /// a request of its own against a 60-an-hour allowance without a token, so
@@ -159,15 +160,13 @@ GithubFailure classify(DioException e) {
 class GithubApi {
   GithubApi({Dio? dio}) : _dio = dio ?? _shared;
 
-  static final Dio _shared = Dio(
-    BaseOptions(
-      connectTimeout: const Duration(seconds: 8),
-      receiveTimeout: const Duration(seconds: 10),
-      headers: const {
-        'Accept': 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28',
-      },
-    ),
+  static final Dio _shared = httpClient(
+    connect: const Duration(seconds: 8),
+    receive: const Duration(seconds: 10),
+    headers: const {
+      'Accept': 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
   );
 
   final Dio _dio;

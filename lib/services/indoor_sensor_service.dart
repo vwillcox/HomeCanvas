@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import '../config/app_config.dart';
+import 'http_client.dart';
 
 /// One recorded sample from the indoor sensor.
 class IndoorReading {
@@ -41,12 +42,7 @@ class IndoorSensorService extends ChangeNotifier {
   /// and a 24-hour chart doesn't visibly change minute to minute.
   static const Duration _historyInterval = Duration(minutes: 15);
 
-  final Dio _dio = Dio(
-    BaseOptions(
-      connectTimeout: const Duration(seconds: 5),
-      receiveTimeout: const Duration(seconds: 15),
-    ),
-  );
+  final Dio _dio = httpClient(connect: const Duration(seconds: 5));
 
   HomeAssistantSettings _settings = HomeAssistantSettings();
   Timer? _pollTimer;

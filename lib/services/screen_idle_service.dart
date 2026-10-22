@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import '../config/app_config.dart' show ScreenSettings;
 import 'config_service.dart';
 import 'playback_source.dart';
+import 'http_client.dart';
 
 /// Switches the panel off by itself once there's nothing worth showing —
 /// no slideshow, nothing playing, and nobody touching it — and brings it
@@ -33,11 +34,9 @@ class ScreenIdleService {
   /// Both playback sources; either one playing counts as "in use".
   final List<PlaybackSource> _sources;
 
-  final Dio _dio = Dio(
-    BaseOptions(
-      connectTimeout: const Duration(seconds: 3),
-      receiveTimeout: const Duration(seconds: 3),
-    ),
+  final Dio _dio = httpClient(
+    connect: const Duration(seconds: 3),
+    receive: const Duration(seconds: 3),
   );
 
   Timer? _timer;

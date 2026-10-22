@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import 'config_service.dart';
+import 'http_client.dart';
 
 /// The panel's backlight, set from Settings or the editor's web page and
 /// put back whenever the kiosk starts.
@@ -27,11 +28,9 @@ class BrightnessService extends ChangeNotifier {
   }) : _save = save ?? _config.save,
        _dio =
            dio ??
-           Dio(
-             BaseOptions(
-               connectTimeout: const Duration(seconds: 2),
-               receiveTimeout: const Duration(seconds: 2),
-             ),
+           httpClient(
+             connect: const Duration(seconds: 2),
+             receive: const Duration(seconds: 2),
            );
 
   /// Below this the panel is on but unreadable — as good as off, and "off"

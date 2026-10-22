@@ -12,6 +12,7 @@ import 'fit_canvas.dart';
 import 'tile_bits.dart';
 import '../../l10n/l10n.dart';
 import '../../map_text.dart';
+import '../../services/http_client.dart';
 
 /// Something being counted down to.
 @immutable
@@ -69,12 +70,7 @@ class Countdown {
 class BankHolidays {
   BankHolidays._();
 
-  static final Dio _dio = Dio(
-    BaseOptions(
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 15),
-    ),
-  );
+  static final Dio _dio = httpClient();
   static Map<String, List<Countdown>>? _all;
   static DateTime? _fetched;
   static Future<void>? _loading;

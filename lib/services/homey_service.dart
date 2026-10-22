@@ -8,6 +8,7 @@ import '../l10n/l10n.dart';
 import 'config_service.dart';
 import 'local_network.dart';
 import 'socket_io.dart';
+import 'http_client.dart';
 
 /// One thing a Homey device measures or can be set to: `onoff`, `dim`,
 /// `measure_temperature`.
@@ -315,14 +316,12 @@ class HomeyService extends ChangeNotifier {
   }) : _lookup = lookup ?? InternetAddress.lookup,
        _dio =
            dio ??
-           Dio(
-             BaseOptions(
-               connectTimeout: const Duration(seconds: 5),
-               receiveTimeout: const Duration(seconds: 10),
-               // Wherever a Homey might send the panel on to, the key does
-               // not follow.
-               followRedirects: false,
-             ),
+           httpClient(
+             connect: const Duration(seconds: 5),
+             receive: const Duration(seconds: 10),
+             // Wherever a Homey might send the panel on to, the key does
+             // not follow.
+             followRedirects: false,
            ),
        _open = socket;
 

@@ -10,6 +10,7 @@ import 'video_link.dart';
 import 'video_stream.dart';
 import 'youtube_link.dart';
 import 'yt_dlp.dart' show VideoException;
+import 'http_client.dart';
 
 /// One of railcam.uk's cameras.
 @immutable
@@ -82,20 +83,15 @@ class RailcamService extends ChangeNotifier {
   RailcamService({Dio? dio})
     : _dio =
           dio ??
-          Dio(
-            BaseOptions(
-              baseUrl: _site,
-              connectTimeout: const Duration(seconds: 10),
-              receiveTimeout: const Duration(seconds: 30),
-              // Its "signed out" is a redirect, so those are read, not
-              // followed; and its pages are not all the UTF-8 they claim.
-              followRedirects: false,
-              validateStatus: (s) => s != null && s < 400,
-              responseType: ResponseType.bytes,
-              headers: const {
-                'User-Agent': 'HomeCanvas/1.0 (home dashboard panel)',
-              },
-            ),
+          httpClient(
+            baseUrl: _site,
+            receive: const Duration(seconds: 30),
+            // Its "signed out" is a redirect, so those are read, not
+            // followed; and its pages are not all the UTF-8 they claim.
+            followRedirects: false,
+            validateStatus: (s) => s != null && s < 400,
+            responseType: ResponseType.bytes,
+            headers: const {'User-Agent': homeCanvasAgent},
           );
 
   static const _site = 'https://railcam.uk';

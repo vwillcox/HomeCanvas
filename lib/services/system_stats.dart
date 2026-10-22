@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../l10n/l10n.dart';
 import '../map_text.dart';
+import 'http_client.dart';
 
 /// A container on a machine, and whether it is running.
 @immutable
@@ -502,11 +503,9 @@ class GlancesClient {
 
   final String baseUrl;
 
-  static final Dio _dio = Dio(
-    BaseOptions(
-      connectTimeout: const Duration(seconds: 4),
-      receiveTimeout: const Duration(seconds: 6),
-    ),
+  static final Dio _dio = httpClient(
+    connect: const Duration(seconds: 4),
+    receive: const Duration(seconds: 6),
   );
 
   String get _base {

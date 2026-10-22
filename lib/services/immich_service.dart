@@ -8,6 +8,7 @@ import 'config_service.dart';
 import 'media_cache.dart';
 import 'media_source.dart';
 import '../map_text.dart';
+import 'http_client.dart';
 
 /// Thin Immich REST client. Reads connection details live from [ConfigService]
 /// so reconnecting in Settings takes effect immediately. Also acts as a
@@ -35,13 +36,11 @@ class ImmichService with ImmichUrls implements MediaSource {
     if (_client == null || _clientFor != key) {
       _client?.close();
       _clientFor = key;
-      _client = Dio(
-        BaseOptions(
-          baseUrl: _base,
-          headers: {'x-api-key': config.apiKey, 'Accept': 'application/json'},
-          connectTimeout: const Duration(seconds: 12),
-          receiveTimeout: const Duration(seconds: 30),
-        ),
+      _client = httpClient(
+        baseUrl: _base,
+        headers: {'x-api-key': config.apiKey, 'Accept': 'application/json'},
+        connect: const Duration(seconds: 12),
+        receive: const Duration(seconds: 30),
       );
     }
     return _client!;
