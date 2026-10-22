@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
+import '../map_text.dart';
 
 /// One note on the household board.
 @immutable
@@ -29,13 +30,13 @@ class HouseNote {
 
   static HouseNote? fromJson(Object? j) {
     if (j is! Map) return null;
-    final text = '${j['text'] ?? ''}'.trim();
+    final text = j.text('text');
     final at = DateTime.tryParse('${j['at'] ?? ''}');
     if (text.isEmpty || at == null) return null;
     return HouseNote(
       id: '${j['id'] ?? at.microsecondsSinceEpoch}',
       text: text,
-      from: '${j['from'] ?? ''}'.trim(),
+      from: j.text('from'),
       at: at.toLocal(),
     );
   }

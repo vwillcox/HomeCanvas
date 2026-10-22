@@ -9,6 +9,7 @@ import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'tile_bits.dart';
 import '../../l10n/l10n.dart';
+import '../../map_text.dart';
 
 /// Days left on your sites' HTTPS certificates, soonest to expire first, so a
 /// renewal that quietly failed is noticed before a browser notices it.
@@ -38,8 +39,7 @@ class _CertsWidgetState extends State<CertsWidget>
 
   List<String> get _hosts => [
     for (final row in (widget.w.config.options['sites'] as List? ?? const []))
-      if (row is Map && '${row['host'] ?? ''}'.trim().isNotEmpty)
-        '${row['host']}'.trim(),
+      if (row is Map && row.text('host').isNotEmpty) '${row['host']}'.trim(),
   ];
 
   @override

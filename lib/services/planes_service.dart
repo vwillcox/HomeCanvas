@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import '../l10n/l10n.dart';
+import '../map_text.dart';
 
 /// One aircraft in the sky near home.
 @immutable
@@ -222,9 +223,9 @@ class PlanesService extends ChangeNotifier {
       out.add(
         Plane(
           hex: '${a['hex'] ?? ''}',
-          callsign: '${a['flight'] ?? ''}'.trim().toUpperCase(),
-          registration: '${a['r'] ?? ''}'.trim(),
-          type: '${a['t'] ?? ''}'.trim(),
+          callsign: a.text('flight').toUpperCase(),
+          registration: a.text('r'),
+          type: a.text('t'),
           altitudeFt: alt is num ? alt.round() : null,
           knots: (a['gs'] as num?)?.toDouble(),
           track: (a['track'] as num? ?? a['true_heading'] as num?)?.toDouble(),

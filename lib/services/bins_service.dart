@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../dashboard/dashboard_model.dart';
 import 'bin_schedule.dart';
 import 'config_service.dart';
+import '../map_text.dart';
 
 /// The bins widgets' memory and voice.
 ///
@@ -58,7 +59,7 @@ class BinsService extends ChangeNotifier {
     final now = _clock();
     for (final w in _config.config.dashboard.widgets) {
       if (w.type != 'bins') continue;
-      final at = '${w.options['speakAt'] ?? ''}'.trim();
+      final at = w.options.text('speakAt');
       final m = RegExp(r'^(\d{1,2}):(\d{2})$').firstMatch(at);
       if (m == null) continue;
       final hour = int.parse(m[1]!), minute = int.parse(m[2]!);

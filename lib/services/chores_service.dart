@@ -7,6 +7,7 @@ import 'package:flutter/painting.dart' show Color;
 import 'package:path/path.dart' as p;
 
 import 'bin_schedule.dart' show Bin, dateOnly;
+import '../map_text.dart';
 
 /// A chore, as set up in the widget's settings.
 @immutable
@@ -36,12 +37,12 @@ class Chore {
       '${task.trim().toLowerCase()}|${anyone ? '*' : who.trim().toLowerCase()}';
 
   static Chore? fromRow(Map<String, dynamic> row) {
-    final task = '${row['task'] ?? ''}'.trim();
+    final task = row.text('task');
     if (task.isEmpty) return null;
     return Chore(
       task: task,
-      emoji: '${row['emoji'] ?? ''}'.trim(),
-      who: '${row['who'] ?? ''}'.trim(),
+      emoji: row.text('emoji'),
+      who: row.text('who'),
       days: '${row['days'] ?? 'daily'}'.trim(),
       stars: (int.tryParse('${row['stars'] ?? 1}') ?? 1).clamp(0, 100),
     );
@@ -67,7 +68,7 @@ class ChorePerson {
   final Color colour;
 
   static ChorePerson? fromRow(Map<String, dynamic> row) {
-    final name = '${row['name'] ?? ''}'.trim();
+    final name = row.text('name');
     if (name.isEmpty) return null;
     return ChorePerson(
       name,

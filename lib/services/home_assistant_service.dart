@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 
 import 'config_service.dart';
 import '../l10n/l10n.dart';
+import '../map_text.dart';
 
 /// One Home Assistant entity, as the widget shows it.
 @immutable
@@ -88,7 +89,7 @@ class HaEntity {
             ? tr('widget.home_assistant.away', 'Away')
             : _title(state);
       case 'media_player':
-        final title = '${a['media_title'] ?? ''}'.trim();
+        final title = a.text('media_title');
         return state == 'playing' && title.isNotEmpty ? title : _title(state);
       case 'climate':
         final t = a['current_temperature'];

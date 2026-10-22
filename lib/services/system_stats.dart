@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../l10n/l10n.dart';
+import '../map_text.dart';
 
 /// A container on a machine, and whether it is running.
 @immutable
@@ -59,7 +60,7 @@ class DiskHealth {
     if (smart is! List) return const [];
     final out = <DiskHealth>[];
     for (final d in smart.whereType<Map>()) {
-      final name = '${d['DeviceName'] ?? ''}'.trim();
+      final name = d.text('DeviceName');
       if (name.isEmpty) continue;
       final space = name.indexOf(' ');
       final device = baseDevice(space < 0 ? name : name.substring(0, space));
@@ -83,7 +84,7 @@ class DiskHealth {
 
       var failing = false;
       for (final a in attrs) {
-        final failed = '${a['when_failed'] ?? ''}'.trim();
+        final failed = a.text('when_failed');
         final value = a['value'], threshold = a['threshold'];
         final v = value is num ? value : num.tryParse('$value');
         final t = threshold is num ? threshold : num.tryParse('$threshold');

@@ -11,6 +11,7 @@ import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
 import '../../look.dart';
+import '../../map_text.dart';
 
 /// A camera as a tile shows it: TfL's, or any still image address.
 typedef _Shown = ({String name, String url, String view});
@@ -82,8 +83,8 @@ class _TrafficCamsWidgetState extends State<TrafficCamsWidget>
     final all = service.cams ?? const <TrafficCam>[];
     final out = <_Shown>[];
     for (final r in rows) {
-      final typed = '${r['camera'] ?? ''}'.trim();
-      final name = '${r['name'] ?? ''}'.trim();
+      final typed = r.text('camera');
+      final name = r.text('name');
       if (typed.isEmpty) continue;
       if (typed.startsWith('https://') || typed.startsWith('http://')) {
         out.add((

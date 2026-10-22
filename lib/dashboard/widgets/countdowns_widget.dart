@@ -11,6 +11,7 @@ import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
 import '../../l10n/l10n.dart';
+import '../../map_text.dart';
 
 /// Something being counted down to.
 @immutable
@@ -26,8 +27,8 @@ class Countdown {
   /// From a settings row. "25/12" repeats every year; "2026-10-31" or
   /// "31/10/2026" happens once.
   static Countdown? fromRow(Map<String, dynamic> row, DateTime today) {
-    final name = '${row['name'] ?? ''}'.trim();
-    final raw = '${row['date'] ?? ''}'.trim();
+    final name = row.text('name');
+    final raw = row.text('date');
     if (name.isEmpty || raw.isEmpty) return null;
     final full = Bin.parseDay(raw);
     if (full != null) return Countdown(name, full);

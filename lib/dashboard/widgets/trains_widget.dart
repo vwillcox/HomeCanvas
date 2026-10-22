@@ -11,6 +11,7 @@ import '../../time_format.dart';
 import '../../widgets/pause_when_hidden.dart';
 import '../../widgets/shown_timers.dart';
 import '../../l10n/l10n.dart';
+import '../../map_text.dart';
 
 /// The next trains from your station, as a station board shows them: time,
 /// where to, platform, and whether it is on time, late or cancelled.
@@ -40,7 +41,7 @@ class _TrainsWidgetState extends State<TrainsWidget>
   /// the editor's preview — has something to show at once.
   static final Map<String, (Board, DateTime)> _last = {};
 
-  String _opt(String key) => '${widget.w.config.options[key] ?? ''}'.trim();
+  String _opt(String key) => widget.w.config.options.text(key);
   String get _key => '${_opt('from')}>${_opt('to')}';
 
   @override

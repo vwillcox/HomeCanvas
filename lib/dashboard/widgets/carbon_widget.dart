@@ -12,6 +12,7 @@ import '../../time_format.dart';
 import '../../widgets/pause_when_hidden.dart';
 import '../../widgets/shown_timers.dart';
 import '../../l10n/l10n.dart';
+import '../../map_text.dart';
 
 /// How clean the grid's electricity is now, the next day as bars, and the
 /// greenest three hours to run the washing machine or the dishwasher.
@@ -29,7 +30,7 @@ class _CarbonWidgetState extends State<CarbonWidget>
   Timer? _timer;
 
   String? get _outcode {
-    final given = '${widget.w.config.options['postcode'] ?? ''}'.trim();
+    final given = widget.w.config.options.text('postcode');
     return given.isEmpty
         ? context.read<CarbonService>().defaultOutcode
         : outwardCode(given);

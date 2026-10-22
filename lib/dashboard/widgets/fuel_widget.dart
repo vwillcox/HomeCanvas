@@ -11,6 +11,7 @@ import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
+import '../../map_text.dart';
 
 /// What each fuel is called on the forecourt.
 String _fuelName(String code) => switch (code) {
@@ -37,7 +38,7 @@ class _FuelWidgetState extends State<FuelWidget>
   List<String> get _feeds => [
     ...kFuelFeeds,
     for (final r in widget.w.rows('extraFeeds'))
-      if ('${r['url'] ?? ''}'.trim().isNotEmpty) '${r['url']}'.trim(),
+      if (r.text('url').isNotEmpty) '${r['url']}'.trim(),
   ];
 
   String get _postcode => widget.w.option('postcode', '').trim();

@@ -13,6 +13,7 @@ import '../../widgets/shown_timers.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'tile_bits.dart';
+import '../../map_text.dart';
 
 /// Home Assistant as a starship's console, sized for a page of its own: a
 /// rail down the left of Home Assistant's areas, and for the one chosen its
@@ -52,8 +53,8 @@ class _HaBridgeWidgetState extends State<HaBridgeWidget>
   /// The entities added under "Also show", each with what it is called.
   Map<String, String> get _extras => {
     for (final row in widget.w.rows('extras'))
-      if ('${row['entity'] ?? ''}'.trim().contains('.'))
-        '${row['entity']}'.trim(): '${row['name'] ?? ''}'.trim(),
+      if (row.text('entity').contains('.'))
+        '${row['entity']}'.trim(): row.text('name'),
   };
 
   @override

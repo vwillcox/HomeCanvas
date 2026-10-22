@@ -10,6 +10,7 @@ import 'tile_bits.dart';
 import '../../widgets/pause_when_hidden.dart';
 import '../../widgets/shown_timers.dart';
 import '../../l10n/l10n.dart';
+import '../../map_text.dart';
 
 /// Something that happened on this date.
 @immutable
@@ -23,7 +24,7 @@ class HistoryEvent {
   /// Wikipedia's "selected" events for a day, the editors' own pick.
   static List<HistoryEvent> fromWikipedia(Map<String, dynamic> json) => [
     for (final e in (json['selected'] as List? ?? const []).whereType<Map>())
-      if (e['year'] is num && '${e['text'] ?? ''}'.trim().isNotEmpty)
+      if (e['year'] is num && e.text('text').isNotEmpty)
         HistoryEvent(
           (e['year'] as num).toInt(),
           '${e['text']}'.trim(),

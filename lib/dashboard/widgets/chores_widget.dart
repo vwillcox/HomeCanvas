@@ -9,6 +9,7 @@ import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
 import '../../l10n/l10n.dart';
+import '../../map_text.dart';
 
 /// Chores and rewards: a column per person with today's chores to tap off,
 /// stars for each, and the week's total towards a reward.
@@ -44,7 +45,7 @@ class ChoresWidget extends StatelessWidget {
     }
     final today = service.today;
     final goal = int.tryParse('${w.config.options['goal'] ?? 0}') ?? 0;
-    final reward = '${w.config.options['reward'] ?? ''}'.trim();
+    final reward = w.config.options.text('reward');
 
     return LayoutBuilder(
       builder: (context, c) {

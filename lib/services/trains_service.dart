@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../l10n/l10n.dart';
+import '../map_text.dart';
 
 /// One departure from the station, as a station board shows it.
 @immutable
@@ -85,7 +86,7 @@ Board parseBoard(Map<String, dynamic> json) {
     ].where((d) => d.isNotEmpty).toList();
     final reasons = [
       for (final r in (svc['reasons'] as List? ?? const []).whereType<Map>())
-        '${r['shortText'] ?? ''}'.trim(),
+        r.text('shortText'),
     ].where((r) => r.isNotEmpty).toList();
     final mode = '${meta['modeType'] ?? ''}';
 

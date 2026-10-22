@@ -16,6 +16,7 @@ import '../widget_registry.dart';
 import '../../l10n/l10n.dart';
 import '../../widgets/lcars.dart';
 import 'tile_bits.dart';
+import '../../map_text.dart';
 
 /// Headlines from an RSS or Atom feed.
 class DashboardNewsWidget extends StatelessWidget {
@@ -65,8 +66,7 @@ class DashboardNewsWidget extends StatelessWidget {
         ],
     ];
     final names = {
-      for (final r in w.rows('sources'))
-        '${r['url'] ?? ''}'.trim(): '${r['name'] ?? ''}'.trim(),
+      for (final r in w.rows('sources')) r.text('url'): r.text('name'),
     };
 
     // One feed to a tab, each keeping the publisher's own order. The tab
@@ -506,7 +506,7 @@ class DashboardNewsWidget extends StatelessWidget {
     final rows = w.rows('sources');
     final urls = [
       for (final r in rows)
-        if ('${r['url'] ?? ''}'.trim().isNotEmpty) '${r['url']}'.trim(),
+        if (r.text('url').isNotEmpty) '${r['url']}'.trim(),
     ];
     if (urls.isNotEmpty) return urls;
     final legacy = w.option('url', '').trim();
@@ -893,10 +893,9 @@ final newsWidgetType = DashboardWidgetType(
     if (data.feeds == null) return const [];
     final urls = <String>[
       for (final r in (config.options['sources'] as List?) ?? const [])
-        if (r is Map && '${r['url'] ?? ''}'.trim().isNotEmpty)
-          '${r['url']}'.trim(),
+        if (r is Map && r.text('url').isNotEmpty) '${r['url']}'.trim(),
     ];
-    if (urls.isEmpty && '${config.options['url'] ?? ''}'.trim().isNotEmpty) {
+    if (urls.isEmpty && config.options.text('url').isNotEmpty) {
       urls.add('${config.options['url']}'.trim());
     }
     if (urls.isEmpty) return const [];

@@ -13,6 +13,7 @@ import 'fit_canvas.dart';
 import 'tile_bits.dart';
 import '../../widgets/lcars.dart';
 import '../../l10n/l10n.dart';
+import '../../map_text.dart';
 
 /// Home Assistant entities you pick — temperatures, who is home, what is
 /// playing, switches — each as a small card. Switches and lights change with
@@ -33,8 +34,8 @@ class _HomeAssistantWidgetState extends State<HomeAssistantWidget>
   List<({String id, String name})> get _picked => [
     for (final row
         in (widget.w.config.options['entities'] as List? ?? const []))
-      if (row is Map && '${row['entity'] ?? ''}'.trim().contains('.'))
-        (id: '${row['entity']}'.trim(), name: '${row['name'] ?? ''}'.trim()),
+      if (row is Map && row.text('entity').contains('.'))
+        (id: '${row['entity']}'.trim(), name: row.text('name')),
   ];
 
   @override

@@ -15,6 +15,7 @@ import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
 import '../../widgets/lcars.dart';
+import '../../map_text.dart';
 
 /// What every Homey tile does besides drawing: asks the service to keep the
 /// picture fresh, and to listen for changes to the devices it shows. The
@@ -306,11 +307,11 @@ class _HomeyWidgetState extends State<HomeyWidget>
     with PauseWhenHidden, ShownTimers, _HomeyTile {
   List<({String id, String capability, String name})> get _picked => [
     for (final r in widget.w.rows('devices'))
-      if ('${r['device'] ?? ''}'.trim().isNotEmpty)
+      if (r.text('device').isNotEmpty)
         (
           id: '${r['device']}'.trim(),
-          capability: '${r['capability'] ?? ''}'.trim(),
-          name: '${r['name'] ?? ''}'.trim(),
+          capability: r.text('capability'),
+          name: r.text('name'),
         ),
   ];
 
@@ -444,8 +445,8 @@ class _HomeyLightsWidgetState extends State<HomeyLightsWidget>
   List<({String id, String name})> _lights(HomeyService homey) {
     final picked = [
       for (final r in widget.w.rows('lights'))
-        if ('${r['light'] ?? ''}'.trim().isNotEmpty)
-          (id: '${r['light']}'.trim(), name: '${r['name'] ?? ''}'.trim()),
+        if (r.text('light').isNotEmpty)
+          (id: '${r['light']}'.trim(), name: r.text('name')),
     ];
     return picked.isNotEmpty
         ? picked
@@ -722,8 +723,8 @@ class _HomeyFlowsWidgetState extends State<HomeyFlowsWidget>
     with PauseWhenHidden, ShownTimers, _HomeyTile, _Flash {
   List<({String id, String name})> get _picked => [
     for (final r in widget.w.rows('flows'))
-      if ('${r['flow'] ?? ''}'.trim().isNotEmpty)
-        (id: '${r['flow']}'.trim(), name: '${r['name'] ?? ''}'.trim()),
+      if (r.text('flow').isNotEmpty)
+        (id: '${r['flow']}'.trim(), name: r.text('name')),
   ];
 
   // Flows are started, not watched.
@@ -786,8 +787,8 @@ List<({String id, String name})> _pickedOr(
 ) {
   final picked = [
     for (final r in w.rows(option))
-      if ('${r[field] ?? ''}'.trim().isNotEmpty)
-        (id: '${r[field]}'.trim(), name: '${r['name'] ?? ''}'.trim()),
+      if (r.text(field).isNotEmpty)
+        (id: '${r[field]}'.trim(), name: r.text('name')),
   ];
   if (picked.isNotEmpty) return picked;
   final all = homey.all.where(fits).toList()
@@ -1291,8 +1292,8 @@ class _HomeyMoodsWidgetState extends State<HomeyMoodsWidget>
     };
     final picked = [
       for (final r in widget.w.rows('moods'))
-        if ('${r['mood'] ?? ''}'.trim().isNotEmpty)
-          (id: '${r['mood']}'.trim(), name: '${r['name'] ?? ''}'.trim()),
+        if (r.text('mood').isNotEmpty)
+          (id: '${r['mood']}'.trim(), name: r.text('name')),
     ];
     final shown = picked.isNotEmpty
         ? picked
@@ -1902,8 +1903,8 @@ class _HomeyVariablesWidgetState extends State<HomeyVariablesWidget>
     };
     final picked = [
       for (final r in widget.w.rows('variables'))
-        if ('${r['variable'] ?? ''}'.trim().isNotEmpty)
-          (id: '${r['variable']}'.trim(), name: '${r['name'] ?? ''}'.trim()),
+        if (r.text('variable').isNotEmpty)
+          (id: '${r['variable']}'.trim(), name: r.text('name')),
     ];
     final shown = picked.isNotEmpty
         ? picked

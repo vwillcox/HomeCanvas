@@ -7,6 +7,7 @@ import 'api_cache.dart';
 import 'config_service.dart';
 import 'media_cache.dart';
 import 'media_source.dart';
+import '../map_text.dart';
 
 /// Thin Immich REST client. Reads connection details live from [ConfigService]
 /// so reconnecting in Settings takes effect immediately. Also acts as a
@@ -298,7 +299,7 @@ class ImmichService with ImmichUrls implements MediaSource {
     final list = d is Map ? d['people'] : d;
     return [
       for (final p in (list as List? ?? const []).whereType<Map>())
-        if ('${p['name'] ?? ''}'.trim().isNotEmpty)
+        if (p.text('name').isNotEmpty)
           Person(
             id: '${p['id']}',
             name: '${p['name']}'.trim(),

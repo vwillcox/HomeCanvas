@@ -11,6 +11,7 @@ import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'tile_bits.dart';
 import '../../widgets/lcars.dart';
+import '../../map_text.dart';
 
 /// One or more GitHub repositories: stars, issues, pull requests, releases,
 /// a weekly commit chart and — with a token — who is visiting. Several
@@ -344,8 +345,7 @@ class _GithubRepositoryTileState extends State<_GithubRepositoryTile>
             c.maxWidth >= 220 &&
             c.maxHeight >= 190;
         final description =
-            '${repo['description'] ?? ''}'.trim().isNotEmpty &&
-            c.maxHeight > 170;
+            repo.text('description').isNotEmpty && c.maxHeight > 170;
         final chart = _CommitChart(weeks: data.weeklyCommits, theme: theme);
         final stats = LayoutBuilder(
           builder: (context, grid) {

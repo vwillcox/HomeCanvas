@@ -7,6 +7,7 @@ import '../../widgets/pause_when_hidden.dart';
 import '../../widgets/rebuild_every_minute.dart';
 import '../../widgets/shown_timers.dart';
 import '../../l10n/l10n.dart';
+import '../../map_text.dart';
 
 const _days = [
   'monday',
@@ -57,7 +58,7 @@ class _MealsWidgetState extends State<MealsWidget>
     final first = tonight(now, switchHour);
     final second = DateTime(first.year, first.month, first.day + 1);
     final a = mealOn(options, first), b = mealOn(options, second);
-    if (_days.every((d) => '${options[d] ?? ''}'.trim().isEmpty)) {
+    if (_days.every((d) => options.text(d).isEmpty)) {
       return TileMessage(
         tr(
           'widget.meals.fillInTheWeekS',

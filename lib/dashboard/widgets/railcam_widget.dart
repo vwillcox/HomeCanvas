@@ -19,6 +19,7 @@ import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
 import '../../look.dart';
+import '../../map_text.dart';
 
 /// How a camera is shown in the tile.
 enum RailcamLive {
@@ -116,10 +117,10 @@ class _RailcamWidgetState extends State<RailcamWidget>
   /// The cameras picked in the settings: each one's id, and what to call it.
   List<({String id, String name})> _cameras(RailcamService service) => [
     for (final r in widget.w.rows('cameras'))
-      if ('${r['camera'] ?? ''}'.trim().isNotEmpty)
+      if (r.text('camera').isNotEmpty)
         (
           id: '${r['camera']}'.trim(),
-          name: '${r['name'] ?? ''}'.trim().isNotEmpty
+          name: r.text('name').isNotEmpty
               ? '${r['name']}'.trim()
               : service.cam('${r['camera']}'.trim())?.name ??
                     '${r['camera']}'.trim(),

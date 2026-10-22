@@ -14,6 +14,7 @@ import 'fit_canvas.dart';
 import 'tile_bits.dart';
 import '../../widgets/lcars.dart';
 import '../../l10n/l10n.dart';
+import '../../map_text.dart';
 
 /// Govee lights and plugs: tap a card to switch it, drag along its bar for
 /// brightness, tap a swatch for a colour.
@@ -30,7 +31,7 @@ class _LightsWidgetState extends State<LightsWidget>
     with PauseWhenHidden, ShownTimers {
   Timer? _timer;
 
-  String get _key => '${widget.w.config.options['apiKey'] ?? ''}'.trim();
+  String get _key => widget.w.config.options.text('apiKey');
 
   List<String> get _only => '${widget.w.config.options['only'] ?? ''}'
       .split(',')

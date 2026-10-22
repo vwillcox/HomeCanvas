@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import '../l10n/l10n.dart';
+import '../map_text.dart';
 
 /// One roadside camera.
 @immutable
@@ -138,7 +139,7 @@ class TrafficCamsService extends ChangeNotifier {
       out.add(
         TrafficCam(
           id: '${p['id'] ?? ''}',
-          name: '${p['commonName'] ?? ''}'.trim(),
+          name: p.text('commonName'),
           imageUrl: image,
           lat: (p['lat'] as num?)?.toDouble(),
           lon: (p['lon'] as num?)?.toDouble(),

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../l10n/l10n.dart';
+import '../map_text.dart';
 
 /// A price, how it has moved, and the recent path it took to get there.
 @immutable
@@ -392,8 +393,8 @@ class MarketsService extends ChangeNotifier {
     final symbol = '${meta['symbol'] ?? ''}';
     // Indices are best by their short name ("FTSE 100"), companies by their
     // long one ("VODAFONE GROUP PLC ORD USD0.20" is a listing, not a name).
-    final long = '${meta['longName'] ?? ''}'.trim();
-    final short = '${meta['shortName'] ?? ''}'.trim();
+    final long = meta.text('longName');
+    final short = meta.text('shortName');
     final name = meta['instrumentType'] == 'EQUITY' && long.isNotEmpty
         ? _plainCompany(long)
         : (short.isNotEmpty ? short : (long.isNotEmpty ? long : symbol));

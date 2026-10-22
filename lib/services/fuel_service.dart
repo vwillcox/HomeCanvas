@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 
 import '../l10n/l10n.dart';
 import 'config_service.dart';
+import '../map_text.dart';
 
 /// The retailers' own price files, published under the UK's open fuel
 /// price scheme — no key. Those that turn automated requests away (BP,
@@ -246,9 +247,9 @@ class FuelService extends ChangeNotifier {
       if (prices.isEmpty) continue;
       out.add(
         FuelStation(
-          brand: '${s['brand'] ?? ''}'.trim(),
-          address: '${s['address'] ?? ''}'.trim(),
-          postcode: '${s['postcode'] ?? ''}'.trim(),
+          brand: s.text('brand'),
+          address: s.text('address'),
+          postcode: s.text('postcode'),
           latitude: lat,
           longitude: lon,
           prices: prices,

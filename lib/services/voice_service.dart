@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 
 import 'retry_schedule.dart';
 import 'wake_word.dart';
+import '../map_text.dart';
 
 /// The listener, running: what it says, a line at a time, and the way to
 /// shut it up again.
@@ -234,11 +235,11 @@ class VoiceService extends ChangeNotifier {
         onWake?.call();
       case 'heard':
         final said = ++_said;
-        _heard = '${event['text'] ?? ''}'.trim();
+        _heard = event.text('text');
         _answer = '';
         // Two recognisers listen, and where the first one's words mean
         // nothing the second's may: "show socks", and "show stocks".
-        final other = '${event['other'] ?? ''}'.trim();
+        final other = event.text('other');
         var did = _heard.isEmpty ? null : act(_heard);
         if (did == null && other.isNotEmpty) {
           did = act(other);

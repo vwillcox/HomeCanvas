@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import '../map_text.dart';
 
 /// What a check found.
 enum CheckState { up, slow, down, unknown }
@@ -34,10 +35,10 @@ class ServiceTarget {
   final String? mac;
 
   static ServiceTarget? fromRow(Map<String, dynamic> row) {
-    final target = '${row['target'] ?? ''}'.trim();
+    final target = row.text('target');
     if (target.isEmpty) return null;
-    final name = '${row['name'] ?? ''}'.trim();
-    final mac = '${row['mac'] ?? ''}'.trim();
+    final name = row.text('name');
+    final mac = row.text('mac');
     return ServiceTarget(
       name: name.isEmpty ? target : name,
       target: target,

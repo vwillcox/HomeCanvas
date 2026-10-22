@@ -13,6 +13,7 @@ import 'tile_bits.dart';
 import '../../l10n/dates.dart';
 import '../../l10n/l10n.dart';
 import '../../widgets/lcars.dart';
+import '../../map_text.dart';
 
 /// One row a tile was asked for: what to look up, what to call it, and —
 /// as typed — what was paid for it, how many are held, when they were
@@ -66,14 +67,14 @@ List<_Pick> _picks(
   final rows = w.config.options.containsKey(key) ? w.rows(key) : defaults;
   return [
     for (final r in rows)
-      if ('${r[field] ?? ''}'.trim().isNotEmpty)
+      if (r.text(field).isNotEmpty)
         (
           entry: '${r[field]}'.trim(),
-          label: '${r['name'] ?? ''}'.trim(),
-          paid: '${r['paid'] ?? ''}'.trim(),
-          quantity: '${r['quantity'] ?? ''}'.trim(),
-          bought: '${r['bought'] ?? ''}'.trim(),
-          fees: '${r['fees'] ?? ''}'.trim(),
+          label: r.text('name'),
+          paid: r.text('paid'),
+          quantity: r.text('quantity'),
+          bought: r.text('bought'),
+          fees: r.text('fees'),
         ),
   ];
 }

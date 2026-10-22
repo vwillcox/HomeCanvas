@@ -11,6 +11,7 @@ import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
 import '../../l10n/l10n.dart';
+import '../../map_text.dart';
 
 /// CPU, memory, disk and temperature for this Pi and any other machine
 /// running Glances, with whether their containers are all up.
@@ -55,9 +56,9 @@ class _ServersWidgetState extends State<ServersWidget>
   List<({String name, String address})> get _machines => [
     for (final row
         in (widget.w.config.options['machines'] as List? ?? const []))
-      if (row is Map && '${row['address'] ?? ''}'.trim().isNotEmpty)
+      if (row is Map && row.text('address').isNotEmpty)
         (
-          name: '${row['name'] ?? ''}'.trim().isEmpty
+          name: row.text('name').isEmpty
               ? '${row['address']}'.trim()
               : '${row['name']}'.trim(),
           address: '${row['address']}'.trim(),

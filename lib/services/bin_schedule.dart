@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../map_text.dart';
 
 /// One kind of bin and when it goes: from a first collection, every so many
 /// weeks.
@@ -23,7 +24,7 @@ class Bin {
   /// From a row of the widget's settings; null when the row is not usable yet
   /// — no name, or a date that does not parse.
   static Bin? fromRow(Map<String, dynamic> row) {
-    final name = '${row['name'] ?? ''}'.trim();
+    final name = row.text('name');
     final first = parseDay('${row['first'] ?? ''}');
     if (name.isEmpty || first == null) return null;
     final every =
