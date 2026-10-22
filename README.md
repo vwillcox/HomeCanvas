@@ -108,6 +108,11 @@ Seventeen themes, dark and light, glassy, glossy and flat, and one a starship's 
 the whole kiosk: the photo browser, the music player and Settings as well as
 the dashboard. **[THEMES.md](THEMES.md)** shows each one full size.
 
+| LCARS | The Home Assistant bridge |
+|---|---|
+| ![The dashboard in the LCARS theme](docs/screenshots/themes/lcars.jpg) | ![The Home Assistant bridge in LCARS](docs/screenshots/themes/lcars/bridge.jpg) |
+| A starship's console: bars swept round every panel, block buttons, and frames that step into place. | The house as a console: rooms down the side, a switch for each light. |
+
 ### Arranged from a browser
 
 ![The dashboard editor in a browser](docs/screenshots/editor.jpg)
@@ -116,6 +121,32 @@ The editor runs on the panel and opens in any browser on your network. The
 previews are the panel's own drawing of each widget, so what you lay out is
 what you get. Widgets come in folding groups; drag to place and resize,
 reorder pages by dragging their tabs.
+
+### Installed from the terminal
+
+The installer runs full screen in the terminal, over SSH or on the Pi itself.
+It asks everything first, shows you the list, and only then changes
+anything. Run it again later to update, to change widgets and theme, or to
+pick a new wake word.
+
+| Welcome back | Choosing widgets |
+|---|---|
+| ![The installer offering to update, change widgets, or set up voice control](docs/screenshots/installer/welcome.png) | ![A checklist of every widget, grouped as in the editor](docs/screenshots/installer/widgets.png) |
+| On an installed panel: update, change the widgets and theme, or set up voice control. | Start from a preset, then tick any of the 71 widgets. Each says what it needs. |
+
+| A theme, previewed | Your own wake word |
+|---|---|
+| ![The theme list with a preview of LCARS](docs/screenshots/installer/theme.png) | ![A wake word being typed, with a check under it](docs/screenshots/installer/wake-word.png) |
+| A preview of each theme's colours as you move through the list. | Checked as you type: commands, common words and very short names are caught. |
+
+| Teaching it how you say it | How it went |
+|---|---|
+| ![The wizard listening, with a microphone meter and what it heard each time](docs/screenshots/installer/teaching.png) | ![The verdict: heard 4 of 5, learned two mishearings, now 5 of 5](docs/screenshots/installer/verdict.png) |
+| Say it five times; both recognisers write down what they heard. | It keeps how they misheard you, then checks everyday speech doesn't set it off. |
+
+![The list of what will happen, before anything is installed](docs/screenshots/installer/review.png)
+
+Nothing is changed until you've seen this list and chosen **Install**.
 
 ### Settings and more
 
@@ -226,10 +257,12 @@ Pi OS** (trixie), and an **Immich server**. On the Pi, open a terminal and run:
 curl -fsSL https://raw.githubusercontent.com/vwillcox/HomeCanvas/main/install.sh | bash
 ```
 
-The installer walks you through everything, asking before it changes anything:
-it installs what's needed, builds HomeCanvas, connects it to Immich, names it
-on your network and starts it on boot. Run the same command again later to
-update. It also works on Debian, Ubuntu, Fedora, Arch and openSUSE, on 64-bit
+The [installer](#installed-from-the-terminal) opens full screen in the
+terminal and asks everything first: your Immich, the widgets you want, a
+theme, voice control and its wake word, and the extras they need. Then it
+shows you the list and does it all: it installs what's needed, builds
+HomeCanvas, names it on your network, starts it on boot, and teaches it your
+wake word. Run the same command again later to update or change things. It also works on Debian, Ubuntu, Fedora, Arch and openSUSE, on 64-bit
 ARM or Intel/AMD.
 
 **[INSTALL.md](INSTALL.md)** has the steps done by hand, and the optional
