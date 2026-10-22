@@ -34,13 +34,13 @@ dependencies:
   path: ^1.9.0
 
   # D-Bus client, used to read BlueZ media metadata (now playing on the phone)
-  dbus: ^0.7.10
+  dbus: ^0.8.0
 
   # SHA-256 for Spotify's OAuth PKCE code challenge
   crypto: ^3.0.5
 
   # RSS/Atom parsing for the dashboard's news widget
-  xml: ^6.6.1
+  xml: ^7.1.0
 
   # Pulling an article's text out of its page, to read it aloud
   html: ^0.15.7
