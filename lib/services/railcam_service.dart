@@ -33,9 +33,8 @@ class RailCam {
   final String area;
 
   /// For a list of every camera, where its place is what it is found by.
-  String get label => place.isEmpty || name.startsWith(place)
-      ? name
-      : '$place: $name';
+  String get label =>
+      place.isEmpty || name.startsWith(place) ? name : '$place: $name';
 
   /// The site's own small picture of the view — a still kept for its menus,
   /// not a live one.
@@ -316,7 +315,8 @@ class RailcamService extends ChangeNotifier {
       // No longer than the page that named it: a version's address can
       // carry a pass that runs out.
       final kept = _playlists[hls];
-      var playlist = kept != null &&
+      var playlist =
+          kept != null &&
               DateTime.now().difference(kept.$1) < const Duration(minutes: 10)
           ? kept.$2
           : null;
@@ -461,7 +461,9 @@ class RailcamService extends ChangeNotifier {
   // --- Reading its pages ------------------------------------------------------
 
   static final RegExp _open = RegExp(r"openCam\('([^']+)',\s*'([^']*)'\)");
-  static final RegExp _heading = RegExp(r'<span[^>]*>([^<]*)<br>([^<]*)</span>');
+  static final RegExp _heading = RegExp(
+    r'<span[^>]*>([^<]*)<br>([^<]*)</span>',
+  );
 
   /// Every camera on the site's Dashboard page: each is a card headed with
   /// its area and place, over a link that opens it.
@@ -469,10 +471,7 @@ class RailcamService extends ChangeNotifier {
   static List<RailCam> parseDashboard(String html) {
     final out = <String, RailCam>{};
     for (final m in _open.allMatches(html)) {
-      final before = html.substring(
-        m.start > 700 ? m.start - 700 : 0,
-        m.start,
-      );
+      final before = html.substring(m.start > 700 ? m.start - 700 : 0, m.start);
       final heading = _heading.allMatches(before).lastOrNull;
       out[m[1]!] = RailCam(
         id: m[1]!,

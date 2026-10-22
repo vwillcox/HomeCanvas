@@ -49,8 +49,9 @@ VidaaCredentials generateCredentials(
     username = '$brand\$${ts ^ kTimeXorConstant}';
   }
 
-  final valueSuffix =
-      authMethod == AuthMethod.modern ? kValueSuffixModern : kValueSuffixLegacy;
+  final valueSuffix = authMethod == AuthMethod.modern
+      ? kValueSuffixModern
+      : kValueSuffixLegacy;
   final remainder = _sumDigits(ts) % 10;
   final value = '$brand$remainder$valueSuffix';
   final valueMd5 = _md5Upper(value).substring(0, 6);
@@ -205,7 +206,8 @@ class VidaaClient {
     final c = MqttServerClient.withPort(host, _clientId, port)
       ..secure = true
       ..securityContext = ctx
-      ..onBadCertificate = ((Object cert) => true) // TV cert is self-signed
+      ..onBadCertificate =
+          ((Object cert) => true) // TV cert is self-signed
       ..keepAlivePeriod = 30
       ..autoReconnect = true
       ..logging(on: false);
@@ -240,7 +242,8 @@ class VidaaClient {
     return true;
   }
 
-  void _subscribe(String topic) => _client?.subscribe(topic, MqttQos.atMostOnce);
+  void _subscribe(String topic) =>
+      _client?.subscribe(topic, MqttQos.atMostOnce);
 
   /// Exact client-specific topics the broker ACL allows (no wildcards).
   void _subscribeCore() {
@@ -264,9 +267,12 @@ class VidaaClient {
   void _onMessages(List<MqttReceivedMessage<MqttMessage>> events) {
     for (final e in events) {
       final msg = e.payload as MqttPublishMessage;
-      final payload =
-          MqttPublishPayload.bytesToStringAsString(msg.payload.message);
-      _log('[MSG] ${e.topic} -> ${payload.length > 200 ? payload.substring(0, 200) : payload}');
+      final payload = MqttPublishPayload.bytesToStringAsString(
+        msg.payload.message,
+      );
+      _log(
+        '[MSG] ${e.topic} -> ${payload.length > 200 ? payload.substring(0, 200) : payload}',
+      );
       _handle(e.topic, payload);
     }
   }
@@ -350,7 +356,7 @@ class VidaaClient {
           deviceName: s.deviceName,
           hasSignal: s.hasSignal,
           isActive: s.id == state.sourceId,
-        )
+        ),
     ];
   }
 
@@ -378,8 +384,9 @@ class VidaaClient {
   void getSourceList() => _publish(_tvTopic('ui_service', 'sourcelist'), '');
   void getVolume() => _publish(_tvTopic('platform_service', 'getvolume'), '');
   void changeSource(String sourceId) => _publish(
-      _tvTopic('ui_service', 'changesource'),
-      jsonEncode({'sourceid': sourceId}));
+    _tvTopic('ui_service', 'changesource'),
+    jsonEncode({'sourceid': sourceId}),
+  );
   void launchApp(Map<String, dynamic> app) =>
       _publish(_tvTopic('ui_service', 'launchapp'), jsonEncode(app));
 
@@ -388,16 +395,24 @@ class VidaaClient {
   void startPairing() {
     onPinRequired?.call();
     _publish(
-        _tvTopic('ui_service', 'vidaa_app_connect'),
-        jsonEncode(
-            {'app_version': 2, 'connect_result': 0, 'device_type': 'Mobile App'}));
+      _tvTopic('ui_service', 'vidaa_app_connect'),
+      jsonEncode({
+        'app_version': 2,
+        'connect_result': 0,
+        'device_type': 'Mobile App',
+      }),
+    );
   }
 
   /// Sends the PIN, waits for acceptance + token. Returns the token map.
-  Future<Map<String, dynamic>?> submitPin(String pin,
-      {Duration timeout = const Duration(seconds: 12)}) async {
-    _publish(_tvTopic('ui_service', 'authenticationcode'),
-        jsonEncode({'authNum': int.parse(pin)}));
+  Future<Map<String, dynamic>?> submitPin(
+    String pin, {
+    Duration timeout = const Duration(seconds: 12),
+  }) async {
+    _publish(
+      _tvTopic('ui_service', 'authenticationcode'),
+      jsonEncode({'authNum': int.parse(pin)}),
+    );
     try {
       await _authAccepted.future.timeout(timeout);
     } catch (_) {
@@ -409,13 +424,17 @@ class VidaaClient {
 
   /// Request a (new) access token. Empty [refresh] is used right after PIN
   /// acceptance; pass the stored refresh token to renew an expired session.
-  Future<Map<String, dynamic>?> requestToken(String refresh,
-      {Duration timeout = const Duration(seconds: 12)}) async {
+  Future<Map<String, dynamic>?> requestToken(
+    String refresh, {
+    Duration timeout = const Duration(seconds: 12),
+  }) async {
     final w = Completer<Map<String, dynamic>>();
     _tokenWaiter = w;
     // NB: gettoken lives under /data/ (not /actions/ like the other commands).
-    _publish('/remoteapp/tv/platform_service/$_clientId/data/gettoken',
-        jsonEncode({'refreshtoken': refresh}));
+    _publish(
+      '/remoteapp/tv/platform_service/$_clientId/data/gettoken',
+      jsonEncode({'refreshtoken': refresh}),
+    );
     try {
       return await w.future.timeout(timeout);
     } catch (_) {

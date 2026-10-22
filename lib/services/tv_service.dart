@@ -100,7 +100,8 @@ class TvService extends ChangeNotifier {
 
   /// The TV's input list as it last sent it, beside the token.
   File get _sourcesFile => File(
-      _tokenFileSync.path.replaceFirst(RegExp(r'\.json$'), '_inputs.json'));
+    _tokenFileSync.path.replaceFirst(RegExp(r'\.json$'), '_inputs.json'),
+  );
 
   /// Set as a PIN is accepted: the one time asking for the inputs is free,
   /// because the code has only just left the screen.
@@ -173,14 +174,17 @@ class TvService extends ChangeNotifier {
     _refreshExpiry = rTime + rDays * 86400;
     final f = await _tokenFile;
     // Private and whole: these tokens are as good as the TV's remote.
-    await writePrivateFile(f.path, jsonEncode({
-      'host': host,
-      'accesstoken': _accessToken,
-      'refreshtoken': _refreshToken,
-      'access_expiry': _accessExpiry,
-      'refresh_expiry': _refreshExpiry,
-      'saved_at': DateTime.now().toIso8601String(),
-    }));
+    await writePrivateFile(
+      f.path,
+      jsonEncode({
+        'host': host,
+        'accesstoken': _accessToken,
+        'refreshtoken': _refreshToken,
+        'access_expiry': _accessExpiry,
+        'refresh_expiry': _refreshExpiry,
+        'saved_at': DateTime.now().toIso8601String(),
+      }),
+    );
   }
 
   void _setConn(ConnState s, {String? err, bool retry = false}) {
@@ -321,8 +325,14 @@ class TvService extends ChangeNotifier {
       // fail anyway, several layers down, with an error naming TLS instead of
       // the thing actually missing.
       // Not retried: no amount of waiting puts a file on the disk.
-      _setConn(ConnState.error,
-          err: tr('widget.tv.tvClientCertificateNotSet', 'TV client certificate not set up — {message}', {'message': e.message}));
+      _setConn(
+        ConnState.error,
+        err: tr(
+          'widget.tv.tvClientCertificateNotSet',
+          'TV client certificate not set up — {message}',
+          {'message': e.message},
+        ),
+      );
       return;
     }
     await _loadToken();
@@ -346,8 +356,13 @@ class TvService extends ChangeNotifier {
       _setConn(ConnState.needsPairing);
       return;
     }
-    _setConn(ConnState.error,
-        err: tr('widget.tv.couldNotConnectTo', 'Could not connect to {host}', {'host': host}), retry: true);
+    _setConn(
+      ConnState.error,
+      err: tr('widget.tv.couldNotConnectTo', 'Could not connect to {host}', {
+        'host': host,
+      }),
+      retry: true,
+    );
   }
 
   /// Renew the access token: connect with dynamic creds (restricted ACL still
@@ -385,13 +400,26 @@ class TvService extends ChangeNotifier {
       try {
         await _loadAssets();
       } on TvCredentialsMissing catch (e) {
-        _setConn(ConnState.error,
-            err: tr('widget.tv.tvClientCertificateNotSet', 'TV client certificate not set up — {message}', {'message': e.message}));
+        _setConn(
+          ConnState.error,
+          err: tr(
+            'widget.tv.tvClientCertificateNotSet',
+            'TV client certificate not set up — {message}',
+            {'message': e.message},
+          ),
+        );
         return;
       }
       if (!await _openAndConnect(null)) {
-        _setConn(ConnState.error,
-            err: tr('widget.tv.couldNotConnectTo', 'Could not connect to {host}', {'host': host}), retry: true);
+        _setConn(
+          ConnState.error,
+          err: tr(
+            'widget.tv.couldNotConnectTo',
+            'Could not connect to {host}',
+            {'host': host},
+          ),
+          retry: true,
+        );
         return;
       }
     }
@@ -442,5 +470,9 @@ class TvCredentialsMissing implements Exception {
   TvCredentialsMissing(this.message);
   final String message;
   @override
-  String toString() => tr('widget.tv.tvCredentialsMissing', 'TV credentials missing: {message}', {'message': message});
+  String toString() => tr(
+    'widget.tv.tvCredentialsMissing',
+    'TV credentials missing: {message}',
+    {'message': message},
+  );
 }

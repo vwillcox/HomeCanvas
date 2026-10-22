@@ -46,7 +46,9 @@ enum RailcamLive {
 @visibleForTesting
 List<RailcamLive> railcamLive(String option, int count, {required bool alone}) {
   final videos = option == 'video' ? (alone ? 6 : 2) : 0;
-  final streams = option == 'video' || option == 'frames' ? (alone ? 12 : 8) : 0;
+  final streams = option == 'video' || option == 'frames'
+      ? (alone ? 12 : 8)
+      : 0;
   return [
     for (var i = 0; i < count; i++)
       i < videos
@@ -302,8 +304,7 @@ class _LiveCam extends StatefulWidget {
   State<_LiveCam> createState() => _LiveCamState();
 }
 
-class _LiveCamState extends State<_LiveCam>
-    with PauseWhenHidden, ShownTimers {
+class _LiveCamState extends State<_LiveCam> with PauseWhenHidden, ShownTimers {
   /// Railcam's cameras come in one size, mostly 1080p; other sites' and
   /// YouTube's are asked for at about this.
   static const _height = 360;
@@ -485,7 +486,11 @@ class _LiveCamState extends State<_LiveCam>
         }
       }
       final controller = VideoController(player, configuration: _config);
-      await VideoPlayerService.applyAudio(player, service.settings, muted: true);
+      await VideoPlayerService.applyAudio(
+        player,
+        service.settings,
+        muted: true,
+      );
       await stream.prepare(player);
       if (!mounted || run != _run) return;
       final mine = player;
@@ -520,9 +525,7 @@ class _LiveCamState extends State<_LiveCam>
       _sync();
       // Touched, it goes full screen: the player for that is made ready
       // now, once these have had the few seconds they take to start.
-      unawaited(
-        Future<void>.delayed(const Duration(seconds: 4), service.warm),
-      );
+      unawaited(Future<void>.delayed(const Duration(seconds: 4), service.warm));
     } catch (e) {
       debugPrint('Railcam: ${widget.id} would not play in the tile: $e');
       if (mounted && run == _run) {

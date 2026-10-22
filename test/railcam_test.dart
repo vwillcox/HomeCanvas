@@ -86,15 +86,14 @@ class _Site implements HttpClientAdapter {
           status,
           headers: {
             if (had == null) 'set-cookie': ['PHPSESSID=$session; path=/'],
-            if (status == 302) 'location': ['https://railcam.uk/RCnoaccess.php'],
+            if (status == 302)
+              'location': ['https://railcam.uk/RCnoaccess.php'],
           },
         );
     if (path == '/camsMap.php') return page(_map);
     if (path == '/account/login.php') {
       signIns++;
-      final body = utf8.decode(
-        await requestStream!.expand((b) => b).toList(),
-      );
+      final body = utf8.decode(await requestStream!.expand((b) => b).toList());
       if (!body.contains('password=right')) {
         return page('<form name="siteloklogin">Please check…</form>');
       }
@@ -105,7 +104,9 @@ class _Site implements HttpClientAdapter {
       return signedIn ? page(_dashboard) : page('', status: 302);
     }
     if (path == '/site/watch/anycam.php') {
-      return page(signedIn ? _crewe : 'No Access : from URL <title>Crewe</title>');
+      return page(
+        signedIn ? _crewe : 'No Access : from URL <title>Crewe</title>',
+      );
     }
     return page('', status: 404);
   }
@@ -162,7 +163,10 @@ void main() {
     final elsewhere = RailcamService.parsePlayer(
       "hls.loadSource('https://stream1.example.no/bt/Finse.stream/playlist.m3u8');",
     );
-    expect(elsewhere.hls, 'https://stream1.example.no/bt/Finse.stream/playlist.m3u8');
+    expect(
+      elsewhere.hls,
+      'https://stream1.example.no/bt/Finse.stream/playlist.m3u8',
+    );
 
     final off = RailcamService.parsePlayer(
       "<td class = 'offLineKnown' width=\"600\"><h3>OFF-LINE</h3></td>",
@@ -171,8 +175,9 @@ void main() {
     expect(off.hls, isNull);
 
     expect(
-      RailcamService.parsePlayer('No Access : from URL <title>x</title>')
-          .noAccess,
+      RailcamService.parsePlayer(
+        'No Access : from URL <title>x</title>',
+      ).noAccess,
       isTrue,
     );
   });
@@ -239,11 +244,13 @@ void main() {
     expect(railcamLive('video', 14, alone: true), [
       ...List.filled(6, video),
       ...List.filled(6, frames),
-      still, still,
+      still,
+      still,
     ]);
     // Sharing its page: two as video, and eight streams in all.
     expect(railcamLive('video', 9, alone: false), [
-      video, video,
+      video,
+      video,
       ...List.filled(6, frames),
       still,
     ]);
@@ -294,7 +301,11 @@ void main() {
     addTearDown(railcam.dispose);
 
     const link = RailcamLink('RCCrewe1');
-    final stream = await railcam.find(link, maxHeight: 1080, youtube: _noYouTube);
+    final stream = await railcam.find(
+      link,
+      maxHeight: 1080,
+      youtube: _noYouTube,
+    );
     expect(stream.uri, 'https://maybach.railcam.co.uk/Crewe1_69241/index.m3u8');
     expect(stream.isLive, isTrue);
     expect(stream.title, 'Crewe 1 - Chester Lines');
@@ -345,10 +356,10 @@ void main() {
     addTearDown(railcam.dispose);
     await expectLater(
       railcam.find(
-          const RailcamLink('RCCrewe1'),
-          maxHeight: 1080,
-          youtube: _noYouTube,
-        ),
+        const RailcamLink('RCCrewe1'),
+        maxHeight: 1080,
+        youtube: _noYouTube,
+      ),
       throwsA(
         isA<VideoException>().having(
           (e) => e.message,
