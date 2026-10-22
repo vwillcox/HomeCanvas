@@ -20,14 +20,18 @@ class FakeUnifi extends UnifiService {
   List<UnifiDevice> get devices => _devs;
   @override
   List<UnifiClient> get clients => [
-        for (var i = 0; i < 29; i++)
-          UnifiClient(id: '$i', name: 'c$i', type: 'WIRELESS'),
-      ];
+    for (var i = 0; i < 29; i++)
+      UnifiClient(id: '$i', name: 'c$i', type: 'WIRELESS'),
+  ];
   @override
   bool get hasContent => true;
   @override
   UnifiStats get gatewayStats => const UnifiStats(
-      txRateBps: 50000, rxRateBps: 54000, cpuPct: 28, memoryPct: 68);
+    txRateBps: 50000,
+    rxRateBps: 54000,
+    cpuPct: 28,
+    memoryPct: 68,
+  );
   @override
   UnifiStats statsFor(String id) => const UnifiStats(uptimeSec: 11 * 86400);
   @override
@@ -37,15 +41,15 @@ class FakeUnifi extends UnifiService {
 }
 
 List<UnifiDevice> devices(int n) => [
-      for (var i = 0; i < n; i++)
-        UnifiDevice(
-          id: 'd$i',
-          name: i == 0 ? 'Dream Router 7' : 'USW Flex 2.5G $i',
-          model: i == 0 ? 'UDR7' : 'USW Flex 2.5G',
-          state: 'ONLINE',
-          firmwareVersion: '5.1.33',
-        ),
-    ];
+  for (var i = 0; i < n; i++)
+    UnifiDevice(
+      id: 'd$i',
+      name: i == 0 ? 'Dream Router 7' : 'USW Flex 2.5G $i',
+      model: i == 0 ? 'UDR7' : 'USW Flex 2.5G',
+      state: 'ONLINE',
+      firmwareVersion: '5.1.33',
+    ),
+];
 
 /// The panel's grid: a 1900 × 1080 area, 12 × 8 cells, 10 px gaps — then
 /// the tile's own padding taken off, as the dashboard does.
@@ -56,29 +60,41 @@ Size tile(int w, int h) {
   return Size(w * cellW + (w - 1) * gap - 16, h * cellH + (h - 1) * gap - 16);
 }
 
-Future<void> pump(WidgetTester tester, Widget child, Size size,
-    UnifiService unifi) async {
+Future<void> pump(
+  WidgetTester tester,
+  Widget child,
+  Size size,
+  UnifiService unifi,
+) async {
   tester.view.physicalSize = const Size(1920, 1200);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  await tester.pumpWidget(ChangeNotifierProvider<UnifiService>.value(
-    value: unifi,
-    child: MaterialApp(
-      home: Scaffold(
-        body: Align(
-          alignment: Alignment.topLeft,
-          child: SizedBox.fromSize(size: size, child: child),
+  await tester.pumpWidget(
+    ChangeNotifierProvider<UnifiService>.value(
+      value: unifi,
+      child: MaterialApp(
+        home: Scaffold(
+          body: Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox.fromSize(size: size, child: child),
+          ),
         ),
       ),
     ),
-  ));
+  );
 }
 
 DashboardWidgetContext ctx(String type) => DashboardWidgetContext(
-      theme: kBuiltInThemes.first,
-      config: DashboardWidgetConfig(
-          id: 't', type: type, x: 0, y: 0, width: 4, height: 2),
-    );
+  theme: kBuiltInThemes.first,
+  config: DashboardWidgetConfig(
+    id: 't',
+    type: type,
+    x: 0,
+    y: 0,
+    width: 4,
+    height: 2,
+  ),
+);
 
 /// How tall [text] is on screen, after every scaling on the way there.
 double shownHeight(WidgetTester tester, String text) =>
@@ -102,13 +118,11 @@ void main() {
 
   group('arranging entries across a tile', () {
     test('two on a wide, short strip go side by side', () {
-      expect(bestGrid(2, tile(5, 1), cellAspect: 3.2),
-          (columns: 2, rows: 1));
+      expect(bestGrid(2, tile(5, 1), cellAspect: 3.2), (columns: 2, rows: 1));
     });
 
     test('two on a tall, narrow tile stack', () {
-      expect(bestGrid(2, tile(2, 4), cellAspect: 3.2),
-          (columns: 1, rows: 2));
+      expect(bestGrid(2, tile(2, 4), cellAspect: 3.2), (columns: 1, rows: 2));
     });
 
     test('many make a grid', () {
@@ -128,10 +142,15 @@ void main() {
   });
 
   group('on the panel, as placed', () {
-    testWidgets('network health (4 × 2) has figures you can read',
-        (tester) async {
-      await pump(tester, UnifiHealthWidget(w: ctx('unifi_health')),
-          tile(4, 2), FakeUnifi(devices(2)));
+    testWidgets('network health (4 × 2) has figures you can read', (
+      tester,
+    ) async {
+      await pump(
+        tester,
+        UnifiHealthWidget(w: ctx('unifi_health')),
+        tile(4, 2),
+        FakeUnifi(devices(2)),
+      );
       // Before: 26 × 0.67 = 17 px values, about 20 px of line, in a tile
       // with room for far more. Now sized from the tile: over double.
       expect(shownHeight(tester, '54 kb/s'), greaterThan(40));
@@ -140,8 +159,12 @@ void main() {
     });
 
     testWidgets('devices (5 × 1) has names you can read', (tester) async {
-      await pump(tester, UnifiDevicesWidget(w: ctx('unifi_devices')),
-          tile(5, 1), FakeUnifi(devices(2)));
+      await pump(
+        tester,
+        UnifiDevicesWidget(w: ctx('unifi_devices')),
+        tile(5, 1),
+        FakeUnifi(devices(2)),
+      );
       // Before: 15 × 0.45 = 7 px.
       expect(shownHeight(tester, 'Dream Router 7'), greaterThan(24));
       // Side by side, not one above the other.
@@ -163,38 +186,63 @@ void main() {
     testWidgets('network health never overflows', (tester) async {
       final unifi = FakeUnifi(devices(2));
       for (final (w, h) in sizes) {
-        await pump(tester, UnifiHealthWidget(w: ctx('unifi_health')),
-            tile(w, h), unifi);
+        await pump(
+          tester,
+          UnifiHealthWidget(w: ctx('unifi_health')),
+          tile(w, h),
+          unifi,
+        );
         expect(tester.takeException(), isNull, reason: '$w × $h');
       }
     });
 
-    testWidgets('devices never overflow, however many there are',
-        (tester) async {
+    testWidgets('devices never overflow, however many there are', (
+      tester,
+    ) async {
       for (final n in [1, 2, 5, 12]) {
         final unifi = FakeUnifi(devices(n));
         for (final (w, h) in sizes) {
-          await pump(tester, UnifiDevicesWidget(w: ctx('unifi_devices')),
-              tile(w, h), unifi);
+          await pump(
+            tester,
+            UnifiDevicesWidget(w: ctx('unifi_devices')),
+            tile(w, h),
+            unifi,
+          );
           expect(tester.takeException(), isNull, reason: '$n on $w × $h');
         }
       }
     });
 
-    testWidgets('bigger tiles get bigger figures, up to a limit',
-        (tester) async {
+    testWidgets('bigger tiles get bigger figures, up to a limit', (
+      tester,
+    ) async {
       final unifi = FakeUnifi(devices(2));
-      await pump(tester, UnifiHealthWidget(w: ctx('unifi_health')),
-          tile(4, 2), unifi);
+      await pump(
+        tester,
+        UnifiHealthWidget(w: ctx('unifi_health')),
+        tile(4, 2),
+        unifi,
+      );
       final small = shownHeight(tester, '54 kb/s');
-      await pump(tester, UnifiHealthWidget(w: ctx('unifi_health')),
-          tile(8, 4), unifi);
+      await pump(
+        tester,
+        UnifiHealthWidget(w: ctx('unifi_health')),
+        tile(8, 4),
+        unifi,
+      );
       final large = shownHeight(tester, '54 kb/s');
       expect(large, greaterThan(small * 1.5));
-      await pump(tester, UnifiHealthWidget(w: ctx('unifi_health')),
-          tile(12, 8), unifi);
-      expect(shownHeight(tester, '54 kb/s'), lessThan(160),
-          reason: 'a full-page tile must not get figures a hand high');
+      await pump(
+        tester,
+        UnifiHealthWidget(w: ctx('unifi_health')),
+        tile(12, 8),
+        unifi,
+      );
+      expect(
+        shownHeight(tester, '54 kb/s'),
+        lessThan(160),
+        reason: 'a full-page tile must not get figures a hand high',
+      );
     });
   });
 

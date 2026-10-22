@@ -104,9 +104,7 @@ class GithubWidget extends StatelessWidget {
                 indicator: theme.isLcars
                     ? const BoxDecoration(color: lcarsLit)
                     : null,
-                indicatorSize: theme.isLcars
-                    ? TabBarIndicatorSize.tab
-                    : null,
+                indicatorSize: theme.isLcars ? TabBarIndicatorSize.tab : null,
                 labelStyle: TextStyle(
                   fontSize: tabSize,
                   fontWeight: FontWeight.w600,
@@ -202,7 +200,8 @@ class _GithubRepositoryTileState extends State<_GithubRepositoryTile>
   @override
   void didUpdateWidget(covariant _GithubRepositoryTile old) {
     super.didUpdateWidget(old);
-    final asked = widget.repository != old.repository ||
+    final asked =
+        widget.repository != old.repository ||
         _token != old.w.option('token', '').trim();
     if (asked) {
       _data = null;
@@ -380,7 +379,8 @@ class _GithubRepositoryTileState extends State<_GithubRepositoryTile>
             );
           },
         );
-        final wantsTraffic = widget.w.option('showClones', true) ||
+        final wantsTraffic =
+            widget.w.option('showClones', true) ||
             widget.w.option('showVisitors', true) ||
             widget.w.option('showReferrers', true);
         return Column(
@@ -388,7 +388,11 @@ class _GithubRepositoryTileState extends State<_GithubRepositoryTile>
           children: [
             Row(
               children: [
-                Icon(Icons.hub_outlined, color: theme.accent, size: headSize * 1.2),
+                Icon(
+                  Icons.hub_outlined,
+                  color: theme.accent,
+                  size: headSize * 1.2,
+                ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -658,10 +662,11 @@ class _GithubRepositoryTileState extends State<_GithubRepositoryTile>
             label: tr('widget.github.referrer', 'From {site}', {
               'site': '${r['referrer'] ?? '?'}',
             }),
-            value: tr('widget.github.referrerCounts', '{count} · {uniques} unique', {
-              'count': _count(r['count']),
-              'uniques': _count(r['uniques']),
-            }),
+            value: tr(
+              'widget.github.referrerCounts',
+              '{count} · {uniques} unique',
+              {'count': _count(r['count']), 'uniques': _count(r['uniques'])},
+            ),
             icon: Icons.open_in_new,
           ),
     ];
@@ -690,7 +695,9 @@ class _GithubRepositoryTileState extends State<_GithubRepositoryTile>
       return tr('widget.github.yearsAgo', '{n}y ago', {'n': age.inDays ~/ 365});
     }
     if (age.inDays >= 30) {
-      return tr('widget.github.monthsAgo', '{n}mo ago', {'n': age.inDays ~/ 30});
+      return tr('widget.github.monthsAgo', '{n}mo ago', {
+        'n': age.inDays ~/ 30,
+      });
     }
     if (age.inDays > 0) {
       return tr('widget.github.daysAgo', '{n}d ago', {'n': age.inDays});
@@ -720,42 +727,42 @@ class _MetricCell extends StatelessWidget {
         child: SizedBox(
           width: c.maxWidth,
           child: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(metric.icon, size: labelSize, color: theme.accent),
-              const SizedBox(width: 5),
-              Expanded(
+              Row(
+                children: [
+                  Icon(metric.icon, size: labelSize, color: theme.accent),
+                  const SizedBox(width: 5),
+                  Expanded(
+                    child: Text(
+                      metric.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: theme.textSecondary,
+                        fontSize: labelSize,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
                 child: Text(
-                  metric.label,
+                  metric.value,
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: theme.textSecondary,
-                    fontSize: labelSize,
+                    color: theme.textPrimary,
+                    fontSize: valueSize,
+                    fontWeight: FontWeight.w300,
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
               ),
             ],
-          ),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              metric.value,
-              maxLines: 1,
-              style: TextStyle(
-                color: theme.textPrimary,
-                fontSize: valueSize,
-                fontWeight: FontWeight.w300,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
-            ),
-          ),
-        ],
           ),
         ),
       );

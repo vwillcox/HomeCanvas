@@ -13,8 +13,6 @@ import '../l10n/l10n.dart';
 /// [SpotifyService] about how tightly these endpoints are rate-limited
 /// compared to the player one.
 
-
-
 Widget _panelShell({
   required BuildContext context,
   required String title,
@@ -59,25 +57,29 @@ Widget _panelShell({
   );
 }
 
-Widget _emptyNote(String text) => Builder(builder: (context) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: 48),
-      child: Center(
-        child: Text(text,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: context.look.textSecondary, fontSize: 16)),
+Widget _emptyNote(String text) => Builder(
+  builder: (context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 48),
+    child: Center(
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: TextStyle(color: context.look.textSecondary, fontSize: 16),
       ),
-    ));
+    ),
+  ),
+);
 
 Widget _loading() => const Padding(
-      padding: EdgeInsets.symmetric(vertical: 48),
-      child: Center(
-        child: SizedBox(
-          width: 32,
-          height: 32,
-          child: CircularProgressIndicator(strokeWidth: 3),
-        ),
-      ),
-    );
+  padding: EdgeInsets.symmetric(vertical: 48),
+  child: Center(
+    child: SizedBox(
+      width: 32,
+      height: 32,
+      child: CircularProgressIndicator(strokeWidth: 3),
+    ),
+  ),
+);
 
 /// Square artwork for a list row, falling back to a music glyph.
 class _RowArt extends StatelessWidget {
@@ -100,9 +102,8 @@ class _RowArt extends StatelessWidget {
             : CachedNetworkImage(
                 imageUrl: url!,
                 fit: BoxFit.cover,
-                placeholder: (context, _) => ColoredBox(
-                  color: context.look.wash(0.1),
-                ),
+                placeholder: (context, _) =>
+                    ColoredBox(color: context.look.wash(0.1)),
                 errorWidget: (context, url, error) => ColoredBox(
                   color: context.look.wash(0.1),
                   child: Icon(Icons.music_note, color: context.look.wash(0.38)),
@@ -129,14 +130,14 @@ class _SpotifyDevicesDialogState extends State<SpotifyDevicesDialog> {
   late final Future<List<SpotifyDevice>> _future = widget.service.loadDevices();
 
   IconData _iconFor(String type) => switch (type.toLowerCase()) {
-        'computer' => Icons.computer,
-        'smartphone' => Icons.smartphone,
-        'tablet' => Icons.tablet,
-        'tv' => Icons.tv,
-        'castvideo' || 'castaudio' => Icons.cast,
-        'avr' || 'stb' => Icons.speaker_group,
-        _ => Icons.speaker,
-      };
+    'computer' => Icons.computer,
+    'smartphone' => Icons.smartphone,
+    'tablet' => Icons.tablet,
+    'tv' => Icons.tv,
+    'castvideo' || 'castaudio' => Icons.cast,
+    'avr' || 'stb' => Icons.speaker_group,
+    _ => Icons.speaker,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -153,10 +154,11 @@ class _SpotifyDevicesDialogState extends State<SpotifyDevicesDialog> {
           final devices = snapshot.data ?? const [];
           if (devices.isEmpty) {
             return _emptyNote(
-                tr(
-                  'spotify.noSpotifyDevicesFoundOpen',
-                  'No Spotify devices found.\nOpen Spotify somewhere to wake one up.',
-                ));
+              tr(
+                'spotify.noSpotifyDevicesFoundOpen',
+                'No Spotify devices found.\nOpen Spotify somewhere to wake one up.',
+              ),
+            );
           }
           return ListView.separated(
             shrinkWrap: true,
@@ -166,10 +168,15 @@ class _SpotifyDevicesDialogState extends State<SpotifyDevicesDialog> {
             itemBuilder: (context, i) {
               final d = devices[i];
               return ListTile(
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                leading: Icon(_iconFor(d.type),
-                    size: 30, color: d.isActive ? accent : context.look.textSecondary),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 6,
+                ),
+                leading: Icon(
+                  _iconFor(d.type),
+                  size: 30,
+                  color: d.isActive ? accent : context.look.textSecondary,
+                ),
                 title: Text(
                   d.name,
                   style: TextStyle(
@@ -179,8 +186,10 @@ class _SpotifyDevicesDialogState extends State<SpotifyDevicesDialog> {
                   ),
                 ),
                 subtitle: d.isActive
-                    ? Text(tr('spotify.playingHere', 'Playing here'),
-                        style: TextStyle(color: accent, fontSize: 14))
+                    ? Text(
+                        tr('spotify.playingHere', 'Playing here'),
+                        style: TextStyle(color: accent, fontSize: 14),
+                      )
                     : null,
                 trailing: d.isActive
                     ? Icon(Icons.graphic_eq, color: accent)
@@ -226,7 +235,11 @@ class _SpotifyQueueDialogState extends State<SpotifyQueueDialog> {
             return _loading();
           }
           final items = snapshot.data ?? const [];
-          if (items.isEmpty) return _emptyNote(tr('spotify.nothingQueuedUp', 'Nothing queued up'));
+          if (items.isEmpty) {
+            return _emptyNote(
+              tr('spotify.nothingQueuedUp', 'Nothing queued up'),
+            );
+          }
           return ListView.separated(
             shrinkWrap: true,
             itemCount: items.length,
@@ -235,18 +248,29 @@ class _SpotifyQueueDialogState extends State<SpotifyQueueDialog> {
             itemBuilder: (context, i) {
               final item = items[i];
               return ListTile(
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 4,
+                ),
                 leading: _RowArt(url: item.artUrl),
-                title: Text(item.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: context.look.textPrimary, fontSize: 18)),
-                subtitle: Text(item.subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style:
-                        TextStyle(color: context.look.textSecondary, fontSize: 15)),
+                title: Text(
+                  item.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: context.look.textPrimary,
+                    fontSize: 18,
+                  ),
+                ),
+                subtitle: Text(
+                  item.subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: context.look.textSecondary,
+                    fontSize: 15,
+                  ),
+                ),
               );
             },
           );
@@ -295,12 +319,18 @@ class SpotifyBrowseDialog extends StatelessWidget {
                   _ItemList(
                     service: service,
                     load: service.loadRecentlyPlayed,
-                    empty: tr('spotify.nothingPlayedRecentlyIfThis', 'Nothing played recently.\nIf this stays empty, reconnect Spotify in Settings to grant the extra permission.'),
+                    empty: tr(
+                      'spotify.nothingPlayedRecentlyIfThis',
+                      'Nothing played recently.\nIf this stays empty, reconnect Spotify in Settings to grant the extra permission.',
+                    ),
                   ),
                   _ItemList(
                     service: service,
                     load: service.loadTopTracks,
-                    empty: tr('spotify.noTopTracksYetIf', 'No top tracks yet.\nIf this stays empty, reconnect Spotify in Settings to grant the extra permission.'),
+                    empty: tr(
+                      'spotify.noTopTracksYetIf',
+                      'No top tracks yet.\nIf this stays empty, reconnect Spotify in Settings to grant the extra permission.',
+                    ),
                   ),
                 ],
               ),
@@ -351,20 +381,28 @@ class _ItemListState extends State<_ItemList>
           itemBuilder: (context, i) {
             final item = items[i];
             return ListTile(
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 4,
+              ),
               leading: _RowArt(url: item.artUrl),
-              title: Text(item.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: context.look.textPrimary, fontSize: 18)),
+              title: Text(
+                item.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: context.look.textPrimary, fontSize: 18),
+              ),
               subtitle: item.subtitle.isEmpty
                   ? null
-                  : Text(item.subtitle,
+                  : Text(
+                      item.subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style:
-                          TextStyle(color: context.look.textSecondary, fontSize: 15)),
+                      style: TextStyle(
+                        color: context.look.textSecondary,
+                        fontSize: 15,
+                      ),
+                    ),
               // Playing replaces what's on; queueing is the gentler option, so
               // it stays a separate explicit tap rather than the row default.
               trailing: item.isContext
@@ -372,12 +410,20 @@ class _ItemListState extends State<_ItemList>
                   : IconButton(
                       iconSize: 28,
                       tooltip: tr('spotify.addToQueue', 'Add to queue'),
-                      icon: Icon(Icons.queue_music,
-                          color: context.look.textSecondary),
+                      icon: Icon(
+                        Icons.queue_music,
+                        color: context.look.textSecondary,
+                      ),
                       onPressed: () {
                         widget.service.queue(item);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(tr('spotify.queued', 'Queued {title}', {'title': item.title}))),
+                          SnackBar(
+                            content: Text(
+                              tr('spotify.queued', 'Queued {title}', {
+                                'title': item.title,
+                              }),
+                            ),
+                          ),
                         );
                       },
                     ),

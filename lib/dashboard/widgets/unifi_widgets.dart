@@ -29,7 +29,10 @@ class _Waiting extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = service.settings;
     final message = !s.enabled
-        ? tr('widget.unifi.unifiIsSwitchedOffIn', 'UniFi is switched off in Settings')
+        ? tr(
+            'widget.unifi.unifiIsSwitchedOffIn',
+            'UniFi is switched off in Settings',
+          )
         : s.apiKey.isEmpty
         ? tr('widget.unifi.noApiKeySet', 'No API key set')
         : service.error != null
@@ -138,11 +141,21 @@ class UnifiHealthWidget extends StatelessWidget {
     final good = wanUp && offline.isEmpty;
     final statusText = good
         ? tr('widget.unifi.networkHealthy', 'Network healthy')
-        : (!wanUp ? tr('widget.unifi.wanDown', 'WAN down') : tr('widget.unifi.deviceSOffline', '{offline} device(s) offline', {'offline': offline.length}));
+        : (!wanUp
+              ? tr('widget.unifi.wanDown', 'WAN down')
+              : tr(
+                  'widget.unifi.deviceSOffline',
+                  '{offline} device(s) offline',
+                  {'offline': offline.length},
+                ));
     final statusColour = good ? const Color(0xFF4ADE80) : Colors.orangeAccent;
 
     String pct(double? v) => v == null ? '—' : '${v.toStringAsFixed(0)}%';
-    final down = (tr('widget.unifi.down', 'Down'), formatBps(stats.rxRateBps), t.accent);
+    final down = (
+      tr('widget.unifi.down', 'Down'),
+      formatBps(stats.rxRateBps),
+      t.accent,
+    );
     final up = (tr('widget.unifi.up', 'Up'), formatBps(stats.txRateBps), null);
     final small = [
       (tr('widget.unifi.clients', 'Clients'), '${unifi.clients.length}', null),
@@ -466,7 +479,9 @@ class UnifiPresenceWidget extends StatelessWidget {
     if (list.isEmpty) {
       return Center(
         child: Text(
-          watch.isEmpty ? tr('widget.unifi.nobodyConnected', 'Nobody connected') : tr('widget.unifi.noneOfThoseAreHere', 'None of those are here'),
+          watch.isEmpty
+              ? tr('widget.unifi.nobodyConnected', 'Nobody connected')
+              : tr('widget.unifi.noneOfThoseAreHere', 'None of those are here'),
           style: TextStyle(color: t.textSecondary, fontSize: 14),
         ),
       );
@@ -835,64 +850,62 @@ class UnifiClientsWidget extends StatelessWidget {
           children: [
             for (final c in clients)
               Row(
-                  children: [
-                    Icon(
-                      c.wireless ? Icons.wifi : Icons.settings_ethernet,
-                      size: row * 0.6,
-                      color: t.textSecondary,
+                children: [
+                  Icon(
+                    c.wireless ? Icons.wifi : Icons.settings_ethernet,
+                    size: row * 0.6,
+                    color: t.textSecondary,
+                  ),
+                  SizedBox(width: row * 0.3),
+                  Expanded(
+                    flex: 3,
+                    child: Text(
+                      c.displayName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: t.textPrimary,
+                        fontSize: font,
+                        height: 1.1,
+                      ),
                     ),
+                  ),
+                  if (c.ipAddress.isNotEmpty) ...[
                     SizedBox(width: row * 0.3),
-                    Expanded(
-                      flex: 3,
+                    // A column of its own width, set to the right, so the
+                    // addresses sit under one another.
+                    SizedBox(
+                      width: row * 4.6,
                       child: Text(
-                        c.displayName,
+                        c.ipAddress,
+                        maxLines: 1,
+                        textAlign: TextAlign.right,
+                        style: TextStyle(
+                          color: t.accent,
+                          fontSize: font * 0.93,
+                          height: 1.1,
+                          // So the addresses line up down the list.
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ),
+                  ],
+                  if (roomy)
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        byId[c.uplinkDeviceId]?.name ?? '',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.right,
                         style: TextStyle(
-                          color: t.textPrimary,
-                          fontSize: font,
+                          color: t.textSecondary,
+                          fontSize: font * 0.85,
                           height: 1.1,
                         ),
                       ),
                     ),
-                    if (c.ipAddress.isNotEmpty) ...[
-                      SizedBox(width: row * 0.3),
-                      // A column of its own width, set to the right, so the
-                      // addresses sit under one another.
-                      SizedBox(
-                        width: row * 4.6,
-                        child: Text(
-                          c.ipAddress,
-                          maxLines: 1,
-                          textAlign: TextAlign.right,
-                          style: TextStyle(
-                            color: t.accent,
-                            fontSize: font * 0.93,
-                            height: 1.1,
-                            // So the addresses line up down the list.
-                            fontFeatures: const [
-                              FontFeature.tabularFigures(),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                    if (roomy)
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          byId[c.uplinkDeviceId]?.name ?? '',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.right,
-                          style: TextStyle(
-                            color: t.textSecondary,
-                            fontSize: font * 0.85,
-                            height: 1.1,
-                          ),
-                        ),
-                      ),
-                  ],
+                ],
               ),
           ],
         );
@@ -990,7 +1003,10 @@ class UnifiThroughputWidget extends StatelessWidget {
                   // panel up ten minutes cannot show a day, and saying so
                   // beats a graph that looks mysteriously short.
                   h.span < window
-                      ? tr('widget.unifi.soFar', '{window} · {span} so far', {'window': _label(window), 'span': formatUptime(h.span)})
+                      ? tr('widget.unifi.soFar', '{window} · {span} so far', {
+                          'window': _label(window),
+                          'span': formatUptime(h.span),
+                        })
                       : _label(window),
                   style: TextStyle(color: t.textSecondary, fontSize: 11),
                 ),
@@ -1018,8 +1034,11 @@ class UnifiThroughputWidget extends StatelessWidget {
     '24h': Duration(hours: 24),
   };
 
-  static String _label(Duration d) =>
-      d.inHours >= 1 ? tr('widget.unifi.lastH', 'last {inHours}h', {'inHours': d.inHours}) : tr('widget.unifi.lastM', 'last {inMinutes}m', {'inMinutes': d.inMinutes});
+  static String _label(Duration d) => d.inHours >= 1
+      ? tr('widget.unifi.lastH', 'last {inHours}h', {'inHours': d.inHours})
+      : tr('widget.unifi.lastM', 'last {inMinutes}m', {
+          'inMinutes': d.inMinutes,
+        });
 
   static Color _uploadColour(DashboardTheme t) {
     final hsl = HSLColor.fromColor(t.accent);
@@ -1099,11 +1118,10 @@ class _ThroughputPainter extends CustomPainter {
 // Registration
 // ---------------------------------------------------------------------------
 
-final _needsKey =
-    tr(
-      'widget.unifi.needsAUnifiApiKey',
-      'Needs a UniFi API key — Network → Settings → Control Plane → Integrations.',
-    );
+final _needsKey = tr(
+  'widget.unifi.needsAUnifiApiKey',
+  'Needs a UniFi API key — Network → Settings → Control Plane → Integrations.',
+);
 
 final unifiHealthWidgetType = DashboardWidgetType(
   type: 'unifi_health',
@@ -1280,7 +1298,10 @@ class UnifiIspWidget extends StatelessWidget {
       return Center(
         child: Text(
           unifi.hasContent
-              ? tr('widget.unifi.theRouterHasNotRun', 'The router has not run a speed test yet')
+              ? tr(
+                  'widget.unifi.theRouterHasNotRun',
+                  'The router has not run a speed test yet',
+                )
               : tr('widget.unifi.readingTheNetwork', 'Reading the network…'),
           textAlign: TextAlign.center,
           style: TextStyle(color: t.textSecondary, fontSize: 14),
@@ -1324,7 +1345,9 @@ class UnifiIspWidget extends StatelessWidget {
                 label: tr('widget.unifi.down', 'Down'),
                 value: isp.downMbps == null
                     ? '—'
-                    : tr('widget.unifi.mbS2', '{downMbps} Mb/s', {'downMbps': isp.downMbps!.toStringAsFixed(0)}),
+                    : tr('widget.unifi.mbS2', '{downMbps} Mb/s', {
+                        'downMbps': isp.downMbps!.toStringAsFixed(0),
+                      }),
                 colour: t.accent,
               ),
             ),
@@ -1334,7 +1357,9 @@ class UnifiIspWidget extends StatelessWidget {
                 label: tr('widget.unifi.up', 'Up'),
                 value: isp.upMbps == null
                     ? '—'
-                    : tr('widget.unifi.mbS', '{upMbps} Mb/s', {'upMbps': isp.upMbps!.toStringAsFixed(0)}),
+                    : tr('widget.unifi.mbS', '{upMbps} Mb/s', {
+                        'upMbps': isp.upMbps!.toStringAsFixed(0),
+                      }),
               ),
             ),
           ],

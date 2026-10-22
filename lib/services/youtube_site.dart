@@ -40,8 +40,13 @@ class YouTubeSite extends VideoSite {
 
   Future<Map<String, dynamic>> _subscriptions(int count) async {
     try {
-      return await runYtDlp(
-          ['-J', '--flat-playlist', '-I', '1:$count', subscriptionsUrl]);
+      return await runYtDlp([
+        '-J',
+        '--flat-playlist',
+        '-I',
+        '1:$count',
+        subscriptionsUrl,
+      ]);
     } on VideoException catch (e) {
       if (YtDlp.wantsSignIn(e.message)) throw const SignedOut();
       rethrow;

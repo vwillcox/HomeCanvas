@@ -38,10 +38,11 @@ class DashboardWeatherWidget extends StatelessWidget {
     if (weather == null) {
       return Center(
         child: Text(
-          service.error ?? tr(
-            'widget.weather.waitingForTheForecast',
-            'Waiting for the forecast…',
-          ),
+          service.error ??
+              tr(
+                'widget.weather.waitingForTheForecast',
+                'Waiting for the forecast…',
+              ),
           style: TextStyle(color: t.textSecondary, fontSize: 16),
         ),
       );
@@ -49,9 +50,8 @@ class DashboardWeatherWidget extends StatelessWidget {
 
     // Stored as a choice, so it arrives as a string from the editor and as a
     // number from a config written before it became one.
-    final days =
-        (int.tryParse('${w.config.options['forecastDays'] ?? 3}') ?? 3)
-            .clamp(0, 14);
+    final days = (int.tryParse('${w.config.options['forecastDays'] ?? 3}') ?? 3)
+        .clamp(0, 14);
     final showFeels = w.option('showFeelsLike', true);
     final showHighLow = w.option('showHighLow', true);
     final showCurrent = w.option('showCurrent', true);
@@ -62,53 +62,61 @@ class DashboardWeatherWidget extends StatelessWidget {
     // middle of one, and shrink to fit a small tile instead of overflowing —
     // the numbers below are proportions to each other, not sizes on screen.
     final current = t.isLcars
-        ? _consoleCurrent(weather, showFeels: showFeels, showHighLow: showHighLow)
+        ? _consoleCurrent(
+            weather,
+            showFeels: showFeels,
+            showHighLow: showHighLow,
+          )
         : FittedBox(
-      fit: BoxFit.contain,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                weatherIcon(weather.weatherCode, weather.isDay),
-                color: t.accent,
-                size: 64,
-              ),
-              const SizedBox(width: 16),
-              Text(
-                '${weather.temperature.round()}${weather.unit}',
-                style: TextStyle(
-                  color: t.textPrimary,
-                  fontSize: 52,
-                  height: 1.0,
-                  fontWeight: FontWeight.w300,
+            fit: BoxFit.contain,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      weatherIcon(weather.weatherCode, weather.isDay),
+                      color: t.accent,
+                      size: 64,
+                    ),
+                    const SizedBox(width: 16),
+                    Text(
+                      '${weather.temperature.round()}${weather.unit}',
+                      style: TextStyle(
+                        color: t.textPrimary,
+                        fontSize: 52,
+                        height: 1.0,
+                        fontWeight: FontWeight.w300,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            showFeels
-                ? tr(
-                  'widget.weather.feels',
-                  '{description} · feels {feelsLike}{unit}',
-                  {'description': weather.description, 'feelsLike': weather.feelsLike.round(), 'unit': weather.unit},
-                )
-                : weather.description,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: t.textSecondary, fontSize: 17),
-          ),
-          if (showHighLow)
-            Text(
-              '${weather.tempMax.round()}° / ${weather.tempMin.round()}°',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: t.textSecondary, fontSize: 16),
+                const SizedBox(height: 6),
+                Text(
+                  showFeels
+                      ? tr(
+                          'widget.weather.feels',
+                          '{description} · feels {feelsLike}{unit}',
+                          {
+                            'description': weather.description,
+                            'feelsLike': weather.feelsLike.round(),
+                            'unit': weather.unit,
+                          },
+                        )
+                      : weather.description,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: t.textSecondary, fontSize: 17),
+                ),
+                if (showHighLow)
+                  Text(
+                    '${weather.tempMax.round()}° / ${weather.tempMin.round()}°',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: t.textSecondary, fontSize: 16),
+                  ),
+              ],
             ),
-        ],
-      ),
-    );
+          );
 
     // With the current reading switched off, today is dropped from the
     // forecast too. Otherwise the panel still leads with "Today", which is
@@ -171,10 +179,7 @@ class DashboardWeatherWidget extends StatelessWidget {
     // columns of days, and they should open the full picture too.
     return Semantics(
       button: true,
-      label: tr(
-        'widget.weather.showTheFullForecast',
-        'Show the full forecast',
-      ),
+      label: tr('widget.weather.showTheFullForecast', 'Show the full forecast'),
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => showWeatherForecast(context, t),
@@ -182,7 +187,6 @@ class DashboardWeatherWidget extends StatelessWidget {
       ),
     );
   }
-
 
   /// The reading as a console shows it: the temperature heavy in the accent
   /// with what the sky is doing under it, and the other figures beside it
@@ -334,8 +338,7 @@ class _Forecast extends StatelessWidget {
           child: Row(
             children: [
               ...cells.sublist(across),
-              for (var i = cells.length; i < across * 2; i++)
-                const Spacer(),
+              for (var i = cells.length; i < across * 2; i++) const Spacer(),
             ],
           ),
         ),
@@ -363,11 +366,7 @@ class _Forecast extends StatelessWidget {
     );
     Widget low(double size) => Text(
       '${day.tempMin.round()}°',
-      style: TextStyle(
-        color: theme.textSecondary,
-        fontSize: size,
-        height: 1.1,
-      ),
+      style: TextStyle(color: theme.textSecondary, fontSize: size, height: 1.1),
     );
     if (vertical) {
       return Row(
@@ -438,10 +437,7 @@ class _Forecast extends StatelessWidget {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(lcarsLine / 2),
-              child: FittedBox(
-                fit: BoxFit.contain,
-                child: _consoleDay(i, day),
-              ),
+              child: FittedBox(fit: BoxFit.contain, child: _consoleDay(i, day)),
             ),
           ),
       ];
@@ -466,16 +462,23 @@ class _Forecast extends StatelessWidget {
                           child: Text(
                             DashboardWeatherWidget.dayLabel(day.date),
                             style: TextStyle(
-                                color: theme.textSecondary, fontSize: 17),
+                              color: theme.textSecondary,
+                              fontSize: 17,
+                            ),
                           ),
                         ),
-                        Icon(weatherIcon(day.weatherCode, true),
-                            color: theme.textSecondary, size: 26),
+                        Icon(
+                          weatherIcon(day.weatherCode, true),
+                          color: theme.textSecondary,
+                          size: 26,
+                        ),
                         const SizedBox(width: 10),
                         Text(
                           '${day.tempMax.round()}°',
-                          style:
-                              TextStyle(color: theme.textPrimary, fontSize: 20),
+                          style: TextStyle(
+                            color: theme.textPrimary,
+                            fontSize: 20,
+                          ),
                         ),
                       ],
                     )
@@ -485,16 +488,23 @@ class _Forecast extends StatelessWidget {
                         Text(
                           DashboardWeatherWidget.dayLabel(day.date),
                           style: TextStyle(
-                              color: theme.textSecondary, fontSize: 15),
+                            color: theme.textSecondary,
+                            fontSize: 15,
+                          ),
                         ),
                         const SizedBox(height: 4),
-                        Icon(weatherIcon(day.weatherCode, true),
-                            color: theme.textSecondary, size: 32),
+                        Icon(
+                          weatherIcon(day.weatherCode, true),
+                          color: theme.textSecondary,
+                          size: 32,
+                        ),
                         const SizedBox(height: 4),
                         Text(
                           '${day.tempMax.round()}°',
-                          style:
-                              TextStyle(color: theme.textPrimary, fontSize: 18),
+                          style: TextStyle(
+                            color: theme.textPrimary,
+                            fontSize: 18,
+                          ),
                         ),
                       ],
                     ),
@@ -543,7 +553,8 @@ final weatherWidgetType = DashboardWidgetType(
       label: 'Show current conditions',
       kind: OptionKind.boolean,
       defaultValue: true,
-      help: 'Turn off for a forecast-only tile, so one widget can be a '
+      help:
+          'Turn off for a forecast-only tile, so one widget can be a '
           'reading in one place and a week’s outlook in another. Today is '
           'left out of the forecast when this is off.',
     ),
@@ -564,7 +575,8 @@ final weatherWidgetType = DashboardWidgetType(
       label: 'Tap for the full forecast',
       kind: OptionKind.boolean,
       defaultValue: true,
-      help: 'Now, the next 24 hours and the week, over the whole screen. '
+      help:
+          'Now, the next 24 hours and the week, over the whole screen. '
           'Close it with the ×, a tap outside it or a swipe down; it closes '
           'itself after two minutes.',
     ),
@@ -577,8 +589,8 @@ final weatherWidgetType = DashboardWidgetType(
   live: (config, data) {
     final weather = data.weather?.weather;
     if (weather == null) return const [];
-    final days =
-        (int.tryParse('${config.options['forecastDays'] ?? 3}') ?? 3).clamp(0, 7);
+    final days = (int.tryParse('${config.options['forecastDays'] ?? 3}') ?? 3)
+        .clamp(0, 7);
     final feels = config.options['showFeelsLike'] != false
         ? ' · feels ${weather.feelsLike.round()}${weather.unit}'
         : '';
@@ -587,20 +599,32 @@ final weatherWidgetType = DashboardWidgetType(
       return [
         for (final d in weather.daily.take(days == 0 ? 3 : days))
           PreviewLine(
-              '${DashboardWeatherWidget.dayLabel(d.date)}   ${d.tempMax.round()}°',
-              scale: 0.11,
-              centre: true),
+            '${DashboardWeatherWidget.dayLabel(d.date)}   ${d.tempMax.round()}°',
+            scale: 0.11,
+            centre: true,
+          ),
       ];
     }
     return [
-      PreviewLine('${weather.temperature.round()}${weather.unit}',
-          scale: 0.3, accent: true, centre: true),
-      PreviewLine('${weather.description}$feels',
-          scale: 0.1, muted: true, centre: true),
+      PreviewLine(
+        '${weather.temperature.round()}${weather.unit}',
+        scale: 0.3,
+        accent: true,
+        centre: true,
+      ),
+      PreviewLine(
+        '${weather.description}$feels',
+        scale: 0.1,
+        muted: true,
+        centre: true,
+      ),
       if (config.options['showHighLow'] != false)
         PreviewLine(
-            '${weather.tempMax.round()}° / ${weather.tempMin.round()}°',
-            scale: 0.09, muted: true, centre: true),
+          '${weather.tempMax.round()}° / ${weather.tempMin.round()}°',
+          scale: 0.09,
+          muted: true,
+          centre: true,
+        ),
       if (days > 0 && weather.daily.isNotEmpty)
         PreviewLine(
           weather.daily

@@ -14,7 +14,10 @@ final lcars = kBuiltInThemes.firstWhere((t) => t.id == 'lcars');
 /// [home] on the kiosk as LCARS dresses it.
 Widget console(Widget home) => KioskLook(
   theme: lcars,
-  child: MaterialApp(theme: buildTheme(lcars), home: Scaffold(body: home)),
+  child: MaterialApp(
+    theme: buildTheme(lcars),
+    home: Scaffold(body: home),
+  ),
 );
 
 void main() {
@@ -106,19 +109,24 @@ void main() {
   });
 
   group('the shared parts on a console', () {
-    testWidgets('a screen is headed by a text bar, in capitals', (tester) async {
+    testWidgets('a screen is headed by a text bar, in capitals', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         console(const HeaderTitle(title: 'Settings', subtitle: 'Connected')),
       );
       expect(find.byType(LcarsTextBar), findsOneWidget);
       expect(find.text('SETTINGS'), findsOneWidget);
       expect(find.text('CONNECTED'), findsOneWidget);
-      expect(tester.widget<Text>(find.text('SETTINGS')).style!.color,
-          lcars.accent);
+      expect(
+        tester.widget<Text>(find.text('SETTINGS')).style!.color,
+        lcars.accent,
+      );
     });
 
-    testWidgets('a group of settings is a panel with its rows inside',
-        (tester) async {
+    testWidgets('a group of settings is a panel with its rows inside', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         console(
           const GlassSection(
@@ -131,15 +139,20 @@ void main() {
       expect(find.text('Brightness'), findsOneWidget);
     });
 
-    testWidgets('a button in a strip is a block, lit while chosen',
-        (tester) async {
+    testWidgets('a button in a strip is a block, lit while chosen', (
+      tester,
+    ) async {
       var taps = 0;
       await tester.pumpWidget(
         console(
           Row(
             children: [
               PillIconButton(icon: Icons.photo, onPressed: () => taps++),
-              PillIconButton(icon: Icons.dashboard, onPressed: () {}, selected: true),
+              PillIconButton(
+                icon: Icons.dashboard,
+                onPressed: () {},
+                selected: true,
+              ),
             ],
           ),
         ),
@@ -151,11 +164,14 @@ void main() {
       expect(taps, 1);
     });
 
-    testWidgets('a colour that means something is kept as the block\'s',
-        (tester) async {
+    testWidgets('a colour that means something is kept as the block\'s', (
+      tester,
+    ) async {
       const red = Color(0xFFCC0000);
       await tester.pumpWidget(
-        console(PillIconButton(icon: Icons.delete, onPressed: () {}, colour: red)),
+        console(
+          PillIconButton(icon: Icons.delete, onPressed: () {}, colour: red),
+        ),
       );
       expect(tester.widget<LcarsBlock>(find.byType(LcarsBlock)).colour, red);
     });
@@ -175,7 +191,9 @@ void main() {
 
     testWidgets('Glass is still glass on any other theme', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(home: Scaffold(body: HeaderTitle(title: 'Home'))),
+        const MaterialApp(
+          home: Scaffold(body: HeaderTitle(title: 'Home')),
+        ),
       );
       expect(find.byType(LcarsTextBar), findsNothing);
       expect(find.text('Home'), findsOneWidget);
@@ -213,8 +231,9 @@ void main() {
           ),
         );
 
-    testWidgets('is a panel lettered with its name and a number',
-        (tester) async {
+    testWidgets('is a panel lettered with its name and a number', (
+      tester,
+    ) async {
       await draw(tester);
       final panel = tester.widget<LcarsPanel>(find.byType(LcarsPanel));
       expect(panel.label, matches(RegExp(r'^no_such_widget \d\d$')));
@@ -226,8 +245,9 @@ void main() {
       expect(tester.widget<LcarsPanel>(find.byType(LcarsPanel)).down, isTrue);
     });
 
-    testWidgets('leaves its contents where they are without its bars',
-        (tester) async {
+    testWidgets('leaves its contents where they are without its bars', (
+      tester,
+    ) async {
       await draw(tester);
       final framed = tester.getRect(find.textContaining('Unknown widget'));
       await draw(tester, framed: false);
@@ -242,10 +262,8 @@ void main() {
     await tester.pumpWidget(
       console(
         StatefulBuilder(
-          builder: (context, setState) => Slider(
-            value: value,
-            onChanged: (v) => setState(() => value = v),
-          ),
+          builder: (context, setState) =>
+              Slider(value: value, onChanged: (v) => setState(() => value = v)),
         ),
       ),
     );
@@ -262,7 +280,11 @@ void main() {
         child: SizedBox(
           width: 480,
           height: 280,
-          child: LcarsPanel(theme: lcars, label: 'Clock 54', child: const SizedBox()),
+          child: LcarsPanel(
+            theme: lcars,
+            label: 'Clock 54',
+            child: const SizedBox(),
+          ),
         ),
       ),
     );
@@ -270,8 +292,9 @@ void main() {
     int lit(WidgetTester tester) =>
         tester.state<LcarsPanelState>(find.byType(LcarsPanel)).lit.value;
 
-    testWidgets('a panel comes up a length at a time, the elbow first',
-        (tester) async {
+    testWidgets('a panel comes up a length at a time, the elbow first', (
+      tester,
+    ) async {
       await tester.pumpWidget(panel());
       final seen = <int>{lit(tester)};
       for (var i = 0; i < 12; i++) {
@@ -281,8 +304,9 @@ void main() {
       expect(seen, [0, 1, 3, 7, LcarsPanel.allLit]);
     });
 
-    testWidgets('then blinks one short length now and then, never the elbow',
-        (tester) async {
+    testWidgets('then blinks one short length now and then, never the elbow', (
+      tester,
+    ) async {
       await tester.pumpWidget(panel());
       await tester.pump(const Duration(seconds: 1));
       expect(lit(tester), LcarsPanel.allLit);
@@ -302,8 +326,9 @@ void main() {
       expect(lit(tester), LcarsPanel.allLit);
     });
 
-    testWidgets('a panel is simply lit where animations are off',
-        (tester) async {
+    testWidgets('a panel is simply lit where animations are off', (
+      tester,
+    ) async {
       await tester.pumpWidget(panel(still: true));
       expect(lit(tester), LcarsPanel.allLit);
       await tester.pump(const Duration(minutes: 2));
@@ -311,8 +336,9 @@ void main() {
       expect(tester.binding.hasScheduledFrame, isFalse);
     });
 
-    testWidgets('a panel that cannot be seen is dark, and comes up again',
-        (tester) async {
+    testWidgets('a panel that cannot be seen is dark, and comes up again', (
+      tester,
+    ) async {
       Widget shown(bool on) => TickerMode(enabled: on, child: panel());
       await tester.pumpWidget(shown(true));
       await tester.pump(const Duration(seconds: 1));
@@ -325,8 +351,9 @@ void main() {
       expect(lit(tester), LcarsPanel.allLit);
     });
 
-    testWidgets('a readout flashes as its figure changes, and not before',
-        (tester) async {
+    testWidgets('a readout flashes as its figure changes, and not before', (
+      tester,
+    ) async {
       final orange = lcars.block(1);
       Widget readout(String value) => console(
         LcarsReadout(colour: orange, name: 'Wind', value: value, width: 132),
@@ -349,11 +376,13 @@ void main() {
     testWidgets('segments count to a value that jumps, and follow one that '
         'creeps', (tester) async {
       Widget segments(double value) => console(
-        SizedBox(width: 300, child: LcarsSegments(theme: lcars, value: value)),
+        SizedBox(
+          width: 300,
+          child: LcarsSegments(theme: lcars, value: value),
+        ),
       );
-      double drawn() => tester
-          .state<LcarsSegmentsState>(find.byType(LcarsSegments))
-          .drawn;
+      double drawn() =>
+          tester.state<LcarsSegmentsState>(find.byType(LcarsSegments)).drawn;
 
       await tester.pumpWidget(segments(0.8));
       expect(drawn(), 0);

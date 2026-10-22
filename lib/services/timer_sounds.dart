@@ -128,10 +128,17 @@ class TimerSounds {
   Future<String> save(String name, Uint8List bytes) async {
     final safe = safeName(name);
     if (safe == null) {
-      throw FormatException(tr('widget.timers.onlyMp3WavOrOgg', 'Only MP3, WAV or Ogg files can be used.'));
+      throw FormatException(
+        tr(
+          'widget.timers.onlyMp3WavOrOgg',
+          'Only MP3, WAV or Ogg files can be used.',
+        ),
+      );
     }
     if (bytes.length > maxUploadBytes) {
-      throw FormatException(tr('widget.timers.thatFileIsOver5', 'That file is over 5 MB.'));
+      throw FormatException(
+        tr('widget.timers.thatFileIsOver5', 'That file is over 5 MB.'),
+      );
     }
     if (!looksLikeAudio(safe, bytes)) {
       throw const FormatException("That file doesn't look like a sound.");

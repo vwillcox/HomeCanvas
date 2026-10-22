@@ -53,21 +53,24 @@ END:VCALENDAR''');
 
     test('unfolds wrapped lines and unescapes text', () {
       final events = FeedService.parseIcs(
-          'BEGIN:VEVENT\r\nSUMMARY:A very long title that got\r\n  wrapped\\, twice\r\n'
-          'DTSTART:20260811T090000Z\r\nEND:VEVENT');
+        'BEGIN:VEVENT\r\nSUMMARY:A very long title that got\r\n  wrapped\\, twice\r\n'
+        'DTSTART:20260811T090000Z\r\nEND:VEVENT',
+      );
       expect(events.single.title, 'A very long title that got wrapped, twice');
     });
 
     test('recognises all-day events', () {
       final events = FeedService.parseIcs(
-          'BEGIN:VEVENT\nSUMMARY:Birthday\nDTSTART;VALUE=DATE:20260811\nEND:VEVENT');
+        'BEGIN:VEVENT\nSUMMARY:Birthday\nDTSTART;VALUE=DATE:20260811\nEND:VEVENT',
+      );
       expect(events.single.allDay, isTrue);
       expect(events.single.start.day, 11);
     });
 
     test('an event with no start is skipped rather than guessed at', () {
-      final events =
-          FeedService.parseIcs('BEGIN:VEVENT\nSUMMARY:Whenever\nEND:VEVENT');
+      final events = FeedService.parseIcs(
+        'BEGIN:VEVENT\nSUMMARY:Whenever\nEND:VEVENT',
+      );
       expect(events, isEmpty);
     });
   });
@@ -76,9 +79,9 @@ END:VCALENDAR''');
 }
 
 FeedItem item(String title, {Duration? old}) => FeedItem(
-      title: title,
-      published: old == null ? null : DateTime(2026, 8, 14, 12).subtract(old),
-    );
+  title: title,
+  published: old == null ? null : DateTime(2026, 8, 14, 12).subtract(old),
+);
 
 void mixTests() {
   final now = DateTime(2026, 8, 14, 12);
@@ -92,10 +95,16 @@ void mixTests() {
       final quiet = [item('quiet', old: const Duration(hours: 2))];
 
       final mixed = FeedService.mix([busy, quiet], max: 5, now: now);
-      expect(mixed.map((i) => i.title), contains('quiet'),
-          reason: 'the quiet feed must get a look-in');
-      expect(mixed.first.title, 'busy 0',
-          reason: 'but the freshest item still leads');
+      expect(
+        mixed.map((i) => i.title),
+        contains('quiet'),
+        reason: 'the quiet feed must get a look-in',
+      );
+      expect(
+        mixed.first.title,
+        'busy 0',
+        reason: 'but the freshest item still leads',
+      );
     });
 
     test('recency beats feed order', () {
@@ -121,8 +130,12 @@ void mixTests() {
     });
 
     test('never returns more than asked for', () {
-      final a = [for (var i = 0; i < 20; i++) item('a$i', old: Duration(hours: i))];
-      final b = [for (var i = 0; i < 20; i++) item('b$i', old: Duration(hours: i))];
+      final a = [
+        for (var i = 0; i < 20; i++) item('a$i', old: Duration(hours: i)),
+      ];
+      final b = [
+        for (var i = 0; i < 20; i++) item('b$i', old: Duration(hours: i)),
+      ];
       expect(FeedService.mix([a, b], max: 4, now: now).length, 4);
     });
   });
@@ -136,8 +149,8 @@ void mixTests() {
 /// the literal text `&#038;` — and that is what was showing on the panel.
 void _entities() {
   String titleOf(String rawXml) => FeedService.parseFeed(
-        '<rss><channel><item><title>$rawXml</title></item></channel></rss>',
-      ).single.title;
+    '<rss><channel><item><title>$rawXml</title></item></channel></rss>',
+  ).single.title;
 
   group('HTML entities in feed titles', () {
     test('double-encoded numeric entities are decoded', () {

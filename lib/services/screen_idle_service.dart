@@ -33,10 +33,12 @@ class ScreenIdleService {
   /// Both playback sources; either one playing counts as "in use".
   final List<PlaybackSource> _sources;
 
-  final Dio _dio = Dio(BaseOptions(
-    connectTimeout: const Duration(seconds: 3),
-    receiveTimeout: const Duration(seconds: 3),
-  ));
+  final Dio _dio = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 3),
+      receiveTimeout: const Duration(seconds: 3),
+    ),
+  );
 
   Timer? _timer;
   DateTime _lastInteraction = DateTime.now();
@@ -172,7 +174,9 @@ class ScreenIdleService {
     } catch (e) {
       // Not fatal — the screen just stays as it is. Most likely
       // screen-control.service isn't running; see the README.
-      debugPrint('ScreenIdle: could not switch screen ${on ? 'on' : 'off'}: $e');
+      debugPrint(
+        'ScreenIdle: could not switch screen ${on ? 'on' : 'off'}: $e',
+      );
     }
   }
 }

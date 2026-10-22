@@ -39,8 +39,8 @@ typedef PcmSourceOpener = Future<PcmStream> Function();
 /// visualiser is off-screen, collapsed, or switched off in settings.
 class AudioLevelsService extends ChangeNotifier {
   AudioLevelsService({AudioAnalyser? analyser, PcmSourceOpener? open})
-      : _analyser = analyser ?? AudioAnalyser(),
-        _open = open ?? _capturePipeWireSink;
+    : _analyser = analyser ?? AudioAnalyser(),
+      _open = open ?? _capturePipeWireSink;
 
   final AudioAnalyser _analyser;
   final PcmSourceOpener _open;
@@ -65,8 +65,9 @@ class AudioLevelsService extends ChangeNotifier {
   String? _error;
 
   final _pending = BytesBuilder(copy: false);
-  final RetrySchedule _schedule =
-      RetrySchedule(settled: const Duration(seconds: 5));
+  final RetrySchedule _schedule = RetrySchedule(
+    settled: const Duration(seconds: 5),
+  );
 
   /// Band levels, 0–1. All zero when nothing is playing or nothing is running.
   List<double> get levels => _analyser.levels;
@@ -156,13 +157,15 @@ class AudioLevelsService extends ChangeNotifier {
   void _lost(String reason) {
     if (_retry != null) return;
     _error = reason;
-    unawaited(_stop().then((_) {
-      if (_viewers == 0 || !_supported) return;
-      _retry = Timer(_schedule.next(hasContent: false), () {
-        _retry = null;
-        if (_viewers > 0) unawaited(_start());
-      });
-    }));
+    unawaited(
+      _stop().then((_) {
+        if (_viewers == 0 || !_supported) return;
+        _retry = Timer(_schedule.next(hasContent: false), () {
+          _retry = null;
+          if (_viewers > 0) unawaited(_start());
+        });
+      }),
+    );
   }
 
   void _onBytes(List<int> chunk) {

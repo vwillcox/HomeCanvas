@@ -100,7 +100,9 @@ class CustomWidgets extends ChangeNotifier {
   Future<CustomWidgetSpec> install(String source) async {
     final spec = CustomWidgetSpec.parse(source);
     if (!_specs.containsKey(spec.id) && _specs.length >= most) {
-      throw const FormatException('That is the most custom widgets there can be.');
+      throw const FormatException(
+        'That is the most custom widgets there can be.',
+      );
     }
     await Directory(dir).create(recursive: true);
     // Beside it and then over it, so a power cut leaves the old one whole.
@@ -147,11 +149,7 @@ class CustomWidgets extends ChangeNotifier {
     if (had != null && DateTime.now().difference(had.at) < every) {
       return Future.value();
     }
-    return _asking[url] ??= _fetch(
-      url,
-      headers,
-      had,
-    ).whenComplete(() {
+    return _asking[url] ??= _fetch(url, headers, had).whenComplete(() {
       // Not returned: what is removed is this very future, and waiting on
       // it here would wait for ever.
       _asking.remove(url);
@@ -169,15 +167,15 @@ class CustomWidgets extends ChangeNotifier {
     Object? data = had?.data;
     final uri = Uri.tryParse(url);
     if (uri == null || !(uri.isScheme('http') || uri.isScheme('https'))) {
-      error = tr('widget.custom.badAddress', 'Its address is not one to fetch.');
+      error = tr(
+        'widget.custom.badAddress',
+        'Its address is not one to fetch.',
+      );
     } else {
       try {
         final r = await _dio.getUri<ResponseBody>(
           uri,
-          options: Options(
-            headers: headers,
-            responseType: ResponseType.stream,
-          ),
+          options: Options(headers: headers, responseType: ResponseType.stream),
         );
         // Counted as it arrives: a source that never stops sending is
         // hung up on, not held in memory until it does.
@@ -217,7 +215,6 @@ class CustomWidgets extends ChangeNotifier {
   }
 }
 
-Object? _decode(List<int> bytes) =>
-    const Utf8Decoder(allowMalformed: true)
-        .fuse(const JsonDecoder())
-        .convert(bytes);
+Object? _decode(List<int> bytes) => const Utf8Decoder(
+  allowMalformed: true,
+).fuse(const JsonDecoder()).convert(bytes);

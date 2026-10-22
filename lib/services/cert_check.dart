@@ -61,7 +61,12 @@ class CertChecker {
       );
       final cert = socket.peerCertificate;
       socket.destroy();
-      if (cert == null) return CertInfo(host: t, error: tr('widget.certs.noCertificate', 'No certificate'));
+      if (cert == null) {
+        return CertInfo(
+          host: t,
+          error: tr('widget.certs.noCertificate', 'No certificate'),
+        );
+      }
       return CertInfo(
         host: t,
         expires: cert.endValidity,
@@ -69,13 +74,22 @@ class CertChecker {
         trusted: trusted,
       );
     } on SocketException {
-      return CertInfo(host: t, error: tr('widget.certs.notAnswering', 'Not answering'));
+      return CertInfo(
+        host: t,
+        error: tr('widget.certs.notAnswering', 'Not answering'),
+      );
     } on HandshakeException {
       return CertInfo(host: t, error: tr('widget.certs.noHttps', 'No HTTPS'));
     } on TimeoutException {
-      return CertInfo(host: t, error: tr('widget.certs.notAnswering', 'Not answering'));
+      return CertInfo(
+        host: t,
+        error: tr('widget.certs.notAnswering', 'Not answering'),
+      );
     } catch (_) {
-      return CertInfo(host: t, error: tr('widget.certs.couldNotCheck', 'Could not check'));
+      return CertInfo(
+        host: t,
+        error: tr('widget.certs.couldNotCheck', 'Could not check'),
+      );
     }
   }
 

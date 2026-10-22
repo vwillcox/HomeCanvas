@@ -192,15 +192,21 @@ class HomeyDevice {
     if (v is bool) {
       return switch (what) {
         'alarm_contact' =>
-          v ? tr('widget.homey.open', 'Open') : tr('widget.homey.closed', 'Closed'),
+          v
+              ? tr('widget.homey.open', 'Open')
+              : tr('widget.homey.closed', 'Closed'),
         'alarm_motion' =>
-          v ? tr('widget.homey.detected', 'Detected') : tr('widget.homey.clear', 'Clear'),
+          v
+              ? tr('widget.homey.detected', 'Detected')
+              : tr('widget.homey.clear', 'Clear'),
         'alarm_water' =>
           v ? tr('widget.homey.wet', 'Wet') : tr('widget.homey.dry', 'Dry'),
         'alarm_battery' =>
           v ? tr('widget.homey.low', 'Low') : tr('widget.homey.ok', 'OK'),
         'locked' =>
-          v ? tr('widget.homey.locked', 'Locked') : tr('widget.homey.unlocked', 'Unlocked'),
+          v
+              ? tr('widget.homey.locked', 'Locked')
+              : tr('widget.homey.unlocked', 'Unlocked'),
         _ when what.startsWith('alarm_') =>
           v ? tr('widget.homey.alarm', 'Alarm') : tr('widget.homey.ok', 'OK'),
         _ => v ? tr('widget.homey.on', 'On') : tr('widget.homey.off', 'Off'),
@@ -208,11 +214,7 @@ class HomeyDevice {
     }
     if (v is num) {
       // Homey keeps these as a fraction of one, and calls the unit %.
-      if (const {
-        'dim',
-        'volume_set',
-        'windowcoverings_set',
-      }.contains(what)) {
+      if (const {'dim', 'volume_set', 'windowcoverings_set'}.contains(what)) {
         return '${(v * 100).round()}%';
       }
       final decimals = c.decimals;
@@ -283,7 +285,11 @@ class HomeyZone {
 /// which is started at a different address.
 @immutable
 class HomeyFlow {
-  const HomeyFlow({required this.id, required this.name, this.advanced = false});
+  const HomeyFlow({
+    required this.id,
+    required this.name,
+    this.advanced = false,
+  });
 
   final String id;
   final String name;
@@ -308,17 +314,17 @@ class HomeyService extends ChangeNotifier {
     Future<List<InternetAddress>> Function(String host)? lookup,
   }) : _lookup = lookup ?? InternetAddress.lookup,
        _dio =
-          dio ??
-          Dio(
-            BaseOptions(
-              connectTimeout: const Duration(seconds: 5),
-              receiveTimeout: const Duration(seconds: 10),
-              // Wherever a Homey might send the panel on to, the key does
-              // not follow.
-              followRedirects: false,
-            ),
-          ),
-      _open = socket;
+           dio ??
+           Dio(
+             BaseOptions(
+               connectTimeout: const Duration(seconds: 5),
+               receiveTimeout: const Duration(seconds: 10),
+               // Wherever a Homey might send the panel on to, the key does
+               // not follow.
+               followRedirects: false,
+             ),
+           ),
+       _open = socket;
 
   final ConfigService _config;
   final Dio _dio;
@@ -498,7 +504,10 @@ class HomeyService extends ChangeNotifier {
       // A key without the zones or flows permission still shows its devices.
       var zones = _zones;
       try {
-        final z = await _dio.get('$root/api/manager/zones/zone', options: _auth);
+        final z = await _dio.get(
+          '$root/api/manager/zones/zone',
+          options: _auth,
+        );
         zones = {
           for (final e in (z.data as Map? ?? const {}).entries)
             if (e.value case {'name': final String name})
@@ -545,7 +554,10 @@ class HomeyService extends ChangeNotifier {
       if (base != _base) return;
       final status = e.response?.statusCode;
       _error = status == 401 || status == 403
-          ? tr('widget.homey.keyNotAccepted', 'Homey did not accept the API key')
+          ? tr(
+              'widget.homey.keyNotAccepted',
+              'Homey did not accept the API key',
+            )
           : tr('widget.homey.unreachable', 'Could not reach Homey');
     } catch (e) {
       if (base != _base) return;
@@ -693,10 +705,8 @@ class HomeyService extends ChangeNotifier {
   }
 
   /// Sets the mood [id]: a room's lights as they were saved.
-  Future<bool> setMood(String id) => _send(
-    'POST',
-    'moods/mood/${Uri.encodeComponent(id)}/set',
-  );
+  Future<bool> setMood(String id) =>
+      _send('POST', 'moods/mood/${Uri.encodeComponent(id)}/set');
 
   /// Gives the logic variable [id] a new value.
   Future<bool> setVariable(String id, Object value) async {
@@ -776,7 +786,9 @@ class HomeyService extends ChangeNotifier {
 
   Future<void> _comeOn(HomeyDevice d) async {
     final now = _devices[d.id];
-    if (now != null && now.switchable && !now.on) await _set(now, 'onoff', true);
+    if (now != null && now.switchable && !now.on) {
+      await _set(now, 'onoff', true);
+    }
   }
 
   /// Switches every one of [devices] that a tap can switch.
@@ -847,10 +859,11 @@ class HomeyService extends ChangeNotifier {
     return zone == null ? d.name : '${zone.name} · ${d.name}';
   }
 
-  Future<Map<String, String>> _picker(Iterable<HomeyDevice> Function() of) async {
+  Future<Map<String, String>> _picker(
+    Iterable<HomeyDevice> Function() of,
+  ) async {
     await ensure();
-    final list = of().toList()
-      ..sort((a, b) => _label(a).compareTo(_label(b)));
+    final list = of().toList()..sort((a, b) => _label(a).compareTo(_label(b)));
     return {for (final d in list) d.id: _label(d)};
   }
 

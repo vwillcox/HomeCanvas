@@ -12,9 +12,10 @@ void main() {
     // editor's own port and goes to Hue on port 80 — which is how the
     // language picker once came up empty.
     final served = {
-      for (final m in RegExp(r"(?:path == |startsWith\()'(/api/[\w.\-]+)")
-          .allMatches(File('lib/services/dashboard_service.dart')
-              .readAsStringSync()))
+      for (final m
+          in RegExp(r"(?:path == |startsWith\()'(/api/[\w.\-]+)").allMatches(
+            File('lib/services/dashboard_service.dart').readAsStringSync(),
+          ))
         m[1]!,
     };
     expect(served, contains('/api/strings'));
@@ -61,12 +62,14 @@ void main() {
       r.response
         ..statusCode = 201
         ..headers.contentType = ContentType.json
-        ..write(jsonEncode({
-          'method': r.method,
-          'path': r.uri.path,
-          'query': r.uri.query,
-          'body': body,
-        }));
+        ..write(
+          jsonEncode({
+            'method': r.method,
+            'path': r.uri.path,
+            'query': r.uri.query,
+            'body': body,
+          }),
+        );
       await r.response.close();
     });
     final relay = HueRelay(Uri.parse('http://127.0.0.1:${hue.port}'));
@@ -103,8 +106,11 @@ void main() {
     final front = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     front.listen(HueRelay(Uri.parse('http://127.0.0.1:$port')).forward);
     final client = HttpClient();
-    final res = await (await client.get('127.0.0.1', front.port, '/api'))
-        .close();
+    final res = await (await client.get(
+      '127.0.0.1',
+      front.port,
+      '/api',
+    )).close();
     expect(res.statusCode, HttpStatus.badGateway);
     client.close(force: true);
     await front.close(force: true);

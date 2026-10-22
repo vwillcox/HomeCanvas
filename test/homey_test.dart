@@ -176,14 +176,15 @@ class _Http implements HttpClientAdapter {
         reason: 'Connection refused',
       );
     }
-    ResponseBody json(Object body, {int status = 200}) => ResponseBody.fromString(
-      jsonEncode(body),
-      status,
-      headers: {
-        Headers.contentTypeHeader: [Headers.jsonContentType],
-        'x-homey-id': ['abc123'],
-      },
-    );
+    ResponseBody json(Object body, {int status = 200}) =>
+        ResponseBody.fromString(
+          jsonEncode(body),
+          status,
+          headers: {
+            Headers.contentTypeHeader: [Headers.jsonContentType],
+            'x-homey-id': ['abc123'],
+          },
+        );
     if (path == '/api/manager/system/ping') return json('pong');
     if (options.headers['Authorization'] != 'Bearer $key') {
       return json({'error': 'unauthorized'}, status: 401);
@@ -320,7 +321,8 @@ class _Socket {
   void drop() => unawaited(_in!.close());
 }
 
-Future<void> _settle() => Future<void>.delayed(const Duration(milliseconds: 20));
+Future<void> _settle() =>
+    Future<void>.delayed(const Duration(milliseconds: 20));
 
 void main() {
   group('Socket.IO packets', () {
@@ -329,12 +331,18 @@ void main() {
         const SocketIoPacket(
           SocketIoPacket.event,
           id: 3,
-          data: ['handshakeClient', {'token': 't'}],
+          data: [
+            'handshakeClient',
+            {'token': 't'},
+          ],
         ).encode(),
         '23["handshakeClient",{"token":"t"}]',
       );
       expect(
-        const SocketIoPacket(SocketIoPacket.connect, namespace: '/api').encode(),
+        const SocketIoPacket(
+          SocketIoPacket.connect,
+          namespace: '/api',
+        ).encode(),
         '0/api,',
       );
       expect(
@@ -366,8 +374,10 @@ void main() {
 
       expect(SocketIoPacket.parse('0')!.namespace, '/');
       expect(SocketIoPacket.parse('0/api?x=1,')!.namespace, '/api');
-      expect(SocketIoPacket.parse('4/api,"Invalid namespace"')!.data,
-          'Invalid namespace');
+      expect(
+        SocketIoPacket.parse('4/api,"Invalid namespace"')!.data,
+        'Invalid namespace',
+      );
       expect(SocketIoPacket.parse(''), isNull);
       expect(SocketIoPacket.parse('51-["x"]'), isNull);
       expect(SocketIoPacket.parse('2[broken'), isNull);
@@ -401,11 +411,10 @@ void main() {
       final heard = client.events.first;
       server.push('x', 'onoff', true);
       final e = await heard;
-      expect((e.namespace, e.name, e.args.first), (
-        '/api',
-        'homey:device:x',
-        'capability',
-      ));
+      expect(
+        (e.namespace, e.name, e.args.first),
+        ('/api', 'homey:device:x', 'capability'),
+      );
     });
 
     test('a server that goes away fails what was waiting on it', () async {
@@ -420,10 +429,7 @@ void main() {
       await expectLater(waiting, throwsA(isA<SocketIoClosed>()));
       await client.done;
       expect(client.closed, isTrue);
-      expect(
-        client.emit('too late', const []),
-        throwsA(isA<SocketIoClosed>()),
-      );
+      expect(client.emit('too late', const []), throwsA(isA<SocketIoClosed>()));
     });
   });
 
@@ -444,8 +450,10 @@ void main() {
       expect(door.display('measure_temperature'), '18.5 °C');
       expect(door.reading('alarm_contact'), 'alarm_contact');
       expect(door.display('alarm_contact'), 'Closed');
-      expect(door.withValue('alarm_contact', true).display('alarm_contact'),
-          'Open');
+      expect(
+        door.withValue('alarm_contact', true).display('alarm_contact'),
+        'Open',
+      );
       // A capability it has not got falls back to its main one.
       expect(door.reading('measure_power'), 'measure_temperature');
     });
@@ -461,11 +469,10 @@ void main() {
   group('what else Homey says', () {
     test('alerts: alarms first, then what is off line, then batteries', () {
       final alerts = homeyAlerts(_house());
-      expect([for (final a in alerts) '${a.device.name}: ${a.text}'], [
-        'Window: Open',
-        'Shed sensor: Off line',
-        'Window: Battery 12%',
-      ]);
+      expect(
+        [for (final a in alerts) '${a.device.name}: ${a.text}'],
+        ['Window: Open', 'Shed sensor: Off line', 'Window: Battery 12%'],
+      );
       expect(homeyAlerts(_house(), battery: 10, offline: false).length, 1);
     });
 
@@ -483,10 +490,10 @@ void main() {
         },
         'c': 'not a note',
       });
-      expect([for (final n in notes) n.text], [
-        'Welcome home!',
-        'Front door opened',
-      ]);
+      expect(
+        [for (final n in notes) n.text],
+        ['Welcome home!', 'Front door opened'],
+      );
     });
 
     test('a log is asked for by its owner, and its gaps are left out', () {
@@ -512,10 +519,10 @@ void main() {
         'b': {'name': 'Sam', 'present': false},
         'c': {'name': 'Old guest', 'enabled': false},
       });
-      expect([for (final p in people) '${p.name} ${p.state}'], [
-        'Sam Away',
-        'Vincent Asleep',
-      ]);
+      expect(
+        [for (final p in people) '${p.name} ${p.state}'],
+        ['Sam Away', 'Vincent Asleep'],
+      );
       expect(homeyUptime(8542), '2 h 22 min');
       expect(homeyUptime(3 * 86400 + 4 * 3600), '3 d 4 h');
       expect(homeyUptime(125), '2 min');
@@ -586,30 +593,32 @@ void main() {
       expect(http.asked.length, asked);
     });
 
-    test('a tap switches over HTTP, and is put back if Homey says no',
-        () async {
-      use('192.168.1.50', 'secret');
-      homey.watch(['lamp']);
-      await homey.ensure();
+    test(
+      'a tap switches over HTTP, and is put back if Homey says no',
+      () async {
+        use('192.168.1.50', 'secret');
+        homey.watch(['lamp']);
+        await homey.ensure();
 
-      await homey.toggle(homey.device('lamp')!);
-      expect(
-        http.asked,
-        contains('PUT /api/manager/devices/device/lamp/capability/onoff'),
-      );
-      expect(http.lampOn, isTrue);
-      expect(homey.device('lamp')!.on, isTrue);
+        await homey.toggle(homey.device('lamp')!);
+        expect(
+          http.asked,
+          contains('PUT /api/manager/devices/device/lamp/capability/onoff'),
+        );
+        expect(http.lampOn, isTrue);
+        expect(homey.device('lamp')!.on, isTrue);
 
-      http.refusePut = true;
-      await homey.toggle(homey.device('lamp')!);
-      expect(homey.device('lamp')!.on, isTrue);
-      expect(homey.error, 'Homey did not take the change');
+        http.refusePut = true;
+        await homey.toggle(homey.device('lamp')!);
+        expect(homey.device('lamp')!.on, isTrue);
+        expect(homey.error, 'Homey did not take the change');
 
-      // And a lock is never asked to.
-      final asked = http.asked.length;
-      await homey.toggle(homey.device('lock')!);
-      expect(http.asked.length, asked);
-    });
+        // And a lock is never asked to.
+        final asked = http.asked.length;
+        await homey.toggle(homey.device('lock')!);
+        expect(http.asked.length, asked);
+      },
+    );
 
     test('a socket that drops is connected again the next time', () async {
       use('192.168.1.50', 'secret');
@@ -673,7 +682,11 @@ void main() {
       use('192.168.1.50', 'secret');
       await homey.ensure();
       // The house has what its rooms have; a room only its own.
-      expect(homey.devicesIn('home').map((d) => d.id), ['lock', 'door', 'lamp']);
+      expect(homey.devicesIn('home').map((d) => d.id), [
+        'lock',
+        'door',
+        'lamp',
+      ]);
       expect(homey.devicesIn('home', below: false), isEmpty);
       expect(homey.devicesIn('hall').map((d) => d.id), ['door', 'lamp']);
 
@@ -703,31 +716,41 @@ void main() {
       );
     });
 
-    test('questions are asked once, kept, and asked again when stale', () async {
-      use('192.168.1.50', 'secret');
-      await homey.ask('users/user');
-      expect(homeyPeople(homey.answer('users/user')).single.name, 'Vincent');
-      final asked = http.asked.length;
-      await homey.ask('users/user');
-      expect(http.asked.length, asked);
-      await homey.ask('users/user', keep: Duration.zero);
-      expect(http.asked.length, asked + 1);
+    test(
+      'questions are asked once, kept, and asked again when stale',
+      () async {
+        use('192.168.1.50', 'secret');
+        await homey.ask('users/user');
+        expect(homeyPeople(homey.answer('users/user')).single.name, 'Vincent');
+        final asked = http.asked.length;
+        await homey.ask('users/user');
+        expect(http.asked.length, asked);
+        await homey.ask('users/user', keep: Duration.zero);
+        expect(http.asked.length, asked + 1);
 
-      // Something it has not got is not asked for over and over either.
-      await homey.ask('nothing/here');
-      final after = http.asked.length;
-      await homey.ask('nothing/here');
-      expect(http.asked.length, after);
-      expect(homey.answer('nothing/here'), isNull);
+        // Something it has not got is not asked for over and over either.
+        await homey.ask('nothing/here');
+        final after = http.asked.length;
+        await homey.ask('nothing/here');
+        expect(http.asked.length, after);
+        expect(homey.answer('nothing/here'), isNull);
 
-      expect(await homey.listChoices('logic/variable', (v) => v['name'] as String?), {
-        'v': 'Guests staying',
-      });
-      expect(await homey.setVariable('v', true), isTrue);
-      expect(http.guests, isTrue);
-      expect(await homey.setMood('evening'), isTrue);
-      expect(http.asked, contains('POST /api/manager/moods/mood/evening/set'));
-    });
+        expect(
+          await homey.listChoices(
+            'logic/variable',
+            (v) => v['name'] as String?,
+          ),
+          {'v': 'Guests staying'},
+        );
+        expect(await homey.setVariable('v', true), isTrue);
+        expect(http.guests, isTrue);
+        expect(await homey.setMood('evening'), isTrue);
+        expect(
+          http.asked,
+          contains('POST /api/manager/moods/mood/evening/set'),
+        );
+      },
+    );
 
     test('colour, warmth and heat are set; a lock is never touched', () async {
       use('192.168.1.50', 'secret');
@@ -747,8 +770,10 @@ void main() {
         'strip light_mode temperature',
         'strip light_temperature 0.8',
       ]);
-      expect(homey.device('strip')!.capabilities['light_mode']!.value,
-          'temperature');
+      expect(
+        homey.device('strip')!.capabilities['light_mode']!.value,
+        'temperature',
+      );
 
       http.sets.clear();
       final lock = homey.device('lock')!;
@@ -761,7 +786,10 @@ void main() {
       expect(http.sets, isEmpty);
       await homey.set(homey.device('fan')!, 'oscillating', true);
       await homey.set(homey.device('stat')!, 'target_temperature', 21.5);
-      expect(http.sets, ['fan oscillating true', 'stat target_temperature 21.5']);
+      expect(http.sets, [
+        'fan oscillating true',
+        'stat target_temperature 21.5',
+      ]);
     });
 
     test('the key goes nowhere but the home network', () async {
@@ -1040,77 +1068,107 @@ void main() {
     testWidgets('moods, variables, people, timeline, history, the Homey', (
       tester,
     ) async {
-      await sweep(tester, 'homey_moods', {}, answers: {
-        'moods/mood': {
-          'm': {'id': 'm', 'name': 'Evening', 'zone': 'hall'},
+      await sweep(
+        tester,
+        'homey_moods',
+        {},
+        answers: {
+          'moods/mood': {
+            'm': {'id': 'm', 'name': 'Evening', 'zone': 'hall'},
+          },
         },
-      });
+      );
       expect(find.text('Hall'), findsOneWidget);
       expect(find.text('Evening'), findsOneWidget);
       await sweep(tester, 'homey_moods', {}, answers: {'moods/mood': {}});
       expect(find.textContaining('No moods yet'), findsOneWidget);
 
-      await sweep(tester, 'homey_variables', {}, answers: {
-        'logic/variable': {
-          'v': {'id': 'v', 'name': 'Guests staying', 'value': true},
-          'n': {'id': 'n', 'name': 'Bin week', 'value': 2},
+      await sweep(
+        tester,
+        'homey_variables',
+        {},
+        answers: {
+          'logic/variable': {
+            'v': {'id': 'v', 'name': 'Guests staying', 'value': true},
+            'n': {'id': 'n', 'name': 'Bin week', 'value': 2},
+          },
         },
-      });
+      );
       expect(find.text('Guests staying'), findsOneWidget);
       expect(find.text('Yes'), findsOneWidget);
       expect(find.text('2'), findsOneWidget);
 
-      await sweep(tester, 'homey_presence', {}, answers: {
-        'users/user': {
-          'u': {'id': 'u', 'name': 'Vincent Willcox', 'present': true},
+      await sweep(
+        tester,
+        'homey_presence',
+        {},
+        answers: {
+          'users/user': {
+            'u': {'id': 'u', 'name': 'Vincent Willcox', 'present': true},
+          },
         },
-      });
+      );
       expect(find.text('Vincent'), findsOneWidget);
       expect(find.text('Home'), findsOneWidget);
 
-      await sweep(tester, 'homey_timeline', {}, answers: {
-        'notifications/notification': {
-          'n': {
-            'excerpt': 'Welcome home!',
-            'ownerName': 'Timeline',
-            'dateCreated': '2026-10-04T08:55:06.471Z',
+      await sweep(
+        tester,
+        'homey_timeline',
+        {},
+        answers: {
+          'notifications/notification': {
+            'n': {
+              'excerpt': 'Welcome home!',
+              'ownerName': 'Timeline',
+              'dateCreated': '2026-10-04T08:55:06.471Z',
+            },
           },
         },
-      });
+      );
       expect(find.text('Welcome home!'), findsOneWidget);
 
       const log = 'homey:manager:weather:temperature';
-      await sweep(tester, 'homey_history', {'log': log}, answers: {
-        'insights/log': [
-          {
-            'id': log,
-            'ownerName': 'Weather',
-            'title': 'Temperature',
-            'units': '°C',
-            'decimals': 2,
-          },
-        ],
-        homeyLogPath(log, 'last24Hours'): {
-          'values': [
-            for (var i = 0; i < 12; i++)
-              {'t': '2026-10-04T${10 + i}:00:00.000Z', 'v': 14 + i * 0.5},
+      await sweep(
+        tester,
+        'homey_history',
+        {'log': log},
+        answers: {
+          'insights/log': [
+            {
+              'id': log,
+              'ownerName': 'Weather',
+              'title': 'Temperature',
+              'units': '°C',
+              'decimals': 2,
+            },
           ],
+          homeyLogPath(log, 'last24Hours'): {
+            'values': [
+              for (var i = 0; i < 12; i++)
+                {'t': '2026-10-04T${10 + i}:00:00.000Z', 'v': 14 + i * 0.5},
+            ],
+          },
         },
-      });
+      );
       expect(find.text('Weather · Temperature'), findsOneWidget);
       expect(find.text('19.50 °C'), findsOneWidget);
       await sweep(tester, 'homey_history', {});
       expect(find.textContaining('Pick what to chart'), findsOneWidget);
 
-      await sweep(tester, 'homey_system', {}, answers: {
-        'system/': {
-          'homeyModelName': 'Homey Self-Hosted Server',
-          'homeyVersion': '13.5.1',
-          'uptime': 8542.26,
+      await sweep(
+        tester,
+        'homey_system',
+        {},
+        answers: {
+          'system/': {
+            'homeyModelName': 'Homey Self-Hosted Server',
+            'homeyVersion': '13.5.1',
+            'uptime': 8542.26,
+          },
+          'system/memory': {'total': 4000, 'free': 3000},
+          'system/storage': {'total': 1000, 'free': 100},
         },
-        'system/memory': {'total': 4000, 'free': 3000},
-        'system/storage': {'total': 1000, 'free': 100},
-      });
+      );
       expect(find.text('13.5.1'), findsOneWidget);
       expect(find.text('2 h 22 min'), findsOneWidget);
       expect(find.text('25%'), findsOneWidget);

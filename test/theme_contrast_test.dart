@@ -39,12 +39,21 @@ void main() {
       test('keeps its text readable on its tiles', () {
         for (final tile in tileColours(t)) {
           final secondary = Color.alphaBlend(t.textSecondary, tile);
-          expect(contrast(t.textPrimary, tile), greaterThanOrEqualTo(7),
-              reason: 'text on $tile');
-          expect(contrast(secondary, tile), greaterThanOrEqualTo(3.5),
-              reason: 'secondary text on $tile');
-          expect(contrast(t.accent, tile), greaterThanOrEqualTo(3),
-              reason: 'accent on $tile');
+          expect(
+            contrast(t.textPrimary, tile),
+            greaterThanOrEqualTo(7),
+            reason: 'text on $tile',
+          );
+          expect(
+            contrast(secondary, tile),
+            greaterThanOrEqualTo(3.5),
+            reason: 'secondary text on $tile',
+          );
+          expect(
+            contrast(t.accent, tile),
+            greaterThanOrEqualTo(3),
+            reason: 'accent on $tile',
+          );
         }
       });
 

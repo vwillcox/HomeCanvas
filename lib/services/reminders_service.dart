@@ -125,7 +125,10 @@ ParsedReminder? parseReminder(String text, DateTime now) {
   final today = DateTime(now.year, now.month, now.day);
 
   take(
-    RegExp(r'\bin\s+(\d+)\s*(minutes?|mins?|hours?|hrs?)\b', caseSensitive: false),
+    RegExp(
+      r'\bin\s+(\d+)\s*(minutes?|mins?|hours?|hrs?)\b',
+      caseSensitive: false,
+    ),
     (m) {
       final n = int.parse(m[1]!);
       after = m[2]!.toLowerCase().startsWith('h')
@@ -134,7 +137,9 @@ ParsedReminder? parseReminder(String text, DateTime now) {
     },
   );
 
-  take(RegExp(r'\b(?:at\s+)?(noon|midday|midnight)\b', caseSensitive: false), (m) {
+  take(RegExp(r'\b(?:at\s+)?(noon|midday|midnight)\b', caseSensitive: false), (
+    m,
+  ) {
     hour = m[1]!.toLowerCase() == 'midnight' ? 0 : 12;
     minute = 0;
   });
@@ -172,7 +177,10 @@ ParsedReminder? parseReminder(String text, DateTime now) {
     },
   );
   take(
-    RegExp(r'\btomorrow(?:\s+(morning|afternoon|evening|night))?\b', caseSensitive: false),
+    RegExp(
+      r'\btomorrow(?:\s+(morning|afternoon|evening|night))?\b',
+      caseSensitive: false,
+    ),
     (m) {
       day = today.add(const Duration(days: 1));
       defaultHour = switch ((m[1] ?? '').toLowerCase()) {
@@ -183,7 +191,13 @@ ParsedReminder? parseReminder(String text, DateTime now) {
     },
   );
   const weekdays = [
-    'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
+    'monday',
+    'tuesday',
+    'wednesday',
+    'thursday',
+    'friday',
+    'saturday',
+    'sunday',
   ];
   take(
     RegExp(
@@ -202,7 +216,10 @@ ParsedReminder? parseReminder(String text, DateTime now) {
   );
   // 12/10 — day first, this being a British panel — or 12/10/2026.
   take(
-    RegExp(r'\b(?:on\s+)?(\d{1,2})/(\d{1,2})(?:/(\d{2,4}))?\b', caseSensitive: false),
+    RegExp(
+      r'\b(?:on\s+)?(\d{1,2})/(\d{1,2})(?:/(\d{2,4}))?\b',
+      caseSensitive: false,
+    ),
     (m) {
       final d = int.parse(m[1]!), mo = int.parse(m[2]!);
       var y = int.tryParse(m[3] ?? '') ?? now.year;
@@ -210,17 +227,22 @@ ParsedReminder? parseReminder(String text, DateTime now) {
       final date = DateTime(y, mo, d);
       if (date.month == mo && date.day == d) {
         // Without a year, a date already gone this year is next year's.
-        day = m[3] == null && date.isBefore(today) ? DateTime(y + 1, mo, d) : date;
+        day = m[3] == null && date.isBefore(today)
+            ? DateTime(y + 1, mo, d)
+            : date;
       }
     },
   );
-  take(RegExp(r'\bon\s+the\s+(\d{1,2})(?:st|nd|rd|th)\b', caseSensitive: false), (m) {
-    final d = int.parse(m[1]!);
-    var date = DateTime(now.year, now.month, d);
-    if (date.day != d) return;
-    if (date.isBefore(today)) date = DateTime(now.year, now.month + 1, d);
-    day = date;
-  });
+  take(
+    RegExp(r'\bon\s+the\s+(\d{1,2})(?:st|nd|rd|th)\b', caseSensitive: false),
+    (m) {
+      final d = int.parse(m[1]!);
+      var date = DateTime(now.year, now.month, d);
+      if (date.day != d) return;
+      if (date.isBefore(today)) date = DateTime(now.year, now.month + 1, d);
+      day = date;
+    },
+  );
 
   if (!asked && hour == null && after == null) return null;
 
@@ -241,7 +263,9 @@ ParsedReminder? parseReminder(String text, DateTime now) {
       hour!,
       minute ?? 0,
     );
-    if (day == null && !due.isAfter(now)) due = due.add(const Duration(days: 1));
+    if (day == null && !due.isAfter(now)) {
+      due = due.add(const Duration(days: 1));
+    }
     return (what: what, due: due, allDay: false);
   }
   if (day != null) {
@@ -259,9 +283,12 @@ ParsedReminder? parseReminder(String text, DateTime now) {
 /// Reminders sent from the phone app: kept on disk, announced on the panel
 /// when they fall due, and shown by the Reminders widget until dismissed.
 class RemindersService extends ChangeNotifier {
-  RemindersService({String? file, DateTime Function()? clock, this.persist = true})
-    : _file = File(file ?? defaultFile()),
-      _clock = clock ?? DateTime.now;
+  RemindersService({
+    String? file,
+    DateTime Function()? clock,
+    this.persist = true,
+  }) : _file = File(file ?? defaultFile()),
+       _clock = clock ?? DateTime.now;
 
   final bool persist;
   final File _file;
@@ -356,18 +383,20 @@ class RemindersService extends ChangeNotifier {
   /// fell due, undated ones after a month, and never more than fifty.
   void _tidy() {
     final now = _clock();
-    _items = _items.where((r) {
-      if (r.due != null) {
-        return r.due!.isAfter(now.subtract(const Duration(days: 1)));
-      }
-      return r.created.isAfter(now.subtract(const Duration(days: 30)));
-    }).toList()
-      ..sort((a, b) {
-        if (a.due == null && b.due == null) return b.created.compareTo(a.created);
-        if (a.due == null) return 1;
-        if (b.due == null) return -1;
-        return a.due!.compareTo(b.due!);
-      });
+    _items =
+        _items.where((r) {
+          if (r.due != null) {
+            return r.due!.isAfter(now.subtract(const Duration(days: 1)));
+          }
+          return r.created.isAfter(now.subtract(const Duration(days: 30)));
+        }).toList()..sort((a, b) {
+          if (a.due == null && b.due == null) {
+            return b.created.compareTo(a.created);
+          }
+          if (a.due == null) return 1;
+          if (b.due == null) return -1;
+          return a.due!.compareTo(b.due!);
+        });
     if (_items.length > maxReminders) _items = _items.sublist(0, maxReminders);
   }
 

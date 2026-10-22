@@ -32,8 +32,10 @@ Future<void> showTvInputs(
     pageBuilder: (context, _, _) =>
         TvInputsSheet(theme: theme, autoClose: autoClose),
     transitionBuilder: (context, animation, _, child) {
-      final curved =
-          CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+      final curved = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+      );
       return AnimatedBuilder(
         animation: curved,
         builder: (context, _) => BackdropFilter(
@@ -259,7 +261,8 @@ class _InputTile extends StatelessWidget {
     return Semantics(
       button: true,
       selected: active,
-      label: '${s.name}${s.deviceName.isEmpty ? '' : ', ${s.deviceName}'}'
+      label:
+          '${s.name}${s.deviceName.isEmpty ? '' : ', ${s.deviceName}'}'
           '${active ? ', showing now' : ''}',
       child: Material(
         color: active
@@ -279,8 +282,11 @@ class _InputTile extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             child: Row(
               children: [
-                Icon(inputIcon(s), color: active ? t.accent : t.textPrimary,
-                    size: 36),
+                Icon(
+                  inputIcon(s),
+                  color: active ? t.accent : t.textPrimary,
+                  size: 36,
+                ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
@@ -304,7 +310,9 @@ class _InputTile extends StatelessWidget {
                             width: 10,
                             height: 10,
                             decoration: BoxDecoration(
-                                color: dot, shape: BoxShape.circle),
+                              color: dot,
+                              shape: BoxShape.circle,
+                            ),
                           ),
                           const SizedBox(width: 8),
                           Expanded(
@@ -351,10 +359,19 @@ class _Empty extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = theme;
     final text = !connected
-        ? tr('widget.tv.theRemoteIsNotConnected', 'The remote is not connected to the television, so it cannot list the inputs yet.')
+        ? tr(
+            'widget.tv.theRemoteIsNotConnected',
+            'The remote is not connected to the television, so it cannot list the inputs yet.',
+          )
         : asked
-            ? tr('widget.tv.askedTheListWillAppear', 'Asked — the list will appear here as soon as the television answers.')
-            : tr('widget.tv.theTelevisionHasNotListed', 'The television has not listed its inputs yet.');
+        ? tr(
+            'widget.tv.askedTheListWillAppear',
+            'Asked — the list will appear here as soon as the television answers.',
+          )
+        : tr(
+            'widget.tv.theTelevisionHasNotListed',
+            'The television has not listed its inputs yet.',
+          );
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 24),
       child: Column(
@@ -369,12 +386,16 @@ class _Empty extends StatelessWidget {
             FilledButton.icon(
               onPressed: onAsk,
               icon: const Icon(Icons.refresh, size: 26),
-              label: Text(tr('widget.tv.askTheTelevision', 'Ask the television'),
-                  style: TextStyle(fontSize: 22)),
+              label: Text(
+                tr('widget.tv.askTheTelevision', 'Ask the television'),
+                style: TextStyle(fontSize: 22),
+              ),
               style: FilledButton.styleFrom(
                 backgroundColor: t.accent,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 28, vertical: 18),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 28,
+                  vertical: 18,
+                ),
               ),
             ),
             const SizedBox(height: 12),
@@ -387,7 +408,9 @@ class _Empty extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
               style: TextStyle(
-                  color: t.textSecondary.withValues(alpha: 0.8), fontSize: 17),
+                color: t.textSecondary.withValues(alpha: 0.8),
+                fontSize: 17,
+              ),
             ),
           ],
         ],
@@ -472,7 +495,9 @@ String inputSubtitle(TvSource s) {
 IconData inputIcon(TvSource s) {
   final n = s.name.toLowerCase();
   if (n.startsWith('hdmi')) return Icons.settings_input_hdmi;
-  if (n == 'tv' || n.contains('antenna') || n.contains('dtv') ||
+  if (n == 'tv' ||
+      n.contains('antenna') ||
+      n.contains('dtv') ||
       n.contains('atv')) {
     return Icons.live_tv;
   }

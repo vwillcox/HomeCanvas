@@ -37,7 +37,13 @@ class _SunMoonWidgetState extends State<SunMoonWidget>
     final weather = context.watch<ConfigService>().config.weather;
     final lat = weather.latitude, lon = weather.longitude;
     if (lat == null || lon == null) {
-      return TileMessage(tr('widget.sun_moon.setAPlaceInSettings', 'Set a place in Settings → Weather'), theme: t);
+      return TileMessage(
+        tr(
+          'widget.sun_moon.setAPlaceInSettings',
+          'Set a place in Settings → Weather',
+        ),
+        theme: t,
+      );
     }
     final now = DateTime.now();
     final today = SunMoon.sun(now, lat, lon);
@@ -59,7 +65,9 @@ class _SunMoonWidgetState extends State<SunMoonWidget>
           children: [
             TileLabel(
               icon: Icons.wb_twilight_rounded,
-              text: showMoon ? SunMoon.phaseName(phase) : tr('widget.sun_moon.sun', 'Sun'),
+              text: showMoon
+                  ? SunMoon.phaseName(phase)
+                  : tr('widget.sun_moon.sun', 'Sun'),
               theme: t,
               size: 11,
             ),

@@ -20,7 +20,10 @@ class AboutScreen extends StatelessWidget {
       header: ScreenHeader(
         onBack: () => Navigator.of(context).maybePop(),
         title: tr('about.about', 'About'),
-        subtitle: tr('about.versionLibrariesLicencesAndCredits', 'Version, libraries, licences and credits'),
+        subtitle: tr(
+          'about.versionLibrariesLicencesAndCredits',
+          'Version, libraries, licences and credits',
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(40, 8, 40, 40),
@@ -38,7 +41,10 @@ class AboutScreen extends StatelessWidget {
           const SizedBox(height: 8),
           ...kDartPackages.map((c) => _CreditTile(credit: c)),
 
-          _SectionTitle(tr('about.systemLibraries', 'System libraries'), accent),
+          _SectionTitle(
+            tr('about.systemLibraries', 'System libraries'),
+            accent,
+          ),
           Text(
             tr(
               'about.providedByTheOperatingSystem',
@@ -60,7 +66,10 @@ class AboutScreen extends StatelessWidget {
           const SizedBox(height: 8),
           ...kServices.map((c) => _CreditTile(credit: c)),
 
-          _SectionTitle(tr('about.creditsAndSources', 'Credits and sources'), accent),
+          _SectionTitle(
+            tr('about.creditsAndSources', 'Credits and sources'),
+            accent,
+          ),
           Text(
             tr(
               'about.almostAllOfTheCode',
@@ -106,12 +115,13 @@ class _Header extends StatelessWidget {
                     style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
                   ),
                   Text(
-                    tr(
-                      'about.version',
-                      'Version {kAppVersion}',
-                      {'kAppVersion': kAppVersion},
+                    tr('about.version', 'Version {kAppVersion}', {
+                      'kAppVersion': kAppVersion,
+                    }),
+                    style: TextStyle(
+                      color: context.look.textSecondary,
+                      fontSize: 17,
                     ),
-                    style: TextStyle(color: context.look.textSecondary, fontSize: 17),
                   ),
                 ],
               ),
@@ -123,7 +133,11 @@ class _Header extends StatelessWidget {
               'about.aTouchscreenPhotoFrameAnd',
               'A touchscreen photo frame and media browser for a self-hosted Immich server, built for a Raspberry Pi with a DSI touch display.',
             ),
-            style: TextStyle(fontSize: 17, color: context.look.textSecondary, height: 1.35),
+            style: TextStyle(
+              fontSize: 17,
+              color: context.look.textSecondary,
+              height: 1.35,
+            ),
           ),
           const SizedBox(height: 10),
           SelectableText(
@@ -204,7 +218,10 @@ class _CreditTile extends StatelessWidget {
                 ),
                 child: Text(
                   credit.licence,
-                  style: TextStyle(fontSize: 14, color: context.look.textSecondary),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: context.look.textSecondary,
+                  ),
                 ),
               ),
             ],
@@ -292,7 +309,11 @@ class _Licence extends StatelessWidget {
               'about.homecanvasIsReleasedUnderThe',
               'HomeCanvas is released under the MIT Licence. It talks only to your own Immich server and to Open-Meteo for the weather — there is no analytics and no third-party tracking.',
             ),
-            style: TextStyle(fontSize: 16, color: context.look.textSecondary, height: 1.35),
+            style: TextStyle(
+              fontSize: 16,
+              color: context.look.textSecondary,
+              height: 1.35,
+            ),
           ),
         ],
       ),

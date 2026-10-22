@@ -56,14 +56,17 @@ class SharedTextScreen extends StatelessWidget {
                 // screen the centre of the text: pad only where a control
                 // happens to be and the offset comes straight back.
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 56, vertical: _controlGutter),
+                  horizontal: 56,
+                  vertical: _controlGutter,
+                ),
                 child: ConstrainedBox(
                   // Without a floor the scroll view's child is free to be as
                   // short as it likes and pins itself to the top; giving it
                   // the full viewport height is what lets Center have room
                   // to work in. Anything taller still scrolls as before.
                   constraints: BoxConstraints(
-                      minHeight: constraints.maxHeight - _controlGutter * 2),
+                    minHeight: constraints.maxHeight - _controlGutter * 2,
+                  ),
                   child: Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -83,11 +86,7 @@ class SharedTextScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 32),
                         Text(
-                          tr(
-                            'share.from',
-                            'From {sender}',
-                            {'sender': sender},
-                          ),
+                          tr('share.from', 'From {sender}', {'sender': sender}),
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: context.look.textSecondary,
@@ -100,11 +99,7 @@ class SharedTextScreen extends StatelessWidget {
                 ),
               ),
             ),
-            const Positioned(
-              left: 16,
-              top: 16,
-              child: BigBackButton(),
-            ),
+            const Positioned(left: 16, top: 16, child: BigBackButton()),
             // Pinned rather than scrolling with the note: the control that
             // makes the screen go away should be in the same place whatever
             // the message is, and reachable without scrolling to the end of

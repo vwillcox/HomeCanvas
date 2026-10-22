@@ -140,7 +140,10 @@ class _AudioVisualiserState extends State<AudioVisualiser>
     if (widget.style == VisualiserStyle.off) {
       if (widget.onTap == null) return const SizedBox.shrink();
       return _tappable(
-        label: tr('visualiser.visualiserOffTapToTurn', 'Visualiser off. Tap to turn it on.'),
+        label: tr(
+          'visualiser.visualiserOffTapToTurn',
+          'Visualiser off. Tap to turn it on.',
+        ),
         // Enough to hit with a thumb without pretending there is a picture.
         child: SizedBox(
           height: math.max(36, widget.height * 0.36),
@@ -158,8 +161,14 @@ class _AudioVisualiserState extends State<AudioVisualiser>
 
     return _tappable(
       label: widget.style == VisualiserStyle.wave
-          ? tr('visualiser.visualiserWaveformTapToChange', 'Visualiser: waveform. Tap to change.')
-          : tr('visualiser.visualiserBarsTapToChange', 'Visualiser: bars. Tap to change.'),
+          ? tr(
+              'visualiser.visualiserWaveformTapToChange',
+              'Visualiser: waveform. Tap to change.',
+            )
+          : tr(
+              'visualiser.visualiserBarsTapToChange',
+              'Visualiser: bars. Tap to change.',
+            ),
       child: RepaintBoundary(
         child: SizedBox(
           height: widget.height,
@@ -301,11 +310,11 @@ class _WavePainter extends CustomPainter {
     // times at different strengths: a Paint's own colour is ignored once it
     // has a shader, so the transparency has to live in the stops.
     ui.Shader sweep(double alpha) => ui.Gradient.linear(
-          Offset.zero,
-          Offset(size.width, 0),
-          [for (final c in palette) c.withValues(alpha: alpha)],
-          [for (var i = 0; i < palette.length; i++) i / (palette.length - 1)],
-        );
+      Offset.zero,
+      Offset(size.width, 0),
+      [for (final c in palette) c.withValues(alpha: alpha)],
+      [for (var i = 0; i < palette.length; i++) i / (palette.length - 1)],
+    );
 
     canvas.drawPath(path, Paint()..shader = sweep(0.5));
     canvas.drawPath(

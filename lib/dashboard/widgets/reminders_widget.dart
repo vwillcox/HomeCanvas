@@ -55,9 +55,11 @@ class _RemindersWidgetState extends State<RemindersWidget>
         final each = (c.maxHeight - 30) / list.length;
         // A reminder can run to two lines and a sender: about 72 at the
         // smallest size, dividers included.
-        final k = [each / 58, c.maxWidth / 300, 3.5]
-            .reduce((a, b) => a < b ? a : b)
-            .clamp(1.0, 3.5);
+        final k = [
+          each / 58,
+          c.maxWidth / 300,
+          3.5,
+        ].reduce((a, b) => a < b ? a : b).clamp(1.0, 3.5);
         final rows = [
           for (final r in list)
             _ReminderRow(
@@ -87,8 +89,11 @@ class _RemindersWidgetState extends State<RemindersWidget>
               trailing: due == 0
                   ? null
                   : StatusChip(
-                      text: tr('widget.reminders.dueCount',
-                          '{n, plural, one{# due} other{# due}}', {'n': due}),
+                      text: tr(
+                        'widget.reminders.dueCount',
+                        '{n, plural, one{# due} other{# due}}',
+                        {'n': due},
+                      ),
                       colour: status.warn,
                       size: (11 * k).clamp(11.0, 18.0),
                     ),
@@ -209,8 +214,13 @@ class _ReminderRow extends StatelessWidget {
                   ),
                   if (r.from.isNotEmpty)
                     Text(
-                      tr('widget.reminders.from', 'from {name}', {'name': r.from}),
-                      style: TextStyle(color: t.textSecondary, fontSize: 11 * k),
+                      tr('widget.reminders.from', 'from {name}', {
+                        'name': r.from,
+                      }),
+                      style: TextStyle(
+                        color: t.textSecondary,
+                        fontSize: 11 * k,
+                      ),
                     ),
                 ],
               ),
@@ -243,14 +253,18 @@ class _ReminderRow extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(tr('widget.reminders.keep', 'Keep'),
-                style: const TextStyle(fontSize: 18)),
+            child: Text(
+              tr('widget.reminders.keep', 'Keep'),
+              style: const TextStyle(fontSize: 18),
+            ),
           ),
           FilledButton.icon(
             onPressed: () => Navigator.of(ctx).pop(true),
             icon: const Icon(Icons.check),
-            label: Text(tr('widget.reminders.done', 'Done'),
-                style: const TextStyle(fontSize: 18)),
+            label: Text(
+              tr('widget.reminders.done', 'Done'),
+              style: const TextStyle(fontSize: 18),
+            ),
           ),
         ],
       ),
@@ -281,7 +295,8 @@ final remindersWidgetType = DashboardWidgetType(
       label: 'Show reminders with no time',
       kind: OptionKind.boolean,
       defaultValue: true,
-      help: '“Remind me to call the plumber” has no time; it stays at the '
+      help:
+          '“Remind me to call the plumber” has no time; it stays at the '
           'bottom of the list until it’s done.',
     ),
   ],

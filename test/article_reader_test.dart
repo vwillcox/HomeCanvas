@@ -41,9 +41,10 @@ class FakeOutput implements SpeechOutput {
     voices.add(voice);
     clouds.add(cloud);
     speeds.add(speed);
-    final f = File('${Directory.systemTemp.path}/fake-${made.length}-'
-        '${DateTime.now().microsecondsSinceEpoch}.wav')
-      ..writeAsStringSync(text);
+    final f = File(
+      '${Directory.systemTemp.path}/fake-${made.length}-'
+      '${DateTime.now().microsecondsSinceEpoch}.wav',
+    )..writeAsStringSync(text);
     _files[f] = text;
     return f;
   }
@@ -77,7 +78,8 @@ void main() {
   group('taking the article out of a page', () {
     test('uses the article body a page gives search engines', () {
       final page = _page(
-        head: '<script type="application/ld+json">'
+        head:
+            '<script type="application/ld+json">'
             '{"@context":"https://schema.org","@type":"NewsArticle",'
             '"articleBody":"$_para\\n\\n$_para And more besides."}'
             '</script>',
@@ -91,7 +93,8 @@ void main() {
 
     test('finds it inside a @graph too', () {
       final page = _page(
-        head: '<script type="application/ld+json">'
+        head:
+            '<script type="application/ld+json">'
             '{"@graph":[{"@type":"WebPage"},{"@type":["Article"],'
             '"articleBody":"$_para $_para $_para"}]}</script>',
       );
@@ -100,7 +103,8 @@ void main() {
 
     test('otherwise reads the page, leaving the furniture out', () {
       final page = _page(
-        body: '<header><p>Sign up to our newsletter for the best stories.</p></header>'
+        body:
+            '<header><p>Sign up to our newsletter for the best stories.</p></header>'
             '<nav><a>Home</a></nav>'
             '<article><h1>Scheme extended</h1>'
             '<p>$_para</p>'
@@ -119,16 +123,17 @@ void main() {
 
     test('a paragraph repeated straight after itself is said once', () {
       final page = _page(
-        body: '<article><p>$_para</p><p>$_para</p><p>Then more. $_para</p>'
+        body:
+            '<article><p>$_para</p><p>$_para</p><p>Then more. $_para</p>'
             '<p>And more again. $_para</p></article>',
       );
       expect(ArticleText.extract(page)!.paragraphs, hasLength(3));
     });
 
-    test('stops where the other stories start, and drops sign-up pitches',
-        () {
+    test('stops where the other stories start, and drops sign-up pitches', () {
       final page = _page(
-        body: '<article><p>First. $_para</p><p>Second. $_para</p>'
+        body:
+            '<article><p>First. $_para</p><p>Second. $_para</p>'
             '<p>Third. $_para</p>'
             '<p>Power up with unlimited access to the paper. Subscribe Today.</p>'
             '<h2>Related topics</h2><ul><li>Another story entirely, about '
@@ -142,9 +147,10 @@ void main() {
 
     test("a decimal point is not the end of a sentence", () {
       // Joined back up, a split at "1." read aloud as "one. forty-eight".
-      final long = List.filled(6,
-              'You can set the aperture from f/1.48 to f/4.0 in 1/3 stops.')
-          .join(' ');
+      final long = List.filled(
+        6,
+        'You can set the aperture from f/1.48 to f/4.0 in 1/3 stops.',
+      ).join(' ');
       final chunks = speakableChunks([long], max: 130);
       expect(chunks.length, greaterThan(1));
       for (final c in chunks) {
@@ -155,22 +161,29 @@ void main() {
     });
 
     test('a teaser is not an article', () {
-      expect(ArticleText.extract(_page(body: '<p>Watch the video.</p>')), isNull);
+      expect(
+        ArticleText.extract(_page(body: '<p>Watch the video.</p>')),
+        isNull,
+      );
     });
 
-    test('long paragraphs are split between sentences, short ones kept whole',
-        () {
-      final long = List.filled(8, 'This is one sentence of a long paragraph.')
-          .join(' ');
-      final chunks = speakableChunks(['Short.', long], max: 120);
-      expect(chunks.first, 'Short.');
-      expect(chunks.length, greaterThan(2));
-      for (final c in chunks.skip(1)) {
-        expect(c.length, lessThanOrEqualTo(120));
-        expect(c, endsWith('.'));
-      }
-      expect(chunks.skip(1).join(' '), long);
-    });
+    test(
+      'long paragraphs are split between sentences, short ones kept whole',
+      () {
+        final long = List.filled(
+          8,
+          'This is one sentence of a long paragraph.',
+        ).join(' ');
+        final chunks = speakableChunks(['Short.', long], max: 120);
+        expect(chunks.first, 'Short.');
+        expect(chunks.length, greaterThan(2));
+        for (final c in chunks.skip(1)) {
+          expect(c.length, lessThanOrEqualTo(120));
+          expect(c, endsWith('.'));
+        }
+        expect(chunks.skip(1).join(' '), long);
+      },
+    );
   });
 
   group('reading it out', () {
@@ -184,10 +197,13 @@ void main() {
           volume: () => 45,
           onStart: () => started++,
           onEnd: () => ended++,
-          fetch: fetch ??
+          fetch:
+              fetch ??
               (_) async => _page(
-                  body: '<article><p>First. $_para</p><p>Second. $_para</p>'
-                      '<p>Third. $_para</p></article>'),
+                body:
+                    '<article><p>First. $_para</p><p>Second. $_para</p>'
+                    '<p>Third. $_para</p></article>',
+              ),
         );
 
     setUp(() {
@@ -227,21 +243,30 @@ void main() {
       await r.stop();
     });
 
-    test('reads the summary, and says so, when the page cannot be had',
-        () async {
-      final r = reader(fetch: (_) async => throw const SocketException('down'));
-      unawaited(r.read(
-          title: 'Scheme extended', link: 'https://x/1', summary: 'In short.'));
-      await settle();
-      expect(r.summaryOnly, isTrue);
-      for (var i = 0; i < 3; i++) {
+    test(
+      'reads the summary, and says so, when the page cannot be had',
+      () async {
+        final r = reader(
+          fetch: (_) async => throw const SocketException('down'),
+        );
+        unawaited(
+          r.read(
+            title: 'Scheme extended',
+            link: 'https://x/1',
+            summary: 'In short.',
+          ),
+        );
         await settle();
-        out.finishOne();
-      }
-      await settle();
-      expect(out.said.last, 'In short.');
-      expect(out.said[1], contains('summary'));
-    });
+        expect(r.summaryOnly, isTrue);
+        for (var i = 0; i < 3; i++) {
+          await settle();
+          out.finishOne();
+        }
+        await settle();
+        expect(out.said.last, 'In short.');
+        expect(out.said[1], contains('summary'));
+      },
+    );
 
     test('pause holds it, and it carries on from the same place', () async {
       final r = reader();
@@ -278,45 +303,56 @@ void main() {
       expect(ended, 1);
     });
 
-    test('a second article takes over without the music coming back between',
-        () async {
-      final r = reader();
-      unawaited(r.read(title: 'First', link: 'https://x/1'));
-      await settle();
-      unawaited(r.read(title: 'Second', link: 'https://x/2'));
-      await settle();
-      expect(r.title, 'Second');
-      expect(started, 1);
-      expect(ended, 0);
-      await r.stop();
-      expect(ended, 1);
-    });
+    test(
+      'a second article takes over without the music coming back between',
+      () async {
+        final r = reader();
+        unawaited(r.read(title: 'First', link: 'https://x/1'));
+        await settle();
+        unawaited(r.read(title: 'Second', link: 'https://x/2'));
+        await settle();
+        expect(r.title, 'Second');
+        expect(started, 1);
+        expect(ended, 0);
+        await r.stop();
+        expect(ended, 1);
+      },
+    );
   });
 
   group('the author', () {
     String withRecord(String author) => _page(
-          head: '<script type="application/ld+json">{"@type":"NewsArticle",'
-              '"author":$author,"articleBody":"First. $_para\\nSecond. '
-              '$_para\\nThird. $_para"}</script>',
-        );
+      head:
+          '<script type="application/ld+json">{"@type":"NewsArticle",'
+          '"author":$author,"articleBody":"First. $_para\\nSecond. '
+          '$_para\\nThird. $_para"}</script>',
+    );
 
     test('a Person in the article record', () {
-      expect(ArticleText.extract(withRecord('{"@type":"Person","name":"Steven Levy"}'))!.author,
-          'Steven Levy');
+      expect(
+        ArticleText.extract(
+          withRecord('{"@type":"Person","name":"Steven Levy"}'),
+        )!.author,
+        'Steven Levy',
+      );
     });
 
     test('several, as a byline says them', () {
       expect(
-          ArticleText.extract(withRecord(
-                  '[{"name":"Anna Smith"},{"name":"Raj Patel"},{"name":"Li Wei"}]'))!
-              .author,
-          'Anna Smith, Raj Patel and Li Wei');
+        ArticleText.extract(
+          withRecord(
+            '[{"name":"Anna Smith"},{"name":"Raj Patel"},{"name":"Li Wei"}]',
+          ),
+        )!.author,
+        'Anna Smith, Raj Patel and Li Wei',
+      );
     });
 
     test("the page's author tag, when the record has none", () {
       final page = _page(
         head: '<meta name="author" content="By Jo Bloggs">',
-        body: '<article><p>First. $_para</p><p>Second. $_para</p>'
+        body:
+            '<article><p>First. $_para</p><p>Second. $_para</p>'
             '<p>Third. $_para</p></article>',
       );
       expect(ArticleText.extract(page)!.author, 'Jo Bloggs');
@@ -324,8 +360,10 @@ void main() {
 
     test('a profile link is not a name', () {
       final page = _page(
-        head: '<meta property="article:author" content="https://x.com/people/jo">',
-        body: '<article><p>First. $_para</p><p>Second. $_para</p>'
+        head:
+            '<meta property="article:author" content="https://x.com/people/jo">',
+        body:
+            '<article><p>First. $_para</p><p>Second. $_para</p>'
             '<p>Third. $_para</p></article>',
       );
       expect(ArticleText.extract(page)!.author, isNull);
@@ -333,8 +371,7 @@ void main() {
   });
 
   group('a voice per author', () {
-    test('the same name always gets the same voice, however it is written',
-        () {
+    test('the same name always gets the same voice, however it is written', () {
       final i = TtsService.voiceIndex('Steven Levy', 2);
       expect(TtsService.voiceIndex('steven  levy', 2), i);
       expect(TtsService.voiceIndex('By Steven Levy', 2), i);
@@ -342,84 +379,102 @@ void main() {
     });
 
     test('different writers are spread across the voices', () {
-      final names = ['Steven Levy', 'Lauren Goode', 'Anna Smith', 'Raj Patel',
-          'Li Wei', 'Jo Bloggs', 'Sam Jones', 'Alex Kim'];
+      final names = [
+        'Steven Levy',
+        'Lauren Goode',
+        'Anna Smith',
+        'Raj Patel',
+        'Li Wei',
+        'Jo Bloggs',
+        'Sam Jones',
+        'Alex Kim',
+      ];
       final used = names.map((n) => TtsService.voiceIndex(n, 2)).toSet();
       expect(used, {0, 1});
     });
 
-    test('the reader says who wrote it, and reads it all in their voice',
-        () async {
-      final out = FakeOutput();
-      final r = ArticleReader(
-        output: out,
-        volume: () => 45,
-        voiceFor: (author) async => author == null ? null : '/voices/$author',
-        fetch: (_) async => _page(
-          head: '<meta name="author" content="Jo Bloggs">',
-          body: '<article><p>First. $_para</p><p>Second. $_para</p>'
-              '<p>Third. $_para</p></article>',
-        ),
-      );
-      unawaited(r.read(title: 'Scheme extended', link: 'https://x/1'));
-      await settle();
-      expect(r.author, 'Jo Bloggs');
-      for (var i = 0; i < 5; i++) {
+    test(
+      'the reader says who wrote it, and reads it all in their voice',
+      () async {
+        final out = FakeOutput();
+        final r = ArticleReader(
+          output: out,
+          volume: () => 45,
+          voiceFor: (author) async => author == null ? null : '/voices/$author',
+          fetch: (_) async => _page(
+            head: '<meta name="author" content="Jo Bloggs">',
+            body:
+                '<article><p>First. $_para</p><p>Second. $_para</p>'
+                '<p>Third. $_para</p></article>',
+          ),
+        );
+        unawaited(r.read(title: 'Scheme extended', link: 'https://x/1'));
         await settle();
-        out.finishOne();
-      }
-      await settle();
-      expect(out.said.take(2), ['Scheme extended.', 'By Jo Bloggs.']);
-      expect(out.voices.toSet(), {'/voices/Jo Bloggs'});
-    });
+        expect(r.author, 'Jo Bloggs');
+        for (var i = 0; i < 5; i++) {
+          await settle();
+          out.finishOne();
+        }
+        await settle();
+        expect(out.said.take(2), ['Scheme extended.', 'By Jo Bloggs.']);
+        expect(out.voices.toSet(), {'/voices/Jo Bloggs'});
+      },
+    );
   });
 
   group('voice settings', () {
     ArticleReader readerWith(FakeOutput out) => ArticleReader(
-          output: out,
-          volume: () => 45,
-          voiceFor: (author) async => author == null ? null : '/v/alan.onnx',
-          voiceId: (path) => path.split('/').last.replaceAll('.onnx', ''),
-          fetch: (_) async => _page(
-            head: '<meta name="author" content="Jo Bloggs">',
-            body: '<article><p>First. $_para</p><p>Second. $_para</p>'
-                '<p>Third. $_para</p></article>',
-          ),
-        );
+      output: out,
+      volume: () => 45,
+      voiceFor: (author) async => author == null ? null : '/v/alan.onnx',
+      voiceId: (path) => path.split('/').last.replaceAll('.onnx', ''),
+      fetch: (_) async => _page(
+        head: '<meta name="author" content="Jo Bloggs">',
+        body:
+            '<article><p>First. $_para</p><p>Second. $_para</p>'
+            '<p>Third. $_para</p></article>',
+      ),
+    );
 
     test("each voice reads at the speed set for it", () async {
       final out = FakeOutput();
       final r = readerWith(out);
-      unawaited(r.read(
-        title: 'Scheme extended',
-        link: 'https://x/1',
-        speeds: {'alan': 1.15, 'main': 0.85},
-      ));
+      unawaited(
+        r.read(
+          title: 'Scheme extended',
+          link: 'https://x/1',
+          speeds: {'alan': 1.15, 'main': 0.85},
+        ),
+      );
       await settle();
       await r.stop();
       expect(out.speeds, isNotEmpty);
       expect(out.speeds.toSet(), {1.15});
     });
 
-    test('an ElevenLabs reading is all in its one voice, at the main pace',
-        () async {
-      final out = FakeOutput();
-      final r = readerWith(out);
-      const cloud = ElevenLabsVoice(apiKey: 'k');
-      unawaited(r.read(
-        title: 'Scheme extended',
-        link: 'https://x/1',
-        speeds: {'alan': 1.15, 'main': 0.85},
-        cloud: cloud,
-      ));
-      await settle();
-      out.finishOne();
-      await settle();
-      await r.stop();
-      expect(out.clouds.toSet(), {cloud});
-      expect(out.voices.toSet(), {null});
-      expect(out.speeds.toSet(), {0.85});
-    });
+    test(
+      'an ElevenLabs reading is all in its one voice, at the main pace',
+      () async {
+        final out = FakeOutput();
+        final r = readerWith(out);
+        const cloud = ElevenLabsVoice(apiKey: 'k');
+        unawaited(
+          r.read(
+            title: 'Scheme extended',
+            link: 'https://x/1',
+            speeds: {'alan': 1.15, 'main': 0.85},
+            cloud: cloud,
+          ),
+        );
+        await settle();
+        out.finishOne();
+        await settle();
+        await r.stop();
+        expect(out.clouds.toSet(), {cloud});
+        expect(out.voices.toSet(), {null});
+        expect(out.speeds.toSet(), {0.85});
+      },
+    );
 
     test('a voice with no speed set reads at its own pace', () async {
       final out = FakeOutput();
@@ -433,8 +488,9 @@ void main() {
     test('"Say who wrote it" off leaves the byline out', () async {
       final out = FakeOutput();
       final r = readerWith(out);
-      unawaited(r.read(
-          title: 'Scheme extended', link: 'https://x/1', sayAuthor: false));
+      unawaited(
+        r.read(title: 'Scheme extended', link: 'https://x/1', sayAuthor: false),
+      );
       await settle();
       out.finishOne();
       await settle();

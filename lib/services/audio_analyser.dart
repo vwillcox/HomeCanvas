@@ -18,15 +18,17 @@ class AudioAnalyser {
     this.sampleRate = 16000,
     this.fftSize = 512,
     this.wavePoints = 128,
-  })  : assert(fftSize > 0 && (fftSize & (fftSize - 1)) == 0,
-            'fftSize must be a power of two'),
-        _levels = Float64List(bands),
-        _wave = Float64List(wavePoints),
-        _re = Float64List(fftSize),
-        _im = Float64List(fftSize),
-        _window = Float64List(fftSize),
-        _edges = Int32List(bands + 1),
-        _tilt = Float64List(bands) {
+  }) : assert(
+         fftSize > 0 && (fftSize & (fftSize - 1)) == 0,
+         'fftSize must be a power of two',
+       ),
+       _levels = Float64List(bands),
+       _wave = Float64List(wavePoints),
+       _re = Float64List(fftSize),
+       _im = Float64List(fftSize),
+       _window = Float64List(fftSize),
+       _edges = Int32List(bands + 1),
+       _tilt = Float64List(bands) {
     // Hann. Without it every frame boundary is a step change, and the whole
     // spectrum smears into a wall of bars that never moves.
     for (var i = 0; i < fftSize; i++) {

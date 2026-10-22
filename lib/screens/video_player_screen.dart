@@ -16,7 +16,16 @@ import '../l10n/l10n.dart';
 import '../look.dart';
 import '../widgets/lcars.dart';
 
-const List<double> kPlaybackSpeeds = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
+const List<double> kPlaybackSpeeds = [
+  0.25,
+  0.5,
+  0.75,
+  1.0,
+  1.25,
+  1.5,
+  1.75,
+  2.0,
+];
 
 class VideoPlayerScreen extends StatefulWidget {
   final Asset asset;
@@ -45,8 +54,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   // these in software without trouble.
   late final VideoController _controller = VideoController(
     _player,
-    configuration:
-        const VideoControllerConfiguration(enableHardwareAcceleration: false),
+    configuration: const VideoControllerConfiguration(
+      enableHardwareAcceleration: false,
+    ),
   );
   final _subs = <StreamSubscription>[];
   final _transform = TransformationController();
@@ -75,7 +85,13 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       }
     });
     await _applyVolume();
-    _showHud(_muted ? tr('video.muted', 'Muted') : tr('video.volume2', 'Volume {_volume}%', {'_volume': _volume.round()}));
+    _showHud(
+      _muted
+          ? tr('video.muted', 'Muted')
+          : tr('video.volume2', 'Volume {_volume}%', {
+              '_volume': _volume.round(),
+            }),
+    );
   }
 
   /// Change the level from the slider. Moving it off zero also unmutes.
@@ -111,6 +127,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     // Remember the level for the next video.
     unawaited(config.setVideoAudio(_volume, _muted));
   }
+
   Duration _dragStartPosition = Duration.zero;
   bool _zoomed = false;
 
@@ -136,15 +153,21 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     super.initState();
     _transform.addListener(_onZoomChanged);
     _open();
-    _subs.add(_player.stream.position.listen((p) {
-      if (!_seeking && mounted) setState(() => _position = p);
-    }));
-    _subs.add(_player.stream.duration.listen((d) {
-      if (mounted) setState(() => _duration = d);
-    }));
-    _subs.add(_player.stream.playing.listen((p) {
-      if (mounted) setState(() => _playing = p);
-    }));
+    _subs.add(
+      _player.stream.position.listen((p) {
+        if (!_seeking && mounted) setState(() => _position = p);
+      }),
+    );
+    _subs.add(
+      _player.stream.duration.listen((d) {
+        if (mounted) setState(() => _duration = d);
+      }),
+    );
+    _subs.add(
+      _player.stream.playing.listen((p) {
+        if (mounted) setState(() => _playing = p);
+      }),
+    );
   }
 
   Future<void> _open() async {
@@ -156,10 +179,12 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       await widget.onBeforePlay!();
     }
     await MpvTuning.apply(_player);
-    await _player.open(Media(
-      widget.source.videoUrl(widget.asset.id),
-      httpHeaders: widget.source.authHeaders,
-    ));
+    await _player.open(
+      Media(
+        widget.source.videoUrl(widget.asset.id),
+        httpHeaders: widget.source.authHeaders,
+      ),
+    );
     await _applyVolume();
   }
 
@@ -188,7 +213,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   @override
   Widget build(BuildContext context) {
     final total = _duration.inMilliseconds.toDouble();
-    final pos = _position.inMilliseconds.clamp(0, total == 0 ? 0 : total).toDouble();
+    final pos = _position.inMilliseconds
+        .clamp(0, total == 0 ? 0 : total)
+        .toDouble();
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -209,37 +236,60 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         },
         onDoubleTap: () {},
         // Horizontal drag scrubs through the video.
-        onHorizontalDragStart: _zoomed ? null : (_) => _dragStartPosition = _position,
-        onHorizontalDragUpdate: _zoomed ? null : (d) {
-          if (_duration == Duration.zero) return;
-          final w = MediaQuery.of(context).size.width;
-          // Full width of the screen ≈ the whole clip.
-          final deltaMs =
-              (d.localPosition.dx / w) * _duration.inMilliseconds;
-          var target = _dragStartPosition + Duration(milliseconds: deltaMs.toInt());
-          if (target < Duration.zero) target = Duration.zero;
-          if (target > _duration) target = _duration;
-          setState(() {
-            _seeking = true;
-            _position = target;
-          });
-          _showHud(playTime(target));
-        },
-        onHorizontalDragEnd: _zoomed ? null : (_) async {
-          await _player.seek(_position);
-          if (mounted) setState(() => _seeking = false);
-        },
+        onHorizontalDragStart: _zoomed
+            ? null
+            : (_) => _dragStartPosition = _position,
+        onHorizontalDragUpdate: _zoomed
+            ? null
+            : (d) {
+                if (_duration == Duration.zero) return;
+                final w = MediaQuery.of(context).size.width;
+                // Full width of the screen ≈ the whole clip.
+                final deltaMs =
+                    (d.localPosition.dx / w) * _duration.inMilliseconds;
+                var target =
+                    _dragStartPosition +
+                    Duration(milliseconds: deltaMs.toInt());
+                if (target < Duration.zero) target = Duration.zero;
+                if (target > _duration) target = _duration;
+                setState(() {
+                  _seeking = true;
+                  _position = target;
+                });
+                _showHud(playTime(target));
+              },
+        onHorizontalDragEnd: _zoomed
+            ? null
+            : (_) async {
+                await _player.seek(_position);
+                if (mounted) setState(() => _seeking = false);
+              },
         // Vertical drag adjusts volume; a flick down closes the player.
-        onVerticalDragUpdate: _zoomed ? null : (d) {
-          final h = MediaQuery.of(context).size.height;
-          final next = (_volume - (d.delta.dy / h) * 200).clamp(0.0, 100.0);
-          if ((next - _volume).abs() < 0.5) return;
-          unawaited(_setVolume(next));
-          _showHud(next <= 0 ? tr('video.muted', 'Muted') : tr('video.volume', 'Volume {next}%', {'next': next.round()}));
-        },
-        onVerticalDragEnd: _zoomed ? null : (d) {
-          if ((d.primaryVelocity ?? 0) > 700) Navigator.of(context).maybePop();
-        },
+        onVerticalDragUpdate: _zoomed
+            ? null
+            : (d) {
+                final h = MediaQuery.of(context).size.height;
+                final next = (_volume - (d.delta.dy / h) * 200).clamp(
+                  0.0,
+                  100.0,
+                );
+                if ((next - _volume).abs() < 0.5) return;
+                unawaited(_setVolume(next));
+                _showHud(
+                  next <= 0
+                      ? tr('video.muted', 'Muted')
+                      : tr('video.volume', 'Volume {next}%', {
+                          'next': next.round(),
+                        }),
+                );
+              },
+        onVerticalDragEnd: _zoomed
+            ? null
+            : (d) {
+                if ((d.primaryVelocity ?? 0) > 700) {
+                  Navigator.of(context).maybePop();
+                }
+              },
         child: Stack(
           children: [
             // Zoomable video surface. Single-finger panning is only enabled
@@ -276,19 +326,28 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                   ),
                   child: Row(
                     children: [
-                      const SizedBox(width: 64 + 8), // room for the fixed back button
+                      const SizedBox(
+                        width: 64 + 8,
+                      ), // room for the fixed back button
                       Expanded(
                         child: Text(
                           widget.asset.fileName ?? tr('video.video', 'Video'),
-                          style: const TextStyle(color: Colors.white, fontSize: 18),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.zoom_out_map, color: Colors.white),
+                        icon: const Icon(
+                          Icons.zoom_out_map,
+                          color: Colors.white,
+                        ),
                         iconSize: 30,
                         onPressed: () => setState(
-                            () => _transform.value = Matrix4.identity()),
+                          () => _transform.value = Matrix4.identity(),
+                        ),
                       ),
                     ],
                   ),
@@ -314,7 +373,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                     onPlayPause: _player.playOrPause,
                     onSeekStart: () => setState(() => _seeking = true),
                     onSeekChanged: (v) => setState(
-                        () => _position = Duration(milliseconds: v.toInt())),
+                      () => _position = Duration(milliseconds: v.toInt()),
+                    ),
                     onSeekEnd: (v) async {
                       await _player.seek(Duration(milliseconds: v.toInt()));
                       if (mounted) setState(() => _seeking = false);
@@ -357,7 +417,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                   duration: const Duration(milliseconds: 120),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 26, vertical: 16),
+                      horizontal: 26,
+                      vertical: 16,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.66),
                       borderRadius: BorderRadius.circular(18),
@@ -365,9 +427,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                     child: Text(
                       _hud!,
                       style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 34,
-                          fontWeight: FontWeight.w600),
+                        color: Colors.white,
+                        fontSize: 34,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
@@ -454,11 +517,16 @@ class VideoBottomControls extends StatelessWidget {
             children: [
               IconButton(
                 iconSize: 44,
-                icon: Icon(playing ? Icons.pause_circle : Icons.play_circle,
-                    color: Colors.white),
+                icon: Icon(
+                  playing ? Icons.pause_circle : Icons.play_circle,
+                  color: Colors.white,
+                ),
                 onPressed: onPlayPause,
               ),
-              Text(playTime(position), style: const TextStyle(color: Colors.white)),
+              Text(
+                playTime(position),
+                style: const TextStyle(color: Colors.white),
+              ),
               Expanded(
                 child: Slider(
                   min: 0,
@@ -469,7 +537,10 @@ class VideoBottomControls extends StatelessWidget {
                   onChangeEnd: onSeekEnd,
                 ),
               ),
-              Text(playTime(duration), style: const TextStyle(color: Colors.white)),
+              Text(
+                playTime(duration),
+                style: const TextStyle(color: Colors.white),
+              ),
             ],
           ),
         ],
@@ -525,10 +596,12 @@ class VideoVolumeColumn extends StatelessWidget {
                     activeTrackColor: muted ? Colors.white24 : accent,
                     inactiveTrackColor: Colors.white24,
                     thumbColor: muted ? Colors.white54 : accent,
-                    thumbShape:
-                        const RoundSliderThumbShape(enabledThumbRadius: 15),
-                    overlayShape:
-                        const RoundSliderOverlayShape(overlayRadius: 28),
+                    thumbShape: const RoundSliderThumbShape(
+                      enabledThumbRadius: 15,
+                    ),
+                    overlayShape: const RoundSliderOverlayShape(
+                      overlayRadius: 28,
+                    ),
                   ),
                 ),
                 child: Slider(
@@ -543,7 +616,9 @@ class VideoVolumeColumn extends StatelessWidget {
           const SizedBox(height: 6),
           IconButton(
             iconSize: 34,
-            tooltip: muted ? tr('video.unmute', 'Unmute') : tr('video.mute', 'Mute'),
+            tooltip: muted
+                ? tr('video.unmute', 'Unmute')
+                : tr('video.mute', 'Mute'),
             icon: Icon(
               muted
                   ? Icons.volume_off

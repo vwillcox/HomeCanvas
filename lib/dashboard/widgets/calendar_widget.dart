@@ -49,8 +49,11 @@ class DashboardCalendarWidget extends StatelessWidget {
       return [
         for (final r in rows)
           if ('${r['url'] ?? ''}'.isNotEmpty)
-            _Source('${r['url']}', _colour(r['colour'], fallback),
-                '${r['name'] ?? ''}'),
+            _Source(
+              '${r['url']}',
+              _colour(r['colour'], fallback),
+              '${r['name'] ?? ''}',
+            ),
       ];
     }
     final legacy = w.option('url', '');
@@ -63,7 +66,10 @@ class DashboardCalendarWidget extends StatelessWidget {
     final sources = _sources(t.accent);
     if (sources.isEmpty) {
       return _Hint(
-        text: tr('widget.calendar.addACalendarLinkIn', 'Add a calendar link in this widget’s settings.'),
+        text: tr(
+          'widget.calendar.addACalendarLinkIn',
+          'Add a calendar link in this widget’s settings.',
+        ),
         colour: t.textSecondary,
       );
     }
@@ -87,8 +93,11 @@ class DashboardCalendarWidget extends StatelessWidget {
 }
 
 class _ScheduleView extends StatelessWidget {
-  const _ScheduleView(
-      {required this.w, required this.entries, required this.error});
+  const _ScheduleView({
+    required this.w,
+    required this.entries,
+    required this.error,
+  });
 
   final DashboardWidgetContext w;
   final List<_Entry> entries;
@@ -101,14 +110,21 @@ class _ScheduleView extends StatelessWidget {
     final horizon = DateTime.now().add(Duration(days: days));
     final from = DateTime.now().subtract(const Duration(hours: 12));
     final shown = entries
-        .where((e) =>
-            e.event.start.isAfter(from) && e.event.start.isBefore(horizon))
+        .where(
+          (e) => e.event.start.isAfter(from) && e.event.start.isBefore(horizon),
+        )
         .take(w.option('maxEvents', 6))
         .toList();
 
     if (shown.isEmpty) {
       return _Hint(
-        text: error ?? tr('widget.calendar.nothingInTheNextDays', 'Nothing in the next {days} days.', {'days': days}),
+        text:
+            error ??
+            tr(
+              'widget.calendar.nothingInTheNextDays',
+              'Nothing in the next {days} days.',
+              {'days': days},
+            ),
         colour: t.textSecondary,
       );
     }
@@ -179,7 +195,11 @@ class _ScheduleView extends StatelessWidget {
       dayLabel = '${weekdayShort(e.start)} ${numericDayMonth(e.start)}';
     }
 
-    if (e.allDay) return tr('widget.calendar.allDay', '{dayLabel} · all day', {'dayLabel': dayLabel});
+    if (e.allDay) {
+      return tr('widget.calendar.allDay', '{dayLabel} · all day', {
+        'dayLabel': dayLabel,
+      });
+    }
     final time = hhmm(e.start);
     final where = e.location == null ? '' : ' · ${e.location}';
     return '$dayLabel $time$where';
@@ -318,7 +338,9 @@ class _Day extends StatelessWidget {
         final titleHeight = 11.0;
         final room = ((c.maxHeight - 16) / titleHeight).floor();
         final showTitles = c.maxHeight > 34 && room >= 1;
-        final shown = showTitles ? list.take(room.clamp(1, 3)).toList() : const <_Entry>[];
+        final shown = showTitles
+            ? list.take(room.clamp(1, 3)).toList()
+            : const <_Entry>[];
 
         return Padding(
           padding: const EdgeInsets.all(1),
@@ -328,8 +350,10 @@ class _Day extends StatelessWidget {
               Align(
                 alignment: Alignment.center,
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 5,
+                    vertical: 1,
+                  ),
                   decoration: isToday
                       ? BoxDecoration(
                           color: theme.accent,
@@ -344,8 +368,9 @@ class _Day extends StatelessWidget {
                     style: TextStyle(
                       // Against the accent fill, the background colour is the
                       // one guaranteed to contrast with it.
-                      color:
-                          isToday ? theme.background.first : theme.textPrimary,
+                      color: isToday
+                          ? theme.background.first
+                          : theme.textPrimary,
                       fontSize: 12,
                       fontWeight: isToday ? FontWeight.w700 : FontWeight.w400,
                     ),
@@ -362,12 +387,14 @@ class _Day extends StatelessWidget {
                           padding: const EdgeInsets.only(top: 1),
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 3, vertical: 1),
+                              horizontal: 3,
+                              vertical: 1,
+                            ),
                             decoration: BoxDecoration(
                               color: e.colour.withValues(alpha: 0.22),
                               border: Border(
-                                  left:
-                                      BorderSide(color: e.colour, width: 2)),
+                                left: BorderSide(color: e.colour, width: 2),
+                              ),
                               borderRadius: BorderRadius.circular(
                                 theme.isLcars ? 0 : 3,
                               ),
@@ -390,15 +417,15 @@ class _Day extends StatelessWidget {
                         ),
                       if (list.length > shown.length)
                         Text(
-                          tr(
-                            'widget.calendar.more',
-                            '+{shown} more',
-                            {'shown': list.length - shown.length},
-                          ),
+                          tr('widget.calendar.more', '+{shown} more', {
+                            'shown': list.length - shown.length,
+                          }),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                              color: theme.textSecondary, fontSize: 8),
+                            color: theme.textSecondary,
+                            fontSize: 8,
+                          ),
                         ),
                     ],
                   ),
@@ -414,7 +441,9 @@ class _Day extends StatelessWidget {
                         height: 4,
                         margin: const EdgeInsets.symmetric(horizontal: 1),
                         decoration: BoxDecoration(
-                            color: e.colour, shape: BoxShape.circle),
+                          color: e.colour,
+                          shape: BoxShape.circle,
+                        ),
                       ),
                   ],
                 ),
@@ -434,12 +463,12 @@ class _Hint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-        child: Text(
-          text,
-          textAlign: TextAlign.center,
-          style: TextStyle(color: colour, fontSize: 15),
-        ),
-      );
+    child: Text(
+      text,
+      textAlign: TextAlign.center,
+      style: TextStyle(color: colour, fontSize: 15),
+    ),
+  );
 }
 
 final calendarWidgetType = DashboardWidgetType(
@@ -470,7 +499,8 @@ final calendarWidgetType = DashboardWidgetType(
       label: 'Calendars',
       kind: OptionKind.list,
       addLabel: 'Add a calendar',
-      help: 'Each link is the secret iCal address from Google, Apple or '
+      help:
+          'Each link is the secret iCal address from Google, Apple or '
           'Outlook — webcal:// works too. Anyone with one can read that '
           'calendar, so treat them as passwords.',
       fields: [
@@ -520,14 +550,15 @@ final calendarWidgetType = DashboardWidgetType(
     final events = [for (final u in urls) ...feeds.calendar(u)]
       ..sort((a, b) => a.start.compareTo(b.start));
     final from = DateTime.now().subtract(const Duration(hours: 12));
-    final upcoming =
-        events.where((e) => e.start.isAfter(from)).take(4).toList();
+    final upcoming = events
+        .where((e) => e.start.isAfter(from))
+        .take(4)
+        .toList();
     if (upcoming.isEmpty) return const [];
     return [
       for (final e in upcoming) ...[
         PreviewLine(e.title, scale: 0.14, px: 16),
-        PreviewLine(_ScheduleView._when(e),
-            scale: 0.1, muted: true, px: 13),
+        PreviewLine(_ScheduleView._when(e), scale: 0.1, muted: true, px: 13),
       ],
     ];
   },

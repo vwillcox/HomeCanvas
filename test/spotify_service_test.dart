@@ -41,7 +41,8 @@ void main() {
       final seen = <String>[];
       for (var i = 0; i < 3; i++) {
         state = SpotifyService.nextRepeatState(
-            SpotifyService.repeatStateFrom(state));
+          SpotifyService.repeatStateFrom(state),
+        );
         seen.add(state);
       }
       expect(seen, ['context', 'track', 'off']);
@@ -62,9 +63,12 @@ void main() {
     test('the DJ talking keeps the player up, and says it is the DJ', () {
       // The reply Spotify gives while X is speaking: playing, no item, the DJ
       // playlist as context.
-      final r = SpotifyService.readPlayer(_reply(
+      final r = SpotifyService.readPlayer(
+        _reply(
           item: null,
-          context: 'spotify:playlist:${SpotifyService.djPlaylistId}'));
+          context: 'spotify:playlist:${SpotifyService.djPlaylistId}',
+        ),
+      );
       expect(r.kind, PlayerReplyKind.dj);
       expect(r.now.hasTrack, isTrue, reason: 'hasTrack is what keeps it up');
       expect(r.now.isPlaying, isTrue);
@@ -76,7 +80,8 @@ void main() {
 
     test('playing with nothing named is still playing', () {
       final r = SpotifyService.readPlayer(
-          _reply(item: null, context: 'spotify:playlist:somethingelse'));
+        _reply(item: null, context: 'spotify:playlist:somethingelse'),
+      );
       expect(r.kind, PlayerReplyKind.unlabelled);
       expect(r.now.hasTrack, isTrue);
       expect(r.now.isPlaying, isTrue);
@@ -88,37 +93,47 @@ void main() {
       expect(r.now.hasTrack, isFalse);
     });
 
-    test('a podcast episode names the show, and cannot be liked as a track',
-        () {
-      final r = SpotifyService.readPlayer(_reply(item: {
-        'type': 'episode',
-        'id': 'ep1',
-        'name': 'The one about DJs',
-        'duration_ms': 3600000,
-        'images': [
-          {'url': 'https://i.scdn.co/image/ep'}
-        ],
-        'show': {'name': 'Some Podcast', 'publisher': 'Some Network'},
-      }));
-      expect(r.kind, PlayerReplyKind.episode);
-      expect(r.now.title, 'The one about DJs');
-      expect(r.now.artist, 'Some Podcast');
-      expect(r.now.trackId, isEmpty);
-      expect(r.artUrl, 'https://i.scdn.co/image/ep');
-    });
+    test(
+      'a podcast episode names the show, and cannot be liked as a track',
+      () {
+        final r = SpotifyService.readPlayer(
+          _reply(
+            item: {
+              'type': 'episode',
+              'id': 'ep1',
+              'name': 'The one about DJs',
+              'duration_ms': 3600000,
+              'images': [
+                {'url': 'https://i.scdn.co/image/ep'},
+              ],
+              'show': {'name': 'Some Podcast', 'publisher': 'Some Network'},
+            },
+          ),
+        );
+        expect(r.kind, PlayerReplyKind.episode);
+        expect(r.now.title, 'The one about DJs');
+        expect(r.now.artist, 'Some Podcast');
+        expect(r.now.trackId, isEmpty);
+        expect(r.artUrl, 'https://i.scdn.co/image/ep');
+      },
+    );
 
     test("an episode without its own artwork uses the show's", () {
-      final r = SpotifyService.readPlayer(_reply(item: {
-        'type': 'episode',
-        'name': 'Ep',
-        'duration_ms': 1000,
-        'show': {
-          'name': 'Show',
-          'images': [
-            {'url': 'https://i.scdn.co/image/show'}
-          ],
-        },
-      }));
+      final r = SpotifyService.readPlayer(
+        _reply(
+          item: {
+            'type': 'episode',
+            'name': 'Ep',
+            'duration_ms': 1000,
+            'show': {
+              'name': 'Show',
+              'images': [
+                {'url': 'https://i.scdn.co/image/show'},
+              ],
+            },
+          },
+        ),
+      );
       expect(r.artUrl, 'https://i.scdn.co/image/show');
     });
   });
@@ -132,16 +147,16 @@ void main() {
 
     test('not for a gap of a few seconds between tracks', () {
       expect(
-          SpotifyService.emptyLongEnough(
-              t0, t0.add(const Duration(seconds: 6))),
-          isFalse);
+        SpotifyService.emptyLongEnough(t0, t0.add(const Duration(seconds: 6))),
+        isFalse,
+      );
     });
 
     test('once nothing has played for a while', () {
       expect(
-          SpotifyService.emptyLongEnough(
-              t0, t0.add(SpotifyService.emptyGrace)),
-          isTrue);
+        SpotifyService.emptyLongEnough(t0, t0.add(SpotifyService.emptyGrace)),
+        isTrue,
+      );
     });
 
     test('never when nothing has been empty', () {
@@ -150,7 +165,6 @@ void main() {
   });
 }
 
-
 // --- Spotify's DJ, podcasts and gaps ---------------------------------------
 
 Map<String, dynamic> _reply({
@@ -158,17 +172,16 @@ Map<String, dynamic> _reply({
   bool playing = true,
   String? context,
   int progress = 30000,
-}) =>
-    {
-      'is_playing': playing,
-      'progress_ms': progress,
-      'repeat_state': 'off',
-      'shuffle_state': false,
-      'currently_playing_type': 'track',
-      'device': {'name': 'Kiosk Connect', 'supports_volume': true},
-      'context': context == null ? null : {'uri': context},
-      'item': item,
-    };
+}) => {
+  'is_playing': playing,
+  'progress_ms': progress,
+  'repeat_state': 'off',
+  'shuffle_state': false,
+  'currently_playing_type': 'track',
+  'device': {'name': 'Kiosk Connect', 'supports_volume': true},
+  'context': context == null ? null : {'uri': context},
+  'item': item,
+};
 
 final _track = {
   'type': 'track',
@@ -176,13 +189,12 @@ final _track = {
   'name': 'Centuries',
   'duration_ms': 228000,
   'artists': [
-    {'name': 'Fall Out Boy'}
+    {'name': 'Fall Out Boy'},
   ],
   'album': {
     'name': 'American Beauty/American Psycho',
     'images': [
-      {'url': 'https://i.scdn.co/image/abc'}
+      {'url': 'https://i.scdn.co/image/abc'},
     ],
   },
 };
-

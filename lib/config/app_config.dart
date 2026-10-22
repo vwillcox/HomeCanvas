@@ -57,11 +57,11 @@ class SlideshowSettings {
   }
 
   Map<String, dynamic> toJson() => {
-        'intervalSeconds': intervalSeconds,
-        'transition': transitionToString(transition),
-        'shuffle': shuffle,
-        'includeVideos': includeVideos,
-      };
+    'intervalSeconds': intervalSeconds,
+    'transition': transitionToString(transition),
+    'shuffle': shuffle,
+    'includeVideos': includeVideos,
+  };
 }
 
 enum OverlayCorner { topLeft, topRight, bottomLeft, bottomRight }
@@ -141,28 +141,27 @@ class WeatherSettings {
   });
 
   factory WeatherSettings.fromJson(Map<String, dynamic> j) => WeatherSettings(
-        enabled: j['enabled'] as bool? ?? true,
-        location: j['location'] as String? ?? 'CO1 1ZY',
-        corner: _cornerFromString(j['corner'] as String?),
-        metric: j['metric'] as bool? ?? true,
-        showIndoor: j['showIndoor'] as bool? ?? true,
-        latitude: (j['latitude'] as num?)?.toDouble(),
-        longitude: (j['longitude'] as num?)?.toDouble(),
-        resolvedLabel: j['resolvedLabel'] as String?,
-      );
+    enabled: j['enabled'] as bool? ?? true,
+    location: j['location'] as String? ?? 'CO1 1ZY',
+    corner: _cornerFromString(j['corner'] as String?),
+    metric: j['metric'] as bool? ?? true,
+    showIndoor: j['showIndoor'] as bool? ?? true,
+    latitude: (j['latitude'] as num?)?.toDouble(),
+    longitude: (j['longitude'] as num?)?.toDouble(),
+    resolvedLabel: j['resolvedLabel'] as String?,
+  );
 
   Map<String, dynamic> toJson() => {
-        'enabled': enabled,
-        'location': location,
-        'corner': cornerToString(corner),
-        'metric': metric,
-        'showIndoor': showIndoor,
-        'latitude': latitude,
-        'longitude': longitude,
-        'resolvedLabel': resolvedLabel,
-      };
+    'enabled': enabled,
+    'location': location,
+    'corner': cornerToString(corner),
+    'metric': metric,
+    'showIndoor': showIndoor,
+    'latitude': latitude,
+    'longitude': longitude,
+    'resolvedLabel': resolvedLabel,
+  };
 }
-
 
 /// What the full-screen player draws between the scrubber and the transport.
 enum VisualiserStyle { off, bars, wave }
@@ -225,11 +224,11 @@ class NowPlayingSettings {
   }
 
   Map<String, dynamic> toJson() => {
-        'enabled': enabled,
-        'corner': cornerToString(corner),
-        'playAudioHere': playAudioHere,
-        'visualiser': visualiserToString(visualiser),
-      };
+    'enabled': enabled,
+    'corner': cornerToString(corner),
+    'playAudioHere': playAudioHere,
+    'visualiser': visualiserToString(visualiser),
+  };
 }
 
 /// Where the indoor temperature comes from.
@@ -279,8 +278,7 @@ class HomeAssistantSettings {
       temperatureEntity.isNotEmpty;
 
   /// Set up, but deliberately switched off.
-  bool get isPaused =>
-      !enabled && baseUrl.isNotEmpty && token.isNotEmpty;
+  bool get isPaused => !enabled && baseUrl.isNotEmpty && token.isNotEmpty;
 
   factory HomeAssistantSettings.fromJson(Map<String, dynamic> j) =>
       HomeAssistantSettings(
@@ -295,13 +293,13 @@ class HomeAssistantSettings {
       );
 
   Map<String, dynamic> toJson() => {
-        'enabled': enabled,
-        'baseUrl': baseUrl,
-        'token': token,
-        'temperatureEntity': temperatureEntity,
-        'humidityEntity': humidityEntity,
-        'batteryEntity': batteryEntity,
-      };
+    'enabled': enabled,
+    'baseUrl': baseUrl,
+    'token': token,
+    'temperatureEntity': temperatureEntity,
+    'humidityEntity': humidityEntity,
+    'batteryEntity': batteryEntity,
+  };
 }
 
 /// A Spotify Premium account, controlled directly via the Web API rather
@@ -315,22 +313,19 @@ class SpotifySettings {
   String clientId;
   String refreshToken;
 
-  SpotifySettings({
-    this.clientId = '',
-    this.refreshToken = '',
-  });
+  SpotifySettings({this.clientId = '', this.refreshToken = ''});
 
   bool get isConfigured => clientId.isNotEmpty && refreshToken.isNotEmpty;
 
   factory SpotifySettings.fromJson(Map<String, dynamic> j) => SpotifySettings(
-        clientId: j['clientId'] as String? ?? '',
-        refreshToken: j['refreshToken'] as String? ?? '',
-      );
+    clientId: j['clientId'] as String? ?? '',
+    refreshToken: j['refreshToken'] as String? ?? '',
+  );
 
   Map<String, dynamic> toJson() => {
-        'clientId': clientId,
-        'refreshToken': refreshToken,
-      };
+    'clientId': clientId,
+    'refreshToken': refreshToken,
+  };
 }
 
 /// Videos played by the kiosk — see [VideoPlayerService] — and YouTube's
@@ -359,18 +354,18 @@ class YouTubeSettings {
   });
 
   factory YouTubeSettings.fromJson(Map<String, dynamic> j) => YouTubeSettings(
-        maxHeight: (j['maxHeight'] as num?)?.toInt() ?? 1080,
-        signedIn: j['signedIn'] as bool? ?? false,
-        volume: (j['volume'] as num?)?.toDouble() ?? 40,
-        muted: j['muted'] as bool? ?? false,
-      );
+    maxHeight: (j['maxHeight'] as num?)?.toInt() ?? 1080,
+    signedIn: j['signedIn'] as bool? ?? false,
+    volume: (j['volume'] as num?)?.toDouble() ?? 40,
+    muted: j['muted'] as bool? ?? false,
+  );
 
   Map<String, dynamic> toJson() => {
-        'maxHeight': maxHeight,
-        'signedIn': signedIn,
-        'volume': volume,
-        'muted': muted,
-      };
+    'maxHeight': maxHeight,
+    'signedIn': signedIn,
+    'volume': volume,
+    'muted': muted,
+  };
 }
 
 /// A video site other than YouTube — Floatplane, Nebula — see
@@ -455,36 +450,36 @@ class CameraSettings {
   }
 
   factory CameraSettings.fromJson(Map<String, dynamic> j) => CameraSettings(
-        enabled: j['enabled'] as bool? ?? false,
-        address: j['address'] as String? ?? '',
-        username: j['username'] as String? ?? '',
-        password: j['password'] as String? ?? '',
-        cameraId: j['cameraId'] as String? ?? '0',
-        // Bottom right by default rather than the shared fallback's top
-        // right, which the weather panel already has.
-        corner: j['corner'] == null
-            ? OverlayCorner.bottomRight
-            : _cornerFromString(j['corner'] as String?),
-        streamResolution: j['streamResolution'] as String? ?? '1920x1080',
-        rotate: (j['rotate'] as num?)?.toInt() ?? 0,
-        viewQuarterTurns: (j['viewQuarterTurns'] as num?)?.toInt() ?? 0,
-        defaultZoom: (j['defaultZoom'] as num?)?.toDouble() ?? 1.0,
-        maxZoom: (j['maxZoom'] as num?)?.toDouble() ?? 10.0,
-      );
+    enabled: j['enabled'] as bool? ?? false,
+    address: j['address'] as String? ?? '',
+    username: j['username'] as String? ?? '',
+    password: j['password'] as String? ?? '',
+    cameraId: j['cameraId'] as String? ?? '0',
+    // Bottom right by default rather than the shared fallback's top
+    // right, which the weather panel already has.
+    corner: j['corner'] == null
+        ? OverlayCorner.bottomRight
+        : _cornerFromString(j['corner'] as String?),
+    streamResolution: j['streamResolution'] as String? ?? '1920x1080',
+    rotate: (j['rotate'] as num?)?.toInt() ?? 0,
+    viewQuarterTurns: (j['viewQuarterTurns'] as num?)?.toInt() ?? 0,
+    defaultZoom: (j['defaultZoom'] as num?)?.toDouble() ?? 1.0,
+    maxZoom: (j['maxZoom'] as num?)?.toDouble() ?? 10.0,
+  );
 
   Map<String, dynamic> toJson() => {
-        'enabled': enabled,
-        'address': address,
-        'username': username,
-        'password': password,
-        'cameraId': cameraId,
-        'corner': cornerToString(corner),
-        'streamResolution': streamResolution,
-        'rotate': rotate,
-        'viewQuarterTurns': viewQuarterTurns,
-        'defaultZoom': defaultZoom,
-        'maxZoom': maxZoom,
-      };
+    'enabled': enabled,
+    'address': address,
+    'username': username,
+    'password': password,
+    'cameraId': cameraId,
+    'corner': cornerToString(corner),
+    'streamResolution': streamResolution,
+    'rotate': rotate,
+    'viewQuarterTurns': viewQuarterTurns,
+    'defaultZoom': defaultZoom,
+    'maxZoom': maxZoom,
+  };
 }
 
 /// A Hisense VIDAA television, driven over its MQTT control protocol.
@@ -508,9 +503,9 @@ class HomeySettings {
   bool get isConfigured => address.isNotEmpty && apiKey.isNotEmpty;
 
   factory HomeySettings.fromJson(Map<String, dynamic> j) => HomeySettings(
-        address: (j['address'] as String? ?? '').trim(),
-        apiKey: (j['apiKey'] as String? ?? '').trim(),
-      );
+    address: (j['address'] as String? ?? '').trim(),
+    apiKey: (j['apiKey'] as String? ?? '').trim(),
+  );
 
   Map<String, dynamic> toJson() => {'address': address, 'apiKey': apiKey};
 }
@@ -527,9 +522,9 @@ class BrightSettings {
   bool get isConfigured => username.isNotEmpty && password.isNotEmpty;
 
   factory BrightSettings.fromJson(Map<String, dynamic> j) => BrightSettings(
-        username: (j['username'] as String? ?? '').trim(),
-        password: j['password'] as String? ?? '',
-      );
+    username: (j['username'] as String? ?? '').trim(),
+    password: j['password'] as String? ?? '',
+  );
 
   Map<String, dynamic> toJson() => {'username': username, 'password': password};
 }
@@ -589,28 +584,30 @@ class UnifiSettings {
   bool get isConfigured => enabled && host.isNotEmpty && apiKey.isNotEmpty;
 
   factory UnifiSettings.fromJson(Map<String, dynamic> j) => UnifiSettings(
-        enabled: j['enabled'] as bool? ?? false,
-        host: (j['host'] as String? ?? '192.168.1.1')
-            .replaceAll(RegExp(r'^https?://'), '')
-            .replaceAll(RegExp(r'/+$'), ''),
-        apiKey: j['apiKey'] as String? ?? '',
-        siteId: j['siteId'] as String? ?? '',
-        allowSelfSignedCert: j['allowSelfSignedCert'] as bool? ?? true,
-        throughputPollSeconds:
-            ((j['throughputPollSeconds'] as num?)?.toInt() ?? 1).clamp(1, 60),
-        throughputHours:
-            ((j['throughputHours'] as num?)?.toInt() ?? 24).clamp(1, 72),
-      );
+    enabled: j['enabled'] as bool? ?? false,
+    host: (j['host'] as String? ?? '192.168.1.1')
+        .replaceAll(RegExp(r'^https?://'), '')
+        .replaceAll(RegExp(r'/+$'), ''),
+    apiKey: j['apiKey'] as String? ?? '',
+    siteId: j['siteId'] as String? ?? '',
+    allowSelfSignedCert: j['allowSelfSignedCert'] as bool? ?? true,
+    throughputPollSeconds: ((j['throughputPollSeconds'] as num?)?.toInt() ?? 1)
+        .clamp(1, 60),
+    throughputHours: ((j['throughputHours'] as num?)?.toInt() ?? 24).clamp(
+      1,
+      72,
+    ),
+  );
 
   Map<String, dynamic> toJson() => {
-        'enabled': enabled,
-        'host': host,
-        'apiKey': apiKey,
-        'siteId': siteId,
-        'allowSelfSignedCert': allowSelfSignedCert,
-        'throughputPollSeconds': throughputPollSeconds,
-        'throughputHours': throughputHours,
-      };
+    'enabled': enabled,
+    'host': host,
+    'apiKey': apiKey,
+    'siteId': siteId,
+    'allowSelfSignedCert': allowSelfSignedCert,
+    'throughputPollSeconds': throughputPollSeconds,
+    'throughputHours': throughputHours,
+  };
 }
 
 class TvSettings {
@@ -632,16 +629,16 @@ class TvSettings {
   bool get isConfigured => enabled && host.isNotEmpty && uuid.isNotEmpty;
 
   factory TvSettings.fromJson(Map<String, dynamic> j) => TvSettings(
-        enabled: j['enabled'] as bool? ?? false,
-        host: j['host'] as String? ?? '192.168.1.156',
-        uuid: j['uuid'] as String? ?? '7a:8d:88:86:27:93',
-      );
+    enabled: j['enabled'] as bool? ?? false,
+    host: j['host'] as String? ?? '192.168.1.156',
+    uuid: j['uuid'] as String? ?? '7a:8d:88:86:27:93',
+  );
 
   Map<String, dynamic> toJson() => {
-        'enabled': enabled,
-        'host': host,
-        'uuid': uuid,
-      };
+    'enabled': enabled,
+    'host': host,
+    'uuid': uuid,
+  };
 }
 
 /// Turning the panel off by itself when there's nothing worth showing.
@@ -682,22 +679,22 @@ class ScreenSettings {
   }) : wakeWord = wakeWord ?? WakeWord();
 
   factory ScreenSettings.fromJson(Map<String, dynamic> j) => ScreenSettings(
-        autoOffEnabled: j['autoOffEnabled'] as bool? ?? false,
-        idleMinutes: (j['idleMinutes'] as num?)?.toInt() ?? 15,
-        wakeOnMusic: j['wakeOnMusic'] as bool? ?? true,
-        brightness: ((j['brightness'] as num?)?.round() ?? 100).clamp(5, 100),
-        voiceControl: j['voiceControl'] as bool? ?? false,
-        wakeWord: WakeWord.fromJson(j['wakeWord']),
-      );
+    autoOffEnabled: j['autoOffEnabled'] as bool? ?? false,
+    idleMinutes: (j['idleMinutes'] as num?)?.toInt() ?? 15,
+    wakeOnMusic: j['wakeOnMusic'] as bool? ?? true,
+    brightness: ((j['brightness'] as num?)?.round() ?? 100).clamp(5, 100),
+    voiceControl: j['voiceControl'] as bool? ?? false,
+    wakeWord: WakeWord.fromJson(j['wakeWord']),
+  );
 
   Map<String, dynamic> toJson() => {
-        'autoOffEnabled': autoOffEnabled,
-        'idleMinutes': idleMinutes,
-        'wakeOnMusic': wakeOnMusic,
-        'brightness': brightness,
-        'voiceControl': voiceControl,
-        'wakeWord': wakeWord.toJson(),
-      };
+    'autoOffEnabled': autoOffEnabled,
+    'idleMinutes': idleMinutes,
+    'wakeOnMusic': wakeOnMusic,
+    'brightness': brightness,
+    'voiceControl': voiceControl,
+    'wakeWord': wakeWord.toJson(),
+  };
 }
 
 /// A person allowed to share content to the kiosk from the companion app —
@@ -710,9 +707,9 @@ class SenderToken {
   SenderToken({required this.name, required this.token});
 
   factory SenderToken.fromJson(Map<String, dynamic> j) => SenderToken(
-        name: j['name'] as String? ?? '',
-        token: j['token'] as String? ?? '',
-      );
+    name: j['name'] as String? ?? '',
+    token: j['token'] as String? ?? '',
+  );
 
   Map<String, dynamic> toJson() => {'name': name, 'token': token};
 }
@@ -788,8 +785,10 @@ class ShareInboxSettings {
   factory ShareInboxSettings.fromJson(Map<String, dynamic> j) {
     // The reader and the timers once shared the speech volume, so until they
     // are set on their own they start where it is.
-    final speech =
-        ((j['speechVolume'] as num?)?.toDouble() ?? 45).clamp(0.0, 100.0);
+    final speech = ((j['speechVolume'] as num?)?.toDouble() ?? 45).clamp(
+      0.0,
+      100.0,
+    );
     double own(String key) =>
         ((j[key] as num?)?.toDouble() ?? speech).clamp(0.0, 100.0);
     return ShareInboxSettings(
@@ -802,7 +801,8 @@ class ShareInboxSettings {
       speechVolume: speech,
       readerVolume: own('readerVolume'),
       timerVolume: own('timerVolume'),
-      senderTokens: (j['senderTokens'] as List?)
+      senderTokens:
+          (j['senderTokens'] as List?)
               ?.map((t) => SenderToken.fromJson(t as Map<String, dynamic>))
               .toList() ??
           [],
@@ -810,17 +810,17 @@ class ShareInboxSettings {
   }
 
   Map<String, dynamic> toJson() => {
-        'listenPort': listenPort,
-        'requireEncryption': requireEncryption,
-        'dndMuted': dndMuted,
-        'notificationVolume': notificationVolume,
-        'speakNotes': speakNotes,
-        'speakSender': speakSender,
-        'speechVolume': speechVolume,
-        'readerVolume': readerVolume,
-        'timerVolume': timerVolume,
-        'senderTokens': senderTokens.map((t) => t.toJson()).toList(),
-      };
+    'listenPort': listenPort,
+    'requireEncryption': requireEncryption,
+    'dndMuted': dndMuted,
+    'notificationVolume': notificationVolume,
+    'speakNotes': speakNotes,
+    'speakSender': speakSender,
+    'speechVolume': speechVolume,
+    'readerVolume': readerVolume,
+    'timerVolume': timerVolume,
+    'senderTokens': senderTokens.map((t) => t.toJson()).toList(),
+  };
 }
 
 class AppConfig {
@@ -877,22 +877,22 @@ class AppConfig {
     this.videoVolume = 100,
     this.videoMuted = false,
     this.language = 'en-GB',
-  })  : slideshow = slideshow ?? SlideshowSettings(),
-        weather = weather ?? WeatherSettings(),
-        nowPlaying = nowPlaying ?? NowPlayingSettings(),
-        homeAssistant = homeAssistant ?? HomeAssistantSettings(),
-        homey = homey ?? HomeySettings(),
-        bright = bright ?? BrightSettings(),
-        spotify = spotify ?? SpotifySettings(),
-        shareInbox = shareInbox ?? ShareInboxSettings(),
-        screen = screen ?? ScreenSettings(),
-        camera = camera ?? CameraSettings(),
-        dashboard = dashboard ?? DashboardSettings(),
-        tv = tv ?? TvSettings(),
-        unifi = unifi ?? UnifiSettings(),
-        youtube = youtube ?? YouTubeSettings(),
-        floatplane = floatplane ?? VideoSiteSettings(),
-        nebula = nebula ?? VideoSiteSettings();
+  }) : slideshow = slideshow ?? SlideshowSettings(),
+       weather = weather ?? WeatherSettings(),
+       nowPlaying = nowPlaying ?? NowPlayingSettings(),
+       homeAssistant = homeAssistant ?? HomeAssistantSettings(),
+       homey = homey ?? HomeySettings(),
+       bright = bright ?? BrightSettings(),
+       spotify = spotify ?? SpotifySettings(),
+       shareInbox = shareInbox ?? ShareInboxSettings(),
+       screen = screen ?? ScreenSettings(),
+       camera = camera ?? CameraSettings(),
+       dashboard = dashboard ?? DashboardSettings(),
+       tv = tv ?? TvSettings(),
+       unifi = unifi ?? UnifiSettings(),
+       youtube = youtube ?? YouTubeSettings(),
+       floatplane = floatplane ?? VideoSiteSettings(),
+       nebula = nebula ?? VideoSiteSettings();
 
   bool get isConfigured => immichUrl.isNotEmpty && apiKey.isNotEmpty;
 
@@ -956,7 +956,10 @@ class AppConfig {
 
   static AppConfig _fromJson(Map<String, dynamic> j) {
     return AppConfig(
-      immichUrl: (j['immichUrl'] as String? ?? '').replaceAll(RegExp(r'/+$'), ''),
+      immichUrl: (j['immichUrl'] as String? ?? '').replaceAll(
+        RegExp(r'/+$'),
+        '',
+      ),
       apiKey: j['apiKey'] as String? ?? '',
       immichEmail: j['immichEmail'] as String? ?? '',
       immichPassword: j['immichPassword'] as String? ?? '',
@@ -971,7 +974,8 @@ class AppConfig {
           : NowPlayingSettings(),
       homeAssistant: j['homeAssistant'] is Map<String, dynamic>
           ? HomeAssistantSettings.fromJson(
-              j['homeAssistant'] as Map<String, dynamic>)
+              j['homeAssistant'] as Map<String, dynamic>,
+            )
           : HomeAssistantSettings(),
       homey: j['homey'] is Map<String, dynamic>
           ? HomeySettings.fromJson(j['homey'] as Map<String, dynamic>)
@@ -1016,28 +1020,28 @@ class AppConfig {
   }
 
   Map<String, dynamic> toJson() => {
-        'immichUrl': immichUrl,
-        'apiKey': apiKey,
-        'immichEmail': immichEmail,
-        'immichPassword': immichPassword,
-        'slideshow': slideshow.toJson(),
-        'weather': weather.toJson(),
-        'nowPlaying': nowPlaying.toJson(),
-        'homeAssistant': homeAssistant.toJson(),
-        'homey': homey.toJson(),
-        'bright': bright.toJson(),
-        'spotify': spotify.toJson(),
-        'shareInbox': shareInbox.toJson(),
-        'screen': screen.toJson(),
-        'camera': camera.toJson(),
-        'dashboard': dashboard.toJson(),
-        'tv': tv.toJson(),
-        'unifi': unifi.toJson(),
-        'youtube': youtube.toJson(),
-        'floatplane': floatplane.toJson(),
-        'nebula': nebula.toJson(),
-        'videoVolume': videoVolume,
-        'videoMuted': videoMuted,
-        'language': language,
-      };
+    'immichUrl': immichUrl,
+    'apiKey': apiKey,
+    'immichEmail': immichEmail,
+    'immichPassword': immichPassword,
+    'slideshow': slideshow.toJson(),
+    'weather': weather.toJson(),
+    'nowPlaying': nowPlaying.toJson(),
+    'homeAssistant': homeAssistant.toJson(),
+    'homey': homey.toJson(),
+    'bright': bright.toJson(),
+    'spotify': spotify.toJson(),
+    'shareInbox': shareInbox.toJson(),
+    'screen': screen.toJson(),
+    'camera': camera.toJson(),
+    'dashboard': dashboard.toJson(),
+    'tv': tv.toJson(),
+    'unifi': unifi.toJson(),
+    'youtube': youtube.toJson(),
+    'floatplane': floatplane.toJson(),
+    'nebula': nebula.toJson(),
+    'videoVolume': videoVolume,
+    'videoMuted': videoMuted,
+    'language': language,
+  };
 }

@@ -25,8 +25,11 @@ class NebulaSite extends VideoSite {
 
   /// Nebula has answered to three names.
   @override
-  List<String> get cookieDomains =>
-      const ['nebula.tv', 'nebula.app', 'watchnebula.com'];
+  List<String> get cookieDomains => const [
+    'nebula.tv',
+    'nebula.app',
+    'watchnebula.com',
+  ];
 
   @override
   String get signInCookie => 'nebula_auth.apiToken';
@@ -48,8 +51,13 @@ class NebulaSite extends VideoSite {
 
   Future<Map<String, dynamic>> _feed(int count) async {
     try {
-      return await runYtDlp(
-          ['-J', '--flat-playlist', '-I', '1:$count', feedUrl]);
+      return await runYtDlp([
+        '-J',
+        '--flat-playlist',
+        '-I',
+        '1:$count',
+        feedUrl,
+      ]);
     } on VideoException catch (e) {
       if (refused(e.message)) throw const SignedOut();
       rethrow;
@@ -74,18 +82,22 @@ class NebulaSite extends VideoSite {
       if (slug is! String || slug.isEmpty) continue;
       final at = e['timestamp'] ?? e['release_timestamp'];
       final seconds = e['duration'];
-      out.add(FeedVideo(
-        link: NebulaLink(slug, thumbnailUrl: e['thumbnail'] as String?),
-        title: '${e['title'] ?? ''}',
-        channel: '${e['channel'] ?? e['uploader'] ?? ''}',
-        released: at is num
-            ? DateTime.fromMillisecondsSinceEpoch((at * 1000).round(),
-                isUtc: true)
-            : null,
-        duration: seconds is num && seconds > 0
-            ? Duration(seconds: seconds.round())
-            : null,
-      ));
+      out.add(
+        FeedVideo(
+          link: NebulaLink(slug, thumbnailUrl: e['thumbnail'] as String?),
+          title: '${e['title'] ?? ''}',
+          channel: '${e['channel'] ?? e['uploader'] ?? ''}',
+          released: at is num
+              ? DateTime.fromMillisecondsSinceEpoch(
+                  (at * 1000).round(),
+                  isUtc: true,
+                )
+              : null,
+          duration: seconds is num && seconds > 0
+              ? Duration(seconds: seconds.round())
+              : null,
+        ),
+      );
     }
     return out;
   }

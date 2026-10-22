@@ -286,15 +286,18 @@ class TileProgress extends StatelessWidget {
 /// The card something sits on inside a tile, as a console draws it: no
 /// plate, only a bar down its left — near-white while the thing is on, or
 /// in [glow] where its own colour says more.
-BoxDecoration lcarsCard(DashboardTheme theme, {required bool lit, Color? glow}) =>
-    BoxDecoration(
-      border: Border(
-        left: BorderSide(
-          color: lit ? (glow ?? lcarsLit) : theme.block(2),
-          width: 8,
-        ),
-      ),
-    );
+BoxDecoration lcarsCard(
+  DashboardTheme theme, {
+  required bool lit,
+  Color? glow,
+}) => BoxDecoration(
+  border: Border(
+    left: BorderSide(
+      color: lit ? (glow ?? lcarsLit) : theme.block(2),
+      width: 8,
+    ),
+  ),
+);
 
 /// A corner of [radius], or a square one on a console, whose pictures and
 /// cards are square as its blocks are.

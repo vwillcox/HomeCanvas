@@ -46,8 +46,10 @@ void main() {
     test('sets touch events explicitly rather than leaving them automatic', () {
       // "auto" decides from hardware detection and gets it wrong on this
       // panel; 1 is the value that makes the touchscreen work.
-      expect(KioskBrowser.prefs,
-          contains('user_pref("dom.w3c_touch_events.enabled", 1);'));
+      expect(
+        KioskBrowser.prefs,
+        contains('user_pref("dom.w3c_touch_events.enabled", 1);'),
+      );
     });
 
     test('asks for touch-sized toolbars', () {
@@ -58,19 +60,32 @@ void main() {
       // Mode 2 is reject; mode 1 would accept, which is the wrong default for
       // a screen nobody is standing at.
       expect(KioskBrowser.prefs, contains('"cookiebanners.service.mode", 2'));
-      expect(KioskBrowser.prefs,
-          contains('"cookiebanners.service.enableGlobalRules", true'));
+      expect(
+        KioskBrowser.prefs,
+        contains('"cookiebanners.service.enableGlobalRules", true'),
+      );
     });
 
     test('turns tracking protection all the way up', () {
-      expect(KioskBrowser.prefs, contains('"browser.contentblocking.category", "strict"'));
-      expect(KioskBrowser.prefs,
-          contains('"privacy.trackingprotection.enabled", true'));
+      expect(
+        KioskBrowser.prefs,
+        contains('"browser.contentblocking.category", "strict"'),
+      );
+      expect(
+        KioskBrowser.prefs,
+        contains('"privacy.trackingprotection.enabled", true'),
+      );
     });
 
     test('suppresses the first-run pages that would hide a shared link', () {
-      expect(KioskBrowser.prefs, contains('"browser.aboutwelcome.enabled", false'));
-      expect(KioskBrowser.prefs, contains('"datareporting.policy.firstRunURL", ""'));
+      expect(
+        KioskBrowser.prefs,
+        contains('"browser.aboutwelcome.enabled", false'),
+      );
+      expect(
+        KioskBrowser.prefs,
+        contains('"datareporting.policy.firstRunURL", ""'),
+      );
     });
 
     test('never offers to remember a password on a shared screen', () {
@@ -84,7 +99,10 @@ void main() {
       expect(KioskBrowser.userChrome, contains('#nav-bar'));
       expect(KioskBrowser.userChrome, contains('#TabsToolbar'));
       expect(KioskBrowser.userChrome, contains('visibility: collapse'));
-      expect(KioskBrowser.userChrome, isNot(contains('#nav-bar { display: none')));
+      expect(
+        KioskBrowser.userChrome,
+        isNot(contains('#nav-bar { display: none')),
+      );
     });
   });
 }

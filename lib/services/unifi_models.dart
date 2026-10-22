@@ -204,8 +204,10 @@ class UnifiClient {
   /// name is there.
   String get displayName {
     final trimmed = name.trim();
-    final m = RegExp(r'^(.*?)\s+[0-9a-f]{2}:[0-9a-f]{2}$', caseSensitive: false)
-        .firstMatch(trimmed);
+    final m = RegExp(
+      r'^(.*?)\s+[0-9a-f]{2}:[0-9a-f]{2}$',
+      caseSensitive: false,
+    ).firstMatch(trimmed);
     final base = m == null ? trimmed : m.group(1)!.trim();
     return base.isEmpty ? trimmed : base;
   }

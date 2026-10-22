@@ -59,7 +59,8 @@ class SealedSender {
     final cached = _cached;
     if (!force &&
         cached != null &&
-        DateTime.now().difference(cached.fetchedAt) < const Duration(hours: 1)) {
+        DateTime.now().difference(cached.fetchedAt) <
+            const Duration(hours: 1)) {
       return cached;
     }
     final resp = await http.get(
@@ -68,13 +69,15 @@ class SealedSender {
     );
     if (resp.statusCode != 200) {
       throw SealedSendException(
-          'The kiosk would not hand out its key (HTTP ${resp.statusCode}).');
+        'The kiosk would not hand out its key (HTTP ${resp.statusCode}).',
+      );
     }
     final j = jsonDecode(resp.body) as Map<String, dynamic>;
     if (j['v'] != version) {
       throw SealedSendException(
-          'The kiosk speaks encryption version ${j['v']}; this app speaks '
-          '$version. Update whichever is older.');
+        'The kiosk speaks encryption version ${j['v']}; this app speaks '
+        '$version. Update whichever is older.',
+      );
     }
     final r = _Recipient(
       kid: '${j['kid']}',
@@ -102,47 +105,51 @@ class SealedSender {
   }
 
   Future<http.Response> _post(
-      _Recipient recipient, List<int> body, String mime) async {
+    _Recipient recipient,
+    List<int> body,
+    String mime,
+  ) async {
     final wire = await _seal(recipient, body, mime);
     lastSealedTo = recipient.kid;
     return http.post(
       Uri.parse('$address/share'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': sealedMime,
-      },
+      headers: {'Authorization': 'Bearer $token', 'Content-Type': sealedMime},
       body: wire,
     );
   }
 
   Future<Uint8List> _seal(
-      _Recipient recipient, List<int> body, String mime) async {
+    _Recipient recipient,
+    List<int> body,
+    String mime,
+  ) async {
     final ephemeral = await _x25519.newKeyPair();
     final ephemeralPublic = (await ephemeral.extractPublicKey()).bytes;
     final salt = SecretKeyData.random(length: 16).bytes;
 
     final shared = await _x25519.sharedSecretKey(
       keyPair: ephemeral,
-      remotePublicKey:
-          SimplePublicKey(recipient.publicKey, type: KeyPairType.x25519),
+      remotePublicKey: SimplePublicKey(
+        recipient.publicKey,
+        type: KeyPairType.x25519,
+      ),
     );
     final key = await _hkdf.deriveKey(
       secretKey: SecretKey(await shared.extractBytes()),
       nonce: salt,
       info: utf8.encode(
-          '$_info|${recipient.kid}|${base64Encode(ephemeralPublic)}'),
+        '$_info|${recipient.kid}|${base64Encode(ephemeralPublic)}',
+      ),
     );
 
     final out = BytesBuilder();
-    out.add(utf8.encode('${jsonEncode({
-          'v': version,
-          'kid': recipient.kid,
-          'epk': base64Encode(ephemeralPublic),
-          'salt': base64Encode(salt),
-          'mime': mime,
-        })}\n'));
+    out.add(
+      utf8.encode(
+        '${jsonEncode({'v': version, 'kid': recipient.kid, 'epk': base64Encode(ephemeralPublic), 'salt': base64Encode(salt), 'mime': mime})}\n',
+      ),
+    );
 
-    for (var offset = 0, index = 0;; index++) {
+    for (var offset = 0, index = 0; ; index++) {
       final end = (offset + chunkSize) < body.length
           ? offset + chunkSize
           : body.length;

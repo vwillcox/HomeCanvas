@@ -4,14 +4,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:home_canvas/dashboard/widget_registry.dart';
 
 DashboardWidgetType typeOf({int w = 4, int h = 3}) => DashboardWidgetType(
-      type: 't',
-      name: 'T',
-      description: '',
-      glyph: '*',
-      defaultWidth: w,
-      defaultHeight: h,
-      build: (_, _) => const SizedBox.shrink(),
-    );
+  type: 't',
+  name: 'T',
+  description: '',
+  glyph: '*',
+  defaultWidth: w,
+  defaultHeight: h,
+  build: (_, _) => const SizedBox.shrink(),
+);
 
 void main() {
   group('content scales to the tile it is given', () {

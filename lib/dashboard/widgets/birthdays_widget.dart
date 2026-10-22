@@ -108,7 +108,14 @@ class _BirthdaysWidgetState extends State<BirthdaysWidget>
       _cache = (people, DateTime.now());
       if (mounted) setState(() => _people = people);
     } catch (_) {
-      if (mounted) setState(() => _error = tr('widget.birthdays.couldNotReachImmich', 'Could not reach Immich'));
+      if (mounted) {
+        setState(
+          () => _error = tr(
+            'widget.birthdays.couldNotReachImmich',
+            'Could not reach Immich',
+          ),
+        );
+      }
     }
   }
 
@@ -117,7 +124,10 @@ class _BirthdaysWidgetState extends State<BirthdaysWidget>
     final t = widget.w.theme;
     final people = _people;
     if (people == null) {
-      return TileMessage(_error ?? tr('widget.birthdays.askingImmich', 'Asking Immich…'), theme: t);
+      return TileMessage(
+        _error ?? tr('widget.birthdays.askingImmich', 'Asking Immich…'),
+        theme: t,
+      );
     }
     final now = DateTime.now();
     final max = (int.tryParse('${widget.w.config.options['show'] ?? 4}') ?? 4)

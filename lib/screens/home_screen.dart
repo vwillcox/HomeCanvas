@@ -133,11 +133,13 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       if (mounted) {
         Navigator.of(context).pop();
-        _snack(tr(
-          'home.couldNotLoadTheSelected',
-          'Could not load the selected albums: {e}',
-          {'e': e},
-        ));
+        _snack(
+          tr(
+            'home.couldNotLoadTheSelected',
+            'Could not load the selected albums: {e}',
+            {'e': e},
+          ),
+        );
       }
       return;
     }
@@ -146,10 +148,9 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.of(context).pop(); // dismiss loading
 
     if (images.isEmpty) {
-      _snack(tr(
-        'home.noPhotosInTheSelected',
-        'No photos in the selected albums',
-      ));
+      _snack(
+        tr('home.noPhotosInTheSelected', 'No photos in the selected albums'),
+      );
       return;
     }
     final count = ids.length;
@@ -250,7 +251,10 @@ class _HomeScreenState extends State<HomeScreen> {
               Text(
                 _error!,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: context.look.textSecondary, fontSize: 17),
+                style: TextStyle(
+                  color: context.look.textSecondary,
+                  fontSize: 17,
+                ),
               ),
               const SizedBox(height: 24),
               FilledButton.icon(
@@ -590,7 +594,9 @@ class _MiniPlayer extends StatelessWidget {
                     icon: n.isPlaying
                         ? Icons.pause_rounded
                         : Icons.play_arrow_rounded,
-                    label: n.isPlaying ? tr('home.pause', 'Pause') : tr('home.play', 'Play'),
+                    label: n.isPlaying
+                        ? tr('home.pause', 'Pause')
+                        : tr('home.play', 'Play'),
                     onPressed: source.playPause,
                     primary: true,
                   ),
@@ -627,17 +633,11 @@ class _LikeButton extends StatelessWidget {
     return Semantics(
       button: true,
       toggled: liked,
-      label: liked ? tr(
-        'home.removeFromLikedSongs',
-        'Remove from Liked Songs',
-      ) : tr(
-        'home.addToLikedSongs',
-        'Add to Liked Songs',
-      ),
+      label: liked
+          ? tr('home.removeFromLikedSongs', 'Remove from Liked Songs')
+          : tr('home.addToLikedSongs', 'Add to Liked Songs'),
       child: Material(
-        color: liked
-            ? _pink.withValues(alpha: 0.16)
-            : context.look.wash(0.08),
+        color: liked ? _pink.withValues(alpha: 0.16) : context.look.wash(0.08),
         shape: const CircleBorder(),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -695,7 +695,9 @@ class _TransportButton extends StatelessWidget {
             child: Icon(
               icon,
               size: size * 0.55,
-              color: primary ? context.look.background.first : context.look.textPrimary,
+              color: primary
+                  ? context.look.background.first
+                  : context.look.textPrimary,
             ),
           ),
         ),
@@ -800,10 +802,7 @@ class _AlbumTile extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         itemCount(album.assetCount),
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 16,
-                        ),
+                        style: TextStyle(color: Colors.white70, fontSize: 16),
                       ),
                     ],
                   ),

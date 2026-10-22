@@ -43,17 +43,17 @@ class NowPlaying {
   /// else is only known from the source's own update, so isn't worth a full
   /// parameter list here.
   NowPlaying copyWith({Duration? position}) => NowPlaying(
-        title: title,
-        artist: artist,
-        album: album,
-        duration: duration,
-        position: position ?? this.position,
-        status: status,
-        repeat: repeat,
-        shuffle: shuffle,
-        deviceName: deviceName,
-        trackId: trackId,
-      );
+    title: title,
+    artist: artist,
+    album: album,
+    duration: duration,
+    position: position ?? this.position,
+    status: status,
+    repeat: repeat,
+    shuffle: shuffle,
+    deviceName: deviceName,
+    trackId: trackId,
+  );
 
   bool get isPlaying => status == 'playing';
 
@@ -81,6 +81,7 @@ class NowPlayingService extends ChangeNotifier implements PlaybackSource {
   static const String _playerIface = 'org.bluez.MediaPlayer1';
   static const String _deviceIface = 'org.bluez.Device1';
   static const String _transportIface = 'org.bluez.MediaTransport1';
+
   /// AVRCP absolute volume is 0-127.
   static const int _maxVolume = 127;
 
@@ -144,12 +145,9 @@ class NowPlayingService extends ChangeNotifier implements PlaybackSource {
       await _watchObjectManager();
       // BlueZ doesn't push Position updates, so poll while playing — and
       // while the screen is lit, since the position is only for showing.
-      _positionTimer = Timer.periodic(
-        const Duration(seconds: 1),
-        (_) {
-          if (_screen?.lit ?? true) _refreshPosition();
-        },
-      );
+      _positionTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (_screen?.lit ?? true) _refreshPosition();
+      });
     } catch (e) {
       debugPrint('NowPlayingService.start error: $e');
     }
@@ -158,8 +156,11 @@ class NowPlayingService extends ChangeNotifier implements PlaybackSource {
   /// One subscription covers everything under org.bluez: the phone appearing
   /// and disappearing, and live property updates for the active player.
   Future<void> _watchObjectManager() async {
-    final root =
-        DBusRemoteObjectManager(_client!, name: _bluez, path: DBusObjectPath('/'));
+    final root = DBusRemoteObjectManager(
+      _client!,
+      name: _bluez,
+      path: DBusObjectPath('/'),
+    );
     _signalSub = root.signals.listen((signal) {
       if (signal is DBusObjectManagerInterfacesAddedSignal) {
         if (signal.interfacesAndProperties.containsKey(_playerIface)) {
@@ -192,7 +193,11 @@ class NowPlayingService extends ChangeNotifier implements PlaybackSource {
   }
 
   Future<void> _findPlayer() async {
-    final root = DBusRemoteObjectManager(_client!, name: _bluez, path: DBusObjectPath('/'));
+    final root = DBusRemoteObjectManager(
+      _client!,
+      name: _bluez,
+      path: DBusObjectPath('/'),
+    );
     final objects = await root.getManagedObjects();
     for (final entry in objects.entries) {
       if (entry.value.containsKey(_playerIface)) {
@@ -207,8 +212,11 @@ class NowPlayingService extends ChangeNotifier implements PlaybackSource {
 
   void _attachTransport(String path) {
     _transportPath = path;
-    _transport =
-        DBusRemoteObject(_client!, name: _bluez, path: DBusObjectPath(path));
+    _transport = DBusRemoteObject(
+      _client!,
+      name: _bluez,
+      path: DBusObjectPath(path),
+    );
     unawaited(_refreshVolume());
   }
 
@@ -233,8 +241,7 @@ class NowPlayingService extends ChangeNotifier implements PlaybackSource {
     if (raw > 0) _volumeBeforeMute = raw;
     notifyListeners();
     try {
-      await _transport?.setProperty(
-          _transportIface, 'Volume', DBusUint16(raw));
+      await _transport?.setProperty(_transportIface, 'Volume', DBusUint16(raw));
     } catch (e) {
       debugPrint('setVolume error: $e');
     }
@@ -244,7 +251,9 @@ class NowPlayingService extends ChangeNotifier implements PlaybackSource {
   @override
   Future<void> toggleMute() async {
     if (muted) {
-      final restore = _volumeBeforeMute > 0 ? _volumeBeforeMute : _maxVolume ~/ 3;
+      final restore = _volumeBeforeMute > 0
+          ? _volumeBeforeMute
+          : _maxVolume ~/ 3;
       await setVolume(restore / _maxVolume);
     } else {
       _volumeBeforeMute = _volume;
@@ -254,7 +263,11 @@ class NowPlayingService extends ChangeNotifier implements PlaybackSource {
 
   Future<void> _attach(String path) async {
     _playerPath = path;
-    _player = DBusRemoteObject(_client!, name: _bluez, path: DBusObjectPath(path));
+    _player = DBusRemoteObject(
+      _client!,
+      name: _bluez,
+      path: DBusObjectPath(path),
+    );
     await _refreshAll();
     // Re-apply the "control only" preference: PipeWire turns the audio profile
     // back on by itself when the phone reconnects.
@@ -288,8 +301,11 @@ class NowPlayingService extends ChangeNotifier implements PlaybackSource {
       final path = _playerPath;
       if (path == null) return '';
       final devicePath = path.substring(0, path.lastIndexOf('/'));
-      final dev = DBusRemoteObject(_client!,
-          name: _bluez, path: DBusObjectPath(devicePath));
+      final dev = DBusRemoteObject(
+        _client!,
+        name: _bluez,
+        path: DBusObjectPath(devicePath),
+      );
       final v = await dev.getProperty(_deviceIface, 'Alias');
       return (v as DBusString).value;
     } catch (_) {
@@ -325,8 +341,7 @@ class NowPlayingService extends ChangeNotifier implements PlaybackSource {
       final map = track.asStringVariantDict();
       String str(String key) =>
           map[key] is DBusString ? map[key]!.asString() : '';
-      int uint(String key) =>
-          map[key] is DBusUint32 ? map[key]!.asUint32() : 0;
+      int uint(String key) => map[key] is DBusUint32 ? map[key]!.asUint32() : 0;
       title = str('Title');
       artist = str('Artist');
       album = str('Album');
@@ -457,16 +472,19 @@ class NowPlayingService extends ChangeNotifier implements PlaybackSource {
 
   Future<void> _call(String method) async {
     try {
-      await _player?.callMethod(_playerIface, method, [],
-          replySignature: DBusSignature(''));
+      await _player?.callMethod(
+        _playerIface,
+        method,
+        [],
+        replySignature: DBusSignature(''),
+      );
     } catch (e) {
       debugPrint('NowPlaying $method error: $e');
     }
   }
 
   @override
-  Future<void> playPause() =>
-      _now.isPlaying ? _call('Pause') : _call('Play');
+  Future<void> playPause() => _now.isPlaying ? _call('Pause') : _call('Play');
   @override
   Future<void> next() => _call('Next');
   @override
@@ -555,7 +573,8 @@ class NowPlayingService extends ChangeNotifier implements PlaybackSource {
       for (final item in results) {
         final a = (item['artistName'] ?? '').toString().toLowerCase();
         // Prefer a result whose artist actually matches.
-        if (artist.isEmpty || a.contains(artist.toLowerCase().split(' ').first)) {
+        if (artist.isEmpty ||
+            a.contains(artist.toLowerCase().split(' ').first)) {
           art = (item['artworkUrl100'] ?? '').toString();
           break;
         }

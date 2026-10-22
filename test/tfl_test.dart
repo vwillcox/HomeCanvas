@@ -41,8 +41,7 @@ void main() {
     expect(lines.last.good, isTrue);
   });
 
-  test('arrivals soonest first, stop names without "Underground Station"',
-      () {
+  test('arrivals soonest first, stop names without "Underground Station"', () {
     final list = TflService.parseArrivals([
       {
         'lineName': 'Central',
@@ -142,17 +141,23 @@ void main() {
         ),
     ];
 
-    testWidgets('London lines fit every shape, with and without trouble',
-        (tester) async {
+    testWidgets('London lines fit every shape, with and without trouble', (
+      tester,
+    ) async {
       final tfl = TflService();
       addTearDown(tfl.dispose);
       for (final trouble in [true, false]) {
         tfl.debugSetStatus(modes, lines(trouble));
         for (final only in [false, true]) {
           for (final (w, h) in shapes) {
-            await draw(tester, 'tfl_lines', tile(w, h), tfl, {'onlyProblems': only});
-            expect(tester.takeException(), isNull,
-                reason: 'trouble $trouble only $only ${w}x$h');
+            await draw(tester, 'tfl_lines', tile(w, h), tfl, {
+              'onlyProblems': only,
+            });
+            expect(
+              tester.takeException(),
+              isNull,
+              reason: 'trouble $trouble only $only ${w}x$h',
+            );
           }
         }
       }
@@ -161,28 +166,37 @@ void main() {
       expect(find.text('Good service on every line'), findsOneWidget);
     });
 
-    testWidgets('London arrivals fit every shape, filtered by line',
-        (tester) async {
+    testWidgets('London arrivals fit every shape, filtered by line', (
+      tester,
+    ) async {
       final tfl = TflService();
       addTearDown(tfl.dispose);
-      tfl.debugSetArrivals('Oxford Circus', 'any',
-          (id: '940GZZLUOXC', name: 'Oxford Circus'), [
-        for (var i = 0; i < 8; i++)
-          TflArrival(
-            line: i.isEven ? 'Victoria' : 'Central',
-            lineId: i.isEven ? 'victoria' : 'central',
-            mode: 'tube',
-            destination: i.isEven ? 'Brixton' : 'Ealing Broadway',
-            platform: 'Southbound - Platform 5',
-            seconds: i * 90,
-          ),
-      ]);
+      tfl.debugSetArrivals(
+        'Oxford Circus',
+        'any',
+        (id: '940GZZLUOXC', name: 'Oxford Circus'),
+        [
+          for (var i = 0; i < 8; i++)
+            TflArrival(
+              line: i.isEven ? 'Victoria' : 'Central',
+              lineId: i.isEven ? 'victoria' : 'central',
+              mode: 'tube',
+              destination: i.isEven ? 'Brixton' : 'Ealing Broadway',
+              platform: 'Southbound - Platform 5',
+              seconds: i * 90,
+            ),
+        ],
+      );
       for (final (w, h) in shapes) {
-        await draw(tester, 'tfl_arrivals', tile(w, h), tfl, {'stop': 'Oxford Circus'});
+        await draw(tester, 'tfl_arrivals', tile(w, h), tfl, {
+          'stop': 'Oxford Circus',
+        });
         expect(tester.takeException(), isNull, reason: '${w}x$h');
       }
-      await draw(tester, 'tfl_arrivals', tile(3, 3), tfl,
-          {'stop': 'Oxford Circus', 'lines': 'central'});
+      await draw(tester, 'tfl_arrivals', tile(3, 3), tfl, {
+        'stop': 'Oxford Circus',
+        'lines': 'central',
+      });
       expect(find.text('Brixton'), findsNothing);
       expect(find.text('Ealing Broadway'), findsWidgets);
       expect(find.text('Oxford Circus'), findsOneWidget);

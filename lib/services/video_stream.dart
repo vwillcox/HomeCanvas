@@ -90,7 +90,9 @@ class VideoStream {
         await platform.command(['change-list', 'audio-files', 'append', audio]);
       }
       await platform.setProperty(
-          'hwdec', hevc && YtDlp.hevcDecoder ? 'drm-copy' : 'no');
+        'hwdec',
+        hevc && YtDlp.hevcDecoder ? 'drm-copy' : 'no',
+      );
     } catch (e) {
       debugPrint('Video: mpv would not take the stream settings: $e');
     }
@@ -104,8 +106,10 @@ class VideoStream {
     final formats = [
       ...?(info['requested_formats'] as List?)?.whereType<Map>(),
     ];
-    final hls = [...formats, info]
-        .any((f) => '${f['protocol'] ?? ''}'.contains('m3u8'));
+    final hls = [
+      ...formats,
+      info,
+    ].any((f) => '${f['protocol'] ?? ''}'.contains('m3u8'));
     if (formats.isNotEmpty) {
       final urls = formats.map((f) => f['url']).whereType<String>().toList();
       if (urls.isEmpty) return null;
@@ -121,8 +125,7 @@ class VideoStream {
     }
     if (uri == null || uri.isEmpty) return null;
     final seconds = (info['duration'] as num?)?.toDouble();
-    final vcodec =
-        '${formats.firstOrNull?['vcodec'] ?? info['vcodec'] ?? ''}';
+    final vcodec = '${formats.firstOrNull?['vcodec'] ?? info['vcodec'] ?? ''}';
     return VideoStream(
       title: info['title'] as String? ?? 'Video',
       channel: (info['channel'] ?? info['uploader'] ?? '') as String,
@@ -147,7 +150,6 @@ class VideoStream {
   ///
   /// Each address is prefixed with its length, so the `;` and `%` that
   /// streaming addresses are full of need no escaping.
-  static String edl(List<String> urls) => 'edl://${urls.map(
-        (u) => '!new_stream;!no_clip;!no_chapters;%${utf8.encode(u).length}%$u',
-      ).join(';')}';
+  static String edl(List<String> urls) =>
+      'edl://${urls.map((u) => '!new_stream;!no_clip;!no_chapters;%${utf8.encode(u).length}%$u').join(';')}';
 }

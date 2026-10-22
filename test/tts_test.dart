@@ -66,15 +66,19 @@ void _parts() {
     test('sender and note are separate utterances', () {
       // Separate so a real pause can sit between them; piper takes no SSML,
       // and a full stop only buys a mid-paragraph pause.
-      expect(
-        TtsService.announcementParts('Dinner is ready', 'Jo'),
-        ['Message from Jo.', 'Dinner is ready'],
-      );
+      expect(TtsService.announcementParts('Dinner is ready', 'Jo'), [
+        'Message from Jo.',
+        'Dinner is ready',
+      ]);
     });
 
     test('without the sender it is one part', () {
       expect(
-        TtsService.announcementParts('Dinner is ready', 'Jo', withSender: false),
+        TtsService.announcementParts(
+          'Dinner is ready',
+          'Jo',
+          withSender: false,
+        ),
         ['Dinner is ready'],
       );
     });
@@ -89,8 +93,10 @@ void _parts() {
     });
 
     test('the gap is long enough to hear as a break', () {
-      expect(TtsService.announcementGap.inMilliseconds,
-          greaterThanOrEqualTo(600));
+      expect(
+        TtsService.announcementGap.inMilliseconds,
+        greaterThanOrEqualTo(600),
+      );
     });
   });
 }

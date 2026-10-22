@@ -45,7 +45,13 @@ String rainWord(double mmPerHour) {
   final ahead = slots
       .where((s) => s.from.add(const Duration(minutes: 15)).isAfter(now))
       .toList();
-  if (ahead.isEmpty) return (headline: tr('widget.rain.noForecast', 'No forecast'), detail: '', wet: false);
+  if (ahead.isEmpty) {
+    return (
+      headline: tr('widget.rain.noForecast', 'No forecast'),
+      detail: '',
+      wet: false,
+    );
+  }
   final hours = ahead.length / 4;
   final span = hours == hours.roundToDouble()
       ? tr('common.hours', '{n, plural, one{# hour} other{# hours}}', {
@@ -61,24 +67,41 @@ String rainWord(double mmPerHour) {
     return (
       headline: tr('widget.rain.rainingNow', 'Raining now'),
       detail: stop < 0
-          ? tr('widget.rain.forTheNext', '{peak} · for the next {span}', {'peak': rainWord(peak), 'span': span})
-          : tr('widget.rain.stopsAbout', '{peak} · stops about {from}', {'peak': rainWord(peak), 'from': hhmm(ahead[stop].from)}),
+          ? tr('widget.rain.forTheNext', '{peak} · for the next {span}', {
+              'peak': rainWord(peak),
+              'span': span,
+            })
+          : tr('widget.rain.stopsAbout', '{peak} · stops about {from}', {
+              'peak': rainWord(peak),
+              'from': hhmm(ahead[stop].from),
+            }),
       wet: true,
     );
   }
   final start = ahead.indexWhere((s) => s.wet);
   if (start < 0) {
-    return (headline: tr('widget.rain.dryForTheNext', 'Dry for the next {span}', {'span': span}), detail: '', wet: false);
+    return (
+      headline: tr('widget.rain.dryForTheNext', 'Dry for the next {span}', {
+        'span': span,
+      }),
+      detail: '',
+      wet: false,
+    );
   }
   final rest = ahead.sublist(start);
   final end = rest.indexWhere((s) => !s.wet);
   final shower = end < 0 ? rest : rest.sublist(0, end);
   final showerPeak = shower.map((s) => s.rate).reduce((a, b) => a > b ? a : b);
   return (
-    headline: tr('widget.rain.rainFrom', 'Rain from {from}', {'from': hhmm(ahead[start].from)}),
+    headline: tr('widget.rain.rainFrom', 'Rain from {from}', {
+      'from': hhmm(ahead[start].from),
+    }),
     detail: end < 0
         ? rainWord(showerPeak)
-        : tr('widget.rain.untilAbout', '{showerPeak} · until about {from}', {'showerPeak': rainWord(showerPeak), 'from': hhmm(rest[end].from)}),
+        : tr('widget.rain.untilAbout', '{showerPeak} · until about {from}', {
+            'showerPeak': rainWord(showerPeak),
+            'from': hhmm(rest[end].from),
+          }),
     wet: true,
   );
 }
@@ -112,7 +135,10 @@ class RainService extends ChangeNotifier {
   Future<void> refresh() async {
     final w = _config.config.weather;
     if (w.latitude == null || w.longitude == null) {
-      _error = tr('widget.rain.waitingForTheWeatherLocation', 'Waiting for the weather location');
+      _error = tr(
+        'widget.rain.waitingForTheWeatherLocation',
+        'Waiting for the weather location',
+      );
       notifyListeners();
       return;
     }
@@ -130,7 +156,10 @@ class RainService extends ChangeNotifier {
       _slots = parse((r.data as Map).cast<String, dynamic>());
       _error = null;
     } catch (e) {
-      _error = tr('widget.rain.couldNotReachTheRain', 'Could not reach the rain forecast');
+      _error = tr(
+        'widget.rain.couldNotReachTheRain',
+        'Could not reach the rain forecast',
+      );
       debugPrint('Rain: $e');
     }
     notifyListeners();

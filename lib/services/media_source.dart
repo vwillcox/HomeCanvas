@@ -13,8 +13,10 @@ abstract class MediaSource {
 mixin ImmichUrls {
   String get baseUrl;
 
-  String thumbUrl(String id) => '$baseUrl/api/assets/$id/thumbnail?size=thumbnail';
-  String previewUrl(String id) => '$baseUrl/api/assets/$id/thumbnail?size=preview';
+  String thumbUrl(String id) =>
+      '$baseUrl/api/assets/$id/thumbnail?size=thumbnail';
+  String previewUrl(String id) =>
+      '$baseUrl/api/assets/$id/thumbnail?size=preview';
   String originalUrl(String id) => '$baseUrl/api/assets/$id/original';
   String videoUrl(String id) => '$baseUrl/api/assets/$id/video/playback';
 }

@@ -44,7 +44,13 @@ class _DashboardTvWidgetState extends State<DashboardTvWidget> {
 
     switch (tv.conn) {
       case ConnState.connecting:
-        return _Message(theme: t, text: tr('widget.tv.reachingTheTelevision', 'Reaching the television…'));
+        return _Message(
+          theme: t,
+          text: tr(
+            'widget.tv.reachingTheTelevision',
+            'Reaching the television…',
+          ),
+        );
       case ConnState.needsPairing:
         return _Pairing(theme: t, tv: tv);
       case ConnState.error:
@@ -52,15 +58,22 @@ class _DashboardTvWidgetState extends State<DashboardTvWidget> {
           theme: t,
           // It is already trying again, so say so rather than leaving a
           // button as the only way back. The button stays for impatience.
-          text: '${tv.lastError ?? 'Could not reach the television.'}'
+          text:
+              '${tv.lastError ?? 'Could not reach the television.'}'
               '${tv.retryPending ? '\nTrying again…' : ''}',
-          action: (tr('widget.tv.tryNow', 'Try now'), () => unawaited(tv.connect())),
+          action: (
+            tr('widget.tv.tryNow', 'Try now'),
+            () => unawaited(tv.connect()),
+          ),
         );
       case ConnState.disconnected:
         return _Message(
           theme: t,
           text: tr('widget.tv.notConnected', 'Not connected.'),
-          action: (tr('widget.tv.connect', 'Connect'), () => unawaited(tv.connect())),
+          action: (
+            tr('widget.tv.connect', 'Connect'),
+            () => unawaited(tv.connect()),
+          ),
         );
       case ConnState.connected:
         break;
@@ -78,7 +91,9 @@ class _DashboardTvWidgetState extends State<DashboardTvWidget> {
             _Status(theme: t, tv: tv),
             const SizedBox(height: 8),
             if (showPad) ...[
-              Expanded(child: _Pad(theme: t, tv: tv)),
+              Expanded(
+                child: _Pad(theme: t, tv: tv),
+              ),
               const SizedBox(height: 8),
             ],
             if (showInputs && tv.sources.isNotEmpty) ...[
@@ -105,8 +120,9 @@ class _Status extends StatelessWidget {
     final state = tv.state;
     // "HDMI1 · Fire TV Stick" beats "HDMI1" when you are glancing at this
     // from the sofa wondering what the television is showing.
-    final current =
-        state.sources.where((s) => s.id == state.sourceId).firstOrNull;
+    final current = state.sources
+        .where((s) => s.id == state.sourceId)
+        .firstOrNull;
     final device = current?.deviceName ?? '';
     final bits = <String>[
       if ((state.sourceName ?? '').isNotEmpty) state.sourceName!,
@@ -115,9 +131,11 @@ class _Status extends StatelessWidget {
     ];
     return Row(
       children: [
-        Icon(state.powerOn ? Icons.tv : Icons.tv_off,
-            color: state.powerOn ? theme.accent : theme.textSecondary,
-            size: 22),
+        Icon(
+          state.powerOn ? Icons.tv : Icons.tv_off,
+          color: state.powerOn ? theme.accent : theme.textSecondary,
+          size: 22,
+        ),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
@@ -232,12 +250,12 @@ class _Pad extends StatelessWidget {
         final unit = side / 3;
         if (theme.isLcars) return Center(child: _consolePad(side));
         Widget key(IconData icon, String code, {double scale = 1}) => _Key(
-              theme: theme,
-              icon: icon,
-              size: unit * 0.94,
-              iconScale: scale,
-              onPressed: () => tv.key(code),
-            );
+          theme: theme,
+          icon: icon,
+          size: unit * 0.94,
+          iconScale: scale,
+          onPressed: () => tv.key(code),
+        );
 
         return Center(
           child: SizedBox(
@@ -348,8 +366,11 @@ extension on _Pad {
 
 /// Power, volume, mute, channel, back and home.
 class _Transport extends StatelessWidget {
-  const _Transport(
-      {required this.theme, required this.tv, required this.expanded});
+  const _Transport({
+    required this.theme,
+    required this.tv,
+    required this.expanded,
+  });
 
   final DashboardTheme theme;
   final TvService tv;
@@ -414,8 +435,11 @@ class _Transport extends StatelessWidget {
         return Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            key(Icons.power_settings_new, tv.power,
-                colour: const Color(0xFFFF6B6B)),
+            key(
+              Icons.power_settings_new,
+              tv.power,
+              colour: const Color(0xFFFF6B6B),
+            ),
             key(Icons.volume_down, tv.volumeDown),
             key(tv.state.muted ? Icons.volume_off : Icons.volume_mute, tv.mute),
             key(Icons.volume_up, tv.volumeUp),
@@ -451,14 +475,17 @@ class _Key extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foreground = colour ?? (filled ? theme.background.first : theme.textPrimary);
+    final foreground =
+        colour ?? (filled ? theme.background.first : theme.textPrimary);
     return Padding(
       padding: const EdgeInsets.all(3),
       child: Material(
         color: filled
             ? theme.accent
             : Color.alphaBlend(
-                theme.surface, theme.background.first.withValues(alpha: 1)),
+                theme.surface,
+                theme.background.first.withValues(alpha: 1),
+              ),
         shape: CircleBorder(
           side: BorderSide(color: theme.textSecondary.withValues(alpha: 0.3)),
         ),
@@ -518,7 +545,12 @@ class _PairingState extends State<_Pairing> {
     if (!mounted) return;
     setState(() {
       _sending = false;
-      if (!ok) _error = tr('widget.tv.theTelevisionDidNotAccept', 'The television did not accept that PIN.');
+      if (!ok) {
+        _error = tr(
+          'widget.tv.theTelevisionDidNotAccept',
+          'The television did not accept that PIN.',
+        );
+      }
     });
   }
 
@@ -531,18 +563,20 @@ class _PairingState extends State<_Pairing> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              tr(
-                'widget.tv.pairWithTheTelevision',
-                'Pair with the television',
-              ),
+              tr('widget.tv.pairWithTheTelevision', 'Pair with the television'),
               style: TextStyle(
-                  color: t.textPrimary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600),
+                color: t.textPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 6),
             Text(
-              _error ?? tr('widget.tv.tapShowPinThenType', 'Tap "Show PIN", then type the number on the screen.'),
+              _error ??
+                  tr(
+                    'widget.tv.tapShowPinThenType',
+                    'Tap "Show PIN", then type the number on the screen.',
+                  ),
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: _error == null ? t.textSecondary : Colors.redAccent,
@@ -631,7 +665,8 @@ final tvWidgetType = DashboardWidgetType(
       label: 'Show a row of inputs',
       kind: OptionKind.boolean,
       defaultValue: false,
-      help: 'Each input the television reports, with a dot showing whether '
+      help:
+          'Each input the television reports, with a dot showing whether '
           'anything is connected to it. Tap one to switch. The Input button '
           'on the remote opens the same choice as a pop-up, so this is only '
           'worth it on a tile with room to spare.',
@@ -677,7 +712,9 @@ class _Inputs extends StatelessWidget {
           final s = tv.sources[i];
           final Color dot = s.hasSignal
               ? const Color(0xFF4ADE80)
-              : (s.knownButAsleep ? const Color(0xFFF59E0B) : theme.textSecondary);
+              : (s.knownButAsleep
+                    ? const Color(0xFFF59E0B)
+                    : theme.textSecondary);
           if (theme.isLcars) {
             // A block each: lit for the one showing, in colour for one with
             // something plugged in, and unlit for the rest.
@@ -718,8 +755,10 @@ class _Inputs extends StatelessWidget {
                     Container(
                       width: 9,
                       height: 9,
-                      decoration:
-                          BoxDecoration(color: dot, shape: BoxShape.circle),
+                      decoration: BoxDecoration(
+                        color: dot,
+                        shape: BoxShape.circle,
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Text(

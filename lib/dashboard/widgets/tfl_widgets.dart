@@ -73,7 +73,10 @@ class _TflLinesWidgetState extends State<TflLinesWidget>
     final modes = _modes(widget.w);
     if (modes.isEmpty) {
       return TileMessage(
-        tr('widget.tfl.pickModes', 'Pick which lines to show in the widget settings.'),
+        tr(
+          'widget.tfl.pickModes',
+          'Pick which lines to show in the widget settings.',
+        ),
         theme: t,
       );
     }
@@ -81,8 +84,7 @@ class _TflLinesWidgetState extends State<TflLinesWidget>
     final lines = service.status(modes);
     if (lines == null) {
       return TileMessage(
-        service.statusError(modes) ??
-            tr('widget.tfl.askingTfl', 'Asking TfL…'),
+        service.statusError(modes) ?? tr('widget.tfl.askingTfl', 'Asking TfL…'),
         theme: t,
       );
     }
@@ -125,11 +127,17 @@ class _TflLinesWidgetState extends State<TflLinesWidget>
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.check_circle_outline, color: status.good, size: 30),
+                    Icon(
+                      Icons.check_circle_outline,
+                      color: status.good,
+                      size: 30,
+                    ),
                     const SizedBox(width: 10),
                     Text(
-                      tr('widget.tfl.goodServiceEverywhere',
-                          'Good service on every line'),
+                      tr(
+                        'widget.tfl.goodServiceEverywhere',
+                        'Good service on every line',
+                      ),
                       style: TextStyle(color: t.textPrimary, fontSize: 18),
                     ),
                   ],
@@ -151,11 +159,8 @@ class _TflLinesWidgetState extends State<TflLinesWidget>
             padding: EdgeInsets.zero,
             itemCount: shown.length,
             separatorBuilder: (_, _) => const SizedBox(height: 4),
-            itemBuilder: (context, i) => _LineRow(
-              line: shown[i],
-              theme: t,
-              status: status,
-            ),
+            itemBuilder: (context, i) =>
+                _LineRow(line: shown[i], theme: t, status: status),
           ),
         ),
       ],
@@ -191,7 +196,9 @@ class _LineRow extends StatelessWidget {
             decoration: BoxDecoration(
               color: line.colour,
               borderRadius: BorderRadius.circular(tileCorner(theme, 3)),
-              border: Border.all(color: theme.textSecondary.withValues(alpha: .25)),
+              border: Border.all(
+                color: theme.textSecondary.withValues(alpha: .25),
+              ),
             ),
           ),
           const SizedBox(width: 10),
@@ -212,7 +219,9 @@ class _LineRow extends StatelessWidget {
             child: Text(
               // TfL's own wording, which is English; the good-service case
               // is the one worth saying in the panel's language.
-              line.good ? tr('widget.tfl.goodService', 'Good service') : line.status,
+              line.good
+                  ? tr('widget.tfl.goodService', 'Good service')
+                  : line.status,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.end,
@@ -242,7 +251,10 @@ class _LineRow extends StatelessWidget {
           ),
           content: SizedBox(
             width: 640,
-            child: Text(line.reason, style: const TextStyle(fontSize: 18, height: 1.4)),
+            child: Text(
+              line.reason,
+              style: const TextStyle(fontSize: 18, height: 1.4),
+            ),
           ),
           actions: [
             TextButton(
@@ -281,7 +293,12 @@ final tflLinesWidgetType = DashboardWidgetType(
       defaultValue: false,
       help: 'With everything running, the tile just says so.',
     ),
-    WidgetOption(key: 'tube', label: 'Tube', kind: OptionKind.boolean, defaultValue: true),
+    WidgetOption(
+      key: 'tube',
+      label: 'Tube',
+      kind: OptionKind.boolean,
+      defaultValue: true,
+    ),
     WidgetOption(
       key: 'elizabeth',
       label: 'Elizabeth line',
@@ -294,8 +311,18 @@ final tflLinesWidgetType = DashboardWidgetType(
       kind: OptionKind.boolean,
       defaultValue: true,
     ),
-    WidgetOption(key: 'dlr', label: 'DLR', kind: OptionKind.boolean, defaultValue: true),
-    WidgetOption(key: 'tram', label: 'Trams', kind: OptionKind.boolean, defaultValue: false),
+    WidgetOption(
+      key: 'dlr',
+      label: 'DLR',
+      kind: OptionKind.boolean,
+      defaultValue: true,
+    ),
+    WidgetOption(
+      key: 'tram',
+      label: 'Trams',
+      kind: OptionKind.boolean,
+      defaultValue: false,
+    ),
   ],
   preview: const [
     PreviewLine('Bakerloo          Good service', scale: .09, px: 14),
@@ -424,21 +451,30 @@ class _TflArrivalsWidgetState extends State<TflArrivalsWidget>
                 // Older times on show: the last fetch failed.
                 trailing: error == null
                     ? null
-                    : Icon(Icons.cloud_off_outlined, size: 13, color: status.warn),
+                    : Icon(
+                        Icons.cloud_off_outlined,
+                        size: 13,
+                        color: status.warn,
+                      ),
               ),
               const SizedBox(height: 4),
               if (rows.isEmpty)
                 Expanded(
                   child: Center(
                     child: Text(
-                      tr('widget.tfl.nothingDue', 'Nothing due in the next half hour'),
+                      tr(
+                        'widget.tfl.nothingDue',
+                        'Nothing due in the next half hour',
+                      ),
                       style: TextStyle(color: t.textSecondary, fontSize: 13),
                     ),
                   ),
                 )
               else
                 for (final a in rows)
-                  Expanded(child: _ArrivalRow(a: a, theme: t, status: status)),
+                  Expanded(
+                    child: _ArrivalRow(a: a, theme: t, status: status),
+                  ),
             ],
           ),
         );
@@ -467,77 +503,85 @@ class _ArrivalRow extends StatelessWidget {
     final where = bus
         ? ''
         : a.platform
-            .replaceFirst(RegExp(r'\s*-\s*Platform\s*', caseSensitive: false), ' · ')
-            .trim();
+              .replaceFirst(
+                RegExp(r'\s*-\s*Platform\s*', caseSensitive: false),
+                ' · ',
+              )
+              .trim();
     return LayoutBuilder(
       builder: (context, c) {
-    // On the narrowest tile, the line and the minutes: what matters most.
-    final narrow = c.maxWidth < 200;
-    return Row(
-      children: [
-        // The line in its colour: a bus by its number, a train by its name.
-        Flexible(
-          flex: narrow ? 1 : 0,
-          child: Container(
-          constraints: BoxConstraints(minWidth: narrow ? 0 : 44),
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-          decoration: BoxDecoration(
-            color: colour,
-            borderRadius: BorderRadius.circular(
-              tileCorner(theme, bus ? 4 : 10),
-            ),
-          ),
-          child: Text(
-            a.line,
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: _inkOn(colour),
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          ),
-        ),
-        if (narrow) const Spacer() else ...[
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                a.destination,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: theme.textPrimary, fontSize: 14),
-              ),
-              if (where.isNotEmpty)
-                Text(
-                  where,
+        // On the narrowest tile, the line and the minutes: what matters most.
+        final narrow = c.maxWidth < 200;
+        return Row(
+          children: [
+            // The line in its colour: a bus by its number, a train by its name.
+            Flexible(
+              flex: narrow ? 1 : 0,
+              child: Container(
+                constraints: BoxConstraints(minWidth: narrow ? 0 : 44),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                decoration: BoxDecoration(
+                  color: colour,
+                  borderRadius: BorderRadius.circular(
+                    tileCorner(theme, bus ? 4 : 10),
+                  ),
+                ),
+                child: Text(
+                  a.line,
+                  textAlign: TextAlign.center,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: theme.textSecondary, fontSize: 10),
+                  style: TextStyle(
+                    color: _inkOn(colour),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
+              ),
+            ),
+            if (narrow)
+              const Spacer()
+            else ...[
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      a.destination,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: theme.textPrimary, fontSize: 14),
+                    ),
+                    if (where.isNotEmpty)
+                      Text(
+                        where,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: theme.textSecondary,
+                          fontSize: 10,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ],
-          ),
-        ),
-        ],
-        const SizedBox(width: 8),
-        Text(
-          minutes < 1
-              ? tr('widget.tfl.due', 'Due')
-              : tr('common.min', '{n} min', {'n': minutes}),
-          style: TextStyle(
-            color: minutes < 1 ? status.good : theme.textPrimary,
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-            fontFeatures: const [FontFeature.tabularFigures()],
-          ),
-        ),
-      ],
-    );
+            const SizedBox(width: 8),
+            Text(
+              minutes < 1
+                  ? tr('widget.tfl.due', 'Due')
+                  : tr('common.min', '{n} min', {'n': minutes}),
+              style: TextStyle(
+                color: minutes < 1 ? status.good : theme.textPrimary,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ],
+        );
       },
     );
   }
@@ -574,7 +618,8 @@ final tflArrivalsWidgetType = DashboardWidgetType(
         'rail': 'A station: Tube, Elizabeth line, Overground, DLR, tram',
         'bus': 'A bus stop',
       },
-      help: 'Helps a name find the right one — a station and the bus stops '
+      help:
+          'Helps a name find the right one — a station and the bus stops '
           'outside it share a name.',
     ),
     WidgetOption(
@@ -587,14 +632,16 @@ final tflArrivalsWidgetType = DashboardWidgetType(
       key: 'lines',
       label: 'Only these lines',
       defaultValue: '',
-      help: 'Optional, separated by commas: Victoria, Central — or bus '
+      help:
+          'Optional, separated by commas: Victoria, Central — or bus '
           'numbers, 73, N73. Leave empty for every line.',
     ),
     WidgetOption(
       key: 'platform',
       label: 'Only this way',
       defaultValue: '',
-      help: 'Optional: a direction or platform (Northbound, Platform 2), or a '
+      help:
+          'Optional: a direction or platform (Northbound, Platform 2), or a '
           'destination (Brixton).',
     ),
     WidgetOption(

@@ -38,8 +38,7 @@ class PhotoBackdrop extends StatefulWidget {
   State<PhotoBackdrop> createState() => _PhotoBackdropState();
 }
 
-class _PhotoBackdropState extends State<PhotoBackdrop>
-    with PauseWhenHidden {
+class _PhotoBackdropState extends State<PhotoBackdrop> with PauseWhenHidden {
   final _rng = Random();
   List<Asset> _pool = const [];
   int _index = 0;

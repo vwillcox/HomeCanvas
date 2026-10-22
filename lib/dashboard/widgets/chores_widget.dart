@@ -208,8 +208,15 @@ class _Column extends StatelessWidget {
                         chores.isEmpty
                             ? tr('widget.chores.nothingToday', 'Nothing today')
                             : left == 0
-                            ? tr('widget.chores.allDoneToday', 'All done today!')
-                            : tr('widget.chores.toDoToday', '{left} to do today', {'left': left}),
+                            ? tr(
+                                'widget.chores.allDoneToday',
+                                'All done today!',
+                              )
+                            : tr(
+                                'widget.chores.toDoToday',
+                                '{left} to do today',
+                                {'left': left},
+                              ),
                         maxLines: 1,
                         style: TextStyle(
                           color: theme.textSecondary,

@@ -33,14 +33,19 @@ void main() {
     expect((r.what, r.due), ('Book taxi', DateTime(2026, 9, 28, 15)));
     r = p('Dentist tomorrow at 9:30')!;
     expect((r.what, r.due), ('Dentist', DateTime(2026, 9, 29, 9, 30)));
-    expect(p('Check the oven in 20 minutes')!.due, DateTime(2026, 9, 28, 14, 20));
+    expect(
+      p('Check the oven in 20 minutes')!.due,
+      DateTime(2026, 9, 28, 14, 20),
+    );
     // A day alone is news, a question is a question, a long message is a
     // note that happens to mention a time.
     expect(p('The parcel came today'), isNull);
     expect(p('Are you back at 6?'), isNull);
     expect(
-      p('We had a lovely walk by the river and stopped for lunch at the pub '
-          'before heading home at 3pm through the woods'),
+      p(
+        'We had a lovely walk by the river and stopped for lunch at the pub '
+        'before heading home at 3pm through the woods',
+      ),
       isNull,
     );
     expect(p('Dinner is in the oven'), isNull);
@@ -61,30 +66,45 @@ void main() {
     expect(p('Remind me to ring Jo at 6')!.due, DateTime(2026, 9, 28, 18));
 
     r = p("Don't forget the bins tonight")!;
-    expect((r.what, r.due, r.allDay), ('The bins', DateTime(2026, 9, 28, 19), false));
+    expect(
+      (r.what, r.due, r.allDay),
+      ('The bins', DateTime(2026, 9, 28, 19), false),
+    );
 
     r = p('Remember to water the plants on Saturday')!;
-    expect((r.what, r.due, r.allDay),
-        ('Water the plants', DateTime(2026, 10, 3, 9), true));
+    expect(
+      (r.what, r.due, r.allDay),
+      ('Water the plants', DateTime(2026, 10, 3, 9), true),
+    );
 
     // "Monday" on a Monday is next week's.
-    expect(p('Remind me to pay the window cleaner Monday')!.due,
-        DateTime(2026, 10, 5, 9));
+    expect(
+      p('Remind me to pay the window cleaner Monday')!.due,
+      DateTime(2026, 10, 5, 9),
+    );
 
-    expect(p('Remind me to check the oven in 20 minutes')!.due,
-        DateTime(2026, 9, 28, 14, 20));
-    expect(p('Remind me to move the car in 2 hours')!.due,
-        DateTime(2026, 9, 28, 16));
+    expect(
+      p('Remind me to check the oven in 20 minutes')!.due,
+      DateTime(2026, 9, 28, 14, 20),
+    );
+    expect(
+      p('Remind me to move the car in 2 hours')!.due,
+      DateTime(2026, 9, 28, 16),
+    );
 
     r = p('Reminder: parents evening on 12/10 at 7pm')!;
     expect((r.what, r.due), ('Parents evening', DateTime(2026, 10, 12, 19)));
 
     // Without a year, a date already gone is next year's.
-    expect(p('Remind me to renew the passport on 1/3')!.due,
-        DateTime(2027, 3, 1, 9));
+    expect(
+      p('Remind me to renew the passport on 1/3')!.due,
+      DateTime(2027, 3, 1, 9),
+    );
 
-    expect(p('Remind me to call the vet at noon on Friday')!.due,
-        DateTime(2026, 10, 2, 12));
+    expect(
+      p('Remind me to call the vet at noon on Friday')!.due,
+      DateTime(2026, 10, 2, 12),
+    );
   });
 
   test('due reminders are announced once, then cleared after a day', () {
@@ -107,14 +127,21 @@ void main() {
 
     clock = DateTime(2026, 9, 29, 19);
     service.add(p('Remind me to buy milk')!);
-    expect(service.reminders.map((r) => r.text), ['Buy milk', 'Call the plumber']);
+    expect(service.reminders.map((r) => r.text), [
+      'Buy milk',
+      'Call the plumber',
+    ]);
   });
 
   testWidgets('the tile fits every shape, and says when', (tester) async {
     registerBuiltInWidgets();
     final service = RemindersService(persist: false);
     final soon = DateTime.now().add(const Duration(hours: 2));
-    service.add((what: 'Put the bins out', due: soon, allDay: false), from: 'Vince');
+    service.add((
+      what: 'Put the bins out',
+      due: soon,
+      allDay: false,
+    ), from: 'Vince');
     service.add((what: 'Call the plumber', due: null, allDay: false));
     Future<void> draw(Size size) async {
       tester.view.physicalSize = const Size(1920, 1200);
@@ -124,7 +151,13 @@ void main() {
       final w = DashboardWidgetContext(
         theme: kBuiltInThemes.first,
         config: DashboardWidgetConfig(
-            id: 'r', type: 'reminders', x: 0, y: 0, width: 3, height: 3),
+          id: 'r',
+          type: 'reminders',
+          x: 0,
+          y: 0,
+          width: 3,
+          height: 3,
+        ),
       );
       await tester.pumpWidget(
         ChangeNotifierProvider<RemindersService?>.value(

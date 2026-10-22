@@ -11,7 +11,6 @@ library;
 
 import '../l10n/l10n.dart';
 
-
 /// Loose grouping, shown as headings in the editor's font list so twenty
 /// choices read as a few short lists rather than one long one.
 enum FontGroup { plain, friendly, tech, display }
@@ -63,15 +62,13 @@ class DashboardFont {
   }
 
   Map<String, dynamic> toJson() => {
-        'family': family,
-        'name': family.isEmpty
-            ? (L10n.instance.lookup('$_at.name') ?? name)
-            : name,
-        'description': L10n.instance.lookup('$_at.description') ?? description,
-        'file': file,
-        'group': group.name,
-        'groupLabel': fontGroupLabel(group),
-      };
+    'family': family,
+    'name': family.isEmpty ? (L10n.instance.lookup('$_at.name') ?? name) : name,
+    'description': L10n.instance.lookup('$_at.description') ?? description,
+    'file': file,
+    'group': group.name,
+    'groupLabel': fontGroupLabel(group),
+  };
 }
 
 const List<DashboardFont> kDashboardFonts = [

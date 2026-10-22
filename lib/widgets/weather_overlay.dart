@@ -181,8 +181,10 @@ class _WeatherOverlayState extends State<WeatherOverlay>
       child: LayoutBuilder(
         builder: (context, constraints) {
           final screen = Size(constraints.maxWidth, constraints.maxHeight);
-          final collapsed =
-              applyDrift(_collapsedRect(screen, settings.corner), screen);
+          final collapsed = applyDrift(
+            _collapsedRect(screen, settings.corner),
+            screen,
+          );
           final expanded = _expandedRect(screen);
 
           return AnimatedBuilder(
@@ -276,7 +278,9 @@ class _Panel extends StatelessWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: context.look.background.first.withValues(alpha: 0.62 + 0.24 * expansion),
+        color: context.look.background.first.withValues(
+          alpha: 0.62 + 0.24 * expansion,
+        ),
         borderRadius: BorderRadius.circular(26 + 6 * expansion),
         border: Border.all(color: context.look.wash(0.10)),
         boxShadow: [
@@ -296,7 +300,10 @@ class _Panel extends StatelessWidget {
               Opacity(
                 opacity: collapsedOpacity,
                 child: _CollapsedContent(
-                    weather: weather, indoor: indoor, compact: compact),
+                  weather: weather,
+                  indoor: indoor,
+                  compact: compact,
+                ),
               ),
             if (detailOpacity > 0)
               Opacity(
@@ -314,8 +321,11 @@ class _CollapsedContent extends StatelessWidget {
   final Weather weather;
   final IndoorSensorService? indoor;
   final bool compact;
-  const _CollapsedContent(
-      {required this.weather, required this.indoor, required this.compact});
+  const _CollapsedContent({
+    required this.weather,
+    required this.indoor,
+    required this.compact,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -328,9 +338,13 @@ class _CollapsedContent extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon,
-              size: compact ? 52 : 72,
-              color: context.look.legible(weatherColor(weather.weatherCode, weather.isDay))),
+          Icon(
+            icon,
+            size: compact ? 52 : 72,
+            color: context.look.legible(
+              weatherColor(weather.weatherCode, weather.isDay),
+            ),
+          ),
           SizedBox(width: compact ? 15 : 21),
           Expanded(
             child: Column(
@@ -362,19 +376,27 @@ class _CollapsedContent extends StatelessWidget {
                     '${weather.tempMax.round()}° / ${weather.tempMin.round()}°',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: context.look.textSecondary, fontSize: 21),
+                    style: TextStyle(
+                      color: context.look.textSecondary,
+                      fontSize: 21,
+                    ),
                   ),
                 if (!compact && (indoor?.available ?? false))
                   Row(
                     children: [
-                      Icon(Icons.home_outlined,
-                          size: 19, color: context.look.legible(Color(0xFFFF8A65))),
+                      Icon(
+                        Icons.home_outlined,
+                        size: 19,
+                        color: context.look.legible(Color(0xFFFF8A65)),
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         '${_indoorTemp(indoor!, weather.unit)}  ·  '
                         '${indoor!.humidity!.round()}%',
                         style: TextStyle(
-                            color: context.look.legible(Color(0xFFFFB59B)), fontSize: 20),
+                          color: context.look.legible(Color(0xFFFFB59B)),
+                          fontSize: 20,
+                        ),
                       ),
                     ],
                   ),
@@ -430,7 +452,9 @@ class _DetailContent extends StatelessWidget {
               Icon(
                 weatherIcon(weather.weatherCode, weather.isDay),
                 size: 104,
-                color: context.look.legible(weatherColor(weather.weatherCode, weather.isDay)),
+                color: context.look.legible(
+                  weatherColor(weather.weatherCode, weather.isDay),
+                ),
               ),
               const SizedBox(width: 26),
               Column(
@@ -448,7 +472,10 @@ class _DetailContent extends StatelessWidget {
                   ),
                   Text(
                     weather.description,
-                    style: TextStyle(color: context.look.textSecondary, fontSize: 29),
+                    style: TextStyle(
+                      color: context.look.textSecondary,
+                      fontSize: 29,
+                    ),
                   ),
                 ],
               ),
@@ -501,8 +528,11 @@ class _DetailContent extends StatelessWidget {
           if (indoor?.available ?? false) ...[
             Row(
               children: [
-                Icon(Icons.home_outlined,
-                    size: 22, color: context.look.legible(Color(0xFFFF8A65))),
+                Icon(
+                  Icons.home_outlined,
+                  size: 22,
+                  color: context.look.legible(Color(0xFFFF8A65)),
+                ),
                 const SizedBox(width: 8),
                 Text(
                   tr('weather.indoors', 'INDOORS'),
@@ -517,26 +547,30 @@ class _DetailContent extends StatelessWidget {
                 Text(
                   _indoorTemp(indoor!, weather.unit),
                   style: TextStyle(
-                      color: context.look.legible(Color(0xFFFF8A65)),
-                      fontSize: 26,
-                      fontWeight: FontWeight.w600),
+                    color: context.look.legible(Color(0xFFFF8A65)),
+                    fontSize: 26,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(width: 14),
                 Text(
-                  tr(
-                    'weather.humidity2',
-                    '{humidity}% humidity',
-                    {'humidity': indoor!.humidity!.round()},
-                  ),
+                  tr('weather.humidity2', '{humidity}% humidity', {
+                    'humidity': indoor!.humidity!.round(),
+                  }),
                   style: TextStyle(
-                      color: context.look.legible(Color(0xFF4FC3F7)), fontSize: 22),
+                    color: context.look.legible(Color(0xFF4FC3F7)),
+                    fontSize: 22,
+                  ),
                 ),
                 const Spacer(),
                 if ((indoor!.battery ?? 100) <= 20)
                   Row(
                     children: [
-                      Icon(Icons.battery_alert,
-                          size: 20, color: context.look.legible(Color(0xFFFFC46B))),
+                      Icon(
+                        Icons.battery_alert,
+                        size: 20,
+                        color: context.look.legible(Color(0xFFFFC46B)),
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         tr(
@@ -545,7 +579,9 @@ class _DetailContent extends StatelessWidget {
                           {'battery': indoor!.battery},
                         ),
                         style: TextStyle(
-                            color: context.look.legible(Color(0xFFFFC46B)), fontSize: 17),
+                          color: context.look.legible(Color(0xFFFFC46B)),
+                          fontSize: 17,
+                        ),
                       ),
                     ],
                   ),
@@ -599,6 +635,7 @@ class _Stat extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
+
   /// The theme's secondary text unless given.
   final Color? color;
   const _Stat({
@@ -656,9 +693,7 @@ class _DayColumn extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 5),
       padding: const EdgeInsets.symmetric(vertical: 14),
       decoration: BoxDecoration(
-        color: isToday
-            ? context.look.wash(0.10)
-            : context.look.wash(0.04),
+        color: isToday ? context.look.wash(0.10) : context.look.wash(0.04),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(

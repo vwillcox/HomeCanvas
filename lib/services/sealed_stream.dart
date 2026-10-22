@@ -24,8 +24,10 @@ class SealedReader {
   /// Throws [SealedFormatException] on anything malformed and
   /// [SealedAuthException] when a chunk fails its authentication tag — which
   /// is what tampering, truncation, reordering and a wrong key all look like.
-  Stream<List<int>> open(Stream<List<int>> input,
-      {void Function(SealedHeader header)? onHeader}) async* {
+  Stream<List<int>> open(
+    Stream<List<int>> input, {
+    void Function(SealedHeader header)? onHeader,
+  }) async* {
     final buffer = _Buffer();
     SealedHeader? header;
     SecretKey? key;
@@ -54,7 +56,8 @@ class SealedReader {
         final pair = await keyFor(header.kid);
         if (pair == null) {
           throw SealedAuthException(
-              'sealed to key ${header.kid}, which this panel no longer holds');
+            'sealed to key ${header.kid}, which this panel no longer holds',
+          );
         }
         key = await SealedShare.deriveKey(
           sharedSecret: await SealedShare.sharedSecretFor(
@@ -82,16 +85,25 @@ class SealedReader {
         List<int>? plain;
         try {
           plain = await SealedShare.openChunk(
-              key: key!, frame: frame.bytes, index: index, last: false);
+            key: key!,
+            frame: frame.bytes,
+            index: index,
+            last: false,
+          );
         } on SecretBoxAuthenticationError {
           try {
             plain = await SealedShare.openChunk(
-                key: key!, frame: frame.bytes, index: index, last: true);
+              key: key!,
+              frame: frame.bytes,
+              index: index,
+              last: true,
+            );
             sawFinal = true;
           } on SecretBoxAuthenticationError {
             throw SealedAuthException(
-                'chunk $index failed authentication — wrong key, or altered '
-                'in transit');
+              'chunk $index failed authentication — wrong key, or altered '
+              'in transit',
+            );
           }
         }
         index++;
@@ -102,7 +114,8 @@ class SealedReader {
     if (header == null) throw const SealedFormatException('empty body');
     if (!sawFinal) {
       throw const SealedAuthException(
-          'the message ended without its final chunk — it was cut short');
+        'the message ended without its final chunk — it was cut short',
+      );
     }
     if (buffer.length > 0) {
       throw const SealedFormatException('trailing data');
@@ -123,8 +136,10 @@ class SealedWriter {
   /// A fresh key pair per message: the ephemeral private half never leaves
   /// this function and is discarded when it returns, which is what makes past
   /// messages unrecoverable even if the panel's identity key is later taken.
-  Stream<List<int>> seal(Stream<List<int>> plaintext,
-      {required String mime}) async* {
+  Stream<List<int>> seal(
+    Stream<List<int>> plaintext, {
+    required String mime,
+  }) async* {
     final ephemeral = await SealedShare.newKeyPair();
     final ephemeralPublic = (await ephemeral.extractPublicKey()).bytes;
     final salt = _randomBytes(16);
@@ -139,20 +154,21 @@ class SealedWriter {
       ephemeralPublicKey: ephemeralPublic,
     );
 
-    yield utf8.encode('${jsonEncode(SealedHeader(
-          kid: kid,
-          ephemeralPublicKey: ephemeralPublic,
-          salt: salt,
-          mime: mime,
-        ).toJson())}\n');
+    yield utf8.encode(
+      '${jsonEncode(SealedHeader(kid: kid, ephemeralPublicKey: ephemeralPublic, salt: salt, mime: mime).toJson())}\n',
+    );
 
     var index = 0;
     final pending = _Buffer();
     await for (final data in plaintext) {
       pending.add(data);
       while (pending.length >= SealedShare.chunkSize) {
-        yield await _frame(key, pending.take(SealedShare.chunkSize), index++,
-            last: false);
+        yield await _frame(
+          key,
+          pending.take(SealedShare.chunkSize),
+          index++,
+          last: false,
+        );
       }
     }
     // Always a final chunk, even for an empty body, so the receiver has
@@ -161,9 +177,17 @@ class SealedWriter {
   }
 
   static Future<List<int>> _frame(
-      SecretKey key, List<int> plain, int index, {required bool last}) async {
+    SecretKey key,
+    List<int> plain,
+    int index, {
+    required bool last,
+  }) async {
     final box = await SealedShare.sealChunk(
-        key: key, plaintext: plain, index: index, last: last);
+      key: key,
+      plaintext: plain,
+      index: index,
+      last: last,
+    );
     final body = <int>[...box.cipherText, ...box.mac.bytes];
     final out = Uint8List(4 + body.length);
     ByteData.view(out.buffer).setUint32(0, body.length, Endian.big);
@@ -171,8 +195,7 @@ class SealedWriter {
     return out;
   }
 
-  static List<int> _randomBytes(int n) =>
-      SecretKeyData.random(length: n).bytes;
+  static List<int> _randomBytes(int n) => SecretKeyData.random(length: n).bytes;
 }
 
 class SealedFormatException implements Exception {
@@ -227,8 +250,10 @@ class _Buffer {
 
   _Frame? takeFrame() {
     if (_bytes.length < 4) return null;
-    final size = ByteData.view(_bytes.buffer, _bytes.offsetInBytes)
-        .getUint32(0, Endian.big);
+    final size = ByteData.view(
+      _bytes.buffer,
+      _bytes.offsetInBytes,
+    ).getUint32(0, Endian.big);
     // A frame larger than a chunk plus its tag is not one this format
     // produces, and is the shape a memory-exhaustion attempt would take.
     if (size > SealedShare.chunkSize + 64) {

@@ -6,8 +6,7 @@ import '../../widget_registry.dart';
 
 /// The widgets uploaded as Dart from the editor and built into this copy
 /// of the app, by the file each came from.
-final Map<String, DashboardWidgetType Function()> customCodeWidgets = {
-};
+final Map<String, DashboardWidgetType Function()> customCodeWidgets = {};
 
 /// Registers them. One that throws, or that names itself after a widget
 /// there already is, is left out and said so in the log.

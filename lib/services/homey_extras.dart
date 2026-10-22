@@ -36,7 +36,9 @@ List<HomeyAlert> homeyAlerts(
   for (final d in devices) {
     if (!d.available) {
       if (offline) {
-        gone.add(HomeyAlert(d, '', tr('widget.homey_alerts.offline', 'Off line')));
+        gone.add(
+          HomeyAlert(d, '', tr('widget.homey_alerts.offline', 'Off line')),
+        );
       }
       continue;
     }
@@ -65,12 +67,23 @@ List<HomeyAlert> homeyAlerts(
                 ? tr('widget.homey_alerts.batteryLow', 'Battery low')
                 : switch (what) {
                     'alarm_smoke' => tr('widget.homey_alerts.smoke', 'Smoke'),
-                    'alarm_co' => tr('widget.homey_alerts.co', 'Carbon monoxide'),
+                    'alarm_co' => tr(
+                      'widget.homey_alerts.co',
+                      'Carbon monoxide',
+                    ),
                     'alarm_heat' => tr('widget.homey_alerts.heat', 'Heat'),
-                    'alarm_tamper' => tr('widget.homey_alerts.tamper', 'Tampered with'),
-                    'alarm_connectivity' ||
-                    'alarm_online' => tr('widget.homey_alerts.offline', 'Off line'),
-                    'alarm_motion' => tr('widget.homey_alerts.motion', 'Motion'),
+                    'alarm_tamper' => tr(
+                      'widget.homey_alerts.tamper',
+                      'Tampered with',
+                    ),
+                    'alarm_connectivity' || 'alarm_online' => tr(
+                      'widget.homey_alerts.offline',
+                      'Off line',
+                    ),
+                    'alarm_motion' => tr(
+                      'widget.homey_alerts.motion',
+                      'Motion',
+                    ),
                     _ => d.display(c.id),
                   },
           ),
@@ -142,11 +155,12 @@ List<({DateTime at, double value})> homeyEntries(Object? json) => [
     for (final e in _items(json['values']))
       if (DateTime.tryParse('${e['t'] ?? ''}') case final DateTime at)
         if (switch (e['v']) {
-          final num n => n.toDouble(),
-          true => 1.0,
-          false => 0.0,
-          _ => null,
-        } case final double value)
+              final num n => n.toDouble(),
+              true => 1.0,
+              false => 0.0,
+              _ => null,
+            }
+            case final double value)
           (at: at.toLocal(), value: value),
 ];
 
@@ -184,6 +198,5 @@ String homeyUsed(Object? total, Object? free) =>
     : '—';
 
 /// A power reading: "850 W", "2.4 kW".
-String homeyWatts(num w) => w.abs() >= 1000
-    ? '${(w / 1000).toStringAsFixed(1)} kW'
-    : '${w.round()} W';
+String homeyWatts(num w) =>
+    w.abs() >= 1000 ? '${(w / 1000).toStringAsFixed(1)} kW' : '${w.round()} W';

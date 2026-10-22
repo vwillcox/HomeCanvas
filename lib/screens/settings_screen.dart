@@ -87,7 +87,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 leading: const Icon(Icons.dns),
                 title: Text(tr('settings.immichServer', 'Immich server')),
                 subtitle: Text(
-                  config.immichUrl.isEmpty ? tr('settings.notSet', 'Not set') : config.immichUrl,
+                  config.immichUrl.isEmpty
+                      ? tr('settings.notSet', 'Not set')
+                      : config.immichUrl,
                 ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: _editConnection,
@@ -108,11 +110,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   locked.canUse ? Icons.lock : Icons.lock_open,
                   color: locked.canUse ? null : const Color(0xFFFFC46B),
                 ),
-                title: Text(tr('settings.immichAccountLogin', 'Immich account login')),
+                title: Text(
+                  tr('settings.immichAccountLogin', 'Immich account login'),
+                ),
                 subtitle: Text(
                   locked.canUse
-                      ? tr('settings.signedInAsOpenThe', 'Signed in as {immichEmail} — open the Locked Folder tile on the home screen and enter your PIN.', {'immichEmail': config.immichEmail})
-                      : tr('settings.notConfiguredRunSetImmich', 'Not configured. Run set-immich-login.sh on the Pi to store your Immich email + password (required to open the server-side Locked Folder).'),
+                      ? tr(
+                          'settings.signedInAsOpenThe',
+                          'Signed in as {immichEmail} — open the Locked Folder tile on the home screen and enter your PIN.',
+                          {'immichEmail': config.immichEmail},
+                        )
+                      : tr(
+                          'settings.notConfiguredRunSetImmich',
+                          'Not configured. Run set-immich-login.sh on the Pi to store your Immich email + password (required to open the server-side Locked Folder).',
+                        ),
                 ),
                 isThreeLine: true,
               ),
@@ -122,7 +133,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: tr('settings.slideshow', 'Slideshow'),
             children: [const _SlideshowSettingsTile()],
           ),
-          GlassSection(title: tr('settings.storage', 'Storage'), children: [const _CacheTile()]),
+          GlassSection(
+            title: tr('settings.storage', 'Storage'),
+            children: [const _CacheTile()],
+          ),
         ];
       case 1: // Music
         return [
@@ -141,21 +155,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _SiteSignInTile<YouTubeSite>(
                 icon: Icons.smart_display,
                 colour: const Color(0xFFFF0033),
-                signedInText: tr('settings.signedInPremiumYourSubscriptions', 'Signed in — Premium, your subscriptions and members-only videos'),
+                signedInText: tr(
+                  'settings.signedInPremiumYourSubscriptions',
+                  'Signed in — Premium, your subscriptions and members-only videos',
+                ),
               ),
               _SiteSignInTile<FloatplaneSite>(
                 icon: Icons.live_tv,
                 colour: const Color(0xFF00AFEC),
-                signedInText:
-                    tr(
-                      'settings.signedInYourCreatorsLatest',
-                      'Signed in — your creators’ latest videos on the dashboard',
-                    ),
+                signedInText: tr(
+                  'settings.signedInYourCreatorsLatest',
+                  'Signed in — your creators’ latest videos on the dashboard',
+                ),
               ),
               _SiteSignInTile<NebulaSite>(
                 icon: Icons.auto_awesome,
                 colour: const Color(0xFF6C7CFF),
-                signedInText: tr('settings.signedInTheCreatorsYou', 'Signed in — the creators you follow on the dashboard'),
+                signedInText: tr(
+                  'settings.signedInTheCreatorsYou',
+                  'Signed in — the creators you follow on the dashboard',
+                ),
               ),
             ],
           ),
@@ -338,7 +357,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(title),
-        content: Text(tr('settings.theDeviceNow', '{verb} the device now?', {'verb': verb})),
+        content: Text(
+          tr('settings.theDeviceNow', '{verb} the device now?', {'verb': verb}),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
@@ -369,9 +390,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(tr('settings.couldNot', 'Could not {verb}: {e}', {'verb': verb, 'e': e}))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              tr('settings.couldNot', 'Could not {verb}: {e}', {
+                'verb': verb,
+                'e': e,
+              }),
+            ),
+          ),
+        );
       }
     }
   }
@@ -391,63 +419,71 @@ class _SettingsScreenState extends State<SettingsScreen> {
         trailing: context.look.isLcars ? null : _tabBar(),
         title: tr('settings.title', 'Settings'),
         subtitle: config.immichUrl.isEmpty
-            ? tr('settings.notConnectedToImmichYet', 'Not connected to Immich yet')
-            : tr('settings.connectedTo3', 'Connected to {immichUrl}', {'immichUrl': Uri.tryParse(config.immichUrl)?.host ?? config.immichUrl}),
+            ? tr(
+                'settings.notConnectedToImmichYet',
+                'Not connected to Immich yet',
+              )
+            : tr('settings.connectedTo3', 'Connected to {immichUrl}', {
+                'immichUrl':
+                    Uri.tryParse(config.immichUrl)?.host ?? config.immichUrl,
+              }),
       ),
       // A readable column rather than rows stretched across 1,920 pixels, and
       // larger type throughout — every piece of it, section headings and help
       // text included: this is read standing, often from across the room.
       // The tabs above keep their size so all of them still fit.
-      body: _railed(MediaQuery(
-        data: MediaQuery.of(
-          context,
-        ).copyWith(textScaler: const TextScaler.linear(textScale)),
-        child: IconTheme.merge(
-          data: const IconThemeData(size: 30),
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1440),
-              child: ListTileTheme(
-                data: ListTileThemeData(
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 4,
-                  ),
-                  minVerticalPadding: 12,
-                  iconColor: context.look.textSecondary,
-                  titleTextStyle: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: context.look.textPrimary,
-                  ),
-                  subtitleTextStyle: TextStyle(
-                    fontSize: 16,
-                    height: 1.35,
-                    color: context.look.textSecondary,
-                  ),
-                ),
-                child: ListView(
-                  // A new list per tab, so each opens at the top rather than
-                  // wherever the last one was scrolled to.
-                  key: ValueKey(_tab),
-                  padding: const EdgeInsets.fromLTRB(32, 12, 32, 48),
-                  children: [
-                    ..._sectionsFor(_tab, config, locked, maskedKey),
-                    const SizedBox(height: 8),
-                    Center(
-                      child: Text(
-                        'HomeCanvas',
-                        style: TextStyle(color: context.look.wash(0.3)),
-                      ),
+      body: _railed(
+        MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: const TextScaler.linear(textScale)),
+          child: IconTheme.merge(
+            data: const IconThemeData(size: 30),
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1440),
+                child: ListTileTheme(
+                  data: ListTileThemeData(
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 4,
                     ),
-                  ],
+                    minVerticalPadding: 12,
+                    iconColor: context.look.textSecondary,
+                    titleTextStyle: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: context.look.textPrimary,
+                    ),
+                    subtitleTextStyle: TextStyle(
+                      fontSize: 16,
+                      height: 1.35,
+                      color: context.look.textSecondary,
+                    ),
+                  ),
+                  child: ListView(
+                    // A new list per tab, so each opens at the top rather than
+                    // wherever the last one was scrolled to.
+                    key: ValueKey(_tab),
+                    padding: const EdgeInsets.fromLTRB(32, 12, 32, 48),
+                    children: [
+                      ..._sectionsFor(_tab, config, locked, maskedKey),
+                      const SizedBox(height: 8),
+                      Center(
+                        child: Text(
+                          'HomeCanvas',
+                          style: TextStyle(color: context.look.wash(0.3)),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
         ),
-      )),
+      ),
     );
   }
 }
@@ -515,7 +551,9 @@ class _WeatherSettingsTile extends StatelessWidget {
           secondary: Icon(
             w != null ? weatherIcon(w.weatherCode, w.isDay) : Icons.cloud,
           ),
-          title: Text(tr('settings.showWeatherInSlideshow', 'Show weather in slideshow')),
+          title: Text(
+            tr('settings.showWeatherInSlideshow', 'Show weather in slideshow'),
+          ),
           subtitle: Text(
             service.error ??
                 (w != null
@@ -563,13 +601,18 @@ class _WeatherSettingsTile extends StatelessWidget {
                 Icons.home_outlined,
                 color: sensor.available ? const Color(0xFFFF8A65) : null,
               ),
-              title: Text(tr('settings.showIndoorTemperature', 'Show indoor temperature')),
+              title: Text(
+                tr('settings.showIndoorTemperature', 'Show indoor temperature'),
+              ),
               subtitle: Text(
                 sensor.available
                     ? '${sensor.temperatureC!.toStringAsFixed(1)}°C · '
                           '${sensor.humidity?.round() ?? '—'}% · '
                           'battery ${sensor.battery ?? '—'}%'
-                    : tr('settings.notReadingCheckTheHome', 'Not reading — check the Home Assistant section below'),
+                    : tr(
+                        'settings.notReadingCheckTheHome',
+                        'Not reading — check the Home Assistant section below',
+                      ),
               ),
               value: s.showIndoor,
               onChanged: (v) {
@@ -798,9 +841,9 @@ class _CacheTileState extends State<_CacheTile> {
     await _measure();
     if (mounted) {
       setState(() => _busy = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(tr('settings.cacheCleared', 'Cache cleared'))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(tr('settings.cacheCleared', 'Cache cleared'))),
+      );
     }
   }
 
@@ -812,7 +855,11 @@ class _CacheTileState extends State<_CacheTile> {
       subtitle: Text(
         _bytes == null
             ? tr('settings.measuring', 'Measuring…')
-            : tr('settings.onDiskCacheHomecanvas', '{_bytes} on disk  •  ~/.cache/homecanvas', {'_bytes': _human(_bytes!)}),
+            : tr(
+                'settings.onDiskCacheHomecanvas',
+                '{_bytes} on disk  •  ~/.cache/homecanvas',
+                {'_bytes': _human(_bytes!)},
+              ),
       ),
       trailing: _busy
           ? const SizedBox(
@@ -820,7 +867,10 @@ class _CacheTileState extends State<_CacheTile> {
               height: 24,
               child: CircularProgressIndicator(strokeWidth: 2.5),
             )
-          : TextButton(onPressed: _clear, child: Text(tr('settings.clear', 'Clear'))),
+          : TextButton(
+              onPressed: _clear,
+              child: Text(tr('settings.clear', 'Clear')),
+            ),
     );
   }
 }
@@ -843,13 +893,35 @@ class _NowPlayingSettingsTile extends StatelessWidget {
             s.enabled ? Icons.music_note : Icons.music_off,
             color: s.enabled ? null : context.look.wash(0.38),
           ),
-          title: Text(tr('settings.showWhatMyPhoneIs', 'Show what my phone is playing')),
+          title: Text(
+            tr('settings.showWhatMyPhoneIs', 'Show what my phone is playing'),
+          ),
           subtitle: Text(
             service.available
                 ? (n.hasTrack
-                      ? tr('settings.connectedTo2', 'Connected to {deviceName} — {title}', {'deviceName': n.deviceName.isEmpty ? "phone" : n.deviceName, 'title': n.title})
-                      : tr('settings.connectedToNothingPlaying', 'Connected to {deviceName} — nothing playing', {'deviceName': n.deviceName.isEmpty ? "phone" : n.deviceName}))
-                : tr('settings.noPhoneConnectedPairOne', 'No phone connected. Pair one over Bluetooth and play something with media audio routed to this device.'),
+                      ? tr(
+                          'settings.connectedTo2',
+                          'Connected to {deviceName} — {title}',
+                          {
+                            'deviceName': n.deviceName.isEmpty
+                                ? "phone"
+                                : n.deviceName,
+                            'title': n.title,
+                          },
+                        )
+                      : tr(
+                          'settings.connectedToNothingPlaying',
+                          'Connected to {deviceName} — nothing playing',
+                          {
+                            'deviceName': n.deviceName.isEmpty
+                                ? "phone"
+                                : n.deviceName,
+                          },
+                        ))
+                : tr(
+                    'settings.noPhoneConnectedPairOne',
+                    'No phone connected. Pair one over Bluetooth and play something with media audio routed to this device.',
+                  ),
           ),
           isThreeLine: !service.available,
           value: s.enabled,
@@ -864,11 +936,22 @@ class _NowPlayingSettingsTile extends StatelessWidget {
               s.playAudioHere ? Icons.speaker : Icons.headphones,
               color: s.playAudioHere ? null : const Color(0xFF7FE3A1),
             ),
-            title: Text(tr('settings.playTheAudioOnThis', 'Play the audio on this device')),
+            title: Text(
+              tr(
+                'settings.playTheAudioOnThis',
+                'Play the audio on this device',
+              ),
+            ),
             subtitle: Text(
               s.playAudioHere
-                  ? tr('settings.musicPlaysThroughThePi', 'Music plays through the Pi\'s speaker.')
-                  : tr('settings.musicStaysOnThePhone', 'Music stays on the phone (e.g. your headphones) and this screen is just a remote control.'),
+                  ? tr(
+                      'settings.musicPlaysThroughThePi',
+                      'Music plays through the Pi\'s speaker.',
+                    )
+                  : tr(
+                      'settings.musicStaysOnThePhone',
+                      'Music stays on the phone (e.g. your headphones) and this screen is just a remote control.',
+                    ),
             ),
             isThreeLine: !s.playAudioHere,
             value: s.playAudioHere,
@@ -884,8 +967,14 @@ class _NowPlayingSettingsTile extends StatelessWidget {
             title: Text(tr('settings.visualiser', 'Visualiser')),
             subtitle: Text(
               s.playAudioHere
-                  ? tr('settings.drawnInTheFullScreen', 'Drawn in the full-screen player, between the scrubber and the transport controls.')
-                  : tr('settings.needsTheAudioPlayingOn', 'Needs the audio playing on this device — with it staying on the phone there is no sound here to draw.'),
+                  ? tr(
+                      'settings.drawnInTheFullScreen',
+                      'Drawn in the full-screen player, between the scrubber and the transport controls.',
+                    )
+                  : tr(
+                      'settings.needsTheAudioPlayingOn',
+                      'Needs the audio playing on this device — with it staying on the phone there is no sound here to draw.',
+                    ),
             ),
             isThreeLine: !s.playAudioHere,
             trailing: DropdownButton<VisualiserStyle>(
@@ -911,7 +1000,12 @@ class _NowPlayingSettingsTile extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.picture_in_picture_alt),
             title: Text(tr('settings.position', 'Position')),
-            subtitle: Text(tr('settings.whichCornerThePlayerSits', 'Which corner the player sits in')),
+            subtitle: Text(
+              tr(
+                'settings.whichCornerThePlayerSits',
+                'Which corner the player sits in',
+              ),
+            ),
             trailing: DropdownButton<OverlayCorner>(
               value: s.corner,
               underline: const SizedBox.shrink(),
@@ -979,7 +1073,10 @@ class _HomeAssistantSettingsTile extends StatelessWidget {
                     'settings.theIndoorReadingComesFrom',
                     'The indoor reading comes from Home Assistant. Create a token under your Home Assistant profile → Security → Long-lived access tokens.',
                   ),
-                  style: TextStyle(color: context.look.textSecondary, fontSize: 14),
+                  style: TextStyle(
+                    color: context.look.textSecondary,
+                    fontSize: 14,
+                  ),
                 ),
                 const SizedBox(height: 14),
                 // A switch rather than clearing the fields: turning the
@@ -1000,15 +1097,28 @@ class _HomeAssistantSettingsTile extends StatelessWidget {
                         'settings.offStopsPollingHomeAssistant',
                         'Off stops polling Home Assistant and hides the indoor reading, keeping these settings for later.',
                       ),
-                      style: TextStyle(color: context.look.textSecondary, fontSize: 13),
+                      style: TextStyle(
+                        color: context.look.textSecondary,
+                        fontSize: 13,
+                      ),
                     ),
                     value: enabled,
                     onChanged: (v) => setLocal(() => enabled = v),
                   ),
                 ),
                 const SizedBox(height: 6),
-                field(tr('settings.server', 'Server'), url, hint: 'http://localhost:8123'),
-                field(tr('settings.longLivedAccessToken', 'Long-lived access token'), token),
+                field(
+                  tr('settings.server', 'Server'),
+                  url,
+                  hint: 'http://localhost:8123',
+                ),
+                field(
+                  tr(
+                    'settings.longLivedAccessToken',
+                    'Long-lived access token',
+                  ),
+                  token,
+                ),
                 field(
                   tr('settings.temperatureEntity', 'Temperature entity'),
                   temp,
@@ -1057,10 +1167,20 @@ class _HomeAssistantSettingsTile extends StatelessWidget {
       title: Text(tr('settings.homeAssistant', 'Home Assistant')),
       subtitle: Text(
         !s.isConfigured
-            ? tr('settings.notConfiguredNoIndoorTemperature', 'Not configured — no indoor temperature')
+            ? tr(
+                'settings.notConfiguredNoIndoorTemperature',
+                'Not configured — no indoor temperature',
+              )
             : sensor.available
-            ? tr('settings.readingC', '{baseUrl} — reading {temperatureC}°C', {'baseUrl': s.baseUrl, 'temperatureC': sensor.temperatureC!.toStringAsFixed(1)})
-            : tr('settings.configuredButNoReadingYet', '{baseUrl} — configured, but no reading yet', {'baseUrl': s.baseUrl}),
+            ? tr('settings.readingC', '{baseUrl} — reading {temperatureC}°C', {
+                'baseUrl': s.baseUrl,
+                'temperatureC': sensor.temperatureC!.toStringAsFixed(1),
+              })
+            : tr(
+                'settings.configuredButNoReadingYet',
+                '{baseUrl} — configured, but no reading yet',
+                {'baseUrl': s.baseUrl},
+              ),
       ),
       trailing: const Icon(Icons.chevron_right),
       onTap: () => _edit(context),
@@ -1098,7 +1218,10 @@ class _HomeySettingsTile extends StatelessWidget {
                     'settings.homeyHelp',
                     'For the Homey widgets on the dashboard. The address is your Homey’s on your home network — an address anywhere else is refused. Make the API key at my.homey.app under Settings → API Keys, allowed to see and control devices, and to see zones and flows.',
                   ),
-                  style: TextStyle(color: context.look.textSecondary, fontSize: 14),
+                  style: TextStyle(
+                    color: context.look.textSecondary,
+                    fontSize: 14,
+                  ),
                 ),
                 const SizedBox(height: 14),
                 Padding(
@@ -1174,7 +1297,10 @@ class _HomeySettingsTile extends StatelessWidget {
       title: Text(tr('settings.homey', 'Homey')),
       subtitle: Text(
         !s.isConfigured
-            ? tr('settings.homeyNotConfigured', 'Not configured — the Homey widgets have nothing to show')
+            ? tr(
+                'settings.homeyNotConfigured',
+                'Not configured — the Homey widgets have nothing to show',
+              )
             : devices > 0
             ? tr('settings.homeyDevices', '{address} — {count} devices{live}', {
                 'address': s.address,
@@ -1200,12 +1326,21 @@ class _VideoPlayerTile extends StatelessWidget {
     return ListTile(
       leading: const Icon(Icons.play_circle_outline),
       title: Text(tr('settings.videoPlayer', 'Video player')),
-      subtitle: Text(ytDlp.installing
-          ? ytDlp.status ?? tr('settings.installing', 'Installing…')
-          : ytDlp.status ??
-              (ytDlp.ready
-                  ? tr('settings.ytDlpUpdatedDailyYoutube', 'yt-dlp {version}, updated daily — YouTube, Floatplane and Nebula play here', {'version': ytDlp.version})
-                  : tr('settings.notSetUpNeedsYt', 'Not set up — needs yt-dlp to play videos here'))),
+      subtitle: Text(
+        ytDlp.installing
+            ? ytDlp.status ?? tr('settings.installing', 'Installing…')
+            : ytDlp.status ??
+                  (ytDlp.ready
+                      ? tr(
+                          'settings.ytDlpUpdatedDailyYoutube',
+                          'yt-dlp {version}, updated daily — YouTube, Floatplane and Nebula play here',
+                          {'version': ytDlp.version},
+                        )
+                      : tr(
+                          'settings.notSetUpNeedsYt',
+                          'Not set up — needs yt-dlp to play videos here',
+                        )),
+      ),
       trailing: const Icon(Icons.chevron_right),
       onTap: () => showDialog<void>(
         context: context,
@@ -1242,20 +1377,34 @@ class _VideoPlayerDialog extends StatelessWidget {
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.download),
                 title: const Text('yt-dlp'),
-                subtitle: Text(ytDlp.installing
-                    ? ytDlp.status ?? tr('settings.installing', 'Installing…')
-                    : ytDlp.status ??
-                        (ytDlp.ready
-                            ? tr('settings.versionUpdatedDaily', 'Version {version} — updated daily', {'version': ytDlp.version})
-                            : tr('settings.notInstalledItFetchesThe', 'Not installed. It fetches the video from the site; kept up to date automatically once installed.'))),
+                subtitle: Text(
+                  ytDlp.installing
+                      ? ytDlp.status ?? tr('settings.installing', 'Installing…')
+                      : ytDlp.status ??
+                            (ytDlp.ready
+                                ? tr(
+                                    'settings.versionUpdatedDaily',
+                                    'Version {version} — updated daily',
+                                    {'version': ytDlp.version},
+                                  )
+                                : tr(
+                                    'settings.notInstalledItFetchesThe',
+                                    'Not installed. It fetches the video from the site; kept up to date automatically once installed.',
+                                  )),
+                ),
                 trailing: ytDlp.installing
                     ? const SizedBox(
                         width: 28,
                         height: 28,
-                        child: CircularProgressIndicator(strokeWidth: 3))
+                        child: CircularProgressIndicator(strokeWidth: 3),
+                      )
                     : FilledButton.tonal(
                         onPressed: ytDlp.install,
-                        child: Text(ytDlp.ready ? tr('settings.reinstall', 'Reinstall') : tr('settings.install', 'Install')),
+                        child: Text(
+                          ytDlp.ready
+                              ? tr('settings.reinstall', 'Reinstall')
+                              : tr('settings.install', 'Install'),
+                        ),
                       ),
               ),
               const Divider(),
@@ -1312,11 +1461,20 @@ class _SiteSignInTile<T extends VideoSite> extends StatelessWidget {
     return ListTile(
       leading: Icon(icon, color: site.signedIn ? colour : null),
       title: Text(site.name),
-      subtitle: Text(site.signedIn
-          ? signedInText
-          : !site.ready
-              ? tr('settings.needsYtDlpInstallIt', 'Needs yt-dlp — install it under Video player, above')
-              : tr('settings.notSignedInSignIn', 'Not signed in. Sign in here, or — rather than typing a password on the panel — on a computer at {address}/{id}', {'id': site.id, 'address': address})),
+      subtitle: Text(
+        site.signedIn
+            ? signedInText
+            : !site.ready
+            ? tr(
+                'settings.needsYtDlpInstallIt',
+                'Needs yt-dlp — install it under Video player, above',
+              )
+            : tr(
+                'settings.notSignedInSignIn',
+                'Not signed in. Sign in here, or — rather than typing a password on the panel — on a computer at {address}/{id}',
+                {'id': site.id, 'address': address},
+              ),
+      ),
       isThreeLine: !site.signedIn,
       trailing: site.signedIn
           ? OutlinedButton(
@@ -1324,8 +1482,7 @@ class _SiteSignInTile<T extends VideoSite> extends StatelessWidget {
               child: Text(tr('settings.signOut', 'Sign out')),
             )
           : FilledButton(
-              onPressed:
-                  site.ready ? () => signInOnPanel(context, site) : null,
+              onPressed: site.ready ? () => signInOnPanel(context, site) : null,
               child: Text(tr('settings.signIn', 'Sign in')),
             ),
     );
@@ -1360,10 +1517,18 @@ class _SpotifySettingsTile extends StatelessWidget {
       title: Text(tr('settings.spotify', 'Spotify')),
       subtitle: Text(
         !s.isConfigured
-            ? tr('settings.notConnectedFullPlaybackControl', 'Not connected — full playback control alongside the phone')
+            ? tr(
+                'settings.notConnectedFullPlaybackControl',
+                'Not connected — full playback control alongside the phone',
+              )
             : spotify.available
-            ? tr('settings.connectedPlaying', 'Connected — playing "{title}"', {'title': spotify.now.title})
-            : tr('settings.connectedButNothingPlayingRight', 'Connected, but nothing playing right now'),
+            ? tr('settings.connectedPlaying', 'Connected — playing "{title}"', {
+                'title': spotify.now.title,
+              })
+            : tr(
+                'settings.connectedButNothingPlayingRight',
+                'Connected, but nothing playing right now',
+              ),
       ),
       trailing: const Icon(Icons.chevron_right),
       onTap: () => _edit(context),
@@ -1396,7 +1561,12 @@ class _SpotifyDialogState extends State<_SpotifyDialog> {
   Future<void> _connect() async {
     final id = _clientId.text.trim();
     if (id.isEmpty) {
-      setState(() => _error = tr('settings.enterTheClientIdFirst', 'Enter the Client ID first.'));
+      setState(
+        () => _error = tr(
+          'settings.enterTheClientIdFirst',
+          'Enter the Client ID first.',
+        ),
+      );
       return;
     }
     setState(() {
@@ -1437,7 +1607,10 @@ class _SpotifyDialogState extends State<_SpotifyDialog> {
                   'settings.createAFreeAppAt',
                   'Create a free app at developer.spotify.com/dashboard, then paste its Client ID below. Register this exact Redirect URI on that app:',
                 ),
-                style: TextStyle(color: context.look.textSecondary, fontSize: 14),
+                style: TextStyle(
+                  color: context.look.textSecondary,
+                  fontSize: 14,
+                ),
               ),
               const SizedBox(height: 8),
               SelectableText(
@@ -1503,7 +1676,11 @@ class _SpotifyDialogState extends State<_SpotifyDialog> {
         ),
         FilledButton(
           onPressed: _connecting ? null : _connect,
-          child: Text(isConfigured ? tr('settings.reconnect', 'Reconnect') : tr('settings.connect', 'Connect')),
+          child: Text(
+            isConfigured
+                ? tr('settings.reconnect', 'Reconnect')
+                : tr('settings.connect', 'Connect'),
+          ),
         ),
       ],
     );
@@ -1533,7 +1710,11 @@ class _ShareInboxSettingsTile extends StatelessWidget {
       title: Text(tr('settings.shareInbox', 'Share Inbox')),
       subtitle: Text(
         s.senderTokens.isEmpty
-            ? tr('settings.listeningOnNoSendersAdded', 'Listening on :{listenPort} — no senders added yet', {'listenPort': s.listenPort})
+            ? tr(
+                'settings.listeningOnNoSendersAdded',
+                'Listening on :{listenPort} — no senders added yet',
+                {'listenPort': s.listenPort},
+              )
             : 'Listening on :${s.listenPort} — ${s.senderTokens.length} '
                   '${s.senderTokens.length == 1 ? 'sender' : 'senders'}',
       ),
@@ -1596,16 +1777,23 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
 
   void _copy(String token) {
     Clipboard.setData(ClipboardData(text: token));
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(tr('settings.tokenCopied', 'Token copied'))));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(tr('settings.tokenCopied', 'Token copied'))),
+    );
   }
 
   Future<void> _save() async {
     final port = int.tryParse(_port.text.trim());
     if (port == null || port < 1 || port > 65535) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(tr('settings.enterAPortBetween1', 'Enter a port between 1 and 65535'))),
+        SnackBar(
+          content: Text(
+            tr(
+              'settings.enterAPortBetween1',
+              'Enter a port between 1 and 65535',
+            ),
+          ),
+        ),
       );
       return;
     }
@@ -1635,7 +1823,10 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
                   'settings.peopleWithTheCompanionApp',
                   'People with the companion app can share a photo, GIF, video, link or note to this kiosk. Add a name below, hand that person the generated token to enter in their app.',
                 ),
-                style: TextStyle(color: context.look.textSecondary, fontSize: 14),
+                style: TextStyle(
+                  color: context.look.textSecondary,
+                  fontSize: 14,
+                ),
               ),
               const SizedBox(height: 14),
               TextField(
@@ -1659,7 +1850,10 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
                     'settings.textNotesOnlyPhotosHave',
                     'Text notes only. Photos have nothing to read, and a link read out is a stream of letters nobody can follow.',
                   ),
-                  style: TextStyle(color: context.look.textSecondary, fontSize: 13),
+                  style: TextStyle(
+                    color: context.look.textSecondary,
+                    fontSize: 13,
+                  ),
                 ),
                 value: _speak,
                 onChanged: (v) => setState(() => _speak = v),
@@ -1742,7 +1936,10 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
                       controller: _newName,
                       style: const TextStyle(fontSize: 16),
                       decoration: InputDecoration(
-                        labelText: tr('settings.addSenderName', 'Add sender (name)'),
+                        labelText: tr(
+                          'settings.addSenderName',
+                          'Add sender (name)',
+                        ),
                         hintText: "Mum's phone",
                         border: OutlineInputBorder(),
                       ),
@@ -1750,7 +1947,10 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  FilledButton(onPressed: _addSender, child: Text(tr('settings.add', 'Add'))),
+                  FilledButton(
+                    onPressed: _addSender,
+                    child: Text(tr('settings.add', 'Add')),
+                  ),
                 ],
               ),
             ],
@@ -1762,7 +1962,10 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: Text(tr('settings.cancel', 'Cancel')),
         ),
-        FilledButton(onPressed: _save, child: Text(tr('settings.save', 'Save'))),
+        FilledButton(
+          onPressed: _save,
+          child: Text(tr('settings.save', 'Save')),
+        ),
       ],
     );
   }
@@ -1813,13 +2016,18 @@ class _SoundSettingsTile extends StatelessWidget {
                   service.save();
                 },
               ),
-              trailing: Text(muted ? tr('settings.muted', 'Muted') : '${value.round()}%'),
+              trailing: Text(
+                muted ? tr('settings.muted', 'Muted') : '${value.round()}%',
+              ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(80, 0, 24, 12),
               child: Text(
                 help,
-                style: TextStyle(color: context.look.textSecondary, fontSize: 14),
+                style: TextStyle(
+                  color: context.look.textSecondary,
+                  fontSize: 14,
+                ),
               ),
             ),
           ],
@@ -1838,8 +2046,14 @@ class _SoundSettingsTile extends StatelessWidget {
           title: Text(tr('settings.doNotDisturb', 'Do Not Disturb')),
           subtitle: Text(
             muted
-                ? tr('settings.onEverythingBelowIsMuted', 'On — everything below is muted. Turn it off to hear them again at the same levels.')
-                : tr('settings.mutesEverySoundBelowAt', 'Mutes every sound below at once, and keeps the screen from waking for shares. The same switch as the top bar.'),
+                ? tr(
+                    'settings.onEverythingBelowIsMuted',
+                    'On — everything below is muted. Turn it off to hear them again at the same levels.',
+                  )
+                : tr(
+                    'settings.mutesEverySoundBelowAt',
+                    'Mutes every sound below at once, and keeps the screen from waking for shares. The same switch as the top bar.',
+                  ),
           ),
           value: muted,
           onChanged: (on) {
@@ -1851,21 +2065,30 @@ class _SoundSettingsTile extends StatelessWidget {
         slider(
           icon: Icons.notifications,
           title: tr('settings.notifications', 'Notifications'),
-          help: tr('settings.theChimeWhenSomethingIs', 'The chime when something is shared to the panel.'),
+          help: tr(
+            'settings.theChimeWhenSomethingIs',
+            'The chime when something is shared to the panel.',
+          ),
           value: s.notificationVolume,
           set: (v) => s.notificationVolume = v,
         ),
         slider(
           icon: Icons.record_voice_over,
           title: tr('settings.speech', 'Speech'),
-          help: tr('settings.sharedNotesReadAloudAnd', 'Shared notes read aloud, and bin-day reminders.'),
+          help: tr(
+            'settings.sharedNotesReadAloudAnd',
+            'Shared notes read aloud, and bin-day reminders.',
+          ),
           value: s.speechVolume,
           set: (v) => s.speechVolume = v,
         ),
         slider(
           icon: Icons.menu_book_outlined,
           title: tr('settings.newsReader', 'News reader'),
-          help: tr('settings.articlesReadOutFromThe', 'Articles read out from the news widget.'),
+          help: tr(
+            'settings.articlesReadOutFromThe',
+            'Articles read out from the news widget.',
+          ),
           value: s.readerVolume,
           set: (v) => s.readerVolume = v,
         ),
@@ -1908,7 +2131,12 @@ class _ScreenSettingsTile extends StatelessWidget {
         ),
         SwitchListTile(
           secondary: const Icon(Icons.brightness_4),
-          title: Text(tr('settings.turnTheScreenOffWhen', 'Turn the screen off when idle')),
+          title: Text(
+            tr(
+              'settings.turnTheScreenOffWhen',
+              'Turn the screen off when idle',
+            ),
+          ),
           subtitle: Text(
             tr(
               'settings.onceNothingIsPlayingNo',
@@ -1933,7 +2161,9 @@ class _ScreenSettingsTile extends StatelessWidget {
                 for (final m in _choices)
                   DropdownMenuItem(
                     value: m,
-                    child: Text(m == 60 ? tr('settings.1Hour', '1 hour') : '$m minutes'),
+                    child: Text(
+                      m == 60 ? tr('settings.1Hour', '1 hour') : '$m minutes',
+                    ),
                   ),
               ],
               onChanged: (v) {
@@ -1945,7 +2175,9 @@ class _ScreenSettingsTile extends StatelessWidget {
           ),
           SwitchListTile(
             secondary: const Icon(Icons.music_note),
-            title: Text(tr('settings.wakeWhenMusicStarts', 'Wake when music starts')),
+            title: Text(
+              tr('settings.wakeWhenMusicStarts', 'Wake when music starts'),
+            ),
             subtitle: Text(
               tr(
                 'settings.onlyUndoesASwitchOff',
@@ -2069,20 +2301,34 @@ class _CameraSettingsTile extends StatelessWidget {
                     'settings.aPhoneRunningAndroidIp',
                     'A phone running android-ip-camera, on the same network. Take the address and credentials from the app on the phone; turn its HTTPS off, since it uses a self-signed certificate.',
                   ),
-                  style: TextStyle(color: context.look.textSecondary, fontSize: 14),
+                  style: TextStyle(
+                    color: context.look.textSecondary,
+                    fontSize: 14,
+                  ),
                 ),
                 const SizedBox(height: 14),
-                field(tr('settings.address', 'Address'), address, hint: '192.168.1.52:4444'),
+                field(
+                  tr('settings.address', 'Address'),
+                  address,
+                  hint: '192.168.1.52:4444',
+                ),
                 field(tr('settings.username', 'Username'), user),
                 field(tr('settings.password', 'Password'), pass, obscure: true),
-                field(tr('settings.streamSize', 'Stream size'), resolution, hint: '1920x1080'),
+                field(
+                  tr('settings.streamSize', 'Stream size'),
+                  resolution,
+                  hint: '1920x1080',
+                ),
                 field(
                   tr(
                     'settings.rotateOnThePhoneDegrees',
                     'Rotate on the phone (degrees)',
                   ),
                   rotate,
-                  hint: tr('settings.090180Or270', '0, 90, 180 or 270 — MJPEG only'),
+                  hint: tr(
+                    'settings.090180Or270',
+                    '0, 90, 180 or 270 — MJPEG only',
+                  ),
                 ),
                 field(
                   tr(
@@ -2090,11 +2336,10 @@ class _CameraSettingsTile extends StatelessWidget {
                     'Turn the picture here (quarter turns)',
                   ),
                   turns,
-                  hint:
-                      tr(
-                        'settings.03ForWhenThe',
-                        '0-3, for when the phone gets its own orientation wrong',
-                      ),
+                  hint: tr(
+                    'settings.03ForWhenThe',
+                    '0-3, for when the phone gets its own orientation wrong',
+                  ),
                 ),
               ],
             ),
@@ -2211,7 +2456,10 @@ class _DashboardSettingsTile extends StatelessWidget {
                   'settings.thePortTheDashboardEditor',
                   'The port the dashboard editor is served on. Separate from the Share Inbox, so one can be exposed beyond your network without the other.',
                 ),
-                style: TextStyle(color: context.look.textSecondary, fontSize: 14),
+                style: TextStyle(
+                  color: context.look.textSecondary,
+                  fontSize: 14,
+                ),
               ),
               const SizedBox(height: 14),
               TextField(
@@ -2273,15 +2521,20 @@ class _DashboardSettingsTile extends StatelessWidget {
         if (s.enabled) ...[
           ListTile(
             leading: const Icon(Icons.open_in_browser),
-            title: Text(tr('settings.arrangeItInABrowser', 'Arrange it in a browser')),
-            isThreeLine: dashboard.editorIpAddress != null ||
+            title: Text(
+              tr('settings.arrangeItInABrowser', 'Arrange it in a browser'),
+            ),
+            isThreeLine:
+                dashboard.editorIpAddress != null ||
                 dashboard.webPortNote != null,
-            subtitle: Text([
-              dashboard.editorAddress,
-              if (dashboard.editorIpAddress != null)
-                'or ${dashboard.editorIpAddress}',
-              ?dashboard.webPortNote,
-            ].join('\n')),
+            subtitle: Text(
+              [
+                dashboard.editorAddress,
+                if (dashboard.editorIpAddress != null)
+                  'or ${dashboard.editorIpAddress}',
+                ?dashboard.webPortNote,
+              ].join('\n'),
+            ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _editPort(context),
           ),
@@ -2289,7 +2542,13 @@ class _DashboardSettingsTile extends StatelessWidget {
             leading: const Icon(Icons.palette_outlined),
             title: Text(tr('settings.theme', 'Theme')),
             // It dresses every screen now, not just the dashboard.
-            subtitle: Text(tr('settings.theWholeKioskSLook', '{name} · the whole kiosk\'s look', {'name': theme.name})),
+            subtitle: Text(
+              tr(
+                'settings.theWholeKioskSLook',
+                '{name} · the whole kiosk\'s look',
+                {'name': theme.name},
+              ),
+            ),
             trailing: DropdownButton<String>(
               value: dashboard.themes.all.any((t) => t.id == s.themeId)
                   ? s.themeId
@@ -2356,7 +2615,10 @@ class _TvSettingsTile extends StatelessWidget {
                   'settings.theSetMustBeOn',
                   'The set must be on the same network. Only one controller may hold a session at a time — the connection identity comes from this UUID, so two controllers sharing one will displace each other. Changing the UUID means pairing again.',
                 ),
-                style: TextStyle(color: context.look.textSecondary, fontSize: 14),
+                style: TextStyle(
+                  color: context.look.textSecondary,
+                  fontSize: 14,
+                ),
               ),
               const SizedBox(height: 14),
               TextField(
@@ -2405,11 +2667,27 @@ class _TvSettingsTile extends StatelessWidget {
     final tv = context.watch<TvService>();
 
     final status = switch (tv.conn) {
-      ConnState.connected => tr('settings.connectedTo', 'Connected to {host}', {'host': s.host}),
-      ConnState.connecting => tr('settings.connectingTo', 'Connecting to {host}…', {'host': s.host}),
-      ConnState.needsPairing => tr('settings.needsPairingOpenTheTv', 'Needs pairing — open the TV widget'),
-      ConnState.error => tv.lastError ?? tr('settings.couldNotReach', 'Could not reach {host}', {'host': s.host}),
-      ConnState.disconnected => tr('settings.connectsWhenTheTvWidget', 'Connects when the TV widget is on screen'),
+      ConnState.connected => tr('settings.connectedTo', 'Connected to {host}', {
+        'host': s.host,
+      }),
+      ConnState.connecting => tr(
+        'settings.connectingTo',
+        'Connecting to {host}…',
+        {'host': s.host},
+      ),
+      ConnState.needsPairing => tr(
+        'settings.needsPairingOpenTheTv',
+        'Needs pairing — open the TV widget',
+      ),
+      ConnState.error =>
+        tv.lastError ??
+            tr('settings.couldNotReach', 'Could not reach {host}', {
+              'host': s.host,
+            }),
+      ConnState.disconnected => tr(
+        'settings.connectsWhenTheTvWidget',
+        'Connects when the TV widget is on screen',
+      ),
     };
 
     return Column(
@@ -2436,7 +2714,9 @@ class _TvSettingsTile extends StatelessWidget {
               Icons.settings_remote,
               color: tv.conn == ConnState.connected ? Colors.greenAccent : null,
             ),
-            title: Text(tr('settings.addressAndPairing', 'Address and pairing')),
+            title: Text(
+              tr('settings.addressAndPairing', 'Address and pairing'),
+            ),
             subtitle: Text(status),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _edit(context),
@@ -2469,7 +2749,9 @@ class _TvSettingsTile extends StatelessWidget {
     final entered = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(tr('settings.enterTheCodeOnThe', 'Enter the code on the TV')),
+        title: Text(
+          tr('settings.enterTheCodeOnThe', 'Enter the code on the TV'),
+        ),
         content: TextField(
           controller: pin,
           autofocus: true,
@@ -2499,9 +2781,18 @@ class _TvSettingsTile extends StatelessWidget {
     }
     final ok = await tv.submitPin(code);
     if (context.mounted) {
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
-        content: Text(ok ? tr('settings.pairedWithTheTv', 'Paired with the TV.') : tr('settings.theTvDidNotAccept', 'The TV did not accept that code.')),
-      ));
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(
+          content: Text(
+            ok
+                ? tr('settings.pairedWithTheTv', 'Paired with the TV.')
+                : tr(
+                    'settings.theTvDidNotAccept',
+                    'The TV did not accept that code.',
+                  ),
+          ),
+        ),
+      );
     }
   }
 }
@@ -2522,7 +2813,9 @@ class _TabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fg = selected ? context.look.background.first : context.look.textPrimary;
+    final fg = selected
+        ? context.look.background.first
+        : context.look.textPrimary;
     return Semantics(
       button: true,
       selected: selected,

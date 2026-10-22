@@ -9,7 +9,8 @@ import 'package:home_canvas/dashboard/widgets/widgets.dart';
 import 'package:home_canvas/services/timer_service.dart';
 import 'package:home_canvas/services/timer_sounds.dart';
 
-Uint8List _mp3() => Uint8List.fromList([...'ID3'.codeUnits, ...List.filled(20, 0)]);
+Uint8List _mp3() =>
+    Uint8List.fromList([...'ID3'.codeUnits, ...List.filled(20, 0)]);
 
 void main() {
   group('a finished timer', () {
@@ -67,30 +68,32 @@ void main() {
       s.dispose();
     });
 
-    test('dismissed while ringing: the sound stops and nothing is said',
-        () async {
-      var now = DateTime(2026, 9, 26, 12);
-      final heard = <String>[];
-      final ringing = Completer<void>();
-      var silenced = 0;
-      final s = TimerService(
-        play: (sound) => ringing.future,
-        silence: () async {
-          silenced++;
-          ringing.complete();
-        },
-        speak: (t) async => heard.add(t),
-        clock: () => now,
-      );
-      final t = s.start(const Duration(minutes: 1), sound: 'alarm');
-      now = now.add(const Duration(minutes: 1));
-      s.tick();
-      s.remove(t.id);
-      await pumpEventQueue();
-      expect(silenced, 1);
-      expect(heard, isEmpty);
-      s.dispose();
-    });
+    test(
+      'dismissed while ringing: the sound stops and nothing is said',
+      () async {
+        var now = DateTime(2026, 9, 26, 12);
+        final heard = <String>[];
+        final ringing = Completer<void>();
+        var silenced = 0;
+        final s = TimerService(
+          play: (sound) => ringing.future,
+          silence: () async {
+            silenced++;
+            ringing.complete();
+          },
+          speak: (t) async => heard.add(t),
+          clock: () => now,
+        );
+        final t = s.start(const Duration(minutes: 1), sound: 'alarm');
+        now = now.add(const Duration(minutes: 1));
+        s.tick();
+        s.remove(t.id);
+        await pumpEventQueue();
+        expect(silenced, 1);
+        expect(heard, isEmpty);
+        s.dispose();
+      },
+    );
   });
 
   group('uploaded sounds', () {
@@ -132,8 +135,10 @@ void main() {
         throwsFormatException,
       );
       await expectLater(
-        sounds.save('big.mp3', Uint8List(TimerSounds.maxUploadBytes + 1)
-          ..setAll(0, 'ID3'.codeUnits)),
+        sounds.save(
+          'big.mp3',
+          Uint8List(TimerSounds.maxUploadBytes + 1)..setAll(0, 'ID3'.codeUnits),
+        ),
         throwsFormatException,
       );
       expect(await sounds.uploads(), isEmpty);

@@ -22,11 +22,15 @@ void main() {
       }
       // 120 minutes of buckets, not 7,200 samples.
       expect(
-          h
-              .series(const Duration(hours: 2), 10000,
-                  now: start.add(const Duration(seconds: 7200)))
-              .length,
-          lessThanOrEqualTo(121));
+        h
+            .series(
+              const Duration(hours: 2),
+              10000,
+              now: start.add(const Duration(seconds: 7200)),
+            )
+            .length,
+        lessThanOrEqualTo(121),
+      );
     });
 
     test('history older than the retention is dropped', () {
@@ -38,11 +42,15 @@ void main() {
       // The last sample sets "now" for trimming, so only the final ten
       // minutes of buckets survive.
       expect(
-          h
-              .series(const Duration(hours: 1), 1000,
-                  now: start.add(const Duration(minutes: 59)))
-              .length,
-          lessThanOrEqualTo(11));
+        h
+            .series(
+              const Duration(hours: 1),
+              1000,
+              now: start.add(const Duration(minutes: 59)),
+            )
+            .length,
+        lessThanOrEqualTo(11),
+      );
     });
   });
 
@@ -60,24 +68,27 @@ void main() {
 
     test('never returns more points than asked for', () {
       final h = withMinutes(600);
-      expect(h.series(const Duration(hours: 24), 100, now: endOf(600)).length,
-          lessThanOrEqualTo(100));
+      expect(
+        h.series(const Duration(hours: 24), 100, now: endOf(600)).length,
+        lessThanOrEqualTo(100),
+      );
     });
 
     test('a spike survives being squeezed into fewer columns', () {
       // Averaging would hide this, which is the whole point: a busy evening
       // must not be smoothed into a quiet one.
       final h = withMinutes(600, rx: (i) => i == 300 ? 900000000 : 1000);
-      final points =
-          h.series(const Duration(hours: 24), 50, now: endOf(600));
+      final points = h.series(const Duration(hours: 24), 50, now: endOf(600));
       final peak = points.map((p) => p.rx).reduce((a, b) => a > b ? a : b);
       expect(peak, 900000000);
     });
 
     test('asking for fewer points than exist still yields a usable series', () {
       final h = withMinutes(600);
-      expect(h.series(const Duration(hours: 24), 2, now: endOf(600)).length,
-          greaterThan(1));
+      expect(
+        h.series(const Duration(hours: 24), 2, now: endOf(600)).length,
+        greaterThan(1),
+      );
     });
 
     test('an empty history yields nothing rather than throwing', () {
@@ -97,8 +108,10 @@ void main() {
       for (var i = 0; i < 10; i++) {
         h.add(0, 8000000, at: start.add(Duration(minutes: i)));
       }
-      final v = h.volume(const Duration(hours: 1),
-          now: start.add(const Duration(minutes: 10)));
+      final v = h.volume(
+        const Duration(hours: 1),
+        now: start.add(const Duration(minutes: 10)),
+      );
       expect(v.rxBytes, closeTo(600000000, 1000000));
       expect(v.txBytes, 0);
     });

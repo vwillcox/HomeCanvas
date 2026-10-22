@@ -93,10 +93,10 @@ class CodeWidgets {
 
   /// "sea_chart" from "Sea Chart.dart", or null if it is no name for one.
   static String? nameOf(String file) {
-    final base = p.basenameWithoutExtension(file).toLowerCase().replaceAll(
-      RegExp(r'[\s\-]+'),
-      '_',
-    );
+    final base = p
+        .basenameWithoutExtension(file)
+        .toLowerCase()
+        .replaceAll(RegExp(r'[\s\-]+'), '_');
     return file.toLowerCase().endsWith('.dart') &&
             _name.hasMatch(base) &&
             base != 'custom_registry'
@@ -124,7 +124,9 @@ class CodeWidgets {
   Map<String, dynamic> status() {
     Map<String, dynamic> last = const {'state': 'idle'};
     try {
-      final j = jsonDecode(File(p.join(state, 'status.json')).readAsStringSync());
+      final j = jsonDecode(
+        File(p.join(state, 'status.json')).readAsStringSync(),
+      );
       if (j is Map<String, dynamic>) last = j;
     } catch (_) {}
     // A builder that was cut off mid-build — the power, say — left
@@ -154,7 +156,9 @@ class CodeWidgets {
           'underscores, starting with a letter and ending .dart: '
           'tide_times.dart.';
     }
-    if (utf8.encode(source).length > maxBytes) return 'The file is over 256 KB.';
+    if (utf8.encode(source).length > maxBytes) {
+      return 'The file is over 256 KB.';
+    }
     if (!_declares.hasMatch(source)) {
       return 'The file must declare its widget for the registry: '
           'final widgetType = DashboardWidgetType(…);';
@@ -164,10 +168,9 @@ class CodeWidgets {
     if (building) return 'A build is already running.';
     final incoming = Directory(p.join(state, 'incoming'));
     await incoming.create(recursive: true);
-    await File(p.join(incoming.path, '$name.dart')).writeAsString(
-      source,
-      flush: true,
-    );
+    await File(
+      p.join(incoming.path, '$name.dart'),
+    ).writeAsString(source, flush: true);
     return _start('install', name);
   }
 

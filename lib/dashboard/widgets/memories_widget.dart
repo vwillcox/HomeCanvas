@@ -37,8 +37,7 @@ class _Shown {
   final int? year;
 }
 
-class _MemoriesWidgetState extends State<MemoriesWidget>
-    with PauseWhenHidden {
+class _MemoriesWidgetState extends State<MemoriesWidget> with PauseWhenHidden {
   List<_Shown> _photos = const [];
   int _index = 0;
   bool _loading = true;
@@ -161,7 +160,9 @@ class _MemoriesWidgetState extends State<MemoriesWidget>
     }
     if (_photos.isEmpty) {
       return TileMessage(
-        _error != null ? tr('widget.memories.waitingForImmich', 'Waiting for Immich…') : tr('widget.memories.noMemoriesToday', 'No memories today'),
+        _error != null
+            ? tr('widget.memories.waitingForImmich', 'Waiting for Immich…')
+            : tr('widget.memories.noMemoriesToday', 'No memories today'),
         theme: t,
       );
     }
@@ -176,11 +177,7 @@ class _MemoriesWidgetState extends State<MemoriesWidget>
         : years == 1
         ? tr('widget.memories.aYearAgo', 'A year ago')
         : tr('widget.memories.yearsAgo', '{years} years ago', {'years': years});
-    final detail = [
-      if (taken != null)
-        fullDate(taken),
-      ?place,
-    ].join(' · ');
+    final detail = [if (taken != null) fullDate(taken), ?place].join(' · ');
 
     return GestureDetector(
       onTap: () => _step(1),
@@ -189,9 +186,7 @@ class _MemoriesWidgetState extends State<MemoriesWidget>
         builder: (context, c) {
           return ClipRRect(
             // Square on a console, as its blocks are.
-            borderRadius: BorderRadius.circular(
-              context.look.isLcars ? 0 : 12,
-            ),
+            borderRadius: BorderRadius.circular(context.look.isLcars ? 0 : 12),
             child: Stack(
               fit: StackFit.expand,
               children: [

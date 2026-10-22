@@ -21,7 +21,11 @@ class AirQualityWidget extends StatelessWidget {
     final air = service.current;
     if (air == null) {
       return TileMessage(
-        service.error ?? tr('widget.air_quality.fetchingTheAirQuality', 'Fetching the air quality…'),
+        service.error ??
+            tr(
+              'widget.air_quality.fetchingTheAirQuality',
+              'Fetching the air quality…',
+            ),
         theme: t,
       );
     }
@@ -53,11 +57,10 @@ class AirQualityWidget extends StatelessWidget {
         if (air.uv != null) ...[
           const SizedBox(height: 6),
           Text(
-            tr(
-              'widget.air_quality.uv',
-              'UV {uv} · {uvWord}',
-              {'uv': air.uv!.round(), 'uvWord': air.uvWord},
-            ),
+            tr('widget.air_quality.uv', 'UV {uv} · {uvWord}', {
+              'uv': air.uv!.round(),
+              'uvWord': air.uvWord,
+            }),
             maxLines: 1,
             style: TextStyle(color: t.textSecondary, fontSize: 11),
           ),
@@ -127,7 +130,9 @@ class AirQualityWidget extends StatelessWidget {
               children: [
                 TileLabel(
                   icon: Icons.eco_rounded,
-                  text: showPollen ? tr('widget.air_quality.airPollen', 'Air & pollen') : tr('widget.air_quality.airQuality', 'Air quality'),
+                  text: showPollen
+                      ? tr('widget.air_quality.airPollen', 'Air & pollen')
+                      : tr('widget.air_quality.airQuality', 'Air quality'),
                   theme: t,
                   size: 11,
                 ),

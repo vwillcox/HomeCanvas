@@ -38,8 +38,12 @@ void main() {
       SealedReader(keyFor: (k) async => k == accept ? pair : null);
 
   Future<List<int>> sealed(List<int> plaintext, {String mime = 'text/plain'}) =>
-      collect(SealedWriter(recipientPublicKey: panelPublic, kid: kid)
-          .seal(one(plaintext), mime: mime));
+      collect(
+        SealedWriter(
+          recipientPublicKey: panelPublic,
+          kid: kid,
+        ).seal(one(plaintext), mime: mime),
+      );
 
   group('round trip', () {
     test('a short message comes back exactly', () async {
@@ -56,7 +60,11 @@ void main() {
     test('a payload spanning many chunks survives intact', () async {
       final rnd = Random(7);
       final big = Uint8List.fromList(
-          List.generate(SealedShare.chunkSize * 3 + 1234, (_) => rnd.nextInt(256)));
+        List.generate(
+          SealedShare.chunkSize * 3 + 1234,
+          (_) => rnd.nextInt(256),
+        ),
+      );
       final out = await collect(readerFor(panel).open(one(await sealed(big))));
       expect(out.length, big.length);
       expect(out, equals(big));
@@ -71,10 +79,12 @@ void main() {
 
     test('the content type travels inside the sealed part', () async {
       SealedHeader? seen;
-      await collect(readerFor(panel).open(
-        one(await sealed(utf8.encode('hi'), mime: 'video/mp4')),
-        onHeader: (h) => seen = h,
-      ));
+      await collect(
+        readerFor(panel).open(
+          one(await sealed(utf8.encode('hi'), mime: 'video/mp4')),
+          onHeader: (h) => seen = h,
+        ),
+      );
       expect(seen!.mime, 'video/mp4');
     });
   });
@@ -112,26 +122,26 @@ void main() {
     test('a message sealed to a retired key is refused', () async {
       final wire = await sealed(utf8.encode('old'));
       final reader = readerFor(panel, accept: 'some-other-kid');
-      expect(() => collect(reader.open(one(wire))),
-          throwsA(isA<SealedAuthException>()));
-    });
-
-    test('a header claiming an enormous chunk is refused, not allocated',
-        () async {
-      final header = utf8.encode('${jsonEncode({
-            'v': 1,
-            'kid': kid,
-            'epk': base64Encode(List.filled(32, 1)),
-            'salt': base64Encode(List.filled(16, 2)),
-            'mime': 'text/plain',
-          })}\n');
-      final frame = Uint8List(4);
-      ByteData.view(frame.buffer).setUint32(0, 0x7fffffff);
       expect(
-        () => collect(readerFor(panel).open(one([...header, ...frame]))),
-        throwsA(isA<SealedFormatException>()),
+        () => collect(reader.open(one(wire))),
+        throwsA(isA<SealedAuthException>()),
       );
     });
+
+    test(
+      'a header claiming an enormous chunk is refused, not allocated',
+      () async {
+        final header = utf8.encode(
+          '${jsonEncode({'v': 1, 'kid': kid, 'epk': base64Encode(List.filled(32, 1)), 'salt': base64Encode(List.filled(16, 2)), 'mime': 'text/plain'})}\n',
+        );
+        final frame = Uint8List(4);
+        ByteData.view(frame.buffer).setUint32(0, 0x7fffffff);
+        expect(
+          () => collect(readerFor(panel).open(one([...header, ...frame]))),
+          throwsA(isA<SealedFormatException>()),
+        );
+      },
+    );
 
     test('rubbish in place of a header is refused', () async {
       expect(
@@ -147,8 +157,11 @@ void main() {
       final b = await sealed(utf8.encode('same text'));
       final headerA = jsonDecode(utf8.decode(a.sublist(0, a.indexOf(10))));
       final headerB = jsonDecode(utf8.decode(b.sublist(0, b.indexOf(10))));
-      expect(headerA['epk'], isNot(headerB['epk']),
-          reason: 'a reused ephemeral key would cost forward secrecy');
+      expect(
+        headerA['epk'],
+        isNot(headerB['epk']),
+        reason: 'a reused ephemeral key would cost forward secrecy',
+      );
     });
 
     test('identical plaintext seals to different bytes each time', () async {

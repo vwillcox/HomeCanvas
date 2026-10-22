@@ -38,16 +38,18 @@ class FloatplaneSite extends VideoSite {
   @override
   set storedSignedIn(bool value) => config.config.floatplane.signedIn = value;
 
-  final Dio _dio = Dio(BaseOptions(
-    baseUrl: 'https://www.floatplane.com',
-    connectTimeout: const Duration(seconds: 10),
-    receiveTimeout: const Duration(seconds: 20),
-    headers: {
-      // Floatplane asks clients of its API to say who they are.
-      'User-Agent': 'HomeCanvas (+https://github.com/vwillcox/HomeCanvas)',
-      'Accept': 'application/json',
-    },
-  ));
+  final Dio _dio = Dio(
+    BaseOptions(
+      baseUrl: 'https://www.floatplane.com',
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 20),
+      headers: {
+        // Floatplane asks clients of its API to say who they are.
+        'User-Agent': 'HomeCanvas (+https://github.com/vwillcox/HomeCanvas)',
+        'Accept': 'application/json',
+      },
+    ),
+  );
 
   @override
   void dispose() {
@@ -58,14 +60,18 @@ class FloatplaneSite extends VideoSite {
   Future<Object?> _get(String path, Map<String, dynamic> query) async {
     String? sid;
     try {
-      sid = CookieFile.value(await File(cookiesFile).readAsString(),
-          'sails.sid');
+      sid = CookieFile.value(
+        await File(cookiesFile).readAsString(),
+        'sails.sid',
+      );
     } catch (_) {}
     if (sid == null) throw const SignedOut();
     try {
-      final r = await _dio.get<Object?>(path,
-          queryParameters: query,
-          options: Options(headers: {'Cookie': 'sails.sid=$sid'}));
+      final r = await _dio.get<Object?>(
+        path,
+        queryParameters: query,
+        options: Options(headers: {'Cookie': 'sails.sid=$sid'}),
+      );
       return r.data;
     } on DioException catch (e) {
       final code = e.response?.statusCode;
@@ -89,14 +95,20 @@ class FloatplaneSite extends VideoSite {
     // The site writes the creator ids as `ids[0]=…&ids[1]=…`; the published
     // description of the API says repeated `ids=`. Tried in that order.
     try {
-      return feedFromApi(await _get('/api/v3/content/creator/list', {
-        for (var i = 0; i < creators.length; i++) 'ids[$i]': creators[i],
-        'limit': count,
-      }));
+      return feedFromApi(
+        await _get('/api/v3/content/creator/list', {
+          for (var i = 0; i < creators.length; i++) 'ids[$i]': creators[i],
+          'limit': count,
+        }),
+      );
     } on DioException catch (e) {
       if (e.response?.statusCode != 400) rethrow;
-      return feedFromApi(await _get(
-          '/api/v3/content/creator/list', {'ids': creators, 'limit': count}));
+      return feedFromApi(
+        await _get('/api/v3/content/creator/list', {
+          'ids': creators,
+          'limit': count,
+        }),
+      );
     }
   }
 
@@ -115,23 +127,28 @@ class FloatplaneSite extends VideoSite {
       if (metadata is Map && metadata['hasVideo'] != true) continue;
       final creator = post['creator'];
       final thumbnail = post['thumbnail'];
-      final seconds =
-          metadata is Map ? (metadata['videoDuration'] as num?) : null;
-      out.add(FeedVideo(
-        link: FloatplaneLink(
-          id,
-          thumbnailUrl: thumbnail is Map ? _image(thumbnail) : null,
+      final seconds = metadata is Map
+          ? (metadata['videoDuration'] as num?)
+          : null;
+      out.add(
+        FeedVideo(
+          link: FloatplaneLink(
+            id,
+            thumbnailUrl: thumbnail is Map ? _image(thumbnail) : null,
+          ),
+          title: '${post['title'] ?? ''}',
+          channel: creator is Map ? '${creator['title'] ?? ''}' : '',
+          released: DateTime.tryParse('${post['releaseDate'] ?? ''}'),
+          duration: seconds == null || seconds <= 0
+              ? null
+              : Duration(seconds: seconds.round()),
         ),
-        title: '${post['title'] ?? ''}',
-        channel: creator is Map ? '${creator['title'] ?? ''}' : '',
-        released: DateTime.tryParse('${post['releaseDate'] ?? ''}'),
-        duration: seconds == null || seconds <= 0
-            ? null
-            : Duration(seconds: seconds.round()),
-      ));
+      );
     }
-    out.sort((a, b) => (b.released ?? DateTime(0))
-        .compareTo(a.released ?? DateTime(0)));
+    out.sort(
+      (a, b) =>
+          (b.released ?? DateTime(0)).compareTo(a.released ?? DateTime(0)),
+    );
     return out;
   }
 
@@ -139,14 +156,18 @@ class FloatplaneSite extends VideoSite {
   /// the full one is often 1920 wide, and a grid of six of those is a lot of
   /// decoding for the Pi to do behind a playing video.
   static String? _image(Map image) {
-    final sizes = [
-      image,
-      ...((image['childImages'] as List?)?.whereType<Map>() ?? const <Map>[]),
-    ].where((i) => i['path'] is String && i['width'] is num).toList()
-      ..sort((a, b) => (a['width'] as num).compareTo(b['width'] as num));
+    final sizes =
+        [
+            image,
+            ...((image['childImages'] as List?)?.whereType<Map>() ??
+                const <Map>[]),
+          ].where((i) => i['path'] is String && i['width'] is num).toList()
+          ..sort((a, b) => (a['width'] as num).compareTo(b['width'] as num));
     if (sizes.isEmpty) return null;
-    final good = sizes.firstWhere((i) => (i['width'] as num) >= 400,
-        orElse: () => sizes.last);
+    final good = sizes.firstWhere(
+      (i) => (i['width'] as num) >= 400,
+      orElse: () => sizes.last,
+    );
     return good['path'] as String;
   }
 }

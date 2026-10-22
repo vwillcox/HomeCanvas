@@ -190,8 +190,9 @@ class WeatherService extends ChangeNotifier {
   /// an hour. The panel starts before the network is up, so the first fetch
   /// usually fails — on a fixed fifteen-minute timer that left "could not
   /// reach the forecast" on the wall long after the network came good.
-  final RetrySchedule _retry =
-      RetrySchedule(settled: const Duration(minutes: 15));
+  final RetrySchedule _retry = RetrySchedule(
+    settled: const Duration(minutes: 15),
+  );
 
   void _scheduleNext() {
     _timer?.cancel();
@@ -228,11 +229,13 @@ class WeatherService extends ChangeNotifier {
   }
 
   /// One client, so its connections are reused between fetches.
-  final Dio _client = Dio(BaseOptions(
-    connectTimeout: const Duration(seconds: 12),
-    receiveTimeout: const Duration(seconds: 15),
-    validateStatus: (s) => s != null && s < 500,
-  ));
+  final Dio _client = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 12),
+      receiveTimeout: const Duration(seconds: 15),
+      validateStatus: (s) => s != null && s < 500,
+    ),
+  );
 
   Dio _dio() => _client;
 
@@ -249,14 +252,15 @@ class WeatherService extends ChangeNotifier {
 
     if (_ukPostcode.hasMatch(q)) {
       try {
-        final r = await dio
-            .get('https://api.postcodes.io/postcodes/${q.replaceAll(' ', '')}');
+        final r = await dio.get(
+          'https://api.postcodes.io/postcodes/${q.replaceAll(' ', '')}',
+        );
         if (r.statusCode == 200) {
           final res = (r.data as Map)['result'] as Map<String, dynamic>;
           final lat = (res['latitude'] as num).toDouble();
           final lon = (res['longitude'] as num).toDouble();
-          final label =
-              (res['admin_district'] ?? res['parish'] ?? q).toString();
+          final label = (res['admin_district'] ?? res['parish'] ?? q)
+              .toString();
           return (lat, lon, label);
         }
       } catch (e) {
@@ -294,18 +298,17 @@ class WeatherService extends ChangeNotifier {
 
     try {
       // (Re)geocode when the location changed or we have no cached coords.
-      final needsGeocode = force ||
+      final needsGeocode =
+          force ||
           s.latitude == null ||
           s.longitude == null ||
           _resolvedFor != s.location;
       if (needsGeocode) {
         final geo = await _geocode(s.location);
         if (geo == null) {
-          _error = tr(
-            'weather.couldNotFind',
-            'Could not find "{location}"',
-            {'location': s.location},
-          );
+          _error = tr('weather.couldNotFind', 'Could not find "{location}"', {
+            'location': s.location,
+          });
           _weather = null;
           _loading = false;
           notifyListeners();
@@ -324,9 +327,11 @@ class WeatherService extends ChangeNotifier {
         queryParameters: {
           'latitude': s.latitude,
           'longitude': s.longitude,
-          'current': 'temperature_2m,apparent_temperature,weather_code,is_day,'
+          'current':
+              'temperature_2m,apparent_temperature,weather_code,is_day,'
               'relative_humidity_2m,wind_speed_10m',
-          'daily': 'weather_code,temperature_2m_max,temperature_2m_min,'
+          'daily':
+              'weather_code,temperature_2m_max,temperature_2m_min,'
               'precipitation_probability_max,wind_speed_10m_max,'
               'sunrise,sunset,uv_index_max',
           // 14 rather than 7 so the dashboard's longer forecast options have
@@ -335,7 +340,8 @@ class WeatherService extends ChangeNotifier {
           'forecast_days': 14,
           // Twenty-five, so "the next day" still reaches the same hour
           // tomorrow when the current hour is the first.
-          'hourly': 'temperature_2m,weather_code,precipitation_probability,'
+          'hourly':
+              'temperature_2m,weather_code,precipitation_probability,'
               'is_day',
           'forecast_hours': 25,
           'timezone': 'auto',
@@ -348,7 +354,8 @@ class WeatherService extends ChangeNotifier {
         final data = r.data as Map<String, dynamic>;
         final c = data['current'] as Map<String, dynamic>;
         final d = data['daily'] as Map<String, dynamic>;
-        final units = data['current_units'] as Map<String, dynamic>? ?? const {};
+        final units =
+            data['current_units'] as Map<String, dynamic>? ?? const {};
 
         final times = (d['time'] as List).cast<String>();
         final daily = <DailyForecast>[];
@@ -361,17 +368,21 @@ class WeatherService extends ChangeNotifier {
             return v.contains('T') ? v.split('T').last : v;
           }
 
-          daily.add(DailyForecast(
-            date: DateTime.tryParse(times[i]) ?? DateTime.now(),
-            weatherCode: num_('weather_code').toInt(),
-            tempMax: num_('temperature_2m_max'),
-            tempMin: num_('temperature_2m_min'),
-            precipitationChance: num_('precipitation_probability_max').toInt(),
-            windMax: num_('wind_speed_10m_max'),
-            uvIndexMax: num_('uv_index_max'),
-            sunrise: time_('sunrise'),
-            sunset: time_('sunset'),
-          ));
+          daily.add(
+            DailyForecast(
+              date: DateTime.tryParse(times[i]) ?? DateTime.now(),
+              weatherCode: num_('weather_code').toInt(),
+              tempMax: num_('temperature_2m_max'),
+              tempMin: num_('temperature_2m_min'),
+              precipitationChance: num_(
+                'precipitation_probability_max',
+              ).toInt(),
+              windMax: num_('wind_speed_10m_max'),
+              uvIndexMax: num_('uv_index_max'),
+              sunrise: time_('sunrise'),
+              sunset: time_('sunset'),
+            ),
+          );
         }
 
         _weather = Weather(

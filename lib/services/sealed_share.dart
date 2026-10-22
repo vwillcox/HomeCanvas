@@ -142,8 +142,10 @@ class SealedShare {
   }) async {
     final secret = await _x25519.sharedSecretKey(
       keyPair: keyPair,
-      remotePublicKey:
-          SimplePublicKey(remotePublicKey, type: KeyPairType.x25519),
+      remotePublicKey: SimplePublicKey(
+        remotePublicKey,
+        type: KeyPairType.x25519,
+      ),
     );
     return secret.extractBytes();
   }
@@ -172,12 +174,12 @@ class SealedHeader {
   final String mime;
 
   Map<String, dynamic> toJson() => {
-        'v': SealedShare.version,
-        'kid': kid,
-        'epk': base64Encode(ephemeralPublicKey),
-        'salt': base64Encode(salt),
-        'mime': mime,
-      };
+    'v': SealedShare.version,
+    'kid': kid,
+    'epk': base64Encode(ephemeralPublicKey),
+    'salt': base64Encode(salt),
+    'mime': mime,
+  };
 
   static SealedHeader parse(String line) {
     final j = jsonDecode(line);
@@ -210,9 +212,9 @@ class SealedHeader {
 /// closes that race without keeping old keys around indefinitely.
 class ShareKeys {
   ShareKeys({String? directory, this.rotateEvery = const Duration(days: 7)})
-      : _directory = directory ??
-            p.join(Platform.environment['HOME'] ?? '.', '.config',
-                'homecanvas');
+    : _directory =
+          directory ??
+          p.join(Platform.environment['HOME'] ?? '.', '.config', 'homecanvas');
 
   final String _directory;
 
@@ -259,7 +261,8 @@ class ShareKeys {
   /// on every request.
   Future<void> maybeRotate() async {
     final key = _current;
-    if (key == null || DateTime.now().difference(key.createdAt) >= rotateEvery) {
+    if (key == null ||
+        DateTime.now().difference(key.createdAt) >= rotateEvery) {
       await rotate();
     }
   }
@@ -296,16 +299,21 @@ class ShareKeys {
     // Private keys: readable by this account and nobody else, from before
     // they are written. Anyone with this account's shell can still read it.
     await writePrivateFile(
-        _file.path,
-        jsonEncode({
-          'current': await _current?.toJson(),
-          'previous': await _previous?.toJson(),
-        }));
+      _file.path,
+      jsonEncode({
+        'current': await _current?.toJson(),
+        'previous': await _previous?.toJson(),
+      }),
+    );
   }
 }
 
 class _Identity {
-  _Identity({required this.kid, required this.keyPair, required this.createdAt});
+  _Identity({
+    required this.kid,
+    required this.keyPair,
+    required this.createdAt,
+  });
 
   final String kid;
   final SimpleKeyPair keyPair;
@@ -324,7 +332,8 @@ class _Identity {
           type: KeyPairType.x25519,
         ),
         createdAt:
-            DateTime.tryParse('${j['created']}') ?? DateTime.fromMillisecondsSinceEpoch(0),
+            DateTime.tryParse('${j['created']}') ??
+            DateTime.fromMillisecondsSinceEpoch(0),
       );
     } catch (_) {
       return null;
@@ -332,9 +341,9 @@ class _Identity {
   }
 
   Future<Map<String, dynamic>> toJson() async => {
-        'kid': kid,
-        'seed': base64Encode(await keyPair.extractPrivateKeyBytes()),
-        'pub': base64Encode((await keyPair.extractPublicKey()).bytes),
-        'created': createdAt.toIso8601String(),
-      };
+    'kid': kid,
+    'seed': base64Encode(await keyPair.extractPrivateKeyBytes()),
+    'pub': base64Encode((await keyPair.extractPublicKey()).bytes),
+    'created': createdAt.toIso8601String(),
+  };
 }

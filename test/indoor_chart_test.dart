@@ -20,9 +20,11 @@ class _RecordingCanvas implements Canvas {
   void drawPath(Path path, Paint paint) => paths.add(path.getBounds());
 
   @override
-  void clipRect(Rect rect,
-          {ClipOp clipOp = ClipOp.intersect, bool doAntiAlias = true}) =>
-      clips.add(rect);
+  void clipRect(
+    Rect rect, {
+    ClipOp clipOp = ClipOp.intersect,
+    bool doAntiAlias = true,
+  }) => clips.add(rect);
 
   // Everything else the painter calls (lines, text, save/restore) is irrelevant
   // here and can be swallowed.
@@ -49,7 +51,10 @@ void main() {
 
   _RecordingCanvas paint({bool showHumidity = true}) {
     final canvas = _RecordingCanvas();
-    final widget = IndoorChart(readings: readings(), showHumidity: showHumidity);
+    final widget = IndoorChart(
+      readings: readings(),
+      showHumidity: showHumidity,
+    );
     // ignore: invalid_use_of_protected_member
     final painter = (widget.build(_FakeContext()) as CustomPaint).painter!;
     painter.paint(canvas, size);
@@ -60,8 +65,11 @@ void main() {
     final canvas = paint();
     expect(canvas.paths, isNotEmpty);
     for (final b in canvas.paths) {
-      expect(b.bottom, lessThanOrEqualTo(plot.bottom + 0.5),
-          reason: 'a path reached $b, past the plot bottom ${plot.bottom}');
+      expect(
+        b.bottom,
+        lessThanOrEqualTo(plot.bottom + 0.5),
+        reason: 'a path reached $b, past the plot bottom ${plot.bottom}',
+      );
       expect(b.top, greaterThanOrEqualTo(plot.top - 0.5));
     }
   });
@@ -71,8 +79,10 @@ void main() {
   });
 
   test('the humidity line can be turned off', () {
-    expect(paint(showHumidity: false).paths.length,
-        lessThan(paint().paths.length));
+    expect(
+      paint(showHumidity: false).paths.length,
+      lessThan(paint().paths.length),
+    );
   });
 }
 

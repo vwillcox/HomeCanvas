@@ -61,7 +61,9 @@ class _DashboardSpotifyWidgetState extends State<DashboardSpotifyWidget> {
       return Center(
         child: Text(
           t.isLcars
-              ? lcarsCaps(tr('widget.spotify.nothingPlaying', 'Nothing playing'))
+              ? lcarsCaps(
+                  tr('widget.spotify.nothingPlaying', 'Nothing playing'),
+                )
               : tr('widget.spotify.nothingPlaying', 'Nothing playing'),
           style: TextStyle(color: t.textSecondary, fontSize: 16),
         ),
@@ -349,16 +351,17 @@ class _Details extends StatelessWidget {
               value: now.position.inMilliseconds / now.duration.inMilliseconds,
             )
           else
-          ClipRRect(
-            borderRadius: BorderRadius.circular(3),
-            child: LinearProgressIndicator(
-              value: (now.position.inMilliseconds / now.duration.inMilliseconds)
-                  .clamp(0.0, 1.0),
-              minHeight: 5,
-              backgroundColor: t.textSecondary.withValues(alpha: 0.25),
-              valueColor: AlwaysStoppedAnimation(t.accent),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: LinearProgressIndicator(
+                value:
+                    (now.position.inMilliseconds / now.duration.inMilliseconds)
+                        .clamp(0.0, 1.0),
+                minHeight: 5,
+                backgroundColor: t.textSecondary.withValues(alpha: 0.25),
+                valueColor: AlwaysStoppedAnimation(t.accent),
+              ),
             ),
-          ),
         ],
         if (showControls && t.isLcars) ...[
           const SizedBox(height: 8),
@@ -424,12 +427,17 @@ extension on _Details {
     final keys = <(IconData, VoidCallback, Color, double, String?)>[
       if (showLike)
         (
-          source.isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+          source.isLiked
+              ? Icons.favorite_rounded
+              : Icons.favorite_border_rounded,
           source.toggleLike,
           source.isLiked ? lcarsLit : t.block(4),
           1.0,
           source.isLiked
-              ? tr('widget.spotify.removeFromLikedSongs', 'Remove from Liked Songs')
+              ? tr(
+                  'widget.spotify.removeFromLikedSongs',
+                  'Remove from Liked Songs',
+                )
               : tr('widget.spotify.addToLikedSongs', 'Add to Liked Songs'),
         ),
       (Icons.skip_previous, source.previous, t.block(2), 1.0, null),
@@ -530,7 +538,9 @@ class _Like extends StatelessWidget {
     return Semantics(
       button: true,
       toggled: liked,
-      label: liked ? tr('widget.spotify.removeFromLikedSongs', 'Remove from Liked Songs') : tr('widget.spotify.addToLikedSongs', 'Add to Liked Songs'),
+      label: liked
+          ? tr('widget.spotify.removeFromLikedSongs', 'Remove from Liked Songs')
+          : tr('widget.spotify.addToLikedSongs', 'Add to Liked Songs'),
       child: Material(
         color: Colors.transparent,
         shape: const CircleBorder(),

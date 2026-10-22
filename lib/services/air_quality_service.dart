@@ -110,17 +110,21 @@ class AirQuality {
       aqi: n('european_aqi')?.round(),
       uv: n('uv_index'),
       pollen: [
-        PollenReading(tr('widget.air_quality.grass', 'Grass'), n('grass_pollen'), (30, 50, 150)),
+        PollenReading(
+          tr('widget.air_quality.grass', 'Grass'),
+          n('grass_pollen'),
+          (30, 50, 150),
+        ),
         PollenReading(
           tr('widget.air_quality.trees', 'Trees'),
           worst(['alder_pollen', 'birch_pollen', 'olive_pollen']),
           (40, 80, 200),
         ),
-        PollenReading(tr('widget.air_quality.weeds', 'Weeds'), worst(['mugwort_pollen', 'ragweed_pollen']), (
-          10,
-          30,
-          100,
-        )),
+        PollenReading(
+          tr('widget.air_quality.weeds', 'Weeds'),
+          worst(['mugwort_pollen', 'ragweed_pollen']),
+          (10, 30, 100),
+        ),
       ],
       fetched: now,
     );
@@ -140,7 +144,7 @@ class AirQualityService extends ChangeNotifier {
   /// Holding [reading] and never fetching — for tests and previews.
   @visibleForTesting
   AirQualityService.withReading(this._config, AirQuality reading)
-      : _current = reading;
+    : _current = reading;
 
   final ConfigService _config;
   final RetrySchedule _retry = RetrySchedule(
@@ -173,7 +177,10 @@ class AirQualityService extends ChangeNotifier {
     // The weather service resolves the place; until it has, there is nowhere
     // to ask about. The retry schedule comes back shortly.
     if (w.latitude == null || w.longitude == null) {
-      _error = tr('widget.air_quality.waitingForTheWeatherLocation', 'Waiting for the weather location');
+      _error = tr(
+        'widget.air_quality.waitingForTheWeatherLocation',
+        'Waiting for the weather location',
+      );
       if (!_disposed) notifyListeners();
       return;
     }
@@ -195,7 +202,10 @@ class AirQualityService extends ChangeNotifier {
       );
       _error = null;
     } catch (e) {
-      _error = tr('widget.air_quality.couldNotReachTheAir', 'Could not reach the air-quality forecast');
+      _error = tr(
+        'widget.air_quality.couldNotReachTheAir',
+        'Could not reach the air-quality forecast',
+      );
       debugPrint('AirQuality: $e');
     }
     if (!_disposed) notifyListeners();

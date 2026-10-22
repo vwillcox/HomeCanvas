@@ -52,7 +52,11 @@ class ShoppingWidget extends StatelessWidget {
                 theme: t,
                 size: labelH * 0.6,
                 trailing: StatusChip(
-                  text: list.toGet == 0 ? tr('widget.shopping.allGot', 'All got') : tr('widget.shopping.toGet', '{toGet} to get', {'toGet': list.toGet}),
+                  text: list.toGet == 0
+                      ? tr('widget.shopping.allGot', 'All got')
+                      : tr('widget.shopping.toGet', '{toGet} to get', {
+                          'toGet': list.toGet,
+                        }),
                   colour: list.toGet == 0 ? status.good : t.accent,
                   size: labelH * 0.5,
                 ),

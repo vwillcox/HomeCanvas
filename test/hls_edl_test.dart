@@ -9,7 +9,8 @@ void main() {
   String esc(String u) => HlsEdl.escape(u);
 
   // A playlist as Nebula serves it: fragmented MP4, finished, not encrypted.
-  const nebula = '#EXTM3U\n'
+  const nebula =
+      '#EXTM3U\n'
       '#EXT-X-VERSION:6\n'
       '#EXT-X-PLAYLIST-TYPE:VOD\n'
       '#EXT-X-TARGETDURATION:7\n'
@@ -39,10 +40,17 @@ void main() {
     for (final (why, playlist) in [
       ('still live', without('#EXT-X-ENDLIST\n')),
       ('not fragmented MP4', without('#EXT-X-MAP:URI="init.mp4"\n')),
-      ('encrypted',
-          nebula.replaceFirst('#EXTINF:6.006',
-              '#EXT-X-KEY:METHOD=AES-128,URI="https://k"\n#EXTINF:6.006')),
-      ('byte ranges', nebula.replaceFirst('seg-1', '#EXT-X-BYTERANGE:10@0\nseg-1')),
+      (
+        'encrypted',
+        nebula.replaceFirst(
+          '#EXTINF:6.006',
+          '#EXT-X-KEY:METHOD=AES-128,URI="https://k"\n#EXTINF:6.006',
+        ),
+      ),
+      (
+        'byte ranges',
+        nebula.replaceFirst('seg-1', '#EXT-X-BYTERANGE:10@0\nseg-1'),
+      ),
       ('a master playlist', '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1\nv.m3u8\n'),
       ('not a playlist', '<html>'),
     ]) {
@@ -54,8 +62,16 @@ void main() {
     final s = VideoStream.fromInfo({
       'title': 't',
       'requested_formats': [
-        {'url': 'https://v/chunk.m3u8', 'protocol': 'm3u8_native', 'vcodec': 'avc1'},
-        {'url': 'https://a/chunk.m3u8', 'protocol': 'm3u8_native', 'vcodec': 'none'},
+        {
+          'url': 'https://v/chunk.m3u8',
+          'protocol': 'm3u8_native',
+          'vcodec': 'avc1',
+        },
+        {
+          'url': 'https://a/chunk.m3u8',
+          'protocol': 'm3u8_native',
+          'vcodec': 'none',
+        },
       ],
     })!;
     expect(s.uri, 'https://v/chunk.m3u8');

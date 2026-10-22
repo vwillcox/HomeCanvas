@@ -126,7 +126,10 @@ class BinCollection {
     // A day on by the calendar: midnight plus 24 hours is still the same
     // day on the Sunday the clocks go back.
     final from = DateTime(
-        now.year, now.month, now.day + (now.hour >= collectedBy ? 1 : 0));
+      now.year,
+      now.month,
+      now.day + (now.hour >= collectedBy ? 1 : 0),
+    );
     DateTime? soonest;
     for (final b in bins) {
       final d = b.nextOnOrAfter(from);

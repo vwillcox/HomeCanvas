@@ -78,7 +78,14 @@ class _HomeAssistantWidgetState extends State<HomeAssistantWidget>
       );
     }
     if (ha.all.isEmpty) {
-      return TileMessage(ha.error ?? tr('widget.home_assistant.askingHomeAssistant', 'Asking Home Assistant…'), theme: t);
+      return TileMessage(
+        ha.error ??
+            tr(
+              'widget.home_assistant.askingHomeAssistant',
+              'Asking Home Assistant…',
+            ),
+        theme: t,
+      );
     }
 
     return LayoutBuilder(
@@ -157,11 +164,11 @@ class _Card extends StatelessWidget {
         decoration: theme.isLcars
             ? lcarsCard(theme, lit: lit)
             : BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
-          color: lit
-              ? theme.accent.withValues(alpha: 0.14)
-              : theme.textSecondary.withValues(alpha: 0.07),
-        ),
+                borderRadius: BorderRadius.circular(14),
+                color: lit
+                    ? theme.accent.withValues(alpha: 0.14)
+                    : theme.textSecondary.withValues(alpha: 0.07),
+              ),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: FitCanvas(
           designHeight: 54,
@@ -189,7 +196,9 @@ class _Card extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      e == null ? tr('widget.home_assistant.notFound', 'Not found') : e.display,
+                      e == null
+                          ? tr('widget.home_assistant.notFound', 'Not found')
+                          : e.display,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(

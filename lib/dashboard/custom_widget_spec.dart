@@ -75,7 +75,9 @@ class CustomWidgetSpec {
     } on FormatException catch (e) {
       throw FormatException('Not valid JSON: ${e.message}');
     }
-    if (j is! Map) throw const FormatException('The file must be a JSON object.');
+    if (j is! Map) {
+      throw const FormatException('The file must be a JSON object.');
+    }
     final Map<dynamic, dynamic> m = j;
 
     String text(String key, {String? or, int max = 400}) {
@@ -110,7 +112,9 @@ class CustomWidgetSpec {
       throw const FormatException('"options" must be a list of up to 30.');
     }
     for (final o in listed) {
-      if (o is! Map) throw const FormatException('Each option must be an object.');
+      if (o is! Map) {
+        throw const FormatException('Each option must be an object.');
+      }
       final key = o['key'];
       if (key is! String || !_key.hasMatch(key)) {
         throw const FormatException(
@@ -262,7 +266,9 @@ class CustomShow {
   static String _text(Object? v) => v is String ? v : '';
 
   factory CustomShow.parse(Object? j, {required bool hasSource}) {
-    if (j is! Map) throw const FormatException('"show" is needed: how to draw it.');
+    if (j is! Map) {
+      throw const FormatException('"show" is needed: how to draw it.');
+    }
     switch (j['kind']) {
       case 'value':
         if (j['value'] is! String) {
@@ -277,7 +283,9 @@ class CustomShow {
       case 'cards':
         final cards = j['cards'];
         if (cards is! List || cards.isEmpty || cards.length > 12) {
-          throw const FormatException('A "cards" layout needs 1 to 12 "cards".');
+          throw const FormatException(
+            'A "cards" layout needs 1 to 12 "cards".',
+          );
         }
         return CustomShow._(
           layout: CustomLayout.cards,
@@ -333,8 +341,18 @@ Object? customLookup(Object? data, String path) {
 
 final _slot = RegExp(r'\{\{(.*?)\}\}');
 const _months = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
 ];
 
 /// Fills in a template. `{{current.wave_height}}` is looked up in [data];
@@ -373,9 +391,10 @@ String customFill(
       'plus' => n == null ? null : n + (num.tryParse(arg) ?? 0),
       'upper' => v?.toString().toUpperCase(),
       'lower' => v?.toString().toLowerCase(),
-      'time' => at == null
-          ? v
-          : '${'${at.hour}'.padLeft(2, '0')}:${'${at.minute}'.padLeft(2, '0')}',
+      'time' =>
+        at == null
+            ? v
+            : '${'${at.hour}'.padLeft(2, '0')}:${'${at.minute}'.padLeft(2, '0')}',
       'date' => at == null ? v : '${at.day} ${_months[at.month - 1]}',
       'or' => v == null || '$v'.isEmpty ? arg : v,
       _ => v,

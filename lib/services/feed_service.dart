@@ -135,16 +135,18 @@ class _Cached<T> {
 /// clearing the screen for.
 class FeedService extends ChangeNotifier {
   FeedService({Duration? refreshInterval})
-      : _refreshInterval = refreshInterval ?? const Duration(minutes: 15);
+    : _refreshInterval = refreshInterval ?? const Duration(minutes: 15);
 
   final Duration _refreshInterval;
 
-  final Dio _dio = Dio(BaseOptions(
-    connectTimeout: const Duration(seconds: 8),
-    receiveTimeout: const Duration(seconds: 12),
-    responseType: ResponseType.plain,
-    headers: const {'User-Agent': 'HomeCanvas/1.0'},
-  ));
+  final Dio _dio = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 8),
+      receiveTimeout: const Duration(seconds: 12),
+      responseType: ResponseType.plain,
+      headers: const {'User-Agent': 'HomeCanvas/1.0'},
+    ),
+  );
 
   final Map<String, _Cached<FeedItem>> _feeds = {};
 
@@ -220,8 +222,7 @@ class FeedService extends ChangeNotifier {
     return cached?.items ?? const [];
   }
 
-  String? errorFor(String url) =>
-      _feeds[url]?.error ?? _calendars[url]?.error;
+  String? errorFor(String url) => _feeds[url]?.error ?? _calendars[url]?.error;
 
   bool _isStale(DateTime at, [Duration? maxAge]) =>
       DateTime.now().difference(at) > (maxAge ?? _refreshInterval);
@@ -248,7 +249,8 @@ class FeedService extends ChangeNotifier {
       final body = await _get('$origin/');
       // Most sites have this one whether or not the page names it; if not,
       // the headline falls back to a letter.
-      _icons[origin] = (body == null ? null : pickIcon(origin, body)) ??
+      _icons[origin] =
+          (body == null ? null : pickIcon(origin, body)) ??
           '$origin/apple-touch-icon.png';
       notifyListeners();
     } finally {
@@ -287,10 +289,13 @@ class FeedService extends ChangeNotifier {
           type.contains('icon')) {
         continue;
       }
-      final size = int.tryParse(RegExp(r'(\d+)x\d+')
-                  .firstMatch(l.attributes['sizes'] ?? '')
-                  ?.group(1) ??
-              '') ??
+      final size =
+          int.tryParse(
+            RegExp(
+                  r'(\d+)x\d+',
+                ).firstMatch(l.attributes['sizes'] ?? '')?.group(1) ??
+                '',
+          ) ??
           16;
       final score = (rel.contains('apple-touch') ? 10000 : 0) + size;
       if (score > bestScore) {
@@ -345,12 +350,18 @@ class FeedService extends ChangeNotifier {
       final body = await _get(url);
       if (body == null) {
         _feeds[url] = _Cached(
-            _feeds[url]?.items ?? const [], DateTime.now(), tr('widget.news.feedUnreachable', 'Feed unreachable'));
+          _feeds[url]?.items ?? const [],
+          DateTime.now(),
+          tr('widget.news.feedUnreachable', 'Feed unreachable'),
+        );
       } else {
         // Parsed on another isolate: a long feed took long enough on this
         // one to drop frames from whatever was playing.
-        _feeds[url] =
-            _Cached(await compute(parseFeed, body), DateTime.now(), null);
+        _feeds[url] = _Cached(
+          await compute(parseFeed, body),
+          DateTime.now(),
+          null,
+        );
         _refreshed[url] = DateTime.now();
       }
       notifyListeners();
@@ -367,11 +378,17 @@ class FeedService extends ChangeNotifier {
       final fetchUrl = url.replaceFirst(RegExp(r'^webcal://'), 'https://');
       final body = await _get(fetchUrl);
       if (body == null) {
-        _calendars[url] = _Cached(_calendars[url]?.items ?? const [],
-            DateTime.now(), tr('widget.news.calendarUnreachable', 'Calendar unreachable'));
+        _calendars[url] = _Cached(
+          _calendars[url]?.items ?? const [],
+          DateTime.now(),
+          tr('widget.news.calendarUnreachable', 'Calendar unreachable'),
+        );
       } else {
-        _calendars[url] =
-            _Cached(await compute(parseIcs, body), DateTime.now(), null);
+        _calendars[url] = _Cached(
+          await compute(parseIcs, body),
+          DateTime.now(),
+          null,
+        );
       }
       notifyListeners();
     } finally {
@@ -400,7 +417,8 @@ class FeedService extends ChangeNotifier {
     final scored = <({FeedItem item, double score})>[];
 
     for (final feed in feeds) {
-      final sorted = [...feed]..sort((a, b) {
+      final sorted = [...feed]
+        ..sort((a, b) {
           final x = a.published, y = b.published;
           if (x == null && y == null) return 0;
           if (x == null) return 1;
@@ -408,7 +426,8 @@ class FeedService extends ChangeNotifier {
           return y.compareTo(x);
         });
       for (var i = 0; i < sorted.length; i++) {
-        final published = sorted[i].published ?? at.subtract(const Duration(days: 1));
+        final published =
+            sorted[i].published ?? at.subtract(const Duration(days: 1));
         final hours = at.difference(published).inMinutes / 60.0;
         // Halves roughly every six hours, so today's news leads and
         // yesterday's is still present rather than gone.
@@ -455,36 +474,38 @@ class FeedService extends ChangeNotifier {
     for (final item in doc.findAllElements('item')) {
       final title = text(item, 'title');
       if (title == null || title.isEmpty) continue;
-      items.add(FeedItem(
-        title: _unescape(title),
-        summary: _stripHtml(text(item, 'description')),
-        published: _parseDate(text(item, 'pubDate')),
-        link: text(item, 'link'),
-        categories: [
-          for (final c in item.findElements('category'))
-            if (c.innerText.trim().isNotEmpty) _unescape(c.innerText.trim()),
-        ],
-      ));
+      items.add(
+        FeedItem(
+          title: _unescape(title),
+          summary: _stripHtml(text(item, 'description')),
+          published: _parseDate(text(item, 'pubDate')),
+          link: text(item, 'link'),
+          categories: [
+            for (final c in item.findElements('category'))
+              if (c.innerText.trim().isNotEmpty) _unescape(c.innerText.trim()),
+          ],
+        ),
+      );
     }
 
     for (final entry in doc.findAllElements('entry')) {
       final title = text(entry, 'title');
       if (title == null || title.isEmpty) continue;
-      items.add(FeedItem(
-        title: _unescape(title),
-        summary: _stripHtml(text(entry, 'summary') ?? text(entry, 'content')),
-        published:
-            _parseDate(text(entry, 'updated') ?? text(entry, 'published')),
-        link: entry
-            .findElements('link')
-            .firstOrNull
-            ?.getAttribute('href'),
-        categories: [
-          for (final c in entry.findElements('category'))
-            if ((c.getAttribute('term') ?? '').trim().isNotEmpty)
-              c.getAttribute('term')!.trim(),
-        ],
-      ));
+      items.add(
+        FeedItem(
+          title: _unescape(title),
+          summary: _stripHtml(text(entry, 'summary') ?? text(entry, 'content')),
+          published: _parseDate(
+            text(entry, 'updated') ?? text(entry, 'published'),
+          ),
+          link: entry.findElements('link').firstOrNull?.getAttribute('href'),
+          categories: [
+            for (final c in entry.findElements('category'))
+              if ((c.getAttribute('term') ?? '').trim().isNotEmpty)
+                c.getAttribute('term')!.trim(),
+          ],
+        ),
+      );
     }
 
     items.sort((a, b) {
@@ -527,13 +548,15 @@ class FeedService extends ChangeNotifier {
       if (line == 'END:VEVENT') {
         inEvent = false;
         if (summary != null && start != null) {
-          events.add(CalendarEvent(
-            title: summary,
-            start: start,
-            end: end,
-            allDay: allDay,
-            location: location,
-          ));
+          events.add(
+            CalendarEvent(
+              title: summary,
+              start: start,
+              end: end,
+              allDay: allDay,
+              location: location,
+            ),
+          );
         }
         continue;
       }
@@ -550,7 +573,8 @@ class FeedService extends ChangeNotifier {
         case 'LOCATION':
           location = _unescapeIcs(value);
         case 'DTSTART':
-          allDay = name.toUpperCase().contains('VALUE=DATE') &&
+          allDay =
+              name.toUpperCase().contains('VALUE=DATE') &&
               !name.toUpperCase().contains('DATE-TIME');
           start = _parseIcsDate(value);
         case 'DTEND':
@@ -565,8 +589,9 @@ class FeedService extends ChangeNotifier {
   static DateTime? _parseIcsDate(String v) {
     final s = v.trim();
     // 20260812  |  20260812T090000  |  20260812T090000Z
-    final m = RegExp(r'^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})(Z)?)?$')
-        .firstMatch(s);
+    final m = RegExp(
+      r'^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})(Z)?)?$',
+    ).firstMatch(s);
     if (m == null) return null;
     final year = int.parse(m.group(1)!);
     final month = int.parse(m.group(2)!);
@@ -612,12 +637,22 @@ class FeedService extends ChangeNotifier {
     if (iso != null) return iso.toLocal();
     // RFC 822, as RSS uses: "Mon, 10 Aug 2026 07:11:00 +0100"
     final m = RegExp(
-            r'(\d{1,2})\s+(\w{3})\s+(\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?')
-        .firstMatch(v);
+      r'(\d{1,2})\s+(\w{3})\s+(\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?',
+    ).firstMatch(v);
     if (m == null) return null;
     const months = {
-      'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
-      'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12,
+      'jan': 1,
+      'feb': 2,
+      'mar': 3,
+      'apr': 4,
+      'may': 5,
+      'jun': 6,
+      'jul': 7,
+      'aug': 8,
+      'sep': 9,
+      'oct': 10,
+      'nov': 11,
+      'dec': 12,
     };
     final month = months[m.group(2)!.toLowerCase()];
     if (month == null) return null;

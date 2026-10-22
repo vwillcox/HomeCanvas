@@ -56,12 +56,24 @@ const List<HotkeySection> omarchyHotkeys = [
     Hotkey('Super + Shift + Tab', 'Jump to previous workspace'),
     Hotkey('Super + Ctrl + Tab', 'Jump to former workspace'),
     Hotkey('Super + Shift + 1/2/3/4', 'Move window to workspace'),
-    Hotkey('Super + Shift + Alt + 1/2/3/4', 'Move window to workspace without following'),
+    Hotkey(
+      'Super + Shift + Alt + 1/2/3/4',
+      'Move window to workspace without following',
+    ),
     Hotkey('Super + S or Super + Grave', 'Toggle scratchpad'),
-    Hotkey('Super + Alt + S or Super + Shift + Grave', 'Move window to scratchpad'),
-    Hotkey('Super + Shift + Alt + Arrows', 'Move workspaces to directional monitor'),
+    Hotkey(
+      'Super + Alt + S or Super + Shift + Grave',
+      'Move window to scratchpad',
+    ),
+    Hotkey(
+      'Super + Shift + Alt + Arrows',
+      'Move workspaces to directional monitor',
+    ),
     Hotkey('Super + Arrow', 'Move focus to window in direction of arrow'),
-    Hotkey('Super + Shift + Arrow', 'Swap window with another in direction of arrow'),
+    Hotkey(
+      'Super + Shift + Arrow',
+      'Swap window with another in direction of arrow',
+    ),
     Hotkey('Super + Minus', 'Expand window left'),
     Hotkey('Super + Equal', 'Shrink window left'),
     Hotkey('Super + Shift + Minus', 'Shrink window up'),
@@ -76,18 +88,36 @@ const List<HotkeySection> omarchyHotkeys = [
     Hotkey('Super + G', 'Toggle window grouping'),
     Hotkey('Super + Alt + G', 'Move window out of grouping'),
     Hotkey('Super + Alt + Tab', 'Cycle between windows in grouping'),
-    Hotkey('Super + Alt + Shift + Tab', 'Cycle backward between windows in grouping'),
+    Hotkey(
+      'Super + Alt + Shift + Tab',
+      'Cycle backward between windows in grouping',
+    ),
     Hotkey('Super + Alt + 1/2/3/4/5', 'Jump to specific window in grouping'),
-    Hotkey('Super + Alt + Arrow', 'Move window into grouping in direction of arrow'),
-    Hotkey('Super + Ctrl + Left/Right', 'Move between windows inside a tiling group'),
+    Hotkey(
+      'Super + Alt + Arrow',
+      'Move window into grouping in direction of arrow',
+    ),
+    Hotkey(
+      'Super + Ctrl + Left/Right',
+      'Move between windows inside a tiling group',
+    ),
     Hotkey('Super + Ctrl + Z', 'Zoom in on screen (repeat for more zoom)'),
     Hotkey('Super + Ctrl + Alt + Z', 'Zoom fully out from screen'),
     Hotkey('Super + /', 'Step forward through monitor scaling options'),
     Hotkey('Super + Alt + /', 'Step backward through monitor scaling options'),
-    Hotkey('Alt + Tab', 'Cycle forward through windows on the active workspace'),
-    Hotkey('Alt + Shift + Tab', 'Cycle backward through windows on the active workspace'),
+    Hotkey(
+      'Alt + Tab',
+      'Cycle forward through windows on the active workspace',
+    ),
+    Hotkey(
+      'Alt + Shift + Tab',
+      'Cycle backward through windows on the active workspace',
+    ),
     Hotkey('Ctrl + Alt + Tab', 'Cycle focus forward through monitors'),
-    Hotkey('Ctrl + Alt + Shift + Tab', 'Cycle focus backwards through monitors'),
+    Hotkey(
+      'Ctrl + Alt + Shift + Tab',
+      'Cycle focus backwards through monitors',
+    ),
   ]),
   HotkeySection('System controls', [
     Hotkey('Super + Ctrl + A', 'Audio panel'),
@@ -99,7 +129,10 @@ const List<HotkeySection> omarchyHotkeys = [
     Hotkey('Super + Ctrl + 1-9', 'Toggle bar panel by position'),
     Hotkey('Super + Ctrl + S', 'Share menu (via LocalSend)'),
     Hotkey('Super + Ctrl + T', 'Activity (btop)'),
-    Hotkey('Super + Ctrl + C', 'Capture controls (screenshot/-recording/picker)'),
+    Hotkey(
+      'Super + Ctrl + C',
+      'Capture controls (screenshot/-recording/picker)',
+    ),
     Hotkey('Super + Ctrl + O', 'Toggle menu'),
     Hotkey('Super + Ctrl + H', 'Hardware menu'),
     Hotkey('Super + Ctrl + Q', 'Calculator'),
@@ -153,7 +186,10 @@ const List<HotkeySection> omarchyHotkeys = [
     Hotkey('Super + Ctrl + V', 'Clipboard manager'),
   ]),
   HotkeySection('Capture', [
-    Hotkey('Super + Ctrl + C', 'Capture menu (for keyboards w/o PrintScr button)'),
+    Hotkey(
+      'Super + Ctrl + C',
+      'Capture menu (for keyboards w/o PrintScr button)',
+    ),
     Hotkey('Print Screen', 'Screenshot'),
     Hotkey('Alt + Print Screen', 'Screenrecord'),
     Hotkey('Super + Print Screen', 'Color picker'),
@@ -161,8 +197,14 @@ const List<HotkeySection> omarchyHotkeys = [
     Hotkey('Super + Alt + [', 'Make webcam overlay smaller while recording'),
     Hotkey('Super + Alt + ]', 'Make webcam overlay larger while recording'),
     Hotkey('Alt + Shift + L', 'Copy current URL from webapp or Chromium'),
-    Hotkey('Alt + Shift + D', 'Download the video on the current page to ~/Videos'),
-    Hotkey('Super + Ctrl + X', 'Start/stop dictation (requires Install > AI > Dictation)'),
+    Hotkey(
+      'Alt + Shift + D',
+      'Download the video on the current page to ~/Videos',
+    ),
+    Hotkey(
+      'Super + Ctrl + X',
+      'Start/stop dictation (requires Install > AI > Dictation)',
+    ),
     Hotkey('F9', 'Push-to-talk dictation (requires Install > AI > Dictation)'),
   ]),
   HotkeySection('Notifications', [

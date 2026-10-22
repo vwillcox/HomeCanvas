@@ -27,8 +27,10 @@ void main() {
     });
 
     test('a theme with a font sets it for the whole app', () {
-      expect(buildTheme(byId('terminal')).textTheme.bodyMedium!.fontFamily,
-          'ShareTechMono');
+      expect(
+        buildTheme(byId('terminal')).textTheme.bodyMedium!.fontFamily,
+        'ShareTechMono',
+      );
     });
   });
 
@@ -42,8 +44,10 @@ void main() {
       const pale = Color(0xFFFFD98A);
       final deep = byId('frost').legible(pale);
       expect(HSLColor.fromColor(deep).lightness, lessThanOrEqualTo(0.401));
-      expect(HSLColor.fromColor(deep).hue,
-          closeTo(HSLColor.fromColor(pale).hue, 1));
+      expect(
+        HSLColor.fromColor(deep).hue,
+        closeTo(HSLColor.fromColor(pale).hue, 1),
+      );
     });
 
     test('text on the accent is whichever of black and white reads', () {
@@ -52,13 +56,16 @@ void main() {
     });
 
     test('the wash is white on a dark theme and dark on a light one', () {
-      expect(byId('glass').wash(0.1).computeLuminance(),
-          greaterThan(byId('swiss').wash(0.1).computeLuminance()));
+      expect(
+        byId('glass').wash(0.1).computeLuminance(),
+        greaterThan(byId('swiss').wash(0.1).computeLuminance()),
+      );
     });
   });
 
-  testWidgets('the shared parts draw in whatever theme is above them',
-      (tester) async {
+  testWidgets('the shared parts draw in whatever theme is above them', (
+    tester,
+  ) async {
     final swiss = byId('swiss');
     await tester.pumpWidget(
       KioskLook(
@@ -73,10 +80,11 @@ void main() {
     expect(text.style!.color, swiss.textPrimary);
   });
 
-  testWidgets('without a theme above, they fall back to Glass',
-      (tester) async {
+  testWidgets('without a theme above, they fall back to Glass', (tester) async {
     await tester.pumpWidget(
-      const MaterialApp(home: Scaffold(body: HeaderTitle(title: 'Home'))),
+      const MaterialApp(
+        home: Scaffold(body: HeaderTitle(title: 'Home')),
+      ),
     );
     final text = tester.widget<Text>(find.text('Home'));
     expect(text.style!.color, byId('glass').textPrimary);

@@ -3,7 +3,6 @@ library;
 
 import '../l10n/l10n.dart';
 
-
 class Album {
   final String id;
   final String name;
@@ -69,7 +68,8 @@ class Asset {
       fileName: j['originalFileName'] as String?,
       duration: _parseDuration(j['duration']?.toString()),
       taken: DateTime.tryParse(
-          (j['localDateTime'] ?? j['fileCreatedAt'] ?? '').toString()),
+        (j['localDateTime'] ?? j['fileCreatedAt'] ?? '').toString(),
+      ),
     );
   }
 }
@@ -83,11 +83,7 @@ Duration? _parseDuration(String? s) {
     final h = int.parse(parts[0]);
     final m = int.parse(parts[1]);
     final sec = double.parse(parts[2]);
-    return Duration(
-      hours: h,
-      minutes: m,
-      milliseconds: (sec * 1000).round(),
-    );
+    return Duration(hours: h, minutes: m, milliseconds: (sec * 1000).round());
   } catch (_) {
     return null;
   }

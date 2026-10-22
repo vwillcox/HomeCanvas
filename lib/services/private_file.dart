@@ -13,7 +13,9 @@ import 'dart:io';
 Future<void> writePrivateFile(String path, String contents) async {
   final file = File(path);
   await file.parent.create(recursive: true);
-  final part = File('$path.${pid}_${DateTime.now().microsecondsSinceEpoch}.part');
+  final part = File(
+    '$path.${pid}_${DateTime.now().microsecondsSinceEpoch}.part',
+  );
   try {
     await part.writeAsString('');
     await Process.run('chmod', ['600', part.path]);

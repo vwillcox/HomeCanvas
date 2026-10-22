@@ -4,7 +4,14 @@ import 'package:home_canvas/dashboard/dashboard_model.dart';
 
 DashboardWidgetConfig w(String id, {int page = 0, int x = 0, int y = 0}) =>
     DashboardWidgetConfig(
-        id: id, type: 'clock', x: x, y: y, width: 2, height: 2, page: page);
+      id: id,
+      type: 'clock',
+      x: x,
+      y: y,
+      width: 2,
+      height: 2,
+      page: page,
+    );
 
 void main() {
   group('pages', () {
@@ -69,7 +76,10 @@ void main() {
       // A config saying 1 would flip the panel faster than it can be read.
       expect(DashboardSettings.fromJson({'pageSeconds': 1}).pageSeconds, 3);
       expect(DashboardSettings.fromJson({'pageSeconds': -5}).pageSeconds, 0);
-      expect(DashboardSettings.fromJson({'pageSeconds': 99999}).pageSeconds, 3600);
+      expect(
+        DashboardSettings.fromJson({'pageSeconds': 99999}).pageSeconds,
+        3600,
+      );
     });
 
     test('a config written before pages existed loads as page one', () {

@@ -240,12 +240,21 @@ class GoveeService extends ChangeNotifier {
     } on DioException catch (e) {
       final code = e.response?.statusCode;
       _error = code == 401 || code == 403
-          ? tr('widget.lights.goveeDidNotAcceptThe', 'Govee did not accept the API key')
+          ? tr(
+              'widget.lights.goveeDidNotAcceptThe',
+              'Govee did not accept the API key',
+            )
           : code == 429
-          ? tr('widget.lights.goveeSDailyAllowanceIs', 'Govee’s daily allowance is used up')
+          ? tr(
+              'widget.lights.goveeSDailyAllowanceIs',
+              'Govee’s daily allowance is used up',
+            )
           : tr('widget.lights.couldNotReachGovee', 'Could not reach Govee');
     } catch (e) {
-      _error = tr('widget.lights.unexpectedAnswerFromGovee', 'Unexpected answer from Govee');
+      _error = tr(
+        'widget.lights.unexpectedAnswerFromGovee',
+        'Unexpected answer from Govee',
+      );
       debugPrint('Govee: $e');
     }
   }
@@ -399,7 +408,10 @@ class GoveeService extends ChangeNotifier {
         ..on = wasOn
         ..brightness = wasLevel
         ..colour = wasColour;
-      _error = tr('widget.lights.goveeDidNotTakeThe', 'Govee did not take the change');
+      _error = tr(
+        'widget.lights.goveeDidNotTakeThe',
+        'Govee did not take the change',
+      );
       notifyListeners();
     }
   }

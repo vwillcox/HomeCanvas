@@ -49,8 +49,10 @@ class FuelStation {
     const r = 3958.8;
     double rad(double d) => d * math.pi / 180;
     final dLat = rad(latitude - lat), dLon = rad(longitude - lon);
-    final a = math.pow(math.sin(dLat / 2), 2) +
-        math.cos(rad(lat)) * math.cos(rad(latitude)) *
+    final a =
+        math.pow(math.sin(dLat / 2), 2) +
+        math.cos(rad(lat)) *
+            math.cos(rad(latitude)) *
             math.pow(math.sin(dLon / 2), 2);
     return 2 * r * math.asin(math.sqrt(a));
   }

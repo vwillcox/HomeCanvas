@@ -89,46 +89,56 @@ void main() {
 
   group('the shared header', () {
     Widget host(Widget child) => MaterialApp(
-          home: Scaffold(backgroundColor: Colors.black, body: child),
-        );
+      home: Scaffold(backgroundColor: Colors.black, body: child),
+    );
 
-    testWidgets('shows a back button only when there is somewhere to go',
-        (tester) async {
+    testWidgets('shows a back button only when there is somewhere to go', (
+      tester,
+    ) async {
       await tester.pumpWidget(host(const ScreenHeader(title: 'Settings')));
       expect(find.byType(GlassIconButton), findsNothing);
 
       var backed = 0;
-      await tester.pumpWidget(host(ScreenHeader(
-        title: 'Settings',
-        onBack: () => backed++,
-      )));
+      await tester.pumpWidget(
+        host(ScreenHeader(title: 'Settings', onBack: () => backed++)),
+      );
       await tester.tap(find.byType(GlassIconButton));
       expect(backed, 1);
     });
 
     testWidgets('gathers its actions into one pill', (tester) async {
-      await tester.pumpWidget(host(ScreenHeader(
-        title: 'Home',
-        actions: [
-          PillIconButton(icon: Icons.refresh, onPressed: () {}),
-          PillIconButton(icon: Icons.settings, onPressed: () {}),
-        ],
-      )));
+      await tester.pumpWidget(
+        host(
+          ScreenHeader(
+            title: 'Home',
+            actions: [
+              PillIconButton(icon: Icons.refresh, onPressed: () {}),
+              PillIconButton(icon: Icons.settings, onPressed: () {}),
+            ],
+          ),
+        ),
+      );
       expect(find.byType(Glass), findsOneWidget);
       expect(
         find.descendant(
-            of: find.byType(Glass), matching: find.byType(PillIconButton)),
+          of: find.byType(Glass),
+          matching: find.byType(PillIconButton),
+        ),
         findsNWidgets(2),
       );
     });
 
     testWidgets('takes a theme\'s colours for its title', (tester) async {
       const ink = Color(0xFF1E1B16);
-      await tester.pumpWidget(host(const HeaderTitle(
-        title: 'Paper',
-        subtitle: 'a light theme',
-        colour: ink,
-      )));
+      await tester.pumpWidget(
+        host(
+          const HeaderTitle(
+            title: 'Paper',
+            subtitle: 'a light theme',
+            colour: ink,
+          ),
+        ),
+      );
       final t = tester.widget<Text>(find.text('Paper'));
       expect(t.style!.color, ink);
     });

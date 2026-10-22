@@ -17,11 +17,11 @@ void main() {
   late int saves;
 
   BrightnessService make() => BrightnessService(
-        config,
-        backlightDir: dir.path,
-        base: 'http://127.0.0.1:1',
-        save: () async => saves++,
-      );
+    config,
+    backlightDir: dir.path,
+    base: 'http://127.0.0.1:1',
+    save: () async => saves++,
+  );
 
   Future<String> panel() async =>
       (await File('${dir.path}/brightness').readAsString()).trim();

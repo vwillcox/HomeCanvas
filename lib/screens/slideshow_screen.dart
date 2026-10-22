@@ -64,25 +64,26 @@ class _SlideshowScreenState extends State<SlideshowScreen>
       // A running slideshow is the whole point of the display, so it never
       // counts as idle for the auto screen-off.
       if (!mounted) return;
-      _screenIdle = context.read<ScreenIdleService>()
-        ..slideshowRunning = true;
+      _screenIdle = context.read<ScreenIdleService>()..slideshowRunning = true;
       _startWhenReady();
     });
   }
 
   ImageProvider _providerFor(int i) => CachedNetworkImageProvider(
-        widget.source.previewUrl(_order[i].id),
-        headers: widget.source.authHeaders,
-        cacheManager: HomeCanvasCache.manager,
-      );
+    widget.source.previewUrl(_order[i].id),
+    headers: widget.source.authHeaders,
+    cacheManager: HomeCanvasCache.manager,
+  );
 
   /// Fully decode the image at [i]. Bounded so a broken/slow image can't stall
   /// the slideshow.
   Future<void> _decode(int i) async {
     if (!mounted || _order.isEmpty) return;
     try {
-      await precacheImage(_providerFor(i), context)
-          .timeout(const Duration(seconds: 12));
+      await precacheImage(
+        _providerFor(i),
+        context,
+      ).timeout(const Duration(seconds: 12));
     } catch (_) {
       // Fall through and display anyway; the Image widget shows its own error.
     }
@@ -164,8 +165,10 @@ class _SlideshowScreenState extends State<SlideshowScreen>
       return Scaffold(
         backgroundColor: Colors.black,
         body: Center(
-          child: Text(tr('slideshow.noPhotosToShow', 'No photos to show'),
-              style: TextStyle(color: Colors.white70, fontSize: 20)),
+          child: Text(
+            tr('slideshow.noPhotosToShow', 'No photos to show'),
+            style: TextStyle(color: Colors.white70, fontSize: 20),
+          ),
         ),
       );
     }
@@ -275,7 +278,11 @@ class _SlideshowScreenState extends State<SlideshowScreen>
                 child: Column(
                   children: [
                     Container(
-                      padding: const EdgeInsets.only(top: 6, left: 4, right: 16),
+                      padding: const EdgeInsets.only(
+                        top: 6,
+                        left: 4,
+                        right: 16,
+                      ),
                       decoration: const BoxDecoration(
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
@@ -288,13 +295,21 @@ class _SlideshowScreenState extends State<SlideshowScreen>
                           const BigBackButton(),
                           const SizedBox(width: 12),
                           if (widget.title != null)
-                            Text(widget.title!,
-                                style: const TextStyle(
-                                    color: Colors.white70, fontSize: 18)),
-                          const Spacer(),
-                          Text('${_index + 1} / ${_order.length}',
+                            Text(
+                              widget.title!,
                               style: const TextStyle(
-                                  color: Colors.white, fontSize: 18)),
+                                color: Colors.white70,
+                                fontSize: 18,
+                              ),
+                            ),
+                          const Spacer(),
+                          Text(
+                            '${_index + 1} / ${_order.length}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -313,8 +328,10 @@ class _SlideshowScreenState extends State<SlideshowScreen>
                         children: [
                           IconButton(
                             iconSize: 44,
-                            icon: const Icon(Icons.skip_previous,
-                                color: Colors.white),
+                            icon: const Icon(
+                              Icons.skip_previous,
+                              color: Colors.white,
+                            ),
                             onPressed: () {
                               _stop();
                               _prev();
@@ -325,9 +342,7 @@ class _SlideshowScreenState extends State<SlideshowScreen>
                           IconButton(
                             iconSize: 60,
                             icon: Icon(
-                              _playing
-                                  ? Icons.pause_circle
-                                  : Icons.play_circle,
+                              _playing ? Icons.pause_circle : Icons.play_circle,
                               color: Colors.white,
                             ),
                             onPressed: () {
@@ -343,8 +358,10 @@ class _SlideshowScreenState extends State<SlideshowScreen>
                           const SizedBox(width: 24),
                           IconButton(
                             iconSize: 44,
-                            icon: const Icon(Icons.skip_next,
-                                color: Colors.white),
+                            icon: const Icon(
+                              Icons.skip_next,
+                              color: Colors.white,
+                            ),
                             onPressed: () {
                               _stop();
                               _next();
@@ -456,7 +473,8 @@ class _SlideImageState extends State<_SlideImage>
                 width: double.infinity,
                 height: double.infinity,
                 gaplessPlayback: true,
-                errorBuilder: (_, _, _) => const ColoredBox(color: Colors.black),
+                errorBuilder: (_, _, _) =>
+                    const ColoredBox(color: Colors.black),
               ),
             ),
           ),

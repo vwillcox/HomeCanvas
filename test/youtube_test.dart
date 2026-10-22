@@ -42,26 +42,36 @@ void main() {
     });
 
     test('starts where the link says', () {
-      expect(YouTubeLink.parse('https://youtu.be/$id?t=90')!.start,
-          const Duration(seconds: 90));
-      expect(YouTubeLink.parse('https://www.youtube.com/watch?v=$id&t=1m30s')!
-          .start, const Duration(seconds: 90));
-      expect(YouTubeLink.parse('https://www.youtube.com/embed/$id?start=42')!
-          .start, const Duration(seconds: 42));
+      expect(
+        YouTubeLink.parse('https://youtu.be/$id?t=90')!.start,
+        const Duration(seconds: 90),
+      );
+      expect(
+        YouTubeLink.parse('https://www.youtube.com/watch?v=$id&t=1m30s')!.start,
+        const Duration(seconds: 90),
+      );
+      expect(
+        YouTubeLink.parse('https://www.youtube.com/embed/$id?start=42')!.start,
+        const Duration(seconds: 42),
+      );
       expect(YouTubeLink.parse('https://youtu.be/$id')!.start, Duration.zero);
     });
 
     test('reads YouTube time stamps', () {
       expect(YouTubeLink.parseTime('75s'), const Duration(seconds: 75));
-      expect(YouTubeLink.parseTime('1h2m3s'),
-          const Duration(hours: 1, minutes: 2, seconds: 3));
+      expect(
+        YouTubeLink.parseTime('1h2m3s'),
+        const Duration(hours: 1, minutes: 2, seconds: 3),
+      );
       expect(YouTubeLink.parseTime('rubbish'), Duration.zero);
       expect(YouTubeLink.parseTime(null), Duration.zero);
     });
 
     test('drops the tracking from what it hands on', () {
-      expect(YouTubeLink.parse('https://youtu.be/$id?si=tracking')!.watchUrl,
-          'https://www.youtube.com/watch?v=$id');
+      expect(
+        YouTubeLink.parse('https://youtu.be/$id?si=tracking')!.watchUrl,
+        'https://www.youtube.com/watch?v=$id',
+      );
     });
   });
 
@@ -105,7 +115,12 @@ void main() {
 
     test('gives nothing when there is nothing to play', () {
       expect(VideoStream.fromInfo({'title': 'x'}), isNull);
-      expect(VideoStream.fromInfo({'requested_formats': [{}]}), isNull);
+      expect(
+        VideoStream.fromInfo({
+          'requested_formats': [{}],
+        }),
+        isNull,
+      );
     });
 
     test('an empty list of formats falls back to the url', () {
@@ -122,8 +137,12 @@ void main() {
   test('a feed keeps only its videos', () {
     final items = YouTubeSite.feedFromInfo({
       'entries': [
-        {'id': 'aqz-KE-bpKQ', 'title': 'Bunny', 'channel': 'Blender',
-            'duration': 634},
+        {
+          'id': 'aqz-KE-bpKQ',
+          'title': 'Bunny',
+          'channel': 'Blender',
+          'duration': 634,
+        },
         {'id': 'UCsomechannelid', 'title': 'A channel'},
         {'title': 'No id at all'},
       ],
@@ -144,8 +163,10 @@ void main() {
     test('is asked for H.264 at the most frames a second, no taller than the '
         'setting', () {
       final args = YtDlp.streamArgs(720);
-      expect(args,
-          containsAllInOrder(['-S', 'vcodec:h264,res:720,fps,acodec:m4a']));
+      expect(
+        args,
+        containsAllInOrder(['-S', 'vcodec:h264,res:720,fps,acodec:m4a']),
+      );
       expect(args, contains('--no-playlist'));
     });
 
@@ -153,14 +174,21 @@ void main() {
       expect(YtDlp.baseArgs(), isNot(contains('--cookies-from-browser')));
       expect(
         YtDlp.baseArgs(
-            deno: '/d', account: ['--cookies-from-browser', 'firefox:/p']),
-        containsAllInOrder(
-            ['--js-runtimes', 'deno:/d', '--cookies-from-browser', 'firefox:/p']),
+          deno: '/d',
+          account: ['--cookies-from-browser', 'firefox:/p'],
+        ),
+        containsAllInOrder([
+          '--js-runtimes',
+          'deno:/d',
+          '--cookies-from-browser',
+          'firefox:/p',
+        ]),
       );
     });
 
     test('keeps only YouTube and Google cookies from an upload', () {
-      const upload = '# Netscape HTTP Cookie File\n'
+      const upload =
+          '# Netscape HTTP Cookie File\n'
           '.youtube.com\tTRUE\t/\tTRUE\t1893456000\tPREF\tf6=40000000\n'
           '#HttpOnly_.youtube.com\tTRUE\t/\tTRUE\t1893456000\tLOGIN_INFO\tabc\n'
           '.google.com\tTRUE\t/\tTRUE\t1893456000\tSAPISID\txyz\n'
@@ -181,34 +209,49 @@ void main() {
 
     test('refuses an upload with no YouTube cookies in it', () {
       expect(CookieFile.filter('', YouTubeSite.domains), isNull);
-      expect(CookieFile.filter('not a cookie file at all', YouTubeSite.domains), isNull);
       expect(
-          CookieFile.filter('.example.com\tTRUE\t/\tTRUE\t0\tid\t1\n',
-              YouTubeSite.domains),
-          isNull);
+        CookieFile.filter('not a cookie file at all', YouTubeSite.domains),
+        isNull,
+      );
+      expect(
+        CookieFile.filter(
+          '.example.com\tTRUE\t/\tTRUE\t0\tid\t1\n',
+          YouTubeSite.domains,
+        ),
+        isNull,
+      );
     });
 
     test('knows "sign in first" from any other failure', () {
       expect(
-          YtDlp.wantsSignIn(
-              'This feed is only available when logged in. Use '
-              '--cookies-from-browser or --cookies for the authentication.'),
-          isTrue);
-      expect(YtDlp.wantsSignIn('Unable to download webpage: '
-          'network is unreachable'), isFalse);
-      expect(YtDlp.wantsSignIn('YouTube took too long to answer.'),
-          isFalse);
+        YtDlp.wantsSignIn(
+          'This feed is only available when logged in. Use '
+          '--cookies-from-browser or --cookies for the authentication.',
+        ),
+        isTrue,
+      );
+      expect(
+        YtDlp.wantsSignIn(
+          'Unable to download webpage: '
+          'network is unreachable',
+        ),
+        isFalse,
+      );
+      expect(YtDlp.wantsSignIn('YouTube took too long to answer.'), isFalse);
     });
 
     test('its complaints are cut down to the point', () {
       expect(
-        YtDlp.explain('WARNING: meh\n'
-            'ERROR: [youtube] aqz-KE-bpKQ: Video unavailable. This video is private\n'),
+        YtDlp.explain(
+          'WARNING: meh\n'
+          'ERROR: [youtube] aqz-KE-bpKQ: Video unavailable. This video is private\n',
+        ),
         'Video unavailable. This video is private',
       );
       expect(
         YtDlp.explain(
-            'ERROR: [youtube] aqz-KE-bpKQ: Sign in to confirm your age.'),
+          'ERROR: [youtube] aqz-KE-bpKQ: Sign in to confirm your age.',
+        ),
         contains('Signing in, in Settings'),
       );
       expect(YtDlp.explain(''), 'That video would not play.');

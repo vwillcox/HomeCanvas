@@ -75,7 +75,12 @@ class _LinkViewerScreenState extends State<LinkViewerScreen> {
 
     if (await KioskBrowser.resolve() == null) {
       if (mounted) {
-        setState(() => _error = tr('browser.noBrowserIsInstalledOn', 'No browser is installed on this device.'));
+        setState(
+          () => _error = tr(
+            'browser.noBrowserIsInstalledOn',
+            'No browser is installed on this device.',
+          ),
+        );
       }
       return;
     }
@@ -90,7 +95,14 @@ class _LinkViewerScreenState extends State<LinkViewerScreen> {
       reader: widget.reader,
     );
     if (proc == null) {
-      if (mounted) setState(() => _error = tr('browser.couldNotOpenThePage', 'Could not open the page.'));
+      if (mounted) {
+        setState(
+          () => _error = tr(
+            'browser.couldNotOpenThePage',
+            'Could not open the page.',
+          ),
+        );
+      }
       return;
     }
     if (!mounted) {
@@ -128,17 +140,24 @@ class _LinkViewerScreenState extends State<LinkViewerScreen> {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                          color: Colors.white70, fontSize: 18),
+                        color: Colors.white70,
+                        fontSize: 18,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 16),
                   FilledButton.icon(
                     onPressed: _close,
                     icon: const Icon(Icons.close, size: 30),
-                    label: Text(tr('browser.close', 'Close'), style: TextStyle(fontSize: 22)),
+                    label: Text(
+                      tr('browser.close', 'Close'),
+                      style: TextStyle(fontSize: 22),
+                    ),
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 30, vertical: 22),
+                        horizontal: 30,
+                        vertical: 22,
+                      ),
                     ),
                   ),
                 ],
@@ -147,16 +166,19 @@ class _LinkViewerScreenState extends State<LinkViewerScreen> {
             Expanded(
               child: Center(
                 child: _error != null
-                    ? Text(_error!,
+                    ? Text(
+                        _error!,
                         style: const TextStyle(
-                            color: Colors.white70, fontSize: 18))
+                          color: Colors.white70,
+                          fontSize: 18,
+                        ),
+                      )
                     : Text(
                         tr(
                           'browser.thePageIsOpenIn',
                           'The page is open in front of this window.',
                         ),
-                        style:
-                            TextStyle(color: Colors.white24, fontSize: 16),
+                        style: TextStyle(color: Colors.white24, fontSize: 16),
                       ),
               ),
             ),

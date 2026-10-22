@@ -239,7 +239,8 @@ const List<SourceCredit> kSourceCredits = [
         'over D-Bus (org.bluez.MediaPlayer1), per the BlueZ D-Bus API docs. '
         'Album art is not part of AVRCP, so it is resolved separately by '
         'searching the iTunes Search API for artist + track title.',
-    url: 'https://github.com/bluez/bluez/blob/master/doc/org.bluez.MediaPlayer.rst',
+    url:
+        'https://github.com/bluez/bluez/blob/master/doc/org.bluez.MediaPlayer.rst',
   ),
   SourceCredit(
     what: 'Material Design icons',

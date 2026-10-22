@@ -66,7 +66,6 @@ Future<void> focusTvRemote() async {
 
 class _ModuleBarState extends State<ModuleBar>
     with PauseWhenHidden, ShownTimers {
-
   /// Whether the TV remote app is running, so its button only appears when
   /// it can actually flip to it.
   bool _remoteRunning = false;
@@ -106,9 +105,7 @@ class _ModuleBarState extends State<ModuleBar>
 
   void _toDashboard() {
     if (widget.current == KioskModule.dashboard) return;
-    Navigator.of(
-      context,
-    ).push(DashboardScreen.route());
+    Navigator.of(context).push(DashboardScreen.route());
   }
 
   @override
@@ -237,15 +234,19 @@ Future<void> openLockedFolder(BuildContext context) async {
     case UnlockResult.wrongPin:
       say(tr('modules.incorrectPin', 'Incorrect PIN'));
     case UnlockResult.notConfigured:
-      say(tr(
-        'modules.lockedFolderLoginIsNot',
-        'Locked Folder login is not configured',
-      ));
+      say(
+        tr(
+          'modules.lockedFolderLoginIsNot',
+          'Locked Folder login is not configured',
+        ),
+      );
     case UnlockResult.error:
-      say(tr(
-        'modules.couldNotSignInTo',
-        'Could not sign in to Immich for the Locked Folder',
-      ));
+      say(
+        tr(
+          'modules.couldNotSignInTo',
+          'Could not sign in to Immich for the Locked Folder',
+        ),
+      );
   }
 }
 

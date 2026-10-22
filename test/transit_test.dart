@@ -52,7 +52,11 @@ void main() {
     expect(list[1].rail, isTrue);
     expect(
       TransitousService.pickStop([
-        {'id': 'de-DELFI_000008400058', 'name': 'Amsterdam Centraal', 'type': 'STOP'},
+        {
+          'id': 'de-DELFI_000008400058',
+          'name': 'Amsterdam Centraal',
+          'type': 'STOP',
+        },
       ]),
       (id: 'de-DELFI_000008400058', name: 'Amsterdam Centraal'),
     );
@@ -89,7 +93,14 @@ void main() {
       final w = DashboardWidgetContext(
         theme: kBuiltInThemes.first,
         config: DashboardWidgetConfig(
-            id: 't', type: 'transit', x: 0, y: 0, width: 4, height: 3, options: options),
+          id: 't',
+          type: 'transit',
+          x: 0,
+          y: 0,
+          width: 4,
+          height: 3,
+          options: options,
+        ),
       );
       await tester.pumpWidget(
         ChangeNotifierProvider.value(

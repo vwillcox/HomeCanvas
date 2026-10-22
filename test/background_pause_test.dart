@@ -24,22 +24,24 @@ void main() {
     );
   });
 
-  test('stops every process of each name, then carries on the same ones',
-      () async {
-    await pause.pause();
-    expect(sent, [
-      (101, ProcessSignal.sigstop),
-      (202, ProcessSignal.sigstop),
-      (203, ProcessSignal.sigstop),
-    ]);
-    expect(pause.paused, isTrue);
+  test(
+    'stops every process of each name, then carries on the same ones',
+    () async {
+      await pause.pause();
+      expect(sent, [
+        (101, ProcessSignal.sigstop),
+        (202, ProcessSignal.sigstop),
+        (203, ProcessSignal.sigstop),
+      ]);
+      expect(pause.paused, isTrue);
 
-    sent.clear();
-    await pause.resume();
-    expect(sent.map((s) => s.$1), unorderedEquals([101, 202, 203]));
-    expect(sent.every((s) => s.$2 == ProcessSignal.sigcont), isTrue);
-    expect(pause.paused, isFalse);
-  });
+      sent.clear();
+      await pause.resume();
+      expect(sent.map((s) => s.$1), unorderedEquals([101, 202, 203]));
+      expect(sent.every((s) => s.$2 == ProcessSignal.sigcont), isTrue);
+      expect(pause.paused, isFalse);
+    },
+  );
 
   test('resuming with nothing paused does nothing', () async {
     await pause.resume();

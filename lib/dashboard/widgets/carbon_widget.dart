@@ -80,7 +80,11 @@ class _CarbonWidgetState extends State<CarbonWidget>
     final forecast = service.forecast(code);
     if (forecast == null) {
       return TileMessage(
-        service.error(code) ?? tr('widget.grid_carbon.fetchingTheGridForecast', 'Fetching the grid forecast…'),
+        service.error(code) ??
+            tr(
+              'widget.grid_carbon.fetchingTheGridForecast',
+              'Fetching the grid forecast…',
+            ),
         theme: t,
       );
     }
@@ -109,7 +113,9 @@ class _CarbonWidgetState extends State<CarbonWidget>
                 icon: Icons.bolt_rounded,
                 text: forecast.region.isEmpty
                     ? tr('widget.grid_carbon.grid2', 'Grid')
-                    : tr('widget.grid_carbon.grid', 'Grid · {region}', {'region': forecast.region}),
+                    : tr('widget.grid_carbon.grid', 'Grid · {region}', {
+                        'region': forecast.region,
+                      }),
                 theme: t,
                 size: 11,
               ),
@@ -188,7 +194,11 @@ class _CarbonWidgetState extends State<CarbonWidget>
                   TextSpan(
                     children: [
                       TextSpan(
-                        text: tr('widget.grid_carbon.greenest', 'Greenest {from}–{to}', {'from': hhmm(best.from), 'to': hhmm(best.to)}),
+                        text: tr(
+                          'widget.grid_carbon.greenest',
+                          'Greenest {from}–{to}',
+                          {'from': hhmm(best.from), 'to': hhmm(best.to)},
+                        ),
                         style: TextStyle(
                           color: status.good,
                           fontSize: 12,

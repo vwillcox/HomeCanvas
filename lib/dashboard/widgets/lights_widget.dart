@@ -155,14 +155,14 @@ class _Card extends StatelessWidget {
         decoration: theme.isLcars
             ? lcarsCard(theme, lit: on, glow: glow)
             : BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: on
-              ? glow.withValues(alpha: 0.14)
-              : theme.textSecondary.withValues(alpha: 0.07),
-          border: Border.all(
-            color: on ? glow.withValues(alpha: 0.4) : Colors.transparent,
-          ),
-        ),
+                borderRadius: BorderRadius.circular(16),
+                color: on
+                    ? glow.withValues(alpha: 0.14)
+                    : theme.textSecondary.withValues(alpha: 0.07),
+                border: Border.all(
+                  color: on ? glow.withValues(alpha: 0.4) : Colors.transparent,
+                ),
+              ),
         padding: const EdgeInsets.all(12),
         child: FitCanvas(
           designHeight: 100,
@@ -199,7 +199,9 @@ class _Card extends StatelessWidget {
                 !d.online
                     ? tr('widget.lights.offline', 'Offline')
                     : on
-                    ? (d.brightness != null ? '${d.brightness}%' : tr('widget.lights.on', 'On'))
+                    ? (d.brightness != null
+                          ? '${d.brightness}%'
+                          : tr('widget.lights.on', 'On'))
                     : tr('widget.lights.off', 'Off'),
                 style: TextStyle(color: theme.textSecondary, fontSize: 10),
               ),
@@ -274,10 +276,10 @@ class _Switch extends StatelessWidget {
         width: 14,
         height: 14,
         decoration: BoxDecoration(
-                      // A console's key is black, on a lit track.
-                      color: theme.isLcars ? lcarsInk : Colors.white,
-                      shape: BoxShape.circle,
-                    ),
+          // A console's key is black, on a lit track.
+          color: theme.isLcars ? lcarsInk : Colors.white,
+          shape: BoxShape.circle,
+        ),
       ),
     );
   }

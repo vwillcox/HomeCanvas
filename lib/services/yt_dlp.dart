@@ -55,11 +55,13 @@ class YtDlp extends ChangeNotifier {
     super.dispose();
   }
 
-  Future<String?> _ytDlp() async =>
-      await File(_managedYtDlp).exists() ? _managedYtDlp : await findOnPath('yt-dlp');
+  Future<String?> _ytDlp() async => await File(_managedYtDlp).exists()
+      ? _managedYtDlp
+      : await findOnPath('yt-dlp');
 
-  Future<String?> _deno() async =>
-      await File(_managedDeno).exists() ? _managedDeno : await findOnPath('deno');
+  Future<String?> _deno() async => await File(_managedDeno).exists()
+      ? _managedDeno
+      : await findOnPath('deno');
 
   /// Whether a yt-dlp of [version] understands `--js-runtimes`, which arrived
   /// in 2025.11 along with YouTube's need for one. Passing it to an older
@@ -75,15 +77,16 @@ class YtDlp extends ChangeNotifier {
   /// The options every call shares. [account] is a site's signed-in
   /// cookies, as yt-dlp takes them.
   @visibleForTesting
-  static List<String> baseArgs(
-          {String? deno, List<String> account = const []}) =>
-      [
-        '--ignore-config',
-        '--no-warnings',
-        '--no-progress',
-        if (deno != null) ...['--js-runtimes', 'deno:$deno'],
-        ...account,
-      ];
+  static List<String> baseArgs({
+    String? deno,
+    List<String> account = const [],
+  }) => [
+    '--ignore-config',
+    '--no-warnings',
+    '--no-progress',
+    if (deno != null) ...['--js-runtimes', 'deno:$deno'],
+    ...account,
+  ];
 
   /// H.264, the cheapest to decode in software of what YouTube serves:
   /// 1080p60 decoded in 11.1s per 20s of video on the panel, against 12.1s
@@ -100,19 +103,20 @@ class YtDlp extends ChangeNotifier {
   /// of the CPU. It is the choice Nebula's own site offers as "a more
   /// compatible video format".
   static List<String> streamArgs(int maxHeight, {bool hevc = false}) => [
-        '-J',
-        '--no-playlist',
-        '-S', 'vcodec:h264,res:$maxHeight,fps,acodec:m4a',
-        '-f',
-        [
-          if (hevc) ...[
-            'bv*[vcodec^=hvc1][fps<=30]+ba',
-            'bv*[vcodec^=hev1][fps<=30]+ba',
-          ],
-          'bv*+ba',
-          'b',
-        ].join('/'),
-      ];
+    '-J',
+    '--no-playlist',
+    '-S',
+    'vcodec:h264,res:$maxHeight,fps,acodec:m4a',
+    '-f',
+    [
+      if (hevc) ...[
+        'bv*[vcodec^=hvc1][fps<=30]+ba',
+        'bv*[vcodec^=hev1][fps<=30]+ba',
+      ],
+      'bv*+ba',
+      'b',
+    ].join('/'),
+  ];
 
   /// Whether this machine has a hardware HEVC decoder mpv can use — the
   /// Pi 5's `rpi-hevc-dec`, found by name among the video devices.
@@ -132,27 +136,34 @@ class YtDlp extends ChangeNotifier {
 
   /// Runs yt-dlp with [account]'s cookies and returns what it printed as
   /// JSON. Throws [VideoException], worded for the screen, when it fails.
-  Future<Map<String, dynamic>> run(List<String> args,
-      {List<String> account = const [],
-      Duration timeout = const Duration(seconds: 60)}) async {
+  Future<Map<String, dynamic>> run(
+    List<String> args, {
+    List<String> account = const [],
+    Duration timeout = const Duration(seconds: 60),
+  }) async {
     final exe = await _ytDlp();
     if (exe == null) {
       throw VideoException(
-          tr(
-            'video.videosNeedYtDlpInstall',
-            'Videos need yt-dlp. Install it in Settings → Music → Videos.',
-          ));
+        tr(
+          'video.videosNeedYtDlpInstall',
+          'Videos need yt-dlp. Install it in Settings → Music → Videos.',
+        ),
+      );
     }
     _version ??= await _versionOf(exe);
     final deno = takesJsRuntimes(_version) ? await _deno() : null;
     final ProcessResult r;
     try {
       r = await Process.run(
-              exe, [...baseArgs(deno: deno, account: account), ...args],
-              stdoutEncoding: utf8, stderrEncoding: utf8)
-          .timeout(timeout);
+        exe,
+        [...baseArgs(deno: deno, account: account), ...args],
+        stdoutEncoding: utf8,
+        stderrEncoding: utf8,
+      ).timeout(timeout);
     } on TimeoutException {
-      throw VideoException(tr('video.theSiteTookTooLong', 'The site took too long to answer.'));
+      throw VideoException(
+        tr('video.theSiteTookTooLong', 'The site took too long to answer.'),
+      );
     }
     if (r.exitCode != 0) {
       throw VideoException(explain(r.stderr as String));
@@ -161,7 +172,12 @@ class YtDlp extends ChangeNotifier {
     // another isolate, so a video already playing does not drop frames.
     final out = await compute(jsonDecode, r.stdout as String);
     if (out is! Map<String, dynamic>) {
-      throw VideoException(tr('video.theSiteSentBackNothing', 'The site sent back nothing playable.'));
+      throw VideoException(
+        tr(
+          'video.theSiteSentBackNothing',
+          'The site sent back nothing playable.',
+        ),
+      );
     }
     return out;
   }
@@ -183,7 +199,9 @@ class YtDlp extends ChangeNotifier {
         .where((l) => l.startsWith('ERROR:'))
         .map((l) => l.substring(6).trim())
         .toList();
-    if (errors.isEmpty) return tr('video.thatVideoWouldNotPlay', 'That video would not play.');
+    if (errors.isEmpty) {
+      return tr('video.thatVideoWouldNotPlay', 'That video would not play.');
+    }
     final last = errors.last
         .replaceFirst(RegExp(r'^\[[^\]]+\]\s*[A-Za-z0-9_-]*:\s*'), '')
         .trim();
@@ -191,7 +209,11 @@ class YtDlp extends ChangeNotifier {
         last.contains('members-only') ||
         last.contains('only available when logged in') ||
         last.contains('Private video')) {
-      return tr('video.signingInInSettingsMusic', '{last} Signing in, in Settings → Music → Videos, may let it play.', {'last': last});
+      return tr(
+        'video.signingInInSettingsMusic',
+        '{last} Signing in, in Settings → Music → Videos, may let it play.',
+        {'last': last},
+      );
     }
     return last;
   }
@@ -248,7 +270,12 @@ class YtDlp extends ChangeNotifier {
         'deno-${arm ? 'aarch64' : 'x86_64'}-unknown-linux-gnu.zip',
         zip,
       );
-      final unzip = await Process.run('unzip', ['-oq', zip, '-d', AppPaths.bin]);
+      final unzip = await Process.run('unzip', [
+        '-oq',
+        zip,
+        '-d',
+        AppPaths.bin,
+      ]);
       await File(zip).delete();
       if (unzip.exitCode != 0) {
         throw VideoException('Could not unpack deno: ${unzip.stderr}');

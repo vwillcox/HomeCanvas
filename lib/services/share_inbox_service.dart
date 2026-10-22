@@ -122,11 +122,15 @@ class ShareInboxService extends ChangeNotifier {
 
   Future<void> _bind() async {
     try {
-      final server =
-          await HttpServer.bind(InternetAddress.anyIPv4, _settings.listenPort);
+      final server = await HttpServer.bind(
+        InternetAddress.anyIPv4,
+        _settings.listenPort,
+      );
       _server = server;
-      server.listen(_handleRequest,
-          onError: (e) => debugPrint('ShareInbox server error: $e'));
+      server.listen(
+        _handleRequest,
+        onError: (e) => debugPrint('ShareInbox server error: $e'),
+      );
       debugPrint('ShareInbox listening on :${_settings.listenPort}');
     } catch (e) {
       debugPrint('ShareInbox failed to bind :${_settings.listenPort}: $e');
@@ -152,13 +156,15 @@ class ShareInboxService extends ChangeNotifier {
       if (_keysReady) await keys.maybeRotate();
       request.response
         ..headers.contentType = ContentType.json
-        ..write(jsonEncode({
-          'v': SealedShare.version,
-          'kid': keys.currentKeyId,
-          'key': base64Encode(await keys.currentPublicKey()),
-          'rotatedAt': keys.rotatedAt?.toIso8601String(),
-          'rotateEveryHours': keys.rotateEvery.inHours,
-        }));
+        ..write(
+          jsonEncode({
+            'v': SealedShare.version,
+            'kid': keys.currentKeyId,
+            'key': base64Encode(await keys.currentPublicKey()),
+            'rotatedAt': keys.rotatedAt?.toIso8601String(),
+            'rotateEveryHours': keys.rotateEvery.inHours,
+          }),
+        );
       await request.response.close();
       return;
     }
@@ -187,7 +193,8 @@ class ShareInboxService extends ChangeNotifier {
         debugPrint('ShareInbox: refused an unencrypted share from $sender');
         request.response.statusCode = HttpStatus.preconditionFailed;
         request.response.write(
-            'This kiosk accepts encrypted shares only. Update the app.');
+          'This kiosk accepts encrypted shares only. Update the app.',
+        );
         await request.response.close();
         return;
       }
@@ -272,31 +279,39 @@ class ShareInboxService extends ChangeNotifier {
     final plaintext = StreamController<List<int>>();
 
     final reader = SealedReader(keyFor: keys.keyPairFor);
-    reader.open(request, onHeader: (h) {
-      if (!header.isCompleted) header.complete(h);
-    }).listen(
-      plaintext.add,
-      onError: (Object e, StackTrace st) {
-        if (!header.isCompleted) header.completeError(e, st);
-        if (!plaintext.isClosed) plaintext.addError(e, st);
-        unawaited(plaintext.close());
-      },
-      onDone: () {
-        if (!header.isCompleted) {
-          header.completeError(
-              const SealedFormatException('the message carried no header'));
-        }
-        if (!plaintext.isClosed) plaintext.close();
-      },
-      cancelOnError: true,
-    );
+    reader
+        .open(
+          request,
+          onHeader: (h) {
+            if (!header.isCompleted) header.complete(h);
+          },
+        )
+        .listen(
+          plaintext.add,
+          onError: (Object e, StackTrace st) {
+            if (!header.isCompleted) header.completeError(e, st);
+            if (!plaintext.isClosed) plaintext.addError(e, st);
+            unawaited(plaintext.close());
+          },
+          onDone: () {
+            if (!header.isCompleted) {
+              header.completeError(
+                const SealedFormatException('the message carried no header'),
+              );
+            }
+            if (!plaintext.isClosed) plaintext.close();
+          },
+          cancelOnError: true,
+        );
 
     final open = await header.future;
     // Naming the key it was sealed to, so rotation can be watched working:
     // the id here changes when the panel rotates, and a share sealed to the
     // previous key still opens for one further period.
-    debugPrint('ShareInbox: opened a SEALED share from $sender '
-        '(key ${open.kid}, ${open.mime})');
+    debugPrint(
+      'ShareInbox: opened a SEALED share from $sender '
+      '(key ${open.kid}, ${open.mime})',
+    );
 
     if (open.mime == 'application/json') {
       final bytes = <int>[];
@@ -310,7 +325,10 @@ class ShareInboxService extends ChangeNotifier {
   }
 
   Future<void> _handleJson(
-      HttpRequest request, List<int> bytes, String sender) async {
+    HttpRequest request,
+    List<int> bytes,
+    String sender,
+  ) async {
     final body = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
     final kindStr = body['type'] as String?;
     final content = (body['content'] as String? ?? '').trim();
@@ -319,11 +337,13 @@ class ShareInboxService extends ChangeNotifier {
       await request.response.close();
       return;
     }
-    _enqueue(SharedItem(
-      type: kindStr == 'link' ? ShareType.link : ShareType.text,
-      sender: sender,
-      content: content,
-    ));
+    _enqueue(
+      SharedItem(
+        type: kindStr == 'link' ? ShareType.link : ShareType.text,
+        sender: sender,
+        content: content,
+      ),
+    );
     await _respondOk(request);
   }
 
@@ -342,7 +362,9 @@ class ShareInboxService extends ChangeNotifier {
     final dir = _sharedDir;
     await dir.create(recursive: true);
     final path = p.join(
-        dir.path, '${DateTime.now().microsecondsSinceEpoch}${_extForMime(mime)}');
+      dir.path,
+      '${DateTime.now().microsecondsSinceEpoch}${_extForMime(mime)}',
+    );
     final sink = File(path).openWrite();
     try {
       // A sealed stream raises at the end if it was cut short, so reaching

@@ -79,25 +79,32 @@ class _IncomingShareOverlayState extends State<IncomingShareOverlay>
     switch (item.type) {
       case ShareType.image:
       case ShareType.gif:
-        await navigator.push(MaterialPageRoute(
-          builder: (_) =>
-              SharedImageScreen(path: item.localPath!, sender: item.sender),
-        ));
+        await navigator.push(
+          MaterialPageRoute(
+            builder: (_) =>
+                SharedImageScreen(path: item.localPath!, sender: item.sender),
+          ),
+        );
       case ShareType.video:
-        await navigator.push(MaterialPageRoute(
-          builder: (_) => VideoPlayerScreen(
-            asset: Asset(
+        await navigator.push(
+          MaterialPageRoute(
+            builder: (_) => VideoPlayerScreen(
+              asset: Asset(
                 id: 'shared',
                 type: AssetType.video,
-                fileName: item.localPath!.split('/').last),
-            source: LocalFileMediaSource(item.localPath!),
+                fileName: item.localPath!.split('/').last,
+              ),
+              source: LocalFileMediaSource(item.localPath!),
+            ),
           ),
-        ));
+        );
       case ShareType.text:
-        await navigator.push(MaterialPageRoute(
-          builder: (_) =>
-              SharedTextScreen(text: item.content!, sender: item.sender),
-        ));
+        await navigator.push(
+          MaterialPageRoute(
+            builder: (_) =>
+                SharedTextScreen(text: item.content!, sender: item.sender),
+          ),
+        );
       case ShareType.link:
         // A YouTube, Floatplane or Nebula link plays here, full screen,
         // rather than in a browser window that closes itself two minutes in.
@@ -283,23 +290,26 @@ class _Card extends StatelessWidget {
   VideoLink? get _video =>
       item.type == ShareType.link ? VideoLink.parse(item.content!) : null;
 
-  IconData get _icon => _video != null ? Icons.smart_display : switch (item.type) {
-        ShareType.image => Icons.image,
-        ShareType.gif => Icons.gif_box,
-        ShareType.video => Icons.movie,
-        ShareType.link => Icons.link,
-        ShareType.text => Icons.notes,
-      };
+  IconData get _icon => _video != null
+      ? Icons.smart_display
+      : switch (item.type) {
+          ShareType.image => Icons.image,
+          ShareType.gif => Icons.gif_box,
+          ShareType.video => Icons.movie,
+          ShareType.link => Icons.link,
+          ShareType.text => Icons.notes,
+        };
 
-  String get _label => _video == null ? _typeLabel : '${_video!.siteName} video';
+  String get _label =>
+      _video == null ? _typeLabel : '${_video!.siteName} video';
 
   String get _typeLabel => switch (item.type) {
-        ShareType.image => tr('share.photoShared', 'Photo shared'),
-        ShareType.gif => tr('share.gifShared', 'GIF shared'),
-        ShareType.video => tr('share.videoShared', 'Video shared'),
-        ShareType.link => tr('share.linkShared', 'Link shared'),
-        ShareType.text => tr('share.noteShared', 'Note shared'),
-      };
+    ShareType.image => tr('share.photoShared', 'Photo shared'),
+    ShareType.gif => tr('share.gifShared', 'GIF shared'),
+    ShareType.video => tr('share.videoShared', 'Video shared'),
+    ShareType.link => tr('share.linkShared', 'Link shared'),
+    ShareType.text => tr('share.noteShared', 'Note shared'),
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -339,23 +349,33 @@ class _Card extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(_label,
-                        style: TextStyle(
-                            color: context.look.textPrimary,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600)),
+                    Text(
+                      _label,
+                      style: TextStyle(
+                        color: context.look.textPrimary,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     const SizedBox(height: 2),
                     Text(
                       'From ${item.sender}${pendingCount > 1 ? ' · +${pendingCount - 1} more' : ''}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: context.look.textSecondary, fontSize: 15),
+                      style: TextStyle(
+                        color: context.look.textSecondary,
+                        fontSize: 15,
+                      ),
                     ),
                   ],
                 ),
               ),
               IconButton(
-                icon: Icon(Icons.close, color: context.look.textSecondary, size: 22),
+                icon: Icon(
+                  Icons.close,
+                  color: context.look.textSecondary,
+                  size: 22,
+                ),
                 onPressed: onDismiss,
               ),
             ],

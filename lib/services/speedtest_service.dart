@@ -147,20 +147,23 @@ class SpeedtestService extends ChangeNotifier {
 
     final binary = await findBinary();
     if (binary == null) {
-      _emit(SpeedtestState(
-        phase: SpeedtestPhase.failed,
-        error: tr('widget.speedtest.speedtestIsNotInstalledSee', 'speedtest is not installed — see INSTALL.md'),
-      ));
+      _emit(
+        SpeedtestState(
+          phase: SpeedtestPhase.failed,
+          error: tr(
+            'widget.speedtest.speedtestIsNotInstalledSee',
+            'speedtest is not installed — see INSTALL.md',
+          ),
+        ),
+      );
       return;
     }
 
     // Deliberately keeps the previous figures on screen until the new ones
     // arrive: blanking the dial the instant you tap it looks like a fault.
-    _emit(_state.copyWith(
-      phase: SpeedtestPhase.starting,
-      progress: 0,
-      error: null,
-    ));
+    _emit(
+      _state.copyWith(phase: SpeedtestPhase.starting, progress: 0, error: null),
+    );
 
     try {
       _process = await Process.start(binary, [
@@ -172,8 +175,16 @@ class SpeedtestService extends ChangeNotifier {
         '--accept-gdpr',
       ]);
     } catch (e) {
-      _emit(_state.copyWith(
-          phase: SpeedtestPhase.failed, error: tr('widget.speedtest.couldNotStartSpeedtest', 'could not start speedtest: {e}', {'e': e})));
+      _emit(
+        _state.copyWith(
+          phase: SpeedtestPhase.failed,
+          error: tr(
+            'widget.speedtest.couldNotStartSpeedtest',
+            'could not start speedtest: {e}',
+            {'e': e},
+          ),
+        ),
+      );
       return;
     }
 
@@ -184,10 +195,21 @@ class SpeedtestService extends ChangeNotifier {
     _lines = _process!.stdout
         .transform(utf8.decoder)
         .transform(const LineSplitter())
-        .listen(_handleLine, onError: (Object e) {
-      _emit(_state.copyWith(
-          phase: SpeedtestPhase.failed, error: tr('widget.speedtest.speedtestFailed2', 'speedtest failed: {e}', {'e': e})));
-    });
+        .listen(
+          _handleLine,
+          onError: (Object e) {
+            _emit(
+              _state.copyWith(
+                phase: SpeedtestPhase.failed,
+                error: tr(
+                  'widget.speedtest.speedtestFailed2',
+                  'speedtest failed: {e}',
+                  {'e': e},
+                ),
+              ),
+            );
+          },
+        );
 
     final code = await _process!.exitCode;
     await _lines?.cancel();
@@ -195,10 +217,16 @@ class SpeedtestService extends ChangeNotifier {
     _process = null;
 
     if (code != 0 && _state.phase != SpeedtestPhase.done) {
-      _emit(_state.copyWith(
-        phase: SpeedtestPhase.failed,
-        error: tr('widget.speedtest.speedtestExitedWithCode', 'speedtest exited with code {code}', {'code': code}),
-      ));
+      _emit(
+        _state.copyWith(
+          phase: SpeedtestPhase.failed,
+          error: tr(
+            'widget.speedtest.speedtestExitedWithCode',
+            'speedtest exited with code {code}',
+            {'code': code},
+          ),
+        ),
+      );
     }
   }
 
@@ -233,65 +261,77 @@ class SpeedtestService extends ChangeNotifier {
     switch (j['type']) {
       case 'testStart':
         final server = j['server'] as Map<String, dynamic>? ?? const {};
-        _emit(_state.copyWith(
-          phase: SpeedtestPhase.ping,
-          isp: '${j['isp'] ?? ''}',
-          serverName: '${server['name'] ?? ''}',
-          serverLocation: '${server['location'] ?? ''}',
-          downloadMbps: 0,
-          uploadMbps: 0,
-          progress: 0,
-        ));
+        _emit(
+          _state.copyWith(
+            phase: SpeedtestPhase.ping,
+            isp: '${j['isp'] ?? ''}',
+            serverName: '${server['name'] ?? ''}',
+            serverLocation: '${server['location'] ?? ''}',
+            downloadMbps: 0,
+            uploadMbps: 0,
+            progress: 0,
+          ),
+        );
 
       case 'ping':
         final p = j['ping'] as Map<String, dynamic>? ?? const {};
-        _emit(_state.copyWith(
-          phase: SpeedtestPhase.ping,
-          latencyMs: _num(p['latency']),
-          jitterMs: _num(p['jitter']),
-          progress: _num(p['progress']) ?? 0,
-        ));
+        _emit(
+          _state.copyWith(
+            phase: SpeedtestPhase.ping,
+            latencyMs: _num(p['latency']),
+            jitterMs: _num(p['jitter']),
+            progress: _num(p['progress']) ?? 0,
+          ),
+        );
 
       case 'download':
         final d = j['download'] as Map<String, dynamic>? ?? const {};
-        _emit(_state.copyWith(
-          phase: SpeedtestPhase.download,
-          downloadMbps: _mbps(d['bandwidth']),
-          progress: _num(d['progress']) ?? 0,
-        ));
+        _emit(
+          _state.copyWith(
+            phase: SpeedtestPhase.download,
+            downloadMbps: _mbps(d['bandwidth']),
+            progress: _num(d['progress']) ?? 0,
+          ),
+        );
 
       case 'upload':
         final u = j['upload'] as Map<String, dynamic>? ?? const {};
-        _emit(_state.copyWith(
-          phase: SpeedtestPhase.upload,
-          uploadMbps: _mbps(u['bandwidth']),
-          progress: _num(u['progress']) ?? 0,
-        ));
+        _emit(
+          _state.copyWith(
+            phase: SpeedtestPhase.upload,
+            uploadMbps: _mbps(u['bandwidth']),
+            progress: _num(u['progress']) ?? 0,
+          ),
+        );
 
       case 'result':
         final d = j['download'] as Map<String, dynamic>? ?? const {};
         final u = j['upload'] as Map<String, dynamic>? ?? const {};
         final p = j['ping'] as Map<String, dynamic>? ?? const {};
         final r = j['result'] as Map<String, dynamic>? ?? const {};
-        _emit(_state.copyWith(
-          phase: SpeedtestPhase.done,
-          // The final figures, which differ slightly from the last progress
-          // sample — that one is an instantaneous rate, these are the run.
-          downloadMbps: _mbps(d['bandwidth']),
-          uploadMbps: _mbps(u['bandwidth']),
-          latencyMs: _num(p['latency']),
-          jitterMs: _num(p['jitter']),
-          packetLoss: _num(j['packetLoss']),
-          resultUrl: '${r['url'] ?? ''}',
-          progress: 1,
-          finishedAt: DateTime.now(),
-        ));
+        _emit(
+          _state.copyWith(
+            phase: SpeedtestPhase.done,
+            // The final figures, which differ slightly from the last progress
+            // sample — that one is an instantaneous rate, these are the run.
+            downloadMbps: _mbps(d['bandwidth']),
+            uploadMbps: _mbps(u['bandwidth']),
+            latencyMs: _num(p['latency']),
+            jitterMs: _num(p['jitter']),
+            packetLoss: _num(j['packetLoss']),
+            resultUrl: '${r['url'] ?? ''}',
+            progress: 1,
+            finishedAt: DateTime.now(),
+          ),
+        );
 
       case 'error':
-        _emit(_state.copyWith(
-          phase: SpeedtestPhase.failed,
-          error: '${j['message'] ?? 'speedtest reported an error'}',
-        ));
+        _emit(
+          _state.copyWith(
+            phase: SpeedtestPhase.failed,
+            error: '${j['message'] ?? 'speedtest reported an error'}',
+          ),
+        );
     }
   }
 

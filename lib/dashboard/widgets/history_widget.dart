@@ -101,7 +101,14 @@ class _HistoryWidgetState extends State<HistoryWidget>
           ..clear()
           ..[day] = events;
       } catch (e) {
-        if (mounted) setState(() => _error = tr('widget.history.couldNotReachWikipedia', 'Could not reach Wikipedia'));
+        if (mounted) {
+          setState(
+            () => _error = tr(
+              'widget.history.couldNotReachWikipedia',
+              'Could not reach Wikipedia',
+            ),
+          );
+        }
         return;
       }
     }
@@ -131,7 +138,10 @@ class _HistoryWidgetState extends State<HistoryWidget>
   Widget build(BuildContext context) {
     final t = widget.w.theme;
     if (_events.isEmpty) {
-      return TileMessage(_error ?? tr('widget.history.askingWikipedia', 'Asking Wikipedia…'), theme: t);
+      return TileMessage(
+        _error ?? tr('widget.history.askingWikipedia', 'Asking Wikipedia…'),
+        theme: t,
+      );
     }
     final e = _events[_index];
     final ago = DateTime.now().year - e.year;
@@ -172,7 +182,11 @@ class _HistoryWidgetState extends State<HistoryWidget>
                       ),
                     ),
                     TextSpan(
-                      text: ago > 0 ? tr('widget.history.yearsAgo', '  {ago} years ago', {'ago': ago}) : '',
+                      text: ago > 0
+                          ? tr('widget.history.yearsAgo', '  {ago} years ago', {
+                              'ago': ago,
+                            })
+                          : '',
                       style: TextStyle(color: t.textSecondary, fontSize: 11),
                     ),
                   ],

@@ -109,7 +109,11 @@ class _TrainsWidgetState extends State<TrainsWidget>
     }
     final board = _board;
     if (board == null) {
-      return TileMessage(_error ?? tr('widget.trains.askingRealtimeTrains', 'Asking Realtime Trains…'), theme: t);
+      return TileMessage(
+        _error ??
+            tr('widget.trains.askingRealtimeTrains', 'Asking Realtime Trains…'),
+        theme: t,
+      );
     }
     final now = DateTime.now();
     final walk = int.tryParse(_opt('walkMinutes')) ?? 0;
@@ -149,7 +153,9 @@ class _TrainsWidgetState extends State<TrainsWidget>
                     ? null
                     : Text(
                         _error != null
-                            ? tr('widget.trains.lastAt', 'last at {_updated}', {'_updated': hhmm(_updated!)})
+                            ? tr('widget.trains.lastAt', 'last at {_updated}', {
+                                '_updated': hhmm(_updated!),
+                              })
                             : hhmm(_updated!),
                         style: TextStyle(
                           color: _error != null ? status.warn : t.textSecondary,
@@ -195,7 +201,12 @@ class _Row extends StatelessWidget {
     final (String text, Color colour) = d.cancelled
         ? (tr('widget.trains.cancelled', 'Cancelled'), status.bad)
         : d.late
-        ? (tr('widget.trains.minLate', '{lateMinutes} min late', {'lateMinutes': d.lateMinutes}), status.warn)
+        ? (
+            tr('widget.trains.minLate', '{lateMinutes} min late', {
+              'lateMinutes': d.lateMinutes,
+            }),
+            status.warn,
+          )
         : d.atPlatform
         ? (tr('widget.trains.atPlatform', 'At platform'), theme.accent)
         : (tr('widget.trains.onTime', 'On time'), status.good);
@@ -256,7 +267,9 @@ class _Row extends StatelessWidget {
               children: [
                 if (d.platform != null && !d.cancelled) ...[
                   StatusChip(
-                    text: tr('widget.trains.plat', 'Plat {platform}', {'platform': d.platform}),
+                    text: tr('widget.trains.plat', 'Plat {platform}', {
+                      'platform': d.platform,
+                    }),
                     colour: theme.accent,
                     size: 10,
                   ),

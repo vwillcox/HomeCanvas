@@ -119,13 +119,27 @@ class SunMoon {
     // The four principal phases are instants; a day either side of each is
     // given its name, which is how the almanacs and the calendars read.
     const day = 1 / synodicDays;
-    if (phase < day || phase > 1 - day) return tr('widget.sun_moon.newMoon', 'New moon');
-    if ((phase - 0.25).abs() < day) return tr('widget.sun_moon.firstQuarter', 'First quarter');
-    if ((phase - 0.5).abs() < day) return tr('widget.sun_moon.fullMoon', 'Full moon');
-    if ((phase - 0.75).abs() < day) return tr('widget.sun_moon.lastQuarter', 'Last quarter');
-    if (phase < 0.25) return tr('widget.sun_moon.waxingCrescent', 'Waxing crescent');
-    if (phase < 0.5) return tr('widget.sun_moon.waxingGibbous', 'Waxing gibbous');
-    if (phase < 0.75) return tr('widget.sun_moon.waningGibbous', 'Waning gibbous');
+    if (phase < day || phase > 1 - day) {
+      return tr('widget.sun_moon.newMoon', 'New moon');
+    }
+    if ((phase - 0.25).abs() < day) {
+      return tr('widget.sun_moon.firstQuarter', 'First quarter');
+    }
+    if ((phase - 0.5).abs() < day) {
+      return tr('widget.sun_moon.fullMoon', 'Full moon');
+    }
+    if ((phase - 0.75).abs() < day) {
+      return tr('widget.sun_moon.lastQuarter', 'Last quarter');
+    }
+    if (phase < 0.25) {
+      return tr('widget.sun_moon.waxingCrescent', 'Waxing crescent');
+    }
+    if (phase < 0.5) {
+      return tr('widget.sun_moon.waxingGibbous', 'Waxing gibbous');
+    }
+    if (phase < 0.75) {
+      return tr('widget.sun_moon.waningGibbous', 'Waning gibbous');
+    }
     return tr('widget.sun_moon.waningCrescent', 'Waning crescent');
   }
 

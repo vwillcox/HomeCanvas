@@ -217,7 +217,8 @@ class DashboardTheme {
     const dark = Color(0xFF0B0C10);
     double contrast(Color a, Color b) {
       final la = a.computeLuminance(), lb = b.computeLuminance();
-      return (la > lb ? la + 0.05 : lb + 0.05) / (la > lb ? lb + 0.05 : la + 0.05);
+      return (la > lb ? la + 0.05 : lb + 0.05) /
+          (la > lb ? lb + 0.05 : la + 0.05);
     }
 
     return contrast(accent, dark) >= contrast(accent, Colors.white)

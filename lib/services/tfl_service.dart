@@ -289,7 +289,10 @@ class TflService extends ChangeNotifier {
     }
   }
 
-  Future<({String id, String name})?> _findStop(String text, String mode) async {
+  Future<({String id, String name})?> _findStop(
+    String text,
+    String mode,
+  ) async {
     if (looksLikeStopId(text)) return (id: text.toUpperCase(), name: text);
     final modes = switch (mode) {
       'bus' => 'bus',
@@ -329,6 +332,7 @@ class TflService extends ChangeNotifier {
           final v = (s['statusSeverity'] as num?)?.toInt() ?? 10;
           return v >= 18 ? 10 : v; // notes rank with good service
         }
+
         return rank(a).compareTo(rank(b));
       });
       final worst = statuses.isEmpty ? null : statuses.first;

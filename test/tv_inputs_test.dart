@@ -19,15 +19,19 @@ class FakeTv extends TvService {
   void refreshSources() => asked++;
 }
 
-TvSource src(String id, String name,
-        {String device = '', bool signal = false, bool active = false}) =>
-    TvSource(
-      id: id,
-      name: name,
-      deviceName: device,
-      hasSignal: signal,
-      isActive: active,
-    );
+TvSource src(
+  String id,
+  String name, {
+  String device = '',
+  bool signal = false,
+  bool active = false,
+}) => TvSource(
+  id: id,
+  name: name,
+  deviceName: device,
+  hasSignal: signal,
+  isActive: active,
+);
 
 final inputs = [
   src('TV', 'TV'),
@@ -37,8 +41,11 @@ final inputs = [
   src('AV', 'AV'),
 ];
 
-Future<FakeTv> pumpInputs(WidgetTester tester,
-    {List<TvSource>? sources, bool connected = true}) async {
+Future<FakeTv> pumpInputs(
+  WidgetTester tester, {
+  List<TvSource>? sources,
+  bool connected = true,
+}) async {
   tester.view.physicalSize = const Size(1920, 1200);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
@@ -75,7 +82,8 @@ Future<void> finish(WidgetTester tester, FakeTv tv) async {
 void main() {
   group('a kept input list', () {
     // What the set sends, and so what is kept on disk between sessions.
-    const kept = '[{"sourceid":"HDMI1","displayname":"HDMI1",'
+    const kept =
+        '[{"sourceid":"HDMI1","displayname":"HDMI1",'
         '"displayname2":"Fire TV Stick","has_signal":1},'
         '{"sourceid":"TV","displayname":"TV","has_signal":0}]';
 
@@ -128,8 +136,7 @@ void main() {
   });
 
   group('the pop-up', () {
-    testWidgets('lists every input, and marks the one showing',
-        (tester) async {
+    testWidgets('lists every input, and marks the one showing', (tester) async {
       final tv = await pumpInputs(tester);
       for (final name in ['TV', 'HDMI1', 'HDMI2', 'HDMI4', 'AV']) {
         expect(find.text(name), findsOneWidget, reason: name);
@@ -176,8 +183,9 @@ void main() {
       await finish(tester, tv);
     });
 
-    testWidgets('does not ask the TV for its inputs just by opening',
-        (tester) async {
+    testWidgets('does not ask the TV for its inputs just by opening', (
+      tester,
+    ) async {
       // Asking makes the set run its pairing check, which flashes a code
       // over whatever is being watched.
       final tv = await pumpInputs(tester, sources: const []);
@@ -191,15 +199,17 @@ void main() {
       await tester.pumpAndSettle();
       expect(tv.asked, 1);
       expect(find.text('Ask the television'), findsNothing);
-      expect(find.textContaining('as soon as the television answers'),
-          findsOneWidget);
+      expect(
+        find.textContaining('as soon as the television answers'),
+        findsOneWidget,
+      );
       await finish(tester, tv);
     });
 
-    testWidgets('not connected, it says why rather than offering to ask',
-        (tester) async {
-      final tv =
-          await pumpInputs(tester, sources: const [], connected: false);
+    testWidgets('not connected, it says why rather than offering to ask', (
+      tester,
+    ) async {
+      final tv = await pumpInputs(tester, sources: const [], connected: false);
       expect(find.textContaining('not connected'), findsOneWidget);
       expect(find.text('Ask the television'), findsNothing);
       await finish(tester, tv);

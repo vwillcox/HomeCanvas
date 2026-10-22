@@ -89,13 +89,17 @@ class _DashboardScreenState extends State<DashboardScreen>
   /// page's dot, so a turn is never a surprise, and pausing is simply
   /// stopping it. In steps, not frames — see [SteppedTimeline] — and held
   /// while the dashboard cannot be seen, as an animation would be.
-  late final SteppedTimeline _turn =
-      SteppedTimeline(onDone: () => _goTo(_page + 1, _pageCount));
+  late final SteppedTimeline _turn = SteppedTimeline(
+    onDone: () => _goTo(_page + 1, _pageCount),
+  );
 
   /// Paused from the page dots. Holds until they are tapped again — through
   /// leaving the dashboard and through a restart, since it is saved.
-  late bool _paused =
-      context.read<ConfigService>().config.dashboard.pagesPaused;
+  late bool _paused = context
+      .read<ConfigService>()
+      .config
+      .dashboard
+      .pagesPaused;
   bool _turning = false;
   int _pageCount = 1;
 
@@ -135,7 +139,10 @@ class _DashboardScreenState extends State<DashboardScreen>
     _player.isOpen.addListener(_playerOpened);
     // Scheduled pages and tiles come and go by the clock — only looked at
     // while the dashboard can be seen.
-    _clock = everyWhileShown(const Duration(seconds: 30), () => setState(() {}));
+    _clock = everyWhileShown(
+      const Duration(seconds: 30),
+      () => setState(() {}),
+    );
     // A dashboard is a thing you glance at from across the room without
     // touching it, so the idle timer would switch the panel off precisely
     // when it is doing its job. Held awake for as long as it is on screen;
@@ -628,11 +635,9 @@ class DashboardTile extends StatelessWidget {
         // leave the configuration alone so it comes back when the widget does.
         ? Center(
             child: Text(
-              tr(
-                'dashboard.unknownWidget',
-                'Unknown widget "{type}"',
-                {'type': config.type},
-              ),
+              tr('dashboard.unknownWidget', 'Unknown widget "{type}"', {
+                'type': config.type,
+              }),
               textAlign: TextAlign.center,
               style: TextStyle(color: theme.textSecondary, fontSize: 14),
             ),
@@ -671,7 +676,8 @@ class DashboardTile extends StatelessWidget {
     if (theme.isLcars) {
       tile = LcarsPanel(
         theme: theme,
-        label: '${type?.localName ?? config.type} '
+        label:
+            '${type?.localName ?? config.type} '
             '${lcarsIndex(config.id) % 90 + 10}',
         down: config.y * 2 + config.height > DashboardGrid.rows,
         scale: fit,
@@ -780,7 +786,11 @@ class _Empty extends StatelessWidget {
 /// artwork, which opens the full player out of itself, and back, play and
 /// next — in a glass pill the size of the module bar's, beside it.
 class _MediaControls extends StatefulWidget {
-  const _MediaControls({required this.source, required this.theme, this.player});
+  const _MediaControls({
+    required this.source,
+    required this.theme,
+    this.player,
+  });
 
   final PlaybackSource source;
   final DashboardTheme theme;
@@ -807,7 +817,11 @@ class _MediaControlsState extends State<_MediaControls> {
         children: [
           Semantics(
             button: true,
-            label: tr('dashboard.nowPlayingOpenThePlayer', 'Now playing: {title}. Open the player.', {'title': source.now.title}),
+            label: tr(
+              'dashboard.nowPlayingOpenThePlayer',
+              'Now playing: {title}. Open the player.',
+              {'title': source.now.title},
+            ),
             child: GestureDetector(
               onTap: () => widget.player?.expand(from: _art),
               behavior: HitTestBehavior.opaque,
@@ -849,7 +863,9 @@ class _MediaControlsState extends State<_MediaControls> {
           ),
           PillIconButton(
             icon: playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
-            tooltip: playing ? tr('dashboard.pause', 'Pause') : tr('dashboard.play', 'Play'),
+            tooltip: playing
+                ? tr('dashboard.pause', 'Pause')
+                : tr('dashboard.play', 'Play'),
             colour: t.accent,
             onPressed: source.playPause,
           ),
@@ -917,7 +933,10 @@ class _PageDots extends StatelessWidget {
             Semantics(
               button: true,
               label: paused
-                  ? tr('dashboard.carryOnTurningPages', 'Carry on turning pages')
+                  ? tr(
+                      'dashboard.carryOnTurningPages',
+                      'Carry on turning pages',
+                    )
                   : tr('dashboard.holdThisPage', 'Hold this page'),
               child: LcarsBlock(
                 colour: paused ? lcarsLit : theme.block(1),
@@ -984,7 +1003,12 @@ class _PageDots extends StatelessWidget {
             ),
             Semantics(
               button: true,
-              label: paused ? tr('dashboard.carryOnTurningPages', 'Carry on turning pages') : tr('dashboard.holdThisPage', 'Hold this page'),
+              label: paused
+                  ? tr(
+                      'dashboard.carryOnTurningPages',
+                      'Carry on turning pages',
+                    )
+                  : tr('dashboard.holdThisPage', 'Hold this page'),
               child: GestureDetector(
                 onTap: onTogglePause,
                 behavior: HitTestBehavior.opaque,

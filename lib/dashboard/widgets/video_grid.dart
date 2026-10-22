@@ -36,57 +36,62 @@ class VideoGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = theme;
-    return LayoutBuilder(builder: (context, c) {
-      final count = items.length;
-      final grid = bestGrid(count, c.biggest, cellAspect: 16 / 9);
-      final gap = math.min(c.maxWidth, c.maxHeight) * 0.03;
-      final cellW = (c.maxWidth - gap * (grid.columns - 1)) / grid.columns;
-      final cellH = (c.maxHeight - gap * (grid.rows - 1)) / grid.rows;
-      // Thumbnails are decoded no wider than they are drawn — covering the
-      // cell, whichever way it is out of 16:9 — rather than at whatever size
-      // the site serves, which for Nebula is full HD.
-      final decodeWidth = (math.max(cellW, cellH * 16 / 9) *
-              MediaQuery.devicePixelRatioOf(context))
-          .round();
-      return Stack(
-        children: [
-          for (var i = 0; i < count; i++)
-            Positioned(
-              left: (i % grid.columns) * (cellW + gap),
-              top: (i ~/ grid.columns) * (cellH + gap),
-              width: cellW,
-              height: cellH,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: items[i].onTap,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(
-                    tileCorner(t, t.cornerRadius * 0.4),
-                  ),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      ColoredBox(color: t.wash(0.08)),
-                      if (items[i].thumbnailUrl != null)
-                        Image.network(items[i].thumbnailUrl!,
+    return LayoutBuilder(
+      builder: (context, c) {
+        final count = items.length;
+        final grid = bestGrid(count, c.biggest, cellAspect: 16 / 9);
+        final gap = math.min(c.maxWidth, c.maxHeight) * 0.03;
+        final cellW = (c.maxWidth - gap * (grid.columns - 1)) / grid.columns;
+        final cellH = (c.maxHeight - gap * (grid.rows - 1)) / grid.rows;
+        // Thumbnails are decoded no wider than they are drawn — covering the
+        // cell, whichever way it is out of 16:9 — rather than at whatever size
+        // the site serves, which for Nebula is full HD.
+        final decodeWidth =
+            (math.max(cellW, cellH * 16 / 9) *
+                    MediaQuery.devicePixelRatioOf(context))
+                .round();
+        return Stack(
+          children: [
+            for (var i = 0; i < count; i++)
+              Positioned(
+                left: (i % grid.columns) * (cellW + gap),
+                top: (i ~/ grid.columns) * (cellH + gap),
+                width: cellW,
+                height: cellH,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: items[i].onTap,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(
+                      tileCorner(t, t.cornerRadius * 0.4),
+                    ),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        ColoredBox(color: t.wash(0.08)),
+                        if (items[i].thumbnailUrl != null)
+                          Image.network(
+                            items[i].thumbnailUrl!,
                             fit: BoxFit.cover,
                             cacheWidth: decodeWidth,
-                            errorBuilder: (_, _, _) => const SizedBox.shrink()),
-                      Align(
-                        alignment: Alignment.bottomLeft,
-                        child: VideoCaption(
-                          title: items[i].title,
-                          subtitle: items[i].subtitle,
+                            errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                          ),
+                        Align(
+                          alignment: Alignment.bottomLeft,
+                          child: VideoCaption(
+                            title: items[i].title,
+                            subtitle: items[i].subtitle,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-        ],
-      );
-    });
+          ],
+        );
+      },
+    );
   }
 }
 
@@ -112,19 +117,24 @@ class VideoCaption extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  height: 1.2)),
+          Text(
+            title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              height: 1.2,
+            ),
+          ),
           if ((subtitle ?? '').isNotEmpty)
-            Text(subtitle!,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white70, fontSize: 13)),
+            Text(
+              subtitle!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white70, fontSize: 13),
+            ),
         ],
       ),
     );
@@ -134,8 +144,11 @@ class VideoCaption extends StatelessWidget {
 /// Fetches a feed again now, for anyone who has just seen a new video go up
 /// and does not want to wait for the next automatic refresh.
 class TileRefreshButton extends StatelessWidget {
-  const TileRefreshButton(
-      {super.key, required this.busy, required this.onRefresh});
+  const TileRefreshButton({
+    super.key,
+    required this.busy,
+    required this.onRefresh,
+  });
 
   final bool busy;
   final VoidCallback onRefresh;
@@ -177,7 +190,9 @@ class TileRefreshButton extends StatelessWidget {
                     width: 22,
                     height: 22,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2.5, color: Colors.white),
+                      strokeWidth: 2.5,
+                      color: Colors.white,
+                    ),
                   )
                 : const Icon(Icons.refresh, color: Colors.white, size: 26),
           ),
@@ -190,8 +205,16 @@ class TileRefreshButton extends StatelessWidget {
 /// A short "how long ago" for a video's release: 5 min, 3 h, 2 d, 12 Mar.
 String releasedAgo(DateTime at, DateTime now) {
   final d = now.difference(at);
-  if (d.inMinutes < 60) return tr('widget.videos.minAgo', '{inMinutes} min ago', {'inMinutes': math.max(1, d.inMinutes)});
-  if (d.inHours < 24) return tr('widget.videos.hAgo', '{inHours} h ago', {'inHours': d.inHours});
-  if (d.inDays < 7) return tr('widget.videos.dAgo', '{inDays} d ago', {'inDays': d.inDays});
+  if (d.inMinutes < 60) {
+    return tr('widget.videos.minAgo', '{inMinutes} min ago', {
+      'inMinutes': math.max(1, d.inMinutes),
+    });
+  }
+  if (d.inHours < 24) {
+    return tr('widget.videos.hAgo', '{inHours} h ago', {'inHours': d.inHours});
+  }
+  if (d.inDays < 7) {
+    return tr('widget.videos.dAgo', '{inDays} d ago', {'inDays': d.inDays});
+  }
   return dayMonth(at);
 }

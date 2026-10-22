@@ -30,11 +30,11 @@ enum VideoView { closed, full, pip }
 /// tiles play their own, and only [resolve] is shared with them.
 class VideoPlayerService extends ChangeNotifier {
   VideoPlayerService(this._config, this.ytDlp, List<VideoSite> sites)
-      : _sites = {for (final s in sites) s.id: s} {
+    : _sites = {for (final s in sites) s.id: s} {
     for (final site in sites) {
       // Streams worked out for an old account are not reused for a new one.
-      site.onAccountChanged = () => _streams.removeWhere(
-          (key, _) => key.startsWith('${site.id}:'));
+      site.onAccountChanged = () =>
+          _streams.removeWhere((key, _) => key.startsWith('${site.id}:'));
     }
   }
 
@@ -72,8 +72,10 @@ class VideoPlayerService extends ChangeNotifier {
   void Function()? onStart;
 
   void start() {
-    _idleTimer ??=
-        Timer.periodic(const Duration(minutes: 1), (_) => _idleCheck());
+    _idleTimer ??= Timer.periodic(
+      const Duration(minutes: 1),
+      (_) => _idleCheck(),
+    );
   }
 
   @override
@@ -91,7 +93,7 @@ class VideoPlayerService extends ChangeNotifier {
   /// live camera's own page names its stream outright. Each is given the
   /// link and the height wanted.
   final Map<String, Future<VideoStream> Function(VideoLink link, int height)>
-      finders = {};
+  finders = {};
 
   /// What mpv should open for [link], no taller than [maxHeight] (or the
   /// setting), as the site's account. Shared between the panel's player and
@@ -106,40 +108,48 @@ class VideoPlayerService extends ChangeNotifier {
     final cached = _streams[key];
     if (cached != null) return cached.$2;
 
-    final future = finders[link.site]?.call(link, height) ?? () async {
-      final account = await _sites[link.site]?.ytDlpAccount() ?? const [];
-      final info = await ytDlp.run(
-          [...YtDlp.streamArgs(height, hevc: YtDlp.hevcDecoder), link.url],
-          account: account);
-      final stream = VideoStream.fromInfo(info);
-      if (stream == null) {
-        throw const VideoException('The site sent back nothing playable.');
-      }
-      // mpv is given the same cookies, for sites that want them for the
-      // stream as well — Floatplane's decryption key.
-      final i = account.indexOf('--cookies');
-      final cookies = i >= 0 ? account[i + 1] : null;
-      if (!stream.hls || stream.isLive) {
-        return stream.copyWith(cookiesFile: cookies);
-      }
-      // Fragmented HLS is played through mpv's own fragment list rather
-      // than ffmpeg's HLS reader, which cannot seek some of it — see HlsEdl.
-      final audio = stream.audioUri;
-      final edl = await Future.wait([
-        HlsEdl.resolve(stream.uri, headers: stream.headers),
-        if (audio != null) HlsEdl.resolve(audio, headers: stream.headers),
-      ]);
-      return stream.copyWith(
-        uri: edl.first,
-        audioUri: audio == null ? null : edl.last,
-        cookiesFile: cookies,
-      );
-    }();
+    final future =
+        finders[link.site]?.call(link, height) ??
+        () async {
+          final account = await _sites[link.site]?.ytDlpAccount() ?? const [];
+          final info = await ytDlp.run([
+            ...YtDlp.streamArgs(height, hevc: YtDlp.hevcDecoder),
+            link.url,
+          ], account: account);
+          final stream = VideoStream.fromInfo(info);
+          if (stream == null) {
+            throw const VideoException('The site sent back nothing playable.');
+          }
+          // mpv is given the same cookies, for sites that want them for the
+          // stream as well — Floatplane's decryption key.
+          final i = account.indexOf('--cookies');
+          final cookies = i >= 0 ? account[i + 1] : null;
+          if (!stream.hls || stream.isLive) {
+            return stream.copyWith(cookiesFile: cookies);
+          }
+          // Fragmented HLS is played through mpv's own fragment list rather
+          // than ffmpeg's HLS reader, which cannot seek some of it — see HlsEdl.
+          final audio = stream.audioUri;
+          final edl = await Future.wait([
+            HlsEdl.resolve(stream.uri, headers: stream.headers),
+            if (audio != null) HlsEdl.resolve(audio, headers: stream.headers),
+          ]);
+          return stream.copyWith(
+            uri: edl.first,
+            audioUri: audio == null ? null : edl.last,
+            cookiesFile: cookies,
+          );
+        }();
     _streams[key] = (now, future);
     // A failure is not worth remembering; the next attempt might work.
-    unawaited(future.then<void>((_) {}, onError: (Object _) {
-      if (_streams[key]?.$2 == future) _streams.remove(key);
-    }));
+    unawaited(
+      future.then<void>(
+        (_) {},
+        onError: (Object _) {
+          if (_streams[key]?.$2 == future) _streams.remove(key);
+        },
+      ),
+    );
     return future;
   }
 
@@ -211,11 +221,13 @@ class VideoPlayerService extends ChangeNotifier {
     // The level first, so a loud video does not begin at mpv's 100%.
     await applyAudio(player, settings);
     await stream.prepare(player);
-    await player.open(Media(
-      stream.uri,
-      httpHeaders: stream.headers,
-      start: !stream.isLive && from > Duration.zero ? from : null,
-    ));
+    await player.open(
+      Media(
+        stream.uri,
+        httpHeaders: stream.headers,
+        start: !stream.isLive && from > Duration.zero ? from : null,
+      ),
+    );
     if (session != _session) return;
     _stream = stream;
     _loading = false;
@@ -314,8 +326,11 @@ class VideoPlayerService extends ChangeNotifier {
 
   /// Sets [player] to the level in [s]. mpv's `mute` as well as its volume:
   /// the photo player found volume 0 alone still audible on this hardware.
-  static Future<void> applyAudio(Player player, YouTubeSettings s,
-      {bool? muted}) async {
+  static Future<void> applyAudio(
+    Player player,
+    YouTubeSettings s, {
+    bool? muted,
+  }) async {
     final mute = muted ?? s.muted;
     await player.setVolume(mute ? 0 : s.volume);
     final platform = player.platform;
@@ -351,8 +366,16 @@ class VideoPlayerService extends ChangeNotifier {
       }
     }
 
-    final [w, h, at, fps, drawn, dropped, decoderDropped, hwdec] =
-        await Future.wait([
+    final [
+      w,
+      h,
+      at,
+      fps,
+      drawn,
+      dropped,
+      decoderDropped,
+      hwdec,
+    ] = await Future.wait([
       for (final p in const [
         'video-params/w',
         'video-params/h',
@@ -369,7 +392,9 @@ class VideoPlayerService extends ChangeNotifier {
       debugPrint('Video: nothing is showing yet');
       return;
     }
-    debugPrint('Video: at ${at}s, ${w}x$h at $fps fps, drawing $drawn; '
-        'dropped $dropped (decoder $decoderDropped), decoded by $hwdec');
+    debugPrint(
+      'Video: at ${at}s, ${w}x$h at $fps fps, drawing $drawn; '
+      'dropped $dropped (decoder $decoderDropped), decoded by $hwdec',
+    );
   }
 }

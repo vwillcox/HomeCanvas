@@ -178,7 +178,8 @@ class GithubApi {
     String repo,
     String token,
     GithubWanted want,
-  )? debugFetch;
+  )?
+  debugFetch;
 
   static const _base = 'https://api.github.com/repos';
 
@@ -251,7 +252,8 @@ class GithubApi {
           );
           release = r.data;
         }),
-      if (want.commits) quietly(() async => weekly = await _commits(repo, options)),
+      if (want.commits)
+        quietly(() async => weekly = await _commits(repo, options)),
       // Traffic is owner-only: without a token it always fails, and each
       // try would spend an hour's allowance for nothing.
       if (token.isNotEmpty && want.clones)
@@ -303,9 +305,7 @@ class GithubApi {
     for (var attempt = 0; attempt < 2; attempt++) {
       final r = await _dio.get<Object?>(
         '$_base/$repo/stats/commit_activity',
-        options: options.copyWith(
-          validateStatus: (s) => s != null && s < 300,
-        ),
+        options: options.copyWith(validateStatus: (s) => s != null && s < 300),
       );
       final data = r.data;
       if (r.statusCode == 200 && data is List) {

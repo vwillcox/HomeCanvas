@@ -13,24 +13,40 @@ import '../l10n/l10n.dart';
 /// same file an upload from a computer makes — see
 /// [VideoSite.afterPanelSignIn].
 Future<bool> signInOnPanel(BuildContext context, VideoSite site) async {
-  await Navigator.of(context).push(MaterialPageRoute(
-    builder: (_) => LinkViewerScreen(
-      url: site.signInUrl,
-      title: tr('video.signInToThenTap', 'Sign in to {name}, then tap Close', {'name': site.name}),
-      profile: site.loginProfile,
-      keepProfile: true,
-      // Long enough for a code from a phone and a second attempt at a
-      // password; the window is closed by hand long before, normally.
-      timeout: const Duration(minutes: 15),
+  await Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (_) => LinkViewerScreen(
+        url: site.signInUrl,
+        title: tr(
+          'video.signInToThenTap',
+          'Sign in to {name}, then tap Close',
+          {'name': site.name},
+        ),
+        profile: site.loginProfile,
+        keepProfile: true,
+        // Long enough for a code from a phone and a second attempt at a
+        // password; the window is closed by hand long before, normally.
+        timeout: const Duration(minutes: 15),
+      ),
     ),
-  ));
+  );
   final ok = await site.afterPanelSignIn();
   if (context.mounted) {
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
-      content: Text(ok
-          ? tr('video.signedInTo', 'Signed in to {name}.', {'name': site.name})
-          : tr('video.notSignedInDidNot', 'Not signed in — {name} did not recognise an account.', {'name': site.name})),
-    ));
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      SnackBar(
+        content: Text(
+          ok
+              ? tr('video.signedInTo', 'Signed in to {name}.', {
+                  'name': site.name,
+                })
+              : tr(
+                  'video.notSignedInDidNot',
+                  'Not signed in — {name} did not recognise an account.',
+                  {'name': site.name},
+                ),
+        ),
+      ),
+    );
   }
   return ok;
 }

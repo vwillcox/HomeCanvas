@@ -51,7 +51,11 @@ class _NotesWidgetState extends State<NotesWidget> {
   static String ago(DateTime at, DateTime now) {
     final d = now.difference(at);
     if (d.inMinutes < 1) return tr('widget.notes.justNow', 'just now');
-    if (d.inHours < 1) return tr('widget.notes.minAgo', '{inMinutes} min ago', {'inMinutes': d.inMinutes});
+    if (d.inHours < 1) {
+      return tr('widget.notes.minAgo', '{inMinutes} min ago', {
+        'inMinutes': d.inMinutes,
+      });
+    }
     if (d.inDays < 1) {
       return hhmm(at);
     }
@@ -124,7 +128,9 @@ class _NotesWidgetState extends State<NotesWidget> {
                 right: 0,
                 bottom: 0,
                 child: StatusChip(
-                  text: tr('widget.notes.more', '+{count} more', {'count': notes.length - count}),
+                  text: tr('widget.notes.more', '+{count} more', {
+                    'count': notes.length - count,
+                  }),
                   colour: t.textSecondary,
                   size: 12,
                 ),
@@ -170,13 +176,15 @@ class _Note extends StatelessWidget {
           decoration: BoxDecoration(
             color: paper,
             borderRadius: BorderRadius.circular(block ? 0 : 12),
-            boxShadow: block ? null : const [
-              BoxShadow(
-                color: Color(0x59000000),
-                blurRadius: 14,
-                offset: Offset(0, 6),
-              ),
-            ],
+            boxShadow: block
+                ? null
+                : const [
+                    BoxShadow(
+                      color: Color(0x59000000),
+                      blurRadius: 14,
+                      offset: Offset(0, 6),
+                    ),
+                  ],
           ),
           child: Stack(
             fit: StackFit.expand,

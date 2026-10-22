@@ -47,8 +47,12 @@ Weather sample() {
     windUnit: 'km/h',
     daily: [
       for (var i = 0; i < 7; i++)
-        day(DateTime(today.year, today.month, today.day + i), 9.0 + i,
-            17.0 + i, rain: i == 2 ? 70 : 5),
+        day(
+          DateTime(today.year, today.month, today.day + i),
+          9.0 + i,
+          17.0 + i,
+          rain: i == 2 ? 70 : 5,
+        ),
     ],
     hourly: [
       for (var i = 0; i < 25; i++)
@@ -63,8 +67,11 @@ Weather sample() {
   );
 }
 
-Future<FakeWeather> pumpSheet(WidgetTester tester, Weather? w,
-    {Size size = const Size(1920, 1200)}) async {
+Future<FakeWeather> pumpSheet(
+  WidgetTester tester,
+  Weather? w, {
+  Size size = const Size(1920, 1200),
+}) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
@@ -180,14 +187,17 @@ void main() {
       expect(hours.first.temperature, w.temperature);
       expect(hours.first.weatherCode, w.weatherCode);
       expect(hours.first.time, w.hourly.first.time);
-      expect(hours.skip(1).map((h) => h.temperature),
-          w.hourly.skip(1).map((h) => h.temperature));
+      expect(
+        hours.skip(1).map((h) => h.temperature),
+        w.hourly.skip(1).map((h) => h.temperature),
+      );
     });
 
     test('no hourly forecast, no strip', () {
       final w = sample();
       expect(
-          withNow(Weather(
+        withNow(
+          Weather(
             temperature: w.temperature,
             feelsLike: w.feelsLike,
             tempMax: w.tempMax,
@@ -196,22 +206,24 @@ void main() {
             isDay: w.isDay,
             label: w.label,
             unit: w.unit,
-          )),
-          isEmpty);
+          ),
+        ),
+        isEmpty,
+      );
     });
   });
 
   group('fitting the hours across', () {
     List<HourlyForecast> n(int count) => [
-          for (var i = 0; i < count; i++)
-            HourlyForecast(
-              time: DateTime(2026, 9, 24, i % 24),
-              temperature: 10,
-              weatherCode: 0,
-              precipitationChance: 0,
-              isDay: true,
-            ),
-        ];
+      for (var i = 0; i < count; i++)
+        HourlyForecast(
+          time: DateTime(2026, 9, 24, i % 24),
+          temperature: 10,
+          weatherCode: 0,
+          precipitationChance: 0,
+          isDay: true,
+        ),
+    ];
 
     test('every hour when there is room', () {
       expect(hoursToShow(n(25), 1800), hasLength(25));
@@ -234,8 +246,11 @@ void main() {
       expect(find.text('Today'), findsOneWidget, reason: 'the week');
       expect(find.text('NEXT 7 DAYS'), findsOneWidget);
       expect(find.text('81%'), findsOneWidget, reason: 'humidity');
-      expect(find.text('70%'), findsOneWidget,
-          reason: 'a wet day says so; a dry one does not');
+      expect(
+        find.text('70%'),
+        findsOneWidget,
+        reason: 'a wet day says so; a dry one does not',
+      );
       expect(tester.takeException(), isNull);
       await finish(tester, fake);
     });
@@ -295,8 +310,11 @@ void main() {
     });
 
     testWidgets('fits a portrait screen without overflowing', (tester) async {
-      final fake =
-          await pumpSheet(tester, sample(), size: const Size(800, 1280));
+      final fake = await pumpSheet(
+        tester,
+        sample(),
+        size: const Size(800, 1280),
+      );
       expect(tester.takeException(), isNull);
       await finish(tester, fake);
     });

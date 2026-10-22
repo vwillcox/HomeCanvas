@@ -38,8 +38,9 @@ class _RemoteImageState extends State<RemoteImage> {
   bool _gaveUp = false;
   final _rng = Random();
 
-  String get _activeUrl =>
-      _usingFallback && widget.fallbackUrl != null ? widget.fallbackUrl! : widget.url;
+  String get _activeUrl => _usingFallback && widget.fallbackUrl != null
+      ? widget.fallbackUrl!
+      : widget.url;
 
   void _onError() {
     if (_retryPending || _gaveUp || !mounted) return;
@@ -103,8 +104,11 @@ class _Placeholder extends StatelessWidget {
                 height: 24,
                 child: CircularProgressIndicator(strokeWidth: 2.5),
               )
-            : Icon(Icons.broken_image_outlined,
-                color: context.look.wash(0.38), size: 34),
+            : Icon(
+                Icons.broken_image_outlined,
+                color: context.look.wash(0.38),
+                size: 34,
+              ),
       ),
     );
   }

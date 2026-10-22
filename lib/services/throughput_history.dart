@@ -81,8 +81,9 @@ class ThroughputHistory extends ChangeNotifier {
   /// How much history there actually is, which is not the same as the
   /// retention — a panel up for ten minutes has ten minutes.
   Duration get span {
-    final first =
-        _buckets.isNotEmpty ? _buckets.first.minute : _live.firstOrNull?.at;
+    final first = _buckets.isNotEmpty
+        ? _buckets.first.minute
+        : _live.firstOrNull?.at;
     final last = _lastSampleAt;
     if (first == null || last == null) return Duration.zero;
     // Measured between the oldest and newest readings rather than against the
@@ -125,7 +126,11 @@ class ThroughputHistory extends ChangeNotifier {
   ///
   /// Peaks rather than means when downsampling: averaging away a burst makes a
   /// busy evening look quiet, which is the opposite of useful.
-  List<ThroughputPoint> series(Duration window, int maxPoints, {DateTime? now}) {
+  List<ThroughputPoint> series(
+    Duration window,
+    int maxPoints, {
+    DateTime? now,
+  }) {
     // The clock is injectable for the same reason FeedService.mix takes one:
     // a window is relative to "now", and a test that cannot say when now is
     // cannot test a window at all.
@@ -137,9 +142,9 @@ class ThroughputHistory extends ChangeNotifier {
     final source = window <= const Duration(minutes: 10)
         ? _live.where((p) => p.at.isAfter(from)).toList()
         : _buckets
-            .where((b) => b.minute.isAfter(from))
-            .map((b) => ThroughputPoint(b.minute, b.peakTx, b.peakRx))
-            .toList();
+              .where((b) => b.minute.isAfter(from))
+              .map((b) => ThroughputPoint(b.minute, b.peakTx, b.peakRx))
+              .toList();
 
     if (source.length <= maxPoints || maxPoints <= 1) return source;
 

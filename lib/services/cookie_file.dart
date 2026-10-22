@@ -66,7 +66,10 @@ class CookieFile {
   /// Python's sqlite3 does the reading — the installer needs Python already.
   /// Returns whether any cookies were found.
   static Future<bool> fromFirefox(
-      String profileDir, String path, List<String> domains) async {
+    String profileDir,
+    String path,
+    List<String> domains,
+  ) async {
     final db = '$profileDir/cookies.sqlite';
     if (!await File(db).exists()) return false;
     // Firefox is still letting go of the file for a moment after the kill.
@@ -91,8 +94,13 @@ print(len(lines) - 1)
 ''';
     try {
       await File(path).parent.create(recursive: true);
-      final r = await Process.run(
-          'python3', ['-c', script, db, path, domains.join(',')]);
+      final r = await Process.run('python3', [
+        '-c',
+        script,
+        db,
+        path,
+        domains.join(','),
+      ]);
       return r.exitCode == 0 && (int.tryParse('${r.stdout}'.trim()) ?? 0) > 0;
     } catch (_) {
       return false;

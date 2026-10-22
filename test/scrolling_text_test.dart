@@ -3,20 +3,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:home_canvas/dashboard/widgets/scrolling_text.dart';
 
 Widget host(String text, double width, {int laps = 3}) => MaterialApp(
-      home: Scaffold(
-        body: Center(
-          child: SizedBox(
-            width: width,
-            child: ScrollingText(
-              text,
-              style: const TextStyle(fontSize: 20),
-              pause: const Duration(milliseconds: 300),
-              laps: laps,
-            ),
-          ),
+  home: Scaffold(
+    body: Center(
+      child: SizedBox(
+        width: width,
+        child: ScrollingText(
+          text,
+          style: const TextStyle(fontSize: 20),
+          pause: const Duration(milliseconds: 300),
+          laps: laps,
         ),
       ),
-    );
+    ),
+  ),
+);
 
 /// Scoped to the widget under test: MaterialApp and Scaffold bring their own
 /// Positioned widgets, so a bare byType finder matches those too.
@@ -28,10 +28,12 @@ final scrollTransform = find.descendant(
 /// How far the pair of copies has been slid: one translation moving both,
 /// so a frame is only painted, not laid out again.
 double slid(WidgetTester tester) => tester
-    .widget<Transform>(find.descendant(
-      of: find.byType(ScrollingText),
-      matching: find.byType(Transform),
-    ))
+    .widget<Transform>(
+      find.descendant(
+        of: find.byType(ScrollingText),
+        matching: find.byType(Transform),
+      ),
+    )
     .transform
     .getTranslation()
     .x;
@@ -49,24 +51,33 @@ List<double> lefts(WidgetTester tester) => tester
     .toList();
 
 void main() {
-  testWidgets('text that fits sits still and is not clipped or animated',
-      (tester) async {
+  testWidgets('text that fits sits still and is not clipped or animated', (
+    tester,
+  ) async {
     await tester.pumpWidget(host('Short', 600));
     await tester.pump();
     expect(scrollTransform, findsNothing);
     expect(find.text('Short'), findsOneWidget);
   });
 
-  testWidgets('text too wide scrolls right to left and loops round',
-      (tester) async {
-    await tester.pumpWidget(host(
-        'A very long track name that certainly will not fit in this box', 120));
+  testWidgets('text too wide scrolls right to left and loops round', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      host(
+        'A very long track name that certainly will not fit in this box',
+        120,
+      ),
+    );
     // Let layout settle and the controller start.
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 16));
 
-    expect(scrollTransform, findsNWidgets(2),
-        reason: 'a second copy trails a lap behind so the wrap has no seam');
+    expect(
+      scrollTransform,
+      findsNWidgets(2),
+      reason: 'a second copy trails a lap behind so the wrap has no seam',
+    );
 
     // Held at the start for the pause.
     expect(offsetOf(tester).left, 0);
@@ -77,22 +88,31 @@ void main() {
     expect(moving, lessThan(0));
 
     await tester.pump(const Duration(milliseconds: 400));
-    expect(offsetOf(tester).left, lessThan(moving),
-        reason: 'it should keep travelling in the same direction');
+    expect(
+      offsetOf(tester).left,
+      lessThan(moving),
+      reason: 'it should keep travelling in the same direction',
+    );
 
     // The whole string is laid out, not merely the part that fits. This is
     // the bug this replaced: an oversized box is still bound by the width
     // coming down from the tile, so the text was truncated before it moved
     // and sliding it along revealed the blank it had been cut to.
-    expect(offsetOf(tester).width, greaterThan(120 * 2),
-        reason: 'the text should be laid out at its full length');
+    expect(
+      offsetOf(tester).width,
+      greaterThan(120 * 2),
+      reason: 'the text should be laid out at its full length',
+    );
 
     // The trailing copy is exactly one lap ahead, which is what makes the
     // wrap seamless.
     final pair = lefts(tester);
     final lap = pair[1] - pair[0];
-    expect(lap, greaterThan(offsetOf(tester).width),
-        reason: 'a lap is the text plus the gap after it');
+    expect(
+      lap,
+      greaterThan(offsetOf(tester).width),
+      reason: 'a lap is the text plus the gap after it',
+    );
 
     // It scrolls the whole text off to the left rather than stopping once
     // the last character shows.
@@ -104,8 +124,11 @@ void main() {
       final l = lefts(tester)[0];
       if (l < furthest) furthest = l;
     }
-    expect(furthest, lessThan(-offsetOf(tester).width),
-        reason: 'the text should leave the left edge entirely');
+    expect(
+      furthest,
+      lessThan(-offsetOf(tester).width),
+      reason: 'the text should leave the left edge entirely',
+    );
 
     // And it keeps going rather than stopping at the end.
     await tester.pump(const Duration(milliseconds: 500));
@@ -114,10 +137,12 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('after its laps it rests at the start, and stops animating',
-      (tester) async {
+  testWidgets('after its laps it rests at the start, and stops animating', (
+    tester,
+  ) async {
     await tester.pumpWidget(
-        host('A title far too long for this narrow box', 100, laps: 1));
+      host('A title far too long for this narrow box', 100, laps: 1),
+    );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 16));
     expect(tester.hasRunningAnimations, isTrue);
@@ -126,15 +151,21 @@ void main() {
     for (var i = 0; i < 60; i++) {
       await tester.pump(const Duration(seconds: 1));
     }
-    expect(tester.hasRunningAnimations, isFalse,
-        reason: 'nothing should be drawn again once it has come to rest');
+    expect(
+      tester.hasRunningAnimations,
+      isFalse,
+      reason: 'nothing should be drawn again once it has come to rest',
+    );
     // The copy a lap behind sits where the text starts.
     expect(lefts(tester)[1], closeTo(0, 0.01));
   });
 
-  testWidgets('a new track re-measures rather than inheriting the old scroll',
-      (tester) async {
-    await tester.pumpWidget(host('A title far too long for this narrow box', 100));
+  testWidgets('a new track re-measures rather than inheriting the old scroll', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      host('A title far too long for this narrow box', 100),
+    );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 16));
     expect(scrollTransform, findsNWidgets(2));
@@ -142,7 +173,10 @@ void main() {
     await tester.pumpWidget(host('Tiny', 100));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 16));
-    expect(scrollTransform, findsNothing,
-        reason: 'a short title should stop scrolling');
+    expect(
+      scrollTransform,
+      findsNothing,
+      reason: 'a short title should stop scrolling',
+    );
   });
 }

@@ -136,6 +136,7 @@ class CarbonService extends ChangeNotifier {
     _fetched[outcode] = DateTime.now();
     notifyListeners();
   }
+
   String? error(String outcode) => _errors[outcode];
 
   /// Fetches for [outcode] if there is nothing recent. Cheap to call often.

@@ -32,32 +32,30 @@ ThemeData buildTheme([DashboardTheme? look]) {
   final solid = t.solidSurface;
   // A raised surface for dialogs and menus: a step lighter than the tiles on
   // a dark theme, a step darker on a light one.
-  final raised = Color.alphaBlend(
-    t.wash(t.isLight ? 0.04 : 0.06),
-    solid,
-  );
-  final scheme = ColorScheme.fromSeed(
-    seedColor: t.accent,
-    brightness: brightness,
-  ).copyWith(
-    primary: t.accent,
-    onPrimary: t.onAccent,
-    surface: t.background.first,
-    onSurface: t.textPrimary,
-    onSurfaceVariant: Color.alphaBlend(t.textSecondary, t.background.first),
-    surfaceContainerLowest: t.background.first,
-    surfaceContainerLow: solid,
-    surfaceContainer: solid,
-    surfaceContainerHigh: raised,
-    surfaceContainerHighest: raised,
-    outline: t.wash(0.3),
-    outlineVariant: t.wash(0.14),
-  );
+  final raised = Color.alphaBlend(t.wash(t.isLight ? 0.04 : 0.06), solid);
+  final scheme =
+      ColorScheme.fromSeed(
+        seedColor: t.accent,
+        brightness: brightness,
+      ).copyWith(
+        primary: t.accent,
+        onPrimary: t.onAccent,
+        surface: t.background.first,
+        onSurface: t.textPrimary,
+        onSurfaceVariant: Color.alphaBlend(t.textSecondary, t.background.first),
+        surfaceContainerLowest: t.background.first,
+        surfaceContainerLow: solid,
+        surfaceContainer: solid,
+        surfaceContainerHigh: raised,
+        surfaceContainerHighest: raised,
+        outline: t.wash(0.3),
+        outlineVariant: t.wash(0.14),
+      );
   // The switch's knob: a deeper shade of the accent, as the kiosk's own look
   // pairs a pale blue track with a deep blue knob.
-  final knob = HSLColor.fromColor(t.accent)
-      .withLightness(t.isLight ? 0.35 : 0.45)
-      .toColor();
+  final knob = HSLColor.fromColor(
+    t.accent,
+  ).withLightness(t.isLight ? 0.35 : 0.45).toColor();
   final text = ThemeData(brightness: brightness).textTheme.apply(
     bodyColor: t.textPrimary,
     displayColor: t.textPrimary,

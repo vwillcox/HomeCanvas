@@ -28,7 +28,8 @@ class AppPaths {
 
   /// Browser profiles worth keeping, such as a YouTube sign-in. Not under
   /// [cache] for the same reason.
-  static String get profiles => p.join(_home, '.local', 'share', name, 'profiles');
+  static String get profiles =>
+      p.join(_home, '.local', 'share', name, 'profiles');
 
   /// Moves an old settings or cache folder to its new name, if there is one
   /// and nothing is at the new name yet. Safe to call on every start.

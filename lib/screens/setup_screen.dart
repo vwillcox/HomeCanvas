@@ -61,7 +61,10 @@ class _SetupScreenState extends State<SetupScreen> {
     } else {
       setState(() {
         _busy = false;
-        _status = tr('setup.couldNotConnectCheckThe', 'Could not connect. Check the URL and API key.');
+        _status = tr(
+          'setup.couldNotConnectCheckThe',
+          'Could not connect. Check the URL and API key.',
+        );
       });
     }
   }
@@ -72,7 +75,10 @@ class _SetupScreenState extends State<SetupScreen> {
     return ModernScaffold(
       header: ScreenHeader(
         title: tr('setup.connectToImmich', 'Connect to Immich'),
-        subtitle: tr('setup.yourServerAddressAndAn', 'Your server address and an API key'),
+        subtitle: tr(
+          'setup.yourServerAddressAndAn',
+          'Your server address and an API key',
+        ),
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -84,7 +90,10 @@ class _SetupScreenState extends State<SetupScreen> {
               children: [
                 Text(
                   tr('setup.immichServerUrl', 'Immich server URL'),
-                  style: TextStyle(fontSize: 16, color: context.look.textSecondary),
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: context.look.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 TextField(
@@ -101,7 +110,10 @@ class _SetupScreenState extends State<SetupScreen> {
                 const SizedBox(height: 20),
                 Text(
                   tr('setup.apiKey', 'API key'),
-                  style: TextStyle(fontSize: 16, color: context.look.textSecondary),
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: context.look.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 TextField(
@@ -110,7 +122,10 @@ class _SetupScreenState extends State<SetupScreen> {
                   style: const TextStyle(fontSize: 20),
                   decoration: InputDecoration(
                     border: const OutlineInputBorder(),
-                    hintText: tr('setup.immichAccountApiKeys', 'Immich → Account → API Keys'),
+                    hintText: tr(
+                      'setup.immichAccountApiKeys',
+                      'Immich → Account → API Keys',
+                    ),
                     prefixIcon: const Icon(Icons.key),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -142,7 +157,9 @@ class _SetupScreenState extends State<SetupScreen> {
                       fontSize: 16,
                       color: _ok
                           ? const Color(0xFF6BE39A)
-                          : (_busy ? context.look.textSecondary : const Color(0xFFFF6B6B)),
+                          : (_busy
+                                ? context.look.textSecondary
+                                : const Color(0xFFFF6B6B)),
                     ),
                   ),
               ],

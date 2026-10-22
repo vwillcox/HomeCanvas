@@ -141,7 +141,9 @@ class _DashboardOmarchyWidgetState extends State<DashboardOmarchyWidget>
         final page = _page.clamp(0, pages - 1);
         final from = page * perPage;
         final slice = section.keys.sublist(
-            from, (from + perPage).clamp(0, section.keys.length));
+          from,
+          (from + perPage).clamp(0, section.keys.length),
+        );
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -310,9 +312,7 @@ class _Header extends StatelessWidget {
                   height: theme.isLcars ? 8 : 10,
                   margin: EdgeInsets.only(left: theme.isLcars ? 3 : 8),
                   decoration: BoxDecoration(
-                    shape: theme.isLcars
-                        ? BoxShape.rectangle
-                        : BoxShape.circle,
+                    shape: theme.isLcars ? BoxShape.rectangle : BoxShape.circle,
                     color: theme.isLcars
                         ? (i == page ? lcarsLit : theme.block(i))
                         : i == page
@@ -410,21 +410,21 @@ class _TabsState extends State<_Tabs> {
               // On a console each tab is a block of its own colour, the
               // one showing near-white, lettered in black.
               decoration: theme.isLcars
-                  ? BoxDecoration(
-                      color: selected ? lcarsLit : theme.block(i),
-                    )
+                  ? BoxDecoration(color: selected ? lcarsLit : theme.block(i))
                   : BoxDecoration(
-                color: selected
-                    ? theme.accent.withValues(alpha: 0.22)
-                    : theme.textSecondary.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(theme.cornerRadius * 0.4),
-                border: Border.all(
-                  color: selected
-                      ? theme.accent
-                      : theme.textSecondary.withValues(alpha: 0.25),
-                  width: selected ? 2 : 1,
-                ),
-              ),
+                      color: selected
+                          ? theme.accent.withValues(alpha: 0.22)
+                          : theme.textSecondary.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(
+                        theme.cornerRadius * 0.4,
+                      ),
+                      border: Border.all(
+                        color: selected
+                            ? theme.accent
+                            : theme.textSecondary.withValues(alpha: 0.25),
+                        width: selected ? 2 : 1,
+                      ),
+                    ),
               child: Text(
                 theme.isLcars
                     ? lcarsCaps(sections[i].title)
@@ -524,11 +524,7 @@ class _Row extends StatelessWidget {
             child: FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
-              child: _Caps(
-                theme: theme,
-                keys: hotkey.keys,
-                size: metrics.key,
-              ),
+              child: _Caps(theme: theme, keys: hotkey.keys, size: metrics.key),
             ),
           ),
         ),
@@ -574,37 +570,36 @@ class _Caps extends StatelessWidget {
   }
 
   Widget _joiner(String text) => Padding(
-        padding: EdgeInsets.symmetric(horizontal: size * 0.22),
-        child: Text(
-          text,
-          style: TextStyle(
-            color: theme.textSecondary,
-            fontSize: size * 0.85,
-          ),
-        ),
-      );
+    padding: EdgeInsets.symmetric(horizontal: size * 0.22),
+    child: Text(
+      text,
+      style: TextStyle(color: theme.textSecondary, fontSize: size * 0.85),
+    ),
+  );
 
   Widget _cap(String label) => Container(
-        padding: EdgeInsets.symmetric(
-            horizontal: size * 0.45, vertical: size * 0.26),
-        // A key, on a console, is a block lettered in black.
-        decoration: theme.isLcars
-            ? BoxDecoration(color: theme.block(lcarsIndex(label)))
-            : BoxDecoration(
-          color: theme.accent.withValues(alpha: 0.16),
-          borderRadius: BorderRadius.circular(size * 0.35),
-          border: Border.all(color: theme.accent.withValues(alpha: 0.55)),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: theme.isLcars ? lcarsInk : theme.accent,
-            fontSize: size,
-            fontWeight: FontWeight.w600,
-            height: 1.0,
+    padding: EdgeInsets.symmetric(
+      horizontal: size * 0.45,
+      vertical: size * 0.26,
+    ),
+    // A key, on a console, is a block lettered in black.
+    decoration: theme.isLcars
+        ? BoxDecoration(color: theme.block(lcarsIndex(label)))
+        : BoxDecoration(
+            color: theme.accent.withValues(alpha: 0.16),
+            borderRadius: BorderRadius.circular(size * 0.35),
+            border: Border.all(color: theme.accent.withValues(alpha: 0.55)),
           ),
-        ),
-      );
+    child: Text(
+      label,
+      style: TextStyle(
+        color: theme.isLcars ? lcarsInk : theme.accent,
+        fontSize: size,
+        fontWeight: FontWeight.w600,
+        height: 1.0,
+      ),
+    ),
+  );
 }
 
 /// How a page of [count] shortcuts divides up in a box of this size.
@@ -641,9 +636,8 @@ class _Caps extends StatelessWidget {
 /// never seen on the page they are trying to memorise.
 @visibleForTesting
 List<List<String>> omarchyCaps(String keys) => [
-      for (final alternative in keys.split(' or '))
-        alternative.split(' + '),
-    ];
+  for (final alternative in keys.split(' or ')) alternative.split(' + '),
+];
 
 final omarchyWidgetType = DashboardWidgetType(
   type: 'omarchy',
@@ -668,7 +662,8 @@ final omarchyWidgetType = DashboardWidgetType(
         'all': 'All of them',
         for (final s in omarchyHotkeys) s.title: s.title,
       },
-      help: 'Pick one to pin the sheet to it, or show them all and move '
+      help:
+          'Pick one to pin the sheet to it, or show them all and move '
           'between them.',
     ),
     const WidgetOption(
@@ -688,7 +683,8 @@ final omarchyWidgetType = DashboardWidgetType(
       label: 'Turn the page by itself, every',
       kind: OptionKind.number,
       defaultValue: 0,
-      help: 'Seconds. 0 leaves it still until you touch it. Under three is '
+      help:
+          'Seconds. 0 leaves it still until you touch it. Under three is '
           'treated as three.',
     ),
     const WidgetOption(

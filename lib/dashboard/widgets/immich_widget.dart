@@ -41,8 +41,9 @@ class _DashboardImmichWidgetState extends State<DashboardImmichWidget>
   /// Keeps asking while there is nothing to show. The panel starts before the
   /// network is up, so the first fetch usually fails; without this the tile
   /// said "could not reach Immich" until something else rebuilt it.
-  final RetrySchedule _retry =
-      RetrySchedule(settled: const Duration(minutes: 10));
+  final RetrySchedule _retry = RetrySchedule(
+    settled: const Duration(minutes: 10),
+  );
 
   /// What the pool was fetched for. A changed source means the pool is stale
   /// however recently it was filled.
@@ -158,7 +159,10 @@ class _DashboardImmichWidgetState extends State<DashboardImmichWidget>
         child: SizedBox(
           width: 28,
           height: 28,
-          child: CircularProgressIndicator(strokeWidth: 2, color: t.textSecondary),
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: t.textSecondary,
+          ),
         ),
       );
     }
@@ -175,9 +179,11 @@ class _DashboardImmichWidgetState extends State<DashboardImmichWidget>
             ),
             const SizedBox(height: 4),
             // Says it is still trying rather than presenting a dead end. At
-                // boot this is usually a network that is seconds away.
+            // boot this is usually a network that is seconds away.
             Text(
-              _retry.failures > 3 ? tr('widget.immich.stillTrying', 'still trying') : 'connecting',
+              _retry.failures > 3
+                  ? tr('widget.immich.stillTrying', 'still trying')
+                  : 'connecting',
               style: TextStyle(color: t.textSecondary, fontSize: 12),
             ),
           ],
@@ -189,7 +195,10 @@ class _DashboardImmichWidgetState extends State<DashboardImmichWidget>
       return Center(
         child: Text(
           _source == 'album' && _albumId.isEmpty
-              ? tr('widget.immich.pickAnAlbumInThe', 'Pick an album in the widget settings')
+              ? tr(
+                  'widget.immich.pickAnAlbumInThe',
+                  'Pick an album in the widget settings',
+                )
               : tr('widget.immich.noPhotosToShow', 'No photos to show'),
           textAlign: TextAlign.center,
           style: TextStyle(color: t.textSecondary, fontSize: 14),
@@ -227,7 +236,10 @@ class _DashboardImmichWidgetState extends State<DashboardImmichWidget>
               right: 0,
               bottom: 0,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
@@ -270,10 +282,7 @@ final immichWidgetType = DashboardWidgetType(
       label: 'Photos from',
       kind: OptionKind.choice,
       defaultValue: 'random',
-      choices: {
-        'random': 'Anywhere in the library',
-        'album': 'One album',
-      },
+      choices: {'random': 'Anywhere in the library', 'album': 'One album'},
     ),
     WidgetOption(
       key: 'albumId',

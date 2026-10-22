@@ -36,8 +36,9 @@ class UnifiService extends ChangeNotifier {
 
   /// Quick retries until the console answers, then a steady poll. The panel
   /// starts before the network, so the first attempt usually fails.
-  final RetrySchedule _retry =
-      RetrySchedule(settled: const Duration(seconds: 60));
+  final RetrySchedule _retry = RetrySchedule(
+    settled: const Duration(seconds: 60),
+  );
 
   String? _error;
   String? get error => _error;
@@ -54,7 +55,8 @@ class UnifiService extends ChangeNotifier {
   List<UnifiClient> get clients => _clients;
 
   /// Statistics for a device, or an empty set if it has not answered yet.
-  UnifiStats statsFor(String deviceId) => _stats[deviceId] ?? const UnifiStats();
+  UnifiStats statsFor(String deviceId) =>
+      _stats[deviceId] ?? const UnifiStats();
 
   /// The gateway — the device reporting an uplink. On a single-console site
   /// that is the router; found rather than assumed to be first in the list.
@@ -79,7 +81,8 @@ class UnifiService extends ChangeNotifier {
   /// from the graph — a graph that empties whenever you look at another page
   /// is not a graph.
   late final ThroughputHistory history = ThroughputHistory(
-      retention: Duration(hours: settings.throughputHours));
+    retention: Duration(hours: settings.throughputHours),
+  );
 
   Timer? _fastTimer;
 
@@ -102,25 +105,26 @@ class UnifiService extends ChangeNotifier {
   Dio _client() {
     final existing = _dio;
     if (existing != null) return existing;
-    final dio = Dio(BaseOptions(
-      connectTimeout: const Duration(seconds: 8),
-      receiveTimeout: const Duration(seconds: 12),
-      headers: {
-        'X-API-KEY': settings.apiKey,
-        'Accept': 'application/json',
-      },
-      // 4xx should be readable rather than thrown: a 401 means the key is
-      // wrong, which is worth saying plainly instead of "request failed".
-      validateStatus: (code) => code != null && code < 500,
-    ));
+    final dio = Dio(
+      BaseOptions(
+        connectTimeout: const Duration(seconds: 8),
+        receiveTimeout: const Duration(seconds: 12),
+        headers: {'X-API-KEY': settings.apiKey, 'Accept': 'application/json'},
+        // 4xx should be readable rather than thrown: a 401 means the key is
+        // wrong, which is worth saying plainly instead of "request failed".
+        validateStatus: (code) => code != null && code < 500,
+      ),
+    );
     if (settings.allowSelfSignedCert) {
       // A UniFi console presents a certificate for its .id.ui.direct name, not
       // for the address you reach it on, so a strict check fails against the
       // very device in front of you. Scoped to the configured host so this is
       // not a blanket "trust anything".
       dio.httpClientAdapter = IOHttpClientAdapter(
-        createHttpClient: () => HttpClient()
-          ..badCertificateCallback = (cert, host, port) => host == settings.host,
+        createHttpClient: () =>
+            HttpClient()
+              ..badCertificateCallback = (cert, host, port) =>
+                  host == settings.host,
       );
     }
     return _dio = dio;
@@ -140,8 +144,9 @@ class UnifiService extends ChangeNotifier {
   void _scheduleNext({bool immediately = false}) {
     _timer?.cancel();
     if (!settings.isConfigured) return;
-    final delay =
-        immediately ? Duration.zero : _retry.next(hasContent: hasContent);
+    final delay = immediately
+        ? Duration.zero
+        : _retry.next(hasContent: hasContent);
     _timer = Timer(delay, () async {
       await refresh();
       if (!_disposed) _scheduleNext();
@@ -159,21 +164,20 @@ class UnifiService extends ChangeNotifier {
       // would silently show a third of the network.
       final clients = await _get('/sites/$site/clients?limit=200');
 
-      _devices = _listOf(devices)
-          .map(UnifiDevice.parse)
-          .whereType<UnifiDevice>()
-          .toList();
-      _clients = _listOf(clients)
-          .map(UnifiClient.parse)
-          .whereType<UnifiClient>()
-          .toList();
+      _devices = _listOf(
+        devices,
+      ).map(UnifiDevice.parse).whereType<UnifiDevice>().toList();
+      _clients = _listOf(
+        clients,
+      ).map(UnifiClient.parse).whereType<UnifiClient>().toList();
 
       // Statistics are per device and are what carry CPU, memory and the WAN
       // rates, so they are worth the extra calls.
       for (final d in _devices) {
         try {
           _stats[d.id] = UnifiStats.parse(
-              await _get('/sites/$site/devices/${d.id}/statistics/latest'));
+            await _get('/sites/$site/devices/${d.id}/statistics/latest'),
+          );
         } catch (e) {
           debugPrint('UniFi: stats for ${d.name} failed: $e');
         }
@@ -234,7 +238,8 @@ class UnifiService extends ChangeNotifier {
   Future<void> _readIspTest() async {
     try {
       final r = await _client().get<Object?>(
-          'https://${settings.host}/proxy/network/api/s/default/stat/health');
+        'https://${settings.host}/proxy/network/api/s/default/stat/health',
+      );
       if ((r.statusCode ?? 0) >= 400) return;
       final parsed = UnifiIspTest.fromHealth(r.data);
       if (parsed != null) _isp = parsed;
@@ -269,7 +274,8 @@ class UnifiService extends ChangeNotifier {
     _sampling = true;
     try {
       final raw = await _get(
-          '/sites/${settings.siteId}/devices/${g.id}/statistics/latest');
+        '/sites/${settings.siteId}/devices/${g.id}/statistics/latest',
+      );
       final s = UnifiStats.parse(raw);
       _stats[g.id] = s;
       if (s.txRateBps != null || s.rxRateBps != null) {
@@ -296,8 +302,9 @@ class UnifiService extends ChangeNotifier {
     final code = r.statusCode ?? 0;
     if (code == 401 || code == 403) {
       throw UnifiAuthException(
-          'the console refused the API key (HTTP $code) — check it is still '
-          'valid, and that its admin has access to this site');
+        'the console refused the API key (HTTP $code) — check it is still '
+        'valid, and that its admin has access to this site',
+      );
     }
     if (code >= 400) {
       throw StateError('GET $path returned HTTP $code');

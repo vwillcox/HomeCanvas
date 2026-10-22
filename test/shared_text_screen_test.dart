@@ -22,18 +22,23 @@ void main() {
       expect(SharedTextScreen.fontSizeFor('a' * 100000), long);
     });
 
-    test('surrounding whitespace does not push a short note into small type',
-        () {
-      expect(
-        SharedTextScreen.fontSizeFor('   Dinner is ready   \n\n'),
-        SharedTextScreen.fontSizeFor('Dinner is ready'),
-      );
-    });
+    test(
+      'surrounding whitespace does not push a short note into small type',
+      () {
+        expect(
+          SharedTextScreen.fontSizeFor('   Dinner is ready   \n\n'),
+          SharedTextScreen.fontSizeFor('Dinner is ready'),
+        );
+      },
+    );
 
     test('every note is larger than the 32px it used to be', () {
       for (final n in [1, 40, 41, 120, 121, 320, 321, 5000]) {
-        expect(SharedTextScreen.fontSizeFor('a' * n), greaterThan(32),
-            reason: 'a $n-character note should be bigger than the old size');
+        expect(
+          SharedTextScreen.fontSizeFor('a' * n),
+          greaterThan(32),
+          reason: 'a $n-character note should be bigger than the old size',
+        );
       }
     });
   });
@@ -44,9 +49,11 @@ void main() {
       ..devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
-    await tester.pumpWidget(const MaterialApp(
-      home: SharedTextScreen(text: 'Dinner is ready', sender: 'Jo Fluff'),
-    ));
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: SharedTextScreen(text: 'Dinner is ready', sender: 'Jo Fluff'),
+      ),
+    );
     await tester.pumpAndSettle();
 
     final note = tester.getRect(find.text('Dinner is ready'));
@@ -60,23 +67,32 @@ void main() {
     // layout this replaced centred the text in the space left over between
     // two controls of different heights, which lands close to the middle but
     // never on it — a loose bound would have passed for both.
-    expect((note.top + from.bottom) / 2,
-        moreOrLessEquals(screen.center.dy, epsilon: 0.5));
+    expect(
+      (note.top + from.bottom) / 2,
+      moreOrLessEquals(screen.center.dy, epsilon: 0.5),
+    );
   });
 
-  testWidgets('there is a large OK button that dismisses the note',
-      (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      home: Builder(
-        builder: (context) => ElevatedButton(
-          onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => const SharedTextScreen(
-                text: 'Dinner is ready', sender: 'Jo Fluff'),
-          )),
-          child: const Text('open'),
+  testWidgets('there is a large OK button that dismisses the note', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const SharedTextScreen(
+                  text: 'Dinner is ready',
+                  sender: 'Jo Fluff',
+                ),
+              ),
+            ),
+            child: const Text('open'),
+          ),
         ),
       ),
-    ));
+    );
 
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
@@ -98,14 +114,17 @@ void main() {
     expect(find.text('Dinner is ready'), findsNothing);
   });
 
-  testWidgets('a very long note scrolls rather than overflowing',
-      (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      home: SharedTextScreen(
-        text: List.filled(120, 'a rather long sentence').join(' '),
-        sender: 'Jo Fluff',
+  testWidgets('a very long note scrolls rather than overflowing', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SharedTextScreen(
+          text: List.filled(120, 'a rather long sentence').join(' '),
+          sender: 'Jo Fluff',
+        ),
       ),
-    ));
+    );
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);

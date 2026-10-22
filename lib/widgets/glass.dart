@@ -360,6 +360,7 @@ class ScreenHeader extends StatelessWidget {
   final String? subtitle;
   final VoidCallback? onBack;
   final IconData backIcon;
+
   /// Defaults to "Back" in the panel's language.
   final String? backTooltip;
   final List<Widget> actions;
@@ -466,12 +467,7 @@ class HeaderTitle extends StatelessWidget {
 /// Keeps its own one-minute timer, so the greeting turns over at noon and
 /// the date at midnight without rebuilding the screen around it.
 class GreetingTitle extends StatefulWidget {
-  const GreetingTitle({
-    super.key,
-    this.detail,
-    this.colour,
-    this.secondary,
-  });
+  const GreetingTitle({super.key, this.detail, this.colour, this.secondary});
 
   final String? detail;
   final Color? colour;
@@ -488,8 +484,10 @@ class _GreetingTitleState extends State<GreetingTitle>
   @override
   void initState() {
     super.initState();
-    everyWhileShown(const Duration(minutes: 1),
-        () => setState(() => _now = DateTime.now()));
+    everyWhileShown(
+      const Duration(minutes: 1),
+      () => setState(() => _now = DateTime.now()),
+    );
   }
 
   @override
@@ -636,7 +634,6 @@ class ModernScaffold extends StatelessWidget {
     );
   }
 }
-
 
 /// "Good morning" and so on, by the hour.
 String greetingFor(DateTime t) {

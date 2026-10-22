@@ -35,8 +35,10 @@ Future<void> showWeatherForecast(
     pageBuilder: (context, _, _) =>
         WeatherForecastSheet(theme: theme, autoClose: autoClose),
     transitionBuilder: (context, animation, _, child) {
-      final curved =
-          CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+      final curved = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+      );
       // Blurs the dashboard behind rather than just dimming it: the sheet
       // reads as a layer over the panel, not a page that replaced it.
       return AnimatedBuilder(
@@ -94,10 +96,13 @@ class _WeatherForecastSheetState extends State<WeatherForecastSheet>
   @override
   void initState() {
     super.initState();
-    _settle = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 220),
-    )..addListener(() => setState(() => _drag = _dragFrom * (1 - _settle.value)));
+    _settle =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 220),
+        )..addListener(
+          () => setState(() => _drag = _dragFrom * (1 - _settle.value)),
+        );
     _timer = Timer(widget.autoClose, _close);
   }
 
@@ -149,26 +154,27 @@ class _WeatherForecastSheetState extends State<WeatherForecastSheet>
                     // panels inside it are its frame.
                     ? BoxDecoration(color: t.background.first)
                     : BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      for (final c in t.background.length > 1
-                          ? t.background
-                          : [t.background.first, t.background.first])
-                        c.withValues(alpha: 0.97),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(32),
-                  border: Border.all(color: t.border),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x66000000),
-                      blurRadius: 60,
-                      offset: Offset(0, 20),
-                    ),
-                  ],
-                ),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            for (final c
+                                in t.background.length > 1
+                                    ? t.background
+                                    : [t.background.first, t.background.first])
+                              c.withValues(alpha: 0.97),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(32),
+                        border: Border.all(color: t.border),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x66000000),
+                            blurRadius: 60,
+                            offset: Offset(0, 20),
+                          ),
+                        ],
+                      ),
                 child: Material(
                   type: MaterialType.transparency,
                   child: weather == null
@@ -179,7 +185,9 @@ class _WeatherForecastSheetState extends State<WeatherForecastSheet>
                               'Waiting for the forecast…',
                             ),
                             style: TextStyle(
-                                color: t.textSecondary, fontSize: 24),
+                              color: t.textSecondary,
+                              fontSize: 24,
+                            ),
                           ),
                         )
                       : _Body(weather: weather, theme: t, onClose: _close),
@@ -351,23 +359,37 @@ class _Now extends StatelessWidget {
     final today = weather.daily.isNotEmpty ? weather.daily.first : null;
 
     final stats = <_StatData>[
-      _StatData(Icons.thermostat, tr('weather.feelsLike', 'Feels like'), '${weather.feelsLike.round()}°'),
-      _StatData(Icons.water_drop_outlined, tr('weather.humidity', 'Humidity'), '${weather.humidity}%'),
-      _StatData(Icons.air, tr('weather.wind', 'Wind'),
-          '${weather.windSpeed.round()} ${weather.windUnit}'),
+      _StatData(
+        Icons.thermostat,
+        tr('weather.feelsLike', 'Feels like'),
+        '${weather.feelsLike.round()}°',
+      ),
+      _StatData(
+        Icons.water_drop_outlined,
+        tr('weather.humidity', 'Humidity'),
+        '${weather.humidity}%',
+      ),
+      _StatData(
+        Icons.air,
+        tr('weather.wind', 'Wind'),
+        '${weather.windSpeed.round()} ${weather.windUnit}',
+      ),
       if (today != null) ...[
-        _StatData(Icons.umbrella_outlined, tr(
-          'weather.chanceOfRain',
-          'Chance of rain',
+        _StatData(
+          Icons.umbrella_outlined,
+          tr('weather.chanceOfRain', 'Chance of rain'),
+          '${today.precipitationChance}%',
         ),
-            '${today.precipitationChance}%'),
-        _StatData(Icons.wb_sunny_outlined, tr('weather.uvIndex', 'UV index'),
-            '${today.uvIndexMax.round()} · ${uvLabel(today.uvIndexMax)}'),
-        _StatData(Icons.wb_twilight, tr(
-          'weather.sunriseSunset',
-          'Sunrise · sunset',
+        _StatData(
+          Icons.wb_sunny_outlined,
+          tr('weather.uvIndex', 'UV index'),
+          '${today.uvIndexMax.round()} · ${uvLabel(today.uvIndexMax)}',
         ),
-            '${today.sunrise} · ${today.sunset}'),
+        _StatData(
+          Icons.wb_twilight,
+          tr('weather.sunriseSunset', 'Sunrise · sunset'),
+          '${today.sunrise} · ${today.sunset}',
+        ),
       ],
     ];
 
@@ -419,7 +441,10 @@ class _Now extends StatelessWidget {
                       tr(
                         'weather.highLow',
                         'High {tempMax}° · Low {tempMin}°',
-                        {'tempMax': weather.tempMax.round(), 'tempMin': weather.tempMin.round()},
+                        {
+                          'tempMax': weather.tempMax.round(),
+                          'tempMin': weather.tempMin.round(),
+                        },
                       ),
                       style: TextStyle(color: t.textSecondary, fontSize: 26),
                     ),
@@ -619,7 +644,9 @@ class _Week extends StatelessWidget {
       return LcarsPanel(
         theme: t,
         heavy: true,
-        label: tr('weather.nextDays', 'NEXT {days} DAYS', {'days': days.length}),
+        label: tr('weather.nextDays', 'NEXT {days} DAYS', {
+          'days': days.length,
+        }),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(14, 4, 14, 0),
           child: Column(
@@ -663,10 +690,7 @@ class _Week extends StatelessWidget {
           const SizedBox(height: 6),
           for (var i = 0; i < days.length; i++) ...[
             if (i > 0)
-              Divider(
-                height: 1,
-                color: t.textPrimary.withValues(alpha: 0.08),
-              ),
+              Divider(height: 1, color: t.textPrimary.withValues(alpha: 0.08)),
             Expanded(
               child: _DayRow(
                 day: days[i],
@@ -722,8 +746,11 @@ class _DayRow extends StatelessWidget {
         ),
         SizedBox(
           width: 60,
-          child: Icon(weatherIcon(day.weatherCode, true),
-              color: t.isLcars ? t.textSecondary : t.accent, size: 34),
+          child: Icon(
+            weatherIcon(day.weatherCode, true),
+            color: t.isLcars ? t.textSecondary : t.accent,
+            size: 34,
+          ),
         ),
         SizedBox(
           width: 76,
@@ -834,7 +861,10 @@ class _RangeBar extends CustomPainter {
       Paint()..color = track,
     );
     final from = rangeFraction(min, range) * size.width;
-    final to = math.max(from + size.height, rangeFraction(max, range) * size.width);
+    final to = math.max(
+      from + size.height,
+      rangeFraction(max, range) * size.width,
+    );
     final rect = Rect.fromLTRB(from, 0, math.min(to, size.width), size.height);
     canvas.drawRRect(
       RRect.fromRectAndRadius(rect, r),
@@ -849,10 +879,16 @@ class _RangeBar extends CustomPainter {
     final n = now;
     if (n != null) {
       final x = rangeFraction(n, range) * size.width;
-      canvas.drawCircle(Offset(x, size.height / 2), size.height * 0.9,
-          Paint()..color = const Color(0x55000000));
       canvas.drawCircle(
-          Offset(x, size.height / 2), size.height * 0.7, Paint()..color = marker);
+        Offset(x, size.height / 2),
+        size.height * 0.9,
+        Paint()..color = const Color(0x55000000),
+      );
+      canvas.drawCircle(
+        Offset(x, size.height / 2),
+        size.height * 0.7,
+        Paint()..color = marker,
+      );
     }
   }
 
@@ -876,63 +912,70 @@ class _Hours extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = theme;
     final hours = LayoutBuilder(
-        builder: (context, c) {
-          final hours = hoursToShow(withNow(weather), c.maxWidth);
-          if (hours.isEmpty) {
-            return Center(
-              child: Text(
-                tr('weather.noHourlyForecastYet', 'No hourly forecast yet.'),
-                style: TextStyle(color: t.textSecondary, fontSize: 22),
-              ),
-            );
-          }
-          Widget row(Widget Function(HourlyForecast h, int i) cell) => Row(
-                children: [
-                  for (var i = 0; i < hours.length; i++)
-                    Expanded(child: Center(child: cell(hours[i], i))),
-                ],
-              );
+      builder: (context, c) {
+        final hours = hoursToShow(withNow(weather), c.maxWidth);
+        if (hours.isEmpty) {
+          return Center(
+            child: Text(
+              tr('weather.noHourlyForecastYet', 'No hourly forecast yet.'),
+              style: TextStyle(color: t.textSecondary, fontSize: 22),
+            ),
+          );
+        }
+        Widget row(Widget Function(HourlyForecast h, int i) cell) => Row(
+          children: [
+            for (var i = 0; i < hours.length; i++)
+              Expanded(child: Center(child: cell(hours[i], i))),
+          ],
+        );
 
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              row((h, i) => Text(
-                    hourLabel(h.time, first: i == 0),
-                    style: TextStyle(
-                      color: i == 0 ? t.textPrimary : t.textSecondary,
-                      fontSize: 18,
-                      fontWeight: i == 0 ? FontWeight.w600 : FontWeight.w400,
-                    ),
-                  )),
-              const SizedBox(height: 8),
-              row((h, _) => Icon(weatherIcon(h.weatherCode, h.isDay),
-                  color: t.isLcars ? t.textSecondary : t.accent, size: 32)),
-              Expanded(
-                child: CustomPaint(
-                  size: Size.infinite,
-                  painter: _TemperatureCurve(
-                    temps: [for (final h in hours) h.temperature],
-                    line: t.accent,
-                    label: t.textPrimary,
-                    // A console draws in flat colour: the line alone.
-                    filled: !t.isLcars,
-                    fontFamily: t.fontFamily,
-                  ),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            row(
+              (h, i) => Text(
+                hourLabel(h.time, first: i == 0),
+                style: TextStyle(
+                  color: i == 0 ? t.textPrimary : t.textSecondary,
+                  fontSize: 18,
+                  fontWeight: i == 0 ? FontWeight.w600 : FontWeight.w400,
                 ),
               ),
-              row((h, _) => Text(
-                    h.precipitationChance >= 20
-                        ? '${h.precipitationChance}%'
-                        : '',
-                    style: const TextStyle(
-                      color: Color(0xFF7DD3FC),
-                      fontSize: 17,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  )),
-            ],
-          );
-        },
+            ),
+            const SizedBox(height: 8),
+            row(
+              (h, _) => Icon(
+                weatherIcon(h.weatherCode, h.isDay),
+                color: t.isLcars ? t.textSecondary : t.accent,
+                size: 32,
+              ),
+            ),
+            Expanded(
+              child: CustomPaint(
+                size: Size.infinite,
+                painter: _TemperatureCurve(
+                  temps: [for (final h in hours) h.temperature],
+                  line: t.accent,
+                  label: t.textPrimary,
+                  // A console draws in flat colour: the line alone.
+                  filled: !t.isLcars,
+                  fontFamily: t.fontFamily,
+                ),
+              ),
+            ),
+            row(
+              (h, _) => Text(
+                h.precipitationChance >= 20 ? '${h.precipitationChance}%' : '',
+                style: const TextStyle(
+                  color: Color(0xFF7DD3FC),
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
     if (t.isLcars) {
       // The bottom panel: its bar sweeps down and across the foot of the
@@ -996,8 +1039,7 @@ class _TemperatureCurve extends CustomPainter {
     final step = size.width / temps.length;
     final points = [
       for (var i = 0; i < temps.length; i++)
-        Offset(step * (i + 0.5),
-            top + usable * (1 - (temps[i] - lo) / span)),
+        Offset(step * (i + 0.5), top + usable * (1 - (temps[i] - lo) / span)),
     ];
 
     final path = Path()..moveTo(points.first.dx, points.first.dy);
@@ -1055,8 +1097,10 @@ class _TemperatureCurve extends CustomPainter {
         ),
         textDirection: TextDirection.ltr,
       )..layout();
-      tp.paint(canvas,
-          Offset(points[i].dx - tp.width / 2, points[i].dy - tp.height - 6));
+      tp.paint(
+        canvas,
+        Offset(points[i].dx - tp.width / 2, points[i].dy - tp.height - 6),
+      );
     }
   }
 
@@ -1089,8 +1133,9 @@ String dayName(DateTime d, {DateTime? now}) =>
     isToday(d, now: now) ? tr('common.today', 'Today') : weekdayName(d);
 
 /// "Now" for the first column, otherwise the hour on the 24-hour clock.
-String hourLabel(DateTime t, {bool first = false}) =>
-    first ? tr('weather.now', 'Now') : '${t.hour.toString().padLeft(2, '0')}:00';
+String hourLabel(DateTime t, {bool first = false}) => first
+    ? tr('weather.now', 'Now')
+    : '${t.hour.toString().padLeft(2, '0')}:00';
 
 /// The coldest low and warmest high across [days].
 ///
@@ -1141,13 +1186,14 @@ List<HourlyForecast> withNow(Weather w) {
 /// Every hour when there is room for each to be read; every other hour when
 /// there is not. Dropping hours evenly keeps the curve's shape, where
 /// squeezing them would just make every label collide with the next.
-List<HourlyForecast> hoursToShow(List<HourlyForecast> hourly, double width,
-    {double minColumn = 64}) {
+List<HourlyForecast> hoursToShow(
+  List<HourlyForecast> hourly,
+  double width, {
+  double minColumn = 64,
+}) {
   if (hourly.isEmpty) return const [];
   if (width / hourly.length >= minColumn) return hourly;
-  return [
-    for (var i = 0; i < hourly.length; i += 2) hourly[i],
-  ];
+  return [for (var i = 0; i < hourly.length; i += 2) hourly[i]];
 }
 
 /// The UV index in words, as the Met Office bands it.

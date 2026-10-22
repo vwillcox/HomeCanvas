@@ -210,11 +210,11 @@ class _Card extends StatelessWidget {
         decoration: theme.isLcars
             ? lcarsCard(theme, lit: lit)
             : BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
-          color: lit
-              ? theme.accent.withValues(alpha: 0.14)
-              : theme.textSecondary.withValues(alpha: 0.07),
-        ),
+                borderRadius: BorderRadius.circular(14),
+                color: lit
+                    ? theme.accent.withValues(alpha: 0.14)
+                    : theme.textSecondary.withValues(alpha: 0.07),
+              ),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: FitCanvas(
           designHeight: 54,
@@ -264,9 +264,7 @@ class _Card extends StatelessWidget {
                   width: 30,
                   height: 18,
                   padding: const EdgeInsets.all(2),
-                  alignment: on!
-                      ? Alignment.centerRight
-                      : Alignment.centerLeft,
+                  alignment: on! ? Alignment.centerRight : Alignment.centerLeft,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(9),
                     color: on!
@@ -413,7 +411,8 @@ class _HomeyRoomWidgetState extends State<HomeyRoomWidget>
         if (widget.w.option('master', true) && switches.isNotEmpty)
           _Card(
             icon: Icons.meeting_room_outlined,
-            label: homey.zone(_zone)?.name ?? tr('widget.homey_room.room', 'Room'),
+            label:
+                homey.zone(_zone)?.name ?? tr('widget.homey_room.room', 'Room'),
             value: lit == 0
                 ? tr('widget.homey_room.allOff', 'All off')
                 : tr('widget.homey_room.countOn', '{count} on', {'count': lit}),
@@ -511,11 +510,11 @@ class _Light extends StatelessWidget {
       decoration: theme.isLcars
           ? lcarsCard(theme, lit: lit)
           : BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        color: lit
-            ? theme.accent.withValues(alpha: 0.14)
-            : theme.textSecondary.withValues(alpha: 0.07),
-      ),
+              borderRadius: BorderRadius.circular(14),
+              color: lit
+                  ? theme.accent.withValues(alpha: 0.14)
+                  : theme.textSecondary.withValues(alpha: 0.07),
+            ),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: FitCanvas(
         designHeight: 54,
@@ -529,7 +528,9 @@ class _Light extends StatelessWidget {
                 width: 30,
                 height: size.height,
                 child: Icon(
-                  lit ? Icons.lightbulb_rounded : Icons.lightbulb_outline_rounded,
+                  lit
+                      ? Icons.lightbulb_rounded
+                      : Icons.lightbulb_outline_rounded,
                   size: 22,
                   color: lit ? theme.accent : theme.textSecondary,
                 ),
@@ -814,11 +815,11 @@ class _Box extends StatelessWidget {
     decoration: theme.isLcars
         ? lcarsCard(theme, lit: lit)
         : BoxDecoration(
-      borderRadius: BorderRadius.circular(14),
-      color: lit
-          ? theme.accent.withValues(alpha: 0.14)
-          : theme.textSecondary.withValues(alpha: 0.07),
-    ),
+            borderRadius: BorderRadius.circular(14),
+            color: lit
+                ? theme.accent.withValues(alpha: 0.14)
+                : theme.textSecondary.withValues(alpha: 0.07),
+          ),
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     child: FitCanvas(designHeight: designHeight, maxScale: 3, builder: child),
   );
@@ -859,7 +860,9 @@ class _Heading extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: warn ? StatusColours.of(theme).warn : theme.textSecondary,
+                color: warn
+                    ? StatusColours.of(theme).warn
+                    : theme.textSecondary,
                 fontSize: 11,
               ),
             ),
@@ -904,7 +907,10 @@ class _HomeyColourWidgetState extends State<HomeyColourWidget>
     final lights = _lights(homey);
     if (lights.isEmpty) {
       return TileMessage(
-        tr('widget.homey_colour.none', 'Homey has no lights that change colour.'),
+        tr(
+          'widget.homey_colour.none',
+          'Homey has no lights that change colour.',
+        ),
         theme: t,
       );
     }
@@ -942,7 +948,8 @@ class _ColourCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final d = device;
-    final coloured = d != null && d.capabilities['light_mode']?.value != 'temperature';
+    final coloured =
+        d != null && d.capabilities['light_mode']?.value != 'temperature';
     final hue = d?.number('light_hue');
     return _Box(
       theme: theme,
@@ -973,7 +980,11 @@ class _ColourCard extends StatelessWidget {
               value: coloured ? null : d.number('light_temperature'),
               theme: theme,
               gradient: const LinearGradient(
-                colors: [Color(0xFFCFE4FF), Color(0xFFFFF4E0), Color(0xFFFFB45E)],
+                colors: [
+                  Color(0xFFCFE4FF),
+                  Color(0xFFFFF4E0),
+                  Color(0xFFFFB45E),
+                ],
               ),
               onChanged: (v) => homey.warmth(d, v),
             ),
@@ -992,10 +1003,15 @@ class _ColourCard extends StatelessWidget {
                         child: Container(
                           margin: const EdgeInsets.symmetric(horizontal: 2),
                           decoration: BoxDecoration(
-                            color: HSVColor.fromAHSV(1, h * 360, 0.85, 1)
-                                .toColor(),
+                            color: HSVColor.fromAHSV(
+                              1,
+                              h * 360,
+                              0.85,
+                              1,
+                            ).toColor(),
                             borderRadius: BorderRadius.circular(5),
-                            border: coloured &&
+                            border:
+                                coloured &&
                                     hue != null &&
                                     (hue - h).abs() < 0.03
                                 ? Border.all(color: theme.textPrimary, width: 2)
@@ -1192,17 +1208,18 @@ class _HomeyHouseWidgetState extends State<HomeyHouseWidget>
     if (waiting != null) return waiting;
     final everything = homey.all.where((d) => d.switchable).toList();
     // Each room by what is in it itself, so nothing is counted twice.
-    final rooms = [
-      for (final z in homey.zones)
-        (
-          zone: z,
-          devices: homey
-              .devicesIn(z.id, below: false)
-              .where((d) => d.switchable)
-              .toList(),
-        ),
-    ].where((r) => r.devices.isNotEmpty).toList()
-      ..sort((a, b) => a.zone.name.compareTo(b.zone.name));
+    final rooms =
+        [
+            for (final z in homey.zones)
+              (
+                zone: z,
+                devices: homey
+                    .devicesIn(z.id, below: false)
+                    .where((d) => d.switchable)
+                    .toList(),
+              ),
+          ].where((r) => r.devices.isNotEmpty).toList()
+          ..sort((a, b) => a.zone.name.compareTo(b.zone.name));
     if (rooms.isEmpty) {
       return TileMessage(
         tr('widget.homey_house.none', 'Homey has nothing to switch.'),
@@ -1280,8 +1297,9 @@ class _HomeyMoodsWidgetState extends State<HomeyMoodsWidget>
     final shown = picked.isNotEmpty
         ? picked
         : [
-            for (final m in moods.values.toList()
-              ..sort((a, b) => '${a['name']}'.compareTo('${b['name']}')))
+            for (final m
+                in moods.values.toList()
+                  ..sort((a, b) => '${a['name']}'.compareTo('${b['name']}')))
               (id: m['id'] as String, name: ''),
           ];
     if (shown.isEmpty) {
@@ -1308,7 +1326,8 @@ class _HomeyMoodsWidgetState extends State<HomeyMoodsWidget>
                 : switch (result(p.id)) {
                     true => tr('widget.homey_moods.set', 'Set'),
                     false => tr('widget.homey_moods.didNotSet', 'Did not set'),
-                    null => p.name.isNotEmpty ? p.name : '${moods[p.id]!['name']}',
+                    null =>
+                      p.name.isNotEmpty ? p.name : '${moods[p.id]!['name']}',
                   },
             theme: t,
             warn: !moods.containsKey(p.id) || result(p.id) == false,
@@ -1889,8 +1908,9 @@ class _HomeyVariablesWidgetState extends State<HomeyVariablesWidget>
     final shown = picked.isNotEmpty
         ? picked
         : [
-            for (final v in all.values.toList()
-              ..sort((a, b) => '${a['name']}'.compareTo('${b['name']}')))
+            for (final v
+                in all.values.toList()
+                  ..sort((a, b) => '${a['name']}'.compareTo('${b['name']}')))
               (id: v['id'] as String, name: ''),
           ];
     if (shown.isEmpty) {

@@ -124,7 +124,9 @@ class _ServersWidgetState extends State<ServersWidget>
         theme: t,
       );
     }
-    if (_stats.isEmpty) return TileMessage(tr('widget.servers.reading', 'Reading…'), theme: t);
+    if (_stats.isEmpty) {
+      return TileMessage(tr('widget.servers.reading', 'Reading…'), theme: t);
+    }
 
     final status = StatusColours.of(t);
     final down = _stats.where((s) => !s.reachable).length;
@@ -136,11 +138,22 @@ class _ServersWidgetState extends State<ServersWidget>
         .where((s) => s.worstDisk == DiskState.warning)
         .length;
     final chip = down > 0
-        ? (text: tr('widget.servers.notAnswering', '{down} not answering', {'down': down}), colour: status.bad)
+        ? (
+            text: tr('widget.servers.notAnswering', '{down} not answering', {
+              'down': down,
+            }),
+            colour: status.bad,
+          )
         : failing > 0
-        ? (text: tr('widget.servers.diskFailing', 'Disk failing'), colour: status.bad)
+        ? (
+            text: tr('widget.servers.diskFailing', 'Disk failing'),
+            colour: status.bad,
+          )
         : warning > 0
-        ? (text: tr('widget.servers.diskWarning', 'Disk warning'), colour: status.warn)
+        ? (
+            text: tr('widget.servers.diskWarning', 'Disk warning'),
+            colour: status.warn,
+          )
         : stopped > 0
         ? (text: '$stopped stopped', colour: status.warn)
         : (text: tr('widget.servers.allUp', 'All up'), colour: status.good);
@@ -249,7 +262,12 @@ class _Machine extends StatelessWidget {
           ),
           if (s.reachable) ...[
             const Spacer(),
-            _Bar(label: tr('widget.servers.cpu', 'CPU'), value: s.cpu, theme: theme, status: status),
+            _Bar(
+              label: tr('widget.servers.cpu', 'CPU'),
+              value: s.cpu,
+              theme: theme,
+              status: status,
+            ),
             const Spacer(),
             _Bar(
               label: tr('widget.servers.memory', 'Memory'),
@@ -259,7 +277,12 @@ class _Machine extends StatelessWidget {
             ),
             const Spacer(),
             if (disks.isEmpty)
-              _Bar(label: tr('widget.servers.disk', 'Disk'), value: s.disk, theme: theme, status: status)
+              _Bar(
+                label: tr('widget.servers.disk', 'Disk'),
+                value: s.disk,
+                theme: theme,
+                status: status,
+              )
             else
               for (var i = 0; i < disks.length; i++) ...[
                 if (i > 0) const Spacer(),
@@ -306,7 +329,9 @@ extension on _Machine {
         '${h!.temperature!.round()}°C',
     ].join(' · ');
     return _Bar(
-      label: single && d.mount == '/' ? tr('widget.servers.disk', 'Disk') : d.label,
+      label: single && d.mount == '/'
+          ? tr('widget.servers.disk', 'Disk')
+          : d.label,
       value: d.percent,
       theme: theme,
       status: status,

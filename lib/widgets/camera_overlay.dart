@@ -245,7 +245,9 @@ class _CameraOverlayState extends State<CameraOverlay> with BurnInDriftMixin {
         builder: (context, constraints) {
           final screen = Size(constraints.maxWidth, constraints.maxHeight);
           final rect = applyDrift(
-              _collapsedRect(screen, service.settings.corner), screen);
+            _collapsedRect(screen, service.settings.corner),
+            screen,
+          );
           return Stack(
             children: [Positioned.fromRect(rect: rect, child: window)],
           );
@@ -268,9 +270,11 @@ class _CameraOverlayState extends State<CameraOverlay> with BurnInDriftMixin {
     // leaves its replacement hanging before it registers a texture. The
     // stream simply stays up while the page shows it instead of this window.
     setState(() => _fullScreen = true);
-    await navigator.push(MaterialPageRoute(
-      builder: (_) => CameraScreen(player: player, controller: video),
-    ));
+    await navigator.push(
+      MaterialPageRoute(
+        builder: (_) => CameraScreen(player: player, controller: video),
+      ),
+    );
     if (mounted) setState(() => _fullScreen = false);
   }
 
@@ -308,100 +312,106 @@ class _Window extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     final content = Container(
-          color: Colors.black,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              if (video != null)
-                RotatedBox(
-                  quarterTurns: service.settings.viewQuarterTurns,
-                  child: Video(
-                    controller: video!,
-                    controls: NoVideoControls,
-                    fit: BoxFit.contain,
-                    fill: Colors.black,
-                  ),
-                )
-              else
-                const Center(
-                  child: SizedBox(
-                    width: 44,
-                    height: 44,
-                    child: CircularProgressIndicator(strokeWidth: 3),
-                  ),
-                ),
-              // Taps are handled by a layer of its own *above* the picture
-              // rather than by an ancestor: the video widget takes part in
-              // the gesture arena too, and when it wins the tap that should
-              // have expanded the window goes nowhere.
-              Positioned.fill(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: onTap,
-                ),
+      color: Colors.black,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (video != null)
+            RotatedBox(
+              quarterTurns: service.settings.viewQuarterTurns,
+              child: Video(
+                controller: video!,
+                controls: NoVideoControls,
+                fit: BoxFit.contain,
+                fill: Colors.black,
               ),
-              if (waiting)
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      service.lastError ?? tr('camera.waitingForTheCamera', 'Waiting for the camera…'),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          color: Colors.white70, fontSize: 16),
-                    ),
-                  ),
-                )
-              else if (service.lastError != null)
-                Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.7),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      service.lastError!,
-                      style: const TextStyle(color: Colors.white, fontSize: 18),
-                    ),
-                  ),
-                ),
-              if (hud != null)
-                Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 28, vertical: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.55),
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: Text(
-                      hud!,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 40,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-              // Close button, always available so the small window can be
-              // dismissed without expanding it first.
-              Positioned(
-                top: 8,
-                right: 8,
-                child: CameraRoundButton(
-                  icon: Icons.close,
-                  size: 40,
-                  onPressed: service.close,
-                ),
+            )
+          else
+            const Center(
+              child: SizedBox(
+                width: 44,
+                height: 44,
+                child: CircularProgressIndicator(strokeWidth: 3),
               ),
-            ],
+            ),
+          // Taps are handled by a layer of its own *above* the picture
+          // rather than by an ancestor: the video widget takes part in
+          // the gesture arena too, and when it wins the tap that should
+          // have expanded the window goes nowhere.
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onTap,
+            ),
           ),
-        );
+          if (waiting)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  service.lastError ??
+                      tr(
+                        'camera.waitingForTheCamera',
+                        'Waiting for the camera…',
+                      ),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white70, fontSize: 16),
+                ),
+              ),
+            )
+          else if (service.lastError != null)
+            Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.7),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  service.lastError!,
+                  style: const TextStyle(color: Colors.white, fontSize: 18),
+                ),
+              ),
+            ),
+          if (hud != null)
+            Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 28,
+                  vertical: 16,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.55),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Text(
+                  hud!,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 40,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          // Close button, always available so the small window can be
+          // dismissed without expanding it first.
+          Positioned(
+            top: 8,
+            right: 8,
+            child: CameraRoundButton(
+              icon: Icons.close,
+              size: 40,
+              onPressed: service.close,
+            ),
+          ),
+        ],
+      ),
+    );
 
     return ClipRRect(borderRadius: BorderRadius.circular(24), child: content);
   }
@@ -424,10 +434,7 @@ class CameraControls extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            Colors.transparent,
-            Colors.black.withValues(alpha: 0.75),
-          ],
+          colors: [Colors.transparent, Colors.black.withValues(alpha: 0.75)],
         ),
       ),
       // Taps on the controls must not reach the expand/collapse handler
@@ -441,7 +448,9 @@ class CameraControls extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(right: 12),
                   child: _PillButton(
-                    label: lens.facing == 'front' ? tr('camera.front', 'Front') : tr('camera.back', 'Back'),
+                    label: lens.facing == 'front'
+                        ? tr('camera.front', 'Front')
+                        : tr('camera.back', 'Back'),
                     selected: lens.id == service.cameraId,
                     onPressed: () => service.selectCamera(lens.id),
                   ),
@@ -458,12 +467,15 @@ class CameraControls extends StatelessWidget {
                         SliderTheme.of(context).copyWith(
                           trackHeight: 8,
                           thumbShape: const RoundSliderThumbShape(
-                              enabledThumbRadius: 18),
+                            enabledThumbRadius: 18,
+                          ),
                         ),
                       ),
                       child: Slider(
-                        value: service.zoom
-                            .clamp(service.minZoom, service.maxZoom),
+                        value: service.zoom.clamp(
+                          service.minZoom,
+                          service.maxZoom,
+                        ),
                         min: service.minZoom,
                         max: service.maxZoom,
                         onChanged: service.setZoom,
@@ -496,16 +508,15 @@ class CameraControls extends StatelessWidget {
               Row(
                 children: [
                   Icon(
-                    battery <= 20
-                        ? Icons.battery_alert
-                        : Icons.battery_full,
+                    battery <= 20 ? Icons.battery_alert : Icons.battery_full,
                     color: battery <= 20 ? Colors.orangeAccent : Colors.white70,
                     size: 28,
                   ),
                   const SizedBox(width: 6),
-                  Text('$battery%',
-                      style: const TextStyle(
-                          color: Colors.white70, fontSize: 22)),
+                  Text(
+                    '$battery%',
+                    style: const TextStyle(color: Colors.white70, fontSize: 22),
+                  ),
                 ],
               ),
             ],

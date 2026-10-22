@@ -142,7 +142,9 @@ class _ServicesWidgetState extends State<ServicesWidget>
                 trailing: checked == 0
                     ? null
                     : StatusChip(
-                        text: down == 0 ? tr('widget.services.allUp', 'All up') : '$down down',
+                        text: down == 0
+                            ? tr('widget.services.allUp', 'All up')
+                            : '$down down',
                         colour: down == 0 ? status.good : status.bad,
                         size: labelH * 0.5,
                       ),
@@ -212,7 +214,9 @@ class _Row extends StatelessWidget {
         : r == null
         ? 'checking…'
         : r.state == CheckState.down
-        ? (target.mac != null ? tr('widget.services.tapToWake', 'tap to wake') : (r.detail ?? 'down'))
+        ? (target.mac != null
+              ? tr('widget.services.tapToWake', 'tap to wake')
+              : (r.detail ?? 'down'))
         : (r.latency != null ? formatLatency(r.latency!) : 'up');
 
     return GestureDetector(

@@ -89,8 +89,10 @@ class ConfigService extends ChangeNotifier {
   /// which the next start could not read, and so began again from nothing.
   Future<void> _write() async {
     try {
-      await writePrivateFile(_file.path,
-          const JsonEncoder.withIndent('  ').convert(_config.toJson()));
+      await writePrivateFile(
+        _file.path,
+        const JsonEncoder.withIndent('  ').convert(_config.toJson()),
+      );
     } catch (e) {
       debugPrint('ConfigService.save error: $e');
     }

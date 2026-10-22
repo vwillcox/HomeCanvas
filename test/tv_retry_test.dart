@@ -7,17 +7,17 @@ import 'package:home_canvas/services/tv_service.dart';
 
 /// The backoff TvService is built with.
 RetrySchedule asBuilt() => RetrySchedule(
-      settled: const Duration(seconds: 60),
-      first: const Duration(seconds: 4),
-      ceiling: const Duration(seconds: 60),
-    );
+  settled: const Duration(seconds: 60),
+  first: const Duration(seconds: 4),
+  ceiling: const Duration(seconds: 60),
+);
 
 void main() {
   group('the backoff between attempts', () {
     test('starts quickly and settles at a minute', () {
       final s = asBuilt();
       final waits = [
-        for (var i = 0; i < 7; i++) s.next(hasContent: false).inSeconds
+        for (var i = 0; i < 7; i++) s.next(hasContent: false).inSeconds,
       ];
       expect(waits, [4, 8, 16, 32, 60, 60, 60]);
     });
@@ -53,19 +53,27 @@ void main() {
 
     tearDown(() => tv.dispose());
 
-    test('costs nothing to ask: no socket, no timer, no error on screen',
-        () async {
-      config.config.tv = TvSettings(enabled: true, host: '', uuid: '');
-      await tv.connect();
-      expect(tv.conn, ConnState.disconnected);
-      expect(tv.retryPending, isFalse,
-          reason: 'a blank address is not something to keep trying');
-      expect(tv.lastError, isNull);
-    });
+    test(
+      'costs nothing to ask: no socket, no timer, no error on screen',
+      () async {
+        config.config.tv = TvSettings(enabled: true, host: '', uuid: '');
+        await tv.connect();
+        expect(tv.conn, ConnState.disconnected);
+        expect(
+          tv.retryPending,
+          isFalse,
+          reason: 'a blank address is not something to keep trying',
+        );
+        expect(tv.lastError, isNull);
+      },
+    );
 
     test('switched off in settings, it stays off', () async {
       config.config.tv = TvSettings(
-          enabled: false, host: '192.0.2.1', uuid: '02:10:ac:92:12:52');
+        enabled: false,
+        host: '192.0.2.1',
+        uuid: '02:10:ac:92:12:52',
+      );
       await tv.connect();
       expect(tv.conn, ConnState.disconnected);
       expect(tv.retryPending, isFalse);

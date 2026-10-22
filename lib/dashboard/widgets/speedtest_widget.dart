@@ -63,12 +63,18 @@ class _DashboardSpeedtestWidgetState extends State<DashboardSpeedtestWidget> {
     };
 
     final label = switch (s.phase) {
-      SpeedtestPhase.idle => s.hasResult ? tr('widget.speedtest.tapToRetest', 'tap to retest') : tr('widget.speedtest.tapToStart', 'tap to start'),
+      SpeedtestPhase.idle =>
+        s.hasResult
+            ? tr('widget.speedtest.tapToRetest', 'tap to retest')
+            : tr('widget.speedtest.tapToStart', 'tap to start'),
       SpeedtestPhase.starting => 'connecting',
       SpeedtestPhase.ping => 'ping',
       SpeedtestPhase.download => 'download',
       SpeedtestPhase.upload => 'upload',
-      SpeedtestPhase.done => tr('widget.speedtest.tapToRetest', 'tap to retest'),
+      SpeedtestPhase.done => tr(
+        'widget.speedtest.tapToRetest',
+        'tap to retest',
+      ),
       SpeedtestPhase.failed => 'failed',
     };
 
@@ -148,7 +154,8 @@ class _Readout extends StatelessWidget {
         if (s.phase == SpeedtestPhase.failed) {
           return Center(
             child: Text(
-              s.error ?? tr('widget.speedtest.speedtestFailed', 'Speedtest failed'),
+              s.error ??
+                  tr('widget.speedtest.speedtestFailed', 'Speedtest failed'),
               textAlign: TextAlign.center,
               maxLines: 4,
               overflow: TextOverflow.ellipsis,
@@ -189,7 +196,10 @@ class _Readout extends StatelessWidget {
               s.jitterMs == null ? '—' : '${s.jitterMs!.toStringAsFixed(1)} ms',
             ),
             if (s.packetLoss != null)
-              _small(tr('widget.speedtest.loss', 'Loss'), '${s.packetLoss!.toStringAsFixed(0)}%'),
+              _small(
+                tr('widget.speedtest.loss', 'Loss'),
+                '${s.packetLoss!.toStringAsFixed(0)}%',
+              ),
             if (s.isp.isNotEmpty) ...[
               const SizedBox(height: 6),
               Text(

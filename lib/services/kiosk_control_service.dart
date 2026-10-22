@@ -26,12 +26,12 @@ class KioskState {
   final bool dnd;
 
   Map<String, dynamic> toJson() => {
-        'dashboard': dashboard,
-        'lockedFolder': lockedFolder,
-        'camera': camera,
-        'cameraOpen': cameraOpen,
-        'dnd': dnd,
-      };
+    'dashboard': dashboard,
+    'lockedFolder': lockedFolder,
+    'camera': camera,
+    'cameraOpen': cameraOpen,
+    'dnd': dnd,
+  };
 }
 
 /// A small control surface for the TV remote app, on the panel itself.

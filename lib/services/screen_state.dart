@@ -19,7 +19,7 @@ import 'package:flutter/foundation.dart';
 /// case that service is not running or a change came some other way.
 class ScreenState extends ValueNotifier<bool> {
   ScreenState({this._backlightDir, this.recheck = const Duration(seconds: 15)})
-      : super(true);
+    : super(true);
 
   final String? _backlightDir;
   final Duration recheck;

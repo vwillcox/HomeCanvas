@@ -18,7 +18,9 @@ import 'package:home_canvas/services/custom_widgets.dart';
 import 'new_widgets_fit_test.dart' show shapes, tile;
 
 /// The example the editor hands out, as it is on disk.
-final _example = File('assets/dashboard/example-widget.json').readAsStringSync();
+final _example = File(
+  'assets/dashboard/example-widget.json',
+).readAsStringSync();
 
 /// What the example's source answers with.
 const _sea = {
@@ -61,19 +63,26 @@ class _Source implements HttpClientAdapter {
 
 void main() {
   group('a custom widget\'s file', () {
-    test('the example is read: what it is, its settings, source and layout', () {
-      final spec = CustomWidgetSpec.parse(_example);
-      expect(spec.id, 'sea_state');
-      expect(spec.type, 'custom_sea_state');
-      expect(spec.name, 'Sea state');
-      expect(spec.options.map((o) => o.key), ['place', 'latitude', 'longitude']);
-      expect(spec.options[1].kind, OptionKind.number);
-      expect(spec.options[1].defaultValue, 51.95);
-      expect(spec.every, const Duration(minutes: 15));
-      expect(spec.show.layout, CustomLayout.cards);
-      expect(spec.show.cards.length, 4);
-      expect(spec.source, _example);
-    });
+    test(
+      'the example is read: what it is, its settings, source and layout',
+      () {
+        final spec = CustomWidgetSpec.parse(_example);
+        expect(spec.id, 'sea_state');
+        expect(spec.type, 'custom_sea_state');
+        expect(spec.name, 'Sea state');
+        expect(spec.options.map((o) => o.key), [
+          'place',
+          'latitude',
+          'longitude',
+        ]);
+        expect(spec.options[1].kind, OptionKind.number);
+        expect(spec.options[1].defaultValue, 51.95);
+        expect(spec.every, const Duration(minutes: 15));
+        expect(spec.show.layout, CustomLayout.cards);
+        expect(spec.show.cards.length, 4);
+        expect(spec.source, _example);
+      },
+    );
 
     test('what is wrong with a file is said in words', () {
       String wrong(String source) {
@@ -91,34 +100,47 @@ void main() {
       expect(wrong(_spec({'name': ''})), '"name" is needed, as text.');
       expect(wrong(_spec({'defaultWidth': 40})), contains('1 to 12'));
       expect(
-        wrong(_spec({'source': {'url': 'file:///etc/passwd'}})),
+        wrong(
+          _spec({
+            'source': {'url': 'file:///etc/passwd'},
+          }),
+        ),
         contains('http://'),
       );
       expect(
-        wrong(_spec({'show': {'kind': 'chart'}})),
+        wrong(
+          _spec({
+            'show': {'kind': 'chart'},
+          }),
+        ),
         '"show.kind" must be value, cards or list.',
       );
       expect(
-        wrong(_spec({
-          'options': [
-            {'key': 'rows', 'kind': 'list'},
-          ],
-        })),
+        wrong(
+          _spec({
+            'options': [
+              {'key': 'rows', 'kind': 'list'},
+            ],
+          }),
+        ),
         contains('"kind" must be one of'),
       );
       expect(wrong('{"type":"${'a' * 70000}"}'), 'The file is over 64 KB.');
     });
 
-    test('a type already prefixed is not prefixed twice; the least is kept', () {
-      final spec = CustomWidgetSpec.parse(
-        _spec({
-          'type': 'custom_sea_state',
-          'source': {'url': 'http://tides.local/now', 'every': 1},
-        }),
-      );
-      expect(spec.type, 'custom_sea_state');
-      expect(spec.every, const Duration(seconds: 30));
-    });
+    test(
+      'a type already prefixed is not prefixed twice; the least is kept',
+      () {
+        final spec = CustomWidgetSpec.parse(
+          _spec({
+            'type': 'custom_sea_state',
+            'source': {'url': 'http://tides.local/now', 'every': 1},
+          }),
+        );
+        expect(spec.type, 'custom_sea_state');
+        expect(spec.every, const Duration(seconds: 30));
+      },
+    );
   });
 
   group('templates', () {
@@ -132,8 +154,14 @@ void main() {
 
     test('reach into the answer, the settings and the row', () {
       expect(customFill('{{current.level}} m', data: data), '-1.168 m');
-      expect(customFill('{{rows[1].name}}/{{rows.0.name}}', data: data), 'Low/High');
-      expect(customFill('{{option.place}}', options: {'place': 'Harwich'}), 'Harwich');
+      expect(
+        customFill('{{rows[1].name}}/{{rows.0.name}}', data: data),
+        'Low/High',
+      );
+      expect(
+        customFill('{{option.place}}', options: {'place': 'Harwich'}),
+        'Harwich',
+      );
       expect(customFill('{{item.name}}', item: {'name': 'High'}), 'High');
       expect(customFill('{{item}}', item: 'plain'), 'plain');
       expect(customFill('no braces'), 'no braces');
@@ -143,7 +171,10 @@ void main() {
       expect(customFill('{{current.level | number:2}}', data: data), '-1.17');
       expect(customFill('{{current.level | round}}', data: data), '-1');
       expect(customFill('{{current.cloud | percent}}', data: data), '42%');
-      expect(customFill('{{current.cloud | times:100 | number:0}}', data: data), '42');
+      expect(
+        customFill('{{current.cloud | times:100 | number:0}}', data: data),
+        '42',
+      );
       expect(customFill('{{rows[0].height}}', data: data), '3');
       expect(customFill('{{current.at | time}}', data: data), '07:05');
       expect(customFill('{{current.at | date}}', data: data), '4 Oct');
@@ -153,7 +184,10 @@ void main() {
     test('what is missing is a dash, or what the file says instead', () {
       expect(customFill('{{current.nothing}}', data: data), '—');
       expect(customFill('{{rows[9].name | number:1}}', data: data), '—');
-      expect(customFill('{{rows[1].height | or:unknown}}', data: data), 'unknown');
+      expect(
+        customFill('{{rows[1].height | or:unknown}}', data: data),
+        'unknown',
+      );
       expect(customFill('{{current.level.deeper}}', data: data), '—');
     });
 
@@ -193,30 +227,36 @@ void main() {
       dir.deleteSync(recursive: true);
     });
 
-    test('a file is kept, and is a widget at once — and after a restart', () async {
-      expect(WidgetRegistry.find('custom_sea_state'), isNull);
-      await custom.install(_example);
-      expect(redrawn, 1);
-      final type = WidgetRegistry.find('custom_sea_state')!;
-      expect(type.name, 'Sea state');
-      expect(type.category, WidgetCategory.custom);
-      expect(WidgetRegistry.defaultsFor('custom_sea_state')['place'], 'Harwich');
-      expect(File('${dir.path}/sea_state.json').readAsStringSync(), _example);
+    test(
+      'a file is kept, and is a widget at once — and after a restart',
+      () async {
+        expect(WidgetRegistry.find('custom_sea_state'), isNull);
+        await custom.install(_example);
+        expect(redrawn, 1);
+        final type = WidgetRegistry.find('custom_sea_state')!;
+        expect(type.name, 'Sea state');
+        expect(type.category, WidgetCategory.custom);
+        expect(
+          WidgetRegistry.defaultsFor('custom_sea_state')['place'],
+          'Harwich',
+        );
+        expect(File('${dir.path}/sea_state.json').readAsStringSync(), _example);
 
-      // Uploaded again, changed: the one widget, as it now is.
-      await custom.install(_spec({'name': 'The sea'}));
-      expect(custom.all.single.name, 'The sea');
-      expect(WidgetRegistry.find('custom_sea_state')!.name, 'The sea');
+        // Uploaded again, changed: the one widget, as it now is.
+        await custom.install(_spec({'name': 'The sea'}));
+        expect(custom.all.single.name, 'The sea');
+        expect(WidgetRegistry.find('custom_sea_state')!.name, 'The sea');
 
-      // The panel starting again finds it in the folder.
-      WidgetRegistry.unregister('custom_sea_state');
-      File('${dir.path}/broken.json').writeAsStringSync('{');
-      final again = CustomWidgets(dir: dir.path);
-      await again.load();
-      expect(again.all.single.name, 'The sea');
-      expect(WidgetRegistry.find('custom_sea_state'), isNotNull);
-      again.dispose();
-    });
+        // The panel starting again finds it in the folder.
+        WidgetRegistry.unregister('custom_sea_state');
+        File('${dir.path}/broken.json').writeAsStringSync('{');
+        final again = CustomWidgets(dir: dir.path);
+        await again.load();
+        expect(again.all.single.name, 'The sea');
+        expect(WidgetRegistry.find('custom_sea_state'), isNotNull);
+        again.dispose();
+      },
+    );
 
     test('a file that is wrong is refused, and nothing is kept', () async {
       await expectLater(
@@ -248,7 +288,10 @@ void main() {
     test('its source is fetched once, kept, and its failures said', () async {
       const url = 'https://sea.example/now';
       await custom.ensure(url, headers: {'X-Key': 'k'});
-      expect(customLookup(custom.answer(url)!.data, 'current.wave_height'), 0.04);
+      expect(
+        customLookup(custom.answer(url)!.data, 'current.wave_height'),
+        0.04,
+      );
       expect(source.headers.single['X-Key'], 'k');
       await custom.ensure(url);
       expect(source.asked.length, 1);
@@ -449,7 +492,9 @@ void main() {
     late Directory dir;
     late List<List<String>> ran;
     late CodeWidgets code;
-    final example = File('assets/dashboard/example_widget.dart').readAsStringSync();
+    final example = File(
+      'assets/dashboard/example_widget.dart',
+    ).readAsStringSync();
 
     File status() => File('${dir.path}/state/status.json');
 
@@ -470,10 +515,14 @@ void main() {
 
     test('the example declares what the registry takes', () {
       expect(CodeWidgets.declares(example), isTrue);
-      expect(CodeWidgets.declares('final DashboardWidgetType widgetType =\n x;'),
-          isTrue);
-      expect(CodeWidgets.declares('// final widgetType = nothing\nvoid main() {}'),
-          isFalse);
+      expect(
+        CodeWidgets.declares('final DashboardWidgetType widgetType =\n x;'),
+        isTrue,
+      );
+      expect(
+        CodeWidgets.declares('// final widgetType = nothing\nvoid main() {}'),
+        isFalse,
+      );
       expect(CodeWidgets.declares('final tideWidgetType = x;'), isFalse);
     });
 
@@ -501,83 +550,104 @@ void main() {
         'tide_curve',
       ]);
       expect(code.status()['state'], 'building');
-      expect(await code.install('other.dart', example),
-          'A build is already running.');
+      expect(
+        await code.install('other.dart', example),
+        'A build is already running.',
+      );
       expect(ran.length, 1);
     });
 
-    test('what cannot be a widget is refused before anything is built',
-        () async {
-      expect(await code.install('tide.txt', example), contains('ending .dart'));
-      expect(await code.install('tide.dart', 'void main() {}'),
-          contains('final widgetType'));
-      expect(await code.install('tide.dart', '$example${'/' * 300000}'),
-          'The file is over 256 KB.');
-      expect(await code.remove('tide'), 'There is no widget of that name.');
-      expect(ran, isEmpty);
+    test(
+      'what cannot be a widget is refused before anything is built',
+      () async {
+        expect(
+          await code.install('tide.txt', example),
+          contains('ending .dart'),
+        );
+        expect(
+          await code.install('tide.dart', 'void main() {}'),
+          contains('final widgetType'),
+        );
+        expect(
+          await code.install('tide.dart', '$example${'/' * 300000}'),
+          'The file is over 256 KB.',
+        );
+        expect(await code.remove('tide'), 'There is no widget of that name.');
+        expect(ran, isEmpty);
 
-      final elsewhere = CodeWidgets(
-        root: null,
-        sources: '${dir.path}/src',
-        state: '${dir.path}/state',
-        run: (_) async => true,
-      );
-      expect(elsewhere.available, isFalse);
-      // A root is looked for when none is given; a test has none either.
-      expect(await elsewhere.install('tide.dart', example), isNotNull);
-    });
+        final elsewhere = CodeWidgets(
+          root: null,
+          sources: '${dir.path}/src',
+          state: '${dir.path}/state',
+          run: (_) async => true,
+        );
+        expect(elsewhere.available, isFalse);
+        // A root is looked for when none is given; a test has none either.
+        expect(await elsewhere.install('tide.dart', example), isNotNull);
+      },
+    );
 
-    test('what is installed is listed, handed back, and removed by a build',
-        () async {
-      Directory('${dir.path}/src').createSync();
-      File('${dir.path}/src/tide_curve.dart').writeAsStringSync(example);
-      File('${dir.path}/src/notes.txt').writeAsStringSync('not one');
-      expect(code.installed, ['tide_curve']);
-      expect(code.source('tide_curve'), example);
-      expect(code.source('../state/status'), isNull);
-      expect(await code.remove('tide_curve'), isNull);
-      expect(ran.single.sublist(2), ['remove', 'tide_curve']);
-    });
+    test(
+      'what is installed is listed, handed back, and removed by a build',
+      () async {
+        Directory('${dir.path}/src').createSync();
+        File('${dir.path}/src/tide_curve.dart').writeAsStringSync(example);
+        File('${dir.path}/src/notes.txt').writeAsStringSync('not one');
+        expect(code.installed, ['tide_curve']);
+        expect(code.source('tide_curve'), example);
+        expect(code.source('../state/status'), isNull);
+        expect(await code.remove('tide_curve'), isNull);
+        expect(ran.single.sublist(2), ['remove', 'tide_curve']);
+      },
+    );
 
     test('a build is read as the builder left it — or as cut off', () async {
       expect(code.status(), {'state': 'idle'});
       status()
         ..createSync(recursive: true)
-        ..writeAsStringSync(jsonEncode({
-          'state': 'failed',
-          'step': 'checking',
-          'name': 'tide_curve',
-          'error': "error • Undefined name 'x' • tide_curve.dart:12:3",
-        }));
+        ..writeAsStringSync(
+          jsonEncode({
+            'state': 'failed',
+            'step': 'checking',
+            'name': 'tide_curve',
+            'error': "error • Undefined name 'x' • tide_curve.dart:12:3",
+          }),
+        );
       expect(code.status()['error'], contains('tide_curve.dart:12:3'));
       expect(code.building, isFalse);
 
-      status().writeAsStringSync(jsonEncode({
-        'state': 'building',
-        'step': 'building',
-        'started': DateTime.now()
-            .toUtc()
-            .subtract(const Duration(hours: 2))
-            .toIso8601String(),
-      }));
+      status().writeAsStringSync(
+        jsonEncode({
+          'state': 'building',
+          'step': 'building',
+          'started': DateTime.now()
+              .toUtc()
+              .subtract(const Duration(hours: 2))
+              .toIso8601String(),
+        }),
+      );
       expect(code.status()['state'], 'failed');
       expect(code.status()['error'], contains('cut off'));
       // And so the next upload is not turned away.
       expect(await code.install('tide.dart', example), isNull);
     });
 
-    test('a builder that will not start is said, and does not block the next',
-        () async {
-      final stuck = CodeWidgets(
-        root: '/home/pi/homecanvas',
-        sources: '${dir.path}/src',
-        state: '${dir.path}/state',
-        run: (_) async => false,
-      );
-      expect(await stuck.install('tide.dart', example),
-          'The build could not be started.');
-      expect(stuck.building, isFalse);
-    });
+    test(
+      'a builder that will not start is said, and does not block the next',
+      () async {
+        final stuck = CodeWidgets(
+          root: '/home/pi/homecanvas',
+          sources: '${dir.path}/src',
+          state: '${dir.path}/state',
+          run: (_) async => false,
+        );
+        expect(
+          await stuck.install('tide.dart', example),
+          'The build could not be started.',
+        );
+        expect(stuck.building, isFalse);
+      },
+    );
 
     test('the switch is the panel\'s: off unless the config says on', () {
       expect(DashboardSettings().codeWidgets, isFalse);

@@ -30,8 +30,10 @@ void main() {
       ]) {
         expect(parseRepository(typed), 'vwillcox/HomeCanvas', reason: typed);
       }
-      expect(parseRepository('flutter/flutter.github.io'),
-          'flutter/flutter.github.io');
+      expect(
+        parseRepository('flutter/flutter.github.io'),
+        'flutter/flutter.github.io',
+      );
     });
 
     test('nothing that could reach another part of the API', () {
@@ -50,8 +52,11 @@ void main() {
         final got = parseRepository(typed);
         if (got != null) {
           // Only ever exactly one owner and one name, in GitHub's alphabet.
-          expect(got, matches(RegExp(r'^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$')),
-              reason: typed);
+          expect(
+            got,
+            matches(RegExp(r'^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$')),
+            reason: typed,
+          );
           expect(got.split('/').last, isNot(anyOf('.', '..')), reason: typed);
         }
       }
@@ -88,20 +93,26 @@ void main() {
     expect(classify(failed(404)), GithubFailure.notFound);
     expect(classify(failed(401)), GithubFailure.badToken);
     expect(
-      classify(failed(403, {
-        'x-ratelimit-remaining': ['0'],
-      })),
+      classify(
+        failed(403, {
+          'x-ratelimit-remaining': ['0'],
+        }),
+      ),
       GithubFailure.rateLimited,
     );
     expect(
-      classify(failed(403, {
-        'x-ratelimit-remaining': ['4999'],
-      })),
+      classify(
+        failed(403, {
+          'x-ratelimit-remaining': ['4999'],
+        }),
+      ),
       GithubFailure.forbidden,
     );
     expect(classify(failed(429)), GithubFailure.rateLimited);
-    expect(classify(DioException(requestOptions: RequestOptions())),
-        GithubFailure.unreachable);
+    expect(
+      classify(DioException(requestOptions: RequestOptions())),
+      GithubFailure.unreachable,
+    );
   });
 
   group('tiles', () {
@@ -171,8 +182,9 @@ void main() {
       await tester.pump();
     }
 
-    testWidgets('one repository and several fit every tile shape',
-        (tester) async {
+    testWidgets('one repository and several fit every tile shape', (
+      tester,
+    ) async {
       GithubApi.debugFetch = (repo, token, want) async => snapshot(repo);
       for (final options in [
         {'repository': 'vwillcox/HomeCanvas', 'token': 't'},
@@ -197,8 +209,9 @@ void main() {
       expect(find.text('Open issues'), findsOneWidget);
     });
 
-    testWidgets('what isn\'t a repository says so, and asks for nothing',
-        (tester) async {
+    testWidgets('what isn\'t a repository says so, and asks for nothing', (
+      tester,
+    ) async {
       var asked = 0;
       GithubApi.debugFetch = (repo, token, want) async {
         asked++;

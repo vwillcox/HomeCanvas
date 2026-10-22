@@ -41,10 +41,12 @@ class IndoorSensorService extends ChangeNotifier {
   /// and a 24-hour chart doesn't visibly change minute to minute.
   static const Duration _historyInterval = Duration(minutes: 15);
 
-  final Dio _dio = Dio(BaseOptions(
-    connectTimeout: const Duration(seconds: 5),
-    receiveTimeout: const Duration(seconds: 15),
-  ));
+  final Dio _dio = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 5),
+      receiveTimeout: const Duration(seconds: 15),
+    ),
+  );
 
   HomeAssistantSettings _settings = HomeAssistantSettings();
   Timer? _pollTimer;
@@ -104,9 +106,9 @@ class IndoorSensorService extends ChangeNotifier {
   }
 
   Options get _auth => Options(
-        headers: {'Authorization': 'Bearer ${_settings.token}'},
-        responseType: ResponseType.json,
-      );
+    headers: {'Authorization': 'Bearer ${_settings.token}'},
+    responseType: ResponseType.json,
+  );
 
   /// Current value of one entity, or null if it's missing or non-numeric.
   /// Home Assistant reports 'unknown' and 'unavailable' as states too.
@@ -130,7 +132,8 @@ class IndoorSensorService extends ChangeNotifier {
     if (temp == null) return; // Leave the last good reading in place.
     _temperatureC = temp;
     _humidity = await _readEntity(_settings.humidityEntity) ?? _humidity;
-    _battery = (await _readEntity(_settings.batteryEntity))?.round() ?? _battery;
+    _battery =
+        (await _readEntity(_settings.batteryEntity))?.round() ?? _battery;
     _lastSeen = DateTime.now();
     notifyListeners();
   }
@@ -148,7 +151,7 @@ class IndoorSensorService extends ChangeNotifier {
           time: t.key,
           temperatureC: t.value,
           humidity: _nearest(hums, t.key) ?? _humidity ?? 0,
-        )
+        ),
     ];
     notifyListeners();
   }
@@ -194,7 +197,8 @@ class IndoorSensorService extends ChangeNotifier {
   /// painter from drawing thousands of segments.
   @visibleForTesting
   static List<MapEntry<DateTime, double>> downsample(
-      List<MapEntry<DateTime, double>> points) {
+    List<MapEntry<DateTime, double>> points,
+  ) {
     const bucket = Duration(minutes: 10);
     final out = <MapEntry<DateTime, double>>[];
     for (final p in points) {
@@ -206,7 +210,9 @@ class IndoorSensorService extends ChangeNotifier {
   }
 
   static double? _nearest(
-      List<MapEntry<DateTime, double>> points, DateTime when) {
+    List<MapEntry<DateTime, double>> points,
+    DateTime when,
+  ) {
     if (points.isEmpty) return null;
     var best = points.first;
     var bestGap = (best.key.difference(when)).abs();

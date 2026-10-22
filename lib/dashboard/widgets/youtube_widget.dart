@@ -83,8 +83,13 @@ class _VideoTileState extends State<_VideoTile> with PauseWhenHidden {
     if (was['url'] != now['url']) {
       unawaited(_stop().then((_) => _start()));
     } else if (was['muted'] != now['muted'] && _player != null) {
-      unawaited(VideoPlayerService.applyAudio(_player!, _video!.settings,
-          muted: _muted ? true : null));
+      unawaited(
+        VideoPlayerService.applyAudio(
+          _player!,
+          _video!.settings,
+          muted: _muted ? true : null,
+        ),
+      );
     }
   }
 
@@ -100,8 +105,10 @@ class _VideoTileState extends State<_VideoTile> with PauseWhenHidden {
     final video = _video;
     if (link == null || video == null) return;
     try {
-      final stream = await video.resolve(link,
-          maxHeight: math.min(_tileHeight, video.settings.maxHeight));
+      final stream = await video.resolve(
+        link,
+        maxHeight: math.min(_tileHeight, video.settings.maxHeight),
+      );
       if (!mounted || _link != link) return;
       final player = Player();
       await MpvTuning.apply(player);
@@ -109,8 +116,10 @@ class _VideoTileState extends State<_VideoTile> with PauseWhenHidden {
         await player.dispose();
         return;
       }
-      final controller =
-          VideoController(player, configuration: VideoPlayerService.videoConfig);
+      final controller = VideoController(
+        player,
+        configuration: VideoPlayerService.videoConfig,
+      );
       setState(() {
         _player = player;
         _controller = controller;
@@ -118,8 +127,11 @@ class _VideoTileState extends State<_VideoTile> with PauseWhenHidden {
         _error = null;
       });
       await player.setPlaylistMode(PlaylistMode.single);
-      await VideoPlayerService.applyAudio(player, video.settings,
-          muted: _muted ? true : null);
+      await VideoPlayerService.applyAudio(
+        player,
+        video.settings,
+        muted: _muted ? true : null,
+      );
       await stream.prepare(player);
       await player.open(
         Media(
@@ -201,9 +213,11 @@ class _VideoTileState extends State<_VideoTile> with PauseWhenHidden {
           // Underneath until the first frame arrives, and whenever the
           // stream cannot be had.
           if (link.thumbnailUrl != null)
-            Image.network(link.thumbnailUrl!,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => const SizedBox.shrink()),
+            Image.network(
+              link.thumbnailUrl!,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => const SizedBox.shrink(),
+            ),
           if (controller != null)
             Video(
               controller: controller,
@@ -229,8 +243,11 @@ class _VideoTileState extends State<_VideoTile> with PauseWhenHidden {
             ),
           if (controller == null && _error == null)
             const Center(
-              child: Icon(Icons.play_circle_fill,
-                  color: Colors.white70, size: 56),
+              child: Icon(
+                Icons.play_circle_fill,
+                color: Colors.white70,
+                size: 56,
+              ),
             ),
         ],
       ),
@@ -262,14 +279,16 @@ final youtubeWidgetType = DashboardWidgetType(
         'subscriptions': 'Latest from my subscriptions',
         'video': 'One video, playing in the tile',
       },
-      help: 'Subscriptions need the panel signed in to YouTube — in Settings '
+      help:
+          'Subscriptions need the panel signed in to YouTube — in Settings '
           '→ Music → Videos, by tapping the tile, or from a computer at the '
           'editor’s address followed by /youtube.',
     ),
     WidgetOption(
       key: 'url',
       label: 'Video link',
-      help: 'For “One video”: paste the link from YouTube’s Share button. A '
+      help:
+          'For “One video”: paste the link from YouTube’s Share button. A '
           't= in it starts the video from there.',
     ),
     WidgetOption(
@@ -293,8 +312,6 @@ final youtubeWidgetType = DashboardWidgetType(
       help: 'How many of the latest to show.',
     ),
   ],
-  preview: const [
-    PreviewLine('▶  YouTube', scale: 0.2, centre: true),
-  ],
+  preview: const [PreviewLine('▶  YouTube', scale: 0.2, centre: true)],
   build: (context, w) => YouTubeWidget(w: w),
 );

@@ -36,7 +36,8 @@ class _ComposeScreenState extends State<ComposeScreen> {
     if (file != null) setState(() => _gif = file);
   }
 
-  bool get _canSend => !_sending && (_text.text.trim().isNotEmpty || _gif != null);
+  bool get _canSend =>
+      !_sending && (_text.text.trim().isNotEmpty || _gif != null);
 
   Future<void> _send() async {
     setState(() => _sending = true);
@@ -46,11 +47,13 @@ class _ComposeScreenState extends State<ComposeScreen> {
       items.add(SharedMediaFile(path: text, type: SharedMediaType.text));
     }
     if (_gif != null) {
-      items.add(SharedMediaFile(
-        path: _gif!.path,
-        type: SharedMediaType.image,
-        mimeType: _gif!.mimeType ?? 'image/gif',
-      ));
+      items.add(
+        SharedMediaFile(
+          path: _gif!.path,
+          type: SharedMediaType.image,
+          mimeType: _gif!.mimeType ?? 'image/gif',
+        ),
+      );
     }
     if (mounted) Navigator.of(context).pop(items);
   }
@@ -71,7 +74,8 @@ class _ComposeScreenState extends State<ComposeScreen> {
               autofocus: true,
               decoration: const InputDecoration(
                 labelText: 'Message',
-                hintText: 'Say something — your keyboard\'s emoji key '
+                hintText:
+                    'Say something — your keyboard\'s emoji key '
                     'works here like anywhere else',
                 border: OutlineInputBorder(),
               ),
@@ -94,15 +98,17 @@ class _ComposeScreenState extends State<ComposeScreen> {
                       File(_gif!.path),
                       height: 160,
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => const SizedBox(
-                        height: 160,
-                        child: Center(child: Icon(Icons.broken_image)),
-                      ),
+                      errorBuilder: (context, error, stackTrace) =>
+                          const SizedBox(
+                            height: 160,
+                            child: Center(child: Icon(Icons.broken_image)),
+                          ),
                     ),
                     IconButton(
                       style: IconButton.styleFrom(
-                          backgroundColor: Colors.black54,
-                          foregroundColor: Colors.white),
+                        backgroundColor: Colors.black54,
+                        foregroundColor: Colors.white,
+                      ),
                       icon: const Icon(Icons.close),
                       onPressed: () => setState(() => _gif = null),
                     ),
@@ -116,7 +122,8 @@ class _ComposeScreenState extends State<ComposeScreen> {
                   ? const SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2))
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                   : const Icon(Icons.send),
               label: const Text('Send to kiosk'),
             ),

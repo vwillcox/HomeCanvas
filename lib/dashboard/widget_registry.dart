@@ -339,9 +339,7 @@ class DashboardWidgetType {
     'minHeight': minHeight,
     // So the editor's preview skips the shrink the panel skips.
     'fitsItself': fitsItself,
-    'options': [
-      for (final o in options) o.toJson(at: '$_at.option.${o.key}'),
-    ],
+    'options': [for (final o in options) o.toJson(at: '$_at.option.${o.key}')],
     'preview': preview.map((p) => p.toJson()).toList(),
   };
 

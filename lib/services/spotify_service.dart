@@ -75,7 +75,8 @@ class SpotifyService extends ChangeNotifier implements PlaybackSource {
   static const int redirectPort = 8909;
   static const String redirectUri = 'http://127.0.0.1:$redirectPort/callback';
 
-  static const _scopes = 'user-read-playback-state user-modify-playback-state '
+  static const _scopes =
+      'user-read-playback-state user-modify-playback-state '
       'user-read-currently-playing user-library-read user-library-modify '
       'playlist-read-private playlist-modify-public playlist-modify-private '
       'user-read-recently-played user-top-read';
@@ -83,6 +84,7 @@ class SpotifyService extends ChangeNotifier implements PlaybackSource {
   static const Duration idleTimeout = Duration(minutes: 1);
   static const Duration _activePoll = Duration(seconds: 2);
   static const Duration _idlePoll = Duration(seconds: 10);
+
   /// Advances the shown position between real polls, so the progress bar
   /// moves on its own instead of jumping once every [_activePoll] — the
   /// same reason AVRCP has its own 1-second position timer. Purely local;
@@ -117,10 +119,12 @@ class SpotifyService extends ChangeNotifier implements PlaybackSource {
   }
 
   final ConfigService _configService;
-  final Dio _dio = Dio(BaseOptions(
-    connectTimeout: const Duration(seconds: 6),
-    receiveTimeout: const Duration(seconds: 8),
-  ));
+  final Dio _dio = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 6),
+      receiveTimeout: const Duration(seconds: 8),
+    ),
+  );
 
   SpotifyService(this._configService);
 
@@ -206,8 +210,10 @@ class SpotifyService extends ChangeNotifier implements PlaybackSource {
     final seconds = int.tryParse(header ?? '') ?? 60;
     final until = DateTime.now().add(Duration(seconds: seconds));
     _rateLimitedUntil[what] = until;
-    debugPrint('Spotify rate-limited on $what; backing off ${seconds}s '
-        '(until $until)');
+    debugPrint(
+      'Spotify rate-limited on $what; backing off ${seconds}s '
+      '(until $until)',
+    );
     return true;
   }
 
@@ -265,8 +271,10 @@ class SpotifyService extends ChangeNotifier implements PlaybackSource {
   static String _randomUrlSafe(int length) {
     const chars =
         'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    return List.generate(length, (_) => chars[_rand.nextInt(chars.length)])
-        .join();
+    return List.generate(
+      length,
+      (_) => chars[_rand.nextInt(chars.length)],
+    ).join();
   }
 
   static String _base64UrlNoPad(List<int> bytes) =>
@@ -302,24 +310,36 @@ class SpotifyService extends ChangeNotifier implements PlaybackSource {
 
     HttpServer server;
     try {
-      server = await HttpServer.bind(InternetAddress.loopbackIPv4, redirectPort);
+      server = await HttpServer.bind(
+        InternetAddress.loopbackIPv4,
+        redirectPort,
+      );
     } catch (e) {
-      return tr('spotify.couldNotOpenPortLocally', 'Could not open port {redirectPort} locally: {e}', {'redirectPort': redirectPort, 'e': e});
+      return tr(
+        'spotify.couldNotOpenPortLocally',
+        'Could not open port {redirectPort} locally: {e}',
+        {'redirectPort': redirectPort, 'e': e},
+      );
     }
 
-    final authUrl = Uri.parse(_authorizeUrl).replace(queryParameters: {
-      'client_id': clientId,
-      'response_type': 'code',
-      'redirect_uri': redirectUri,
-      'code_challenge_method': 'S256',
-      'code_challenge': challenge,
-      'scope': _scopes,
-      'state': state,
-    });
+    final authUrl = Uri.parse(_authorizeUrl).replace(
+      queryParameters: {
+        'client_id': clientId,
+        'response_type': 'code',
+        'redirect_uri': redirectUri,
+        'code_challenge_method': 'S256',
+        'code_challenge': challenge,
+        'scope': _scopes,
+        'state': state,
+      },
+    );
 
     if (await _openLoginPage(authUrl.toString()) == null) {
       await server.close(force: true);
-      return tr('spotify.couldNotOpenABrowser', 'Could not open a browser to log in with.');
+      return tr(
+        'spotify.couldNotOpenABrowser',
+        'Could not open a browser to log in with.',
+      );
     }
 
     String? code;
@@ -328,7 +348,10 @@ class SpotifyService extends ChangeNotifier implements PlaybackSource {
       final request = await server.first.timeout(const Duration(minutes: 3));
       final params = request.uri.queryParameters;
       if (params['state'] != state) {
-        error = tr('spotify.spotifyRedirectDidNotMatch', 'Spotify redirect did not match — try again.');
+        error = tr(
+          'spotify.spotifyRedirectDidNotMatch',
+          'Spotify redirect did not match — try again.',
+        );
       } else if (params['error'] != null) {
         error = 'Spotify said: ${params['error']}';
       } else {
@@ -340,12 +363,20 @@ class SpotifyService extends ChangeNotifier implements PlaybackSource {
         ..write(_callbackPage(error == null))
         ..close();
     } on TimeoutException {
-      error = tr('spotify.timedOutWaitingForThe', 'Timed out waiting for the Spotify login to complete.');
+      error = tr(
+        'spotify.timedOutWaitingForThe',
+        'Timed out waiting for the Spotify login to complete.',
+      );
     } finally {
       await server.close(force: true);
     }
     if (error != null) return error;
-    if (code == null) return tr('spotify.spotifyDidNotReturnAn', 'Spotify did not return an authorization code.');
+    if (code == null) {
+      return tr(
+        'spotify.spotifyDidNotReturnAn',
+        'Spotify did not return an authorization code.',
+      );
+    }
 
     try {
       final r = await _dio.post(
@@ -361,10 +392,16 @@ class SpotifyService extends ChangeNotifier implements PlaybackSource {
       );
       final data = r.data as Map;
       _accessToken = data['access_token'] as String;
-      _accessTokenExpiry = DateTime.now()
-          .add(Duration(seconds: (data['expires_in'] as int) - 60));
+      _accessTokenExpiry = DateTime.now().add(
+        Duration(seconds: (data['expires_in'] as int) - 60),
+      );
       final refreshToken = data['refresh_token'] as String?;
-      if (refreshToken == null) return tr('spotify.spotifyDidNotReturnA', 'Spotify did not return a refresh token.');
+      if (refreshToken == null) {
+        return tr(
+          'spotify.spotifyDidNotReturnA',
+          'Spotify did not return a refresh token.',
+        );
+      }
 
       _settings.clientId = clientId;
       _settings.refreshToken = refreshToken;
@@ -372,11 +409,16 @@ class SpotifyService extends ChangeNotifier implements PlaybackSource {
       refreshFromSettings();
       return null;
     } on DioException catch (e) {
-      return tr('spotify.spotifyRejectedTheLogin', 'Spotify rejected the login: {message}', {'message': e.response?.data ?? e.message});
+      return tr(
+        'spotify.spotifyRejectedTheLogin',
+        'Spotify rejected the login: {message}',
+        {'message': e.response?.data ?? e.message},
+      );
     }
   }
 
-  String _callbackPage(bool ok) => '''
+  String _callbackPage(bool ok) =>
+      '''
 <!doctype html><html><body style="background:#111;color:#eee;font-family:sans-serif;
 display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
 <div style="text-align:center">
@@ -416,8 +458,9 @@ display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
       );
       final data = r.data as Map;
       _accessToken = data['access_token'] as String;
-      _accessTokenExpiry = DateTime.now()
-          .add(Duration(seconds: (data['expires_in'] as int) - 60));
+      _accessTokenExpiry = DateTime.now().add(
+        Duration(seconds: (data['expires_in'] as int) - 60),
+      );
       // Spotify sometimes rotates the refresh token on use.
       final newRefresh = data['refresh_token'] as String?;
       if (newRefresh != null && newRefresh != _settings.refreshToken) {
@@ -468,21 +511,20 @@ display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
       String album = '',
       Duration duration = Duration.zero,
       String trackId = '',
-    }) =>
-        NowPlaying(
-          title: title,
-          artist: artist,
-          album: album,
-          duration: duration,
-          position: duration == Duration.zero
-              ? Duration.zero
-              : Duration(milliseconds: data['progress_ms'] as int? ?? 0),
-          status: playing ? 'playing' : 'paused',
-          repeat: repeatStateFrom(data['repeat_state'] as String? ?? 'off'),
-          shuffle: data['shuffle_state'] as bool? ?? false,
-          deviceName: device?['name'] as String? ?? 'Spotify',
-          trackId: trackId,
-        );
+    }) => NowPlaying(
+      title: title,
+      artist: artist,
+      album: album,
+      duration: duration,
+      position: duration == Duration.zero
+          ? Duration.zero
+          : Duration(milliseconds: data['progress_ms'] as int? ?? 0),
+      status: playing ? 'playing' : 'paused',
+      repeat: repeatStateFrom(data['repeat_state'] as String? ?? 'off'),
+      shuffle: data['shuffle_state'] as bool? ?? false,
+      deviceName: device?['name'] as String? ?? 'Spotify',
+      trackId: trackId,
+    );
 
     if (item == null) {
       if (!playing) {
@@ -490,13 +532,23 @@ display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
       }
       final context = (data['context'] as Map?)?['uri'] as String? ?? '';
       if (context.endsWith(djPlaylistId)) {
-        return PlayerReply(PlayerReplyKind.dj,
-            base(title: 'DJ X', artist: tr('spotify.talkingBetweenTracks', 'Talking between tracks')));
+        return PlayerReply(
+          PlayerReplyKind.dj,
+          base(
+            title: 'DJ X',
+            artist: tr(
+              'spotify.talkingBetweenTracks',
+              'Talking between tracks',
+            ),
+          ),
+        );
       }
       // Playing, but the API will not say what: an ad, a DJ it does not
       // label, something new. Still audio, so still worth showing.
       return PlayerReply(
-          PlayerReplyKind.unlabelled, base(title: tr('spotify.playingOnSpotify', 'Playing on Spotify')));
+        PlayerReplyKind.unlabelled,
+        base(title: tr('spotify.playingOnSpotify', 'Playing on Spotify')),
+      );
     }
 
     String? firstImage(Object? images) {
@@ -612,7 +664,8 @@ display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
     if (trackId.isNotEmpty && !_rateLimited('liked-status')) {
       final now = DateTime.now();
       final trackChanged = trackId != _lastLikedRecheckTrackId;
-      final intervalElapsed = _lastLikedRecheckAt == null ||
+      final intervalElapsed =
+          _lastLikedRecheckAt == null ||
           now.difference(_lastLikedRecheckAt!) >= _likedRecheckInterval;
       if (trackChanged || intervalElapsed) {
         _lastLikedRecheckAt = now;
@@ -680,8 +733,11 @@ display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
   /// Omitting device_id targets whichever device is currently active on the
   /// account — the point of this being source-agnostic, rather than pinning
   /// control to one specific device.
-  Future<void> _request(String method, String path,
-      {Map<String, dynamic>? query}) async {
+  Future<void> _request(
+    String method,
+    String path, {
+    Map<String, dynamic>? query,
+  }) async {
     final token = await _validAccessToken();
     if (token == null) return;
     try {
@@ -711,8 +767,11 @@ display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
   @override
   Future<void> previous() => _request('POST', '/me/player/previous');
   @override
-  Future<void> seek(Duration position) => _request('PUT', '/me/player/seek',
-      query: {'position_ms': position.inMilliseconds});
+  Future<void> seek(Duration position) => _request(
+    'PUT',
+    '/me/player/seek',
+    query: {'position_ms': position.inMilliseconds},
+  );
 
   @override
   Future<void> cycleRepeat() async {
@@ -740,15 +799,19 @@ display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
   /// [NowPlaying.repeat] already uses for the AVRCP source, so the shared
   /// widget's icon-switch works for either.
   @visibleForTesting
-  static String repeatStateFrom(String spotifyRepeat) => switch (spotifyRepeat) {
+  static String repeatStateFrom(String spotifyRepeat) =>
+      switch (spotifyRepeat) {
         'track' => 'singletrack',
         'context' => 'alltracks',
         _ => 'off',
       };
 
   @override
-  Future<void> toggleShuffle() => _request('PUT', '/me/player/shuffle',
-      query: {'state': (!_now.shuffle).toString()});
+  Future<void> toggleShuffle() => _request(
+    'PUT',
+    '/me/player/shuffle',
+    query: {'state': (!_now.shuffle).toString()},
+  );
 
   @override
   Future<void> setVolume(double fraction) async {
@@ -842,10 +905,12 @@ display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
       );
       final items = (r.data as Map)['items'] as List? ?? const [];
       return items
-          .map((p) => PlaylistInfo(
-                id: (p as Map)['id'] as String,
-                name: p['name'] as String? ?? '',
-              ))
+          .map(
+            (p) => PlaylistInfo(
+              id: (p as Map)['id'] as String,
+              name: p['name'] as String? ?? '',
+            ),
+          )
           .toList();
     } catch (e) {
       if (!_noteIfRateLimited(e, 'loadPlaylists')) {
@@ -864,7 +929,9 @@ display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
     try {
       await _dio.post(
         '$_apiBase/playlists/$playlistId/items',
-        data: {'uris': [_trackUri(trackId)]},
+        data: {
+          'uris': [_trackUri(trackId)],
+        },
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
     } catch (e) {
@@ -952,12 +1019,14 @@ display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
           .map((d) => (d as Map).cast<String, dynamic>())
           // A device with no id can't be transferred to.
           .where((d) => d['id'] is String)
-          .map((d) => SpotifyDevice(
-                id: d['id'] as String,
-                name: d['name'] as String? ?? tr('spotify.unknown', 'Unknown'),
-                type: d['type'] as String? ?? '',
-                isActive: d['is_active'] as bool? ?? false,
-              ))
+          .map(
+            (d) => SpotifyDevice(
+              id: d['id'] as String,
+              name: d['name'] as String? ?? tr('spotify.unknown', 'Unknown'),
+              type: d['type'] as String? ?? '',
+              isActive: d['is_active'] as bool? ?? false,
+            ),
+          )
           .toList();
     } catch (e) {
       if (!_noteIfRateLimited(e, 'loadDevices')) {
@@ -1014,37 +1083,37 @@ display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
   }
 
   Future<List<SpotifyItem>> loadPlaylistItems() => _loadItems(
-        '/me/playlists',
-        'loadPlaylistItems',
-        query: {'limit': 50},
-        map: (p) {
-          final uri = p['uri'] as String?;
-          if (uri == null) return null;
-          final tracks = (p['tracks'] as Map?)?['total'];
-          return SpotifyItem(
-            uri: uri,
-            title: p['name'] as String? ?? '',
-            subtitle: tracks is int ? '$tracks tracks' : '',
-            artUrl: _imageOf(p),
-            isContext: true,
-          );
-        },
+    '/me/playlists',
+    'loadPlaylistItems',
+    query: {'limit': 50},
+    map: (p) {
+      final uri = p['uri'] as String?;
+      if (uri == null) return null;
+      final tracks = (p['tracks'] as Map?)?['total'];
+      return SpotifyItem(
+        uri: uri,
+        title: p['name'] as String? ?? '',
+        subtitle: tracks is int ? '$tracks tracks' : '',
+        artUrl: _imageOf(p),
+        isContext: true,
       );
+    },
+  );
 
   Future<List<SpotifyItem>> loadRecentlyPlayed() => _loadItems(
-        '/me/player/recently-played',
-        'loadRecentlyPlayed',
-        query: {'limit': 30},
-        // each entry wraps the track under `track`
-        map: (e) => _trackToItem((e['track'] as Map?)?.cast<String, dynamic>()),
-      );
+    '/me/player/recently-played',
+    'loadRecentlyPlayed',
+    query: {'limit': 30},
+    // each entry wraps the track under `track`
+    map: (e) => _trackToItem((e['track'] as Map?)?.cast<String, dynamic>()),
+  );
 
   Future<List<SpotifyItem>> loadTopTracks() => _loadItems(
-        '/me/top/tracks',
-        'loadTopTracks',
-        query: {'limit': 30, 'time_range': 'medium_term'},
-        map: (t) => _trackToItem(t),
-      );
+    '/me/top/tracks',
+    'loadTopTracks',
+    query: {'limit': 30, 'time_range': 'medium_term'},
+    map: (t) => _trackToItem(t),
+  );
 
   /// Starts [item] playing on whatever device is currently active.
   Future<void> play(SpotifyItem item) async {
@@ -1058,7 +1127,7 @@ display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
         data: item.isContext
             ? {'context_uri': item.uri}
             : {
-                'uris': [item.uri]
+                'uris': [item.uri],
               },
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );

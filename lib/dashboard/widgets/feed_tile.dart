@@ -32,7 +32,11 @@ class SiteFeedTile<T extends VideoSite> extends StatelessWidget {
           tr(
             'widget.videos.tapToSignInTo',
             'Tap to sign in to {name} and show your subscriptions here — or sign in from a computer at {editorAddress}/{id}',
-            {'name': site.name, 'editorAddress': context.read<DashboardService>().editorAddress, 'id': site.id},
+            {
+              'name': site.name,
+              'editorAddress': context.read<DashboardService>().editorAddress,
+              'id': site.id,
+            },
           ),
           theme: t,
         ),
@@ -49,11 +53,23 @@ class SiteFeedTile<T extends VideoSite> extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           if (videos == null)
-            TileMessage(site.error ?? tr('widget.videos.fetchingFrom', 'Fetching from {name}…', {'name': site.name}), theme: t)
+            TileMessage(
+              site.error ??
+                  tr('widget.videos.fetchingFrom', 'Fetching from {name}…', {
+                    'name': site.name,
+                  }),
+              theme: t,
+            )
           else if (videos.isEmpty)
             TileMessage(
-                site.error ?? tr('widget.videos.nothingNewFromYourSubscriptions', 'Nothing new from your {name} subscriptions.', {'name': site.name}),
-                theme: t)
+              site.error ??
+                  tr(
+                    'widget.videos.nothingNewFromYourSubscriptions',
+                    'Nothing new from your {name} subscriptions.',
+                    {'name': site.name},
+                  ),
+              theme: t,
+            )
           else
             VideoGrid(
               theme: t,
@@ -76,7 +92,10 @@ class SiteFeedTile<T extends VideoSite> extends StatelessWidget {
           Positioned(
             top: 6,
             right: 6,
-            child: TileRefreshButton(busy: site.loading, onRefresh: site.refresh),
+            child: TileRefreshButton(
+              busy: site.loading,
+              onRefresh: site.refresh,
+            ),
           ),
         ],
       ),
@@ -91,30 +110,30 @@ DashboardWidgetType siteFeedWidgetType<T extends VideoSite>({
   required String name,
   required String description,
   required String glyph,
-}) =>
-    DashboardWidgetType(
-      type: type,
-      category: WidgetCategory.photosAndMedia,
-      name: name,
-      description: description,
-      glyph: glyph,
-      defaultWidth: 4,
-      defaultHeight: 3,
-      minWidth: 2,
-      minHeight: 2,
-      fitsItself: true,
-      options: [
-        WidgetOption(
-          key: 'count',
-          label: 'Videos',
-          kind: OptionKind.number,
-          defaultValue: 6,
-          help: 'How many of the latest to show. The panel needs signing in '
-              'to $name — in Settings → Music → Videos, by tapping the tile, '
-              'or from a computer at the editor’s address followed by '
-              '/$type.',
-        ),
-      ],
-      preview: [PreviewLine(name, scale: 0.2, centre: true)],
-      build: (context, w) => SiteFeedTile<T>(w: w),
-    );
+}) => DashboardWidgetType(
+  type: type,
+  category: WidgetCategory.photosAndMedia,
+  name: name,
+  description: description,
+  glyph: glyph,
+  defaultWidth: 4,
+  defaultHeight: 3,
+  minWidth: 2,
+  minHeight: 2,
+  fitsItself: true,
+  options: [
+    WidgetOption(
+      key: 'count',
+      label: 'Videos',
+      kind: OptionKind.number,
+      defaultValue: 6,
+      help:
+          'How many of the latest to show. The panel needs signing in '
+          'to $name — in Settings → Music → Videos, by tapping the tile, '
+          'or from a computer at the editor’s address followed by '
+          '/$type.',
+    ),
+  ],
+  preview: [PreviewLine(name, scale: 0.2, centre: true)],
+  build: (context, w) => SiteFeedTile<T>(w: w),
+);

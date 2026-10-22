@@ -57,8 +57,11 @@ void main() {
         expect(s.keys, isNotEmpty, reason: '${s.title} is empty');
         for (final k in s.keys) {
           expect(k.keys.trim(), isNotEmpty, reason: 'blank keys in ${s.title}');
-          expect(k.action.trim(), isNotEmpty,
-              reason: 'blank action for ${k.keys}');
+          expect(
+            k.action.trim(),
+            isNotEmpty,
+            reason: 'blank action for ${k.keys}',
+          );
         }
       }
     });
@@ -72,8 +75,7 @@ void main() {
       // A guard on the transcription: if a section is dropped in an edit, the
       // count moves and this says so rather than the panel quietly losing a
       // page of shortcuts.
-      final total =
-          omarchyHotkeys.fold<int>(0, (n, s) => n + s.keys.length);
+      final total = omarchyHotkeys.fold<int>(0, (n, s) => n + s.keys.length);
       expect(omarchyHotkeys.length, 20);
       expect(total, 224);
     });
@@ -82,14 +84,14 @@ void main() {
   group('reading the notation', () {
     test('a plain combination is one run of caps', () {
       expect(omarchyCaps('Super + Ctrl + L'), [
-        ['Super', 'Ctrl', 'L']
+        ['Super', 'Ctrl', 'L'],
       ]);
     });
 
     test('"or" separates two ways of doing the same thing', () {
       expect(omarchyCaps('Super + W or Super + Q'), [
         ['Super', 'W'],
-        ['Super', 'Q']
+        ['Super', 'Q'],
       ]);
     });
 
@@ -97,13 +99,13 @@ void main() {
       // Splitting these further would invent notation the reader has never
       // seen on the page they are memorising.
       expect(omarchyCaps('Super + 1/2/3/4'), [
-        ['Super', '1/2/3/4']
+        ['Super', '1/2/3/4'],
       ]);
       expect(omarchyCaps('CapsLock M S'), [
-        ['CapsLock M S']
+        ['CapsLock M S'],
       ]);
       expect(omarchyCaps('Print Screen'), [
-        ['Print Screen']
+        ['Print Screen'],
       ]);
     });
 
@@ -161,12 +163,12 @@ void main() {
 
     test('bigger text means more pages, not lost shortcuts', () {
       int pagesAt(double rowHeight, double minColumn) => omarchySheetFit(
-            width: 1900,
-            height: 950,
-            minColumnWidth: minColumn,
-            rowHeight: rowHeight,
-            count: 51,
-          ).pages;
+        width: 1900,
+        height: 950,
+        minColumnWidth: minColumn,
+        rowHeight: rowHeight,
+        count: 51,
+      ).pages;
       expect(pagesAt(66, 560), greaterThan(pagesAt(42, 380)));
     });
 
@@ -187,7 +189,9 @@ void main() {
       await pumpSheet(tester);
       expect(find.text('Navigating'), findsWidgets);
       expect(
-          find.text('Omarchy menu (apps and everything else)'), findsOneWidget);
+        find.text('Omarchy menu (apps and everything else)'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('a combination is drawn as separate caps', (tester) async {
@@ -195,8 +199,11 @@ void main() {
       // Three caps and two joiners, not one long string.
       expect(find.text('Ctrl'), findsWidgets);
       expect(find.text('+'), findsWidgets);
-      expect(find.text('or'), findsWidgets,
-          reason: 'Super + W or Super + Q is on the first page');
+      expect(
+        find.text('or'),
+        findsWidgets,
+        reason: 'Super + W or Super + Q is on the first page',
+      );
     });
 
     testWidgets('tapping the sheet turns the page', (tester) async {
@@ -208,8 +215,9 @@ void main() {
       expect(first, findsNothing, reason: 'page one should be behind us');
     });
 
-    testWidgets('turning past the last page moves to the next section',
-        (tester) async {
+    testWidgets('turning past the last page moves to the next section', (
+      tester,
+    ) async {
       await pumpSheet(tester);
       // Navigating runs to a second page on a tile this size; one more turn
       // has to leave the section rather than sticking on the last page.
@@ -220,16 +228,16 @@ void main() {
       expect(find.text('Audio panel'), findsOneWidget);
     });
 
-    testWidgets('tapping a tab jumps straight to that section',
-        (tester) async {
+    testWidgets('tapping a tab jumps straight to that section', (tester) async {
       await pumpSheet(tester);
       await tester.tap(find.text('Universal clipboard'));
       await tester.pumpAndSettle();
       expect(find.text('Clipboard manager'), findsOneWidget);
     });
 
-    testWidgets('the strip brings the selected section into view',
-        (tester) async {
+    testWidgets('the strip brings the selected section into view', (
+      tester,
+    ) async {
       await pumpSheet(tester);
       // Walk far enough that the tab started off the right-hand side. A
       // highlight you cannot see is no use.
@@ -237,15 +245,20 @@ void main() {
         await tester.tap(find.byType(DashboardOmarchyWidget));
         await tester.pumpAndSettle();
       }
-      expect(find.text('Toggle locking on idle'), findsOneWidget,
-          reason: 'nine turns should land on Toggles');
+      expect(
+        find.text('Toggle locking on idle'),
+        findsOneWidget,
+        reason: 'nine turns should land on Toggles',
+      );
       final strip = tester.getRect(find.byType(Scrollable).first);
       // The name is on screen twice — as the heading and as its tab. It is
       // the tab whose position matters here.
-      final tab = tester.getRect(find.descendant(
-        of: find.byType(Scrollable).first,
-        matching: find.text('Toggles'),
-      ));
+      final tab = tester.getRect(
+        find.descendant(
+          of: find.byType(Scrollable).first,
+          matching: find.text('Toggles'),
+        ),
+      );
       expect(tab.left, greaterThanOrEqualTo(strip.left - 1));
       expect(tab.right, lessThanOrEqualTo(strip.right + 1));
     });
@@ -256,28 +269,35 @@ void main() {
       expect(find.text('Navigating'), findsNothing);
     });
 
-    testWidgets('a section renamed out of a saved config does not go blank',
-        (tester) async {
+    testWidgets('a section renamed out of a saved config does not go blank', (
+      tester,
+    ) async {
       await pumpSheet(tester, options: {'section': 'Gone Away'});
       expect(
-          find.text('Omarchy menu (apps and everything else)'), findsOneWidget);
+        find.text('Omarchy menu (apps and everything else)'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('smaller text fits more on a page', (tester) async {
       await pumpSheet(tester, options: {'textSize': 'small'});
       // Large runs Navigating to two pages; small has to do better than that.
-      expect(find.text('Cycle focus backwards through monitors'),
-          findsOneWidget);
+      expect(
+        find.text('Cycle focus backwards through monitors'),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('a small tile shows fewer shortcuts rather than overflowing',
-        (tester) async {
+    testWidgets('a small tile shows fewer shortcuts rather than overflowing', (
+      tester,
+    ) async {
       await pumpSheet(tester, size: const Size(420, 300));
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('a tile too small for the page dots uses a counter instead',
-        (tester) async {
+    testWidgets('a tile too small for the page dots uses a counter instead', (
+      tester,
+    ) async {
       await pumpSheet(tester, size: const Size(420, 300));
       // Navigating in a box this size is well past what dots can say.
       expect(find.textContaining(RegExp(r'^1 / \d+$')), findsOneWidget);

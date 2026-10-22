@@ -24,7 +24,8 @@ void main() {
     final file = File('l10n/en-GB.arb');
     final written = const JsonEncoder.withIndent('  ').convert({
       '@@locale': 'en-GB',
-      '@@x-source': 'Written from the code by test/l10n_source_test.dart — '
+      '@@x-source':
+          'Written from the code by test/l10n_source_test.dart — '
           'do not edit by hand.',
       ...source,
     });
@@ -35,7 +36,8 @@ void main() {
     expect(
       file.existsSync() ? file.readAsStringSync().trim() : '',
       written.trim(),
-      reason: 'l10n/en-GB.arb is out of date. Write it again with '
+      reason:
+          'l10n/en-GB.arb is out of date. Write it again with '
           'L10N_WRITE=1 flutter test test/l10n_source_test.dart',
     );
   });
@@ -46,16 +48,24 @@ void main() {
       if (!f.path.endsWith('.arb')) continue;
       final pack = L10n.parsePack(f.readAsStringSync());
       final json = jsonDecode(f.readAsStringSync()) as Map;
-      expect(json['@@x-ai-created'], isNotNull,
-          reason: '${f.path} must say whether an AI created it');
+      expect(
+        json['@@x-ai-created'],
+        isNotNull,
+        reason: '${f.path} must say whether an AI created it',
+      );
       for (final e in pack.entries) {
-        expect(source, contains(e.key), reason: '${f.path}: ${e.key} is not in the app');
+        expect(
+          source,
+          contains(e.key),
+          reason: '${f.path}: ${e.key} is not in the app',
+        );
         final english = source[e.key];
         if (english == null) continue;
         expect(
           placeholders(e.value),
           placeholders(english),
-          reason: '${f.path}: ${e.key} must keep the placeholders of "$english"',
+          reason:
+              '${f.path}: ${e.key} must keep the placeholders of "$english"',
         );
       }
     }
@@ -97,9 +107,13 @@ Map<String, String> sourceStrings() {
     r"""\btr\(\s*'([\w.\-]+)'\s*,\s*((?:(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*")\s*)+)""",
   );
   final literal = RegExp(
-    r"'((?:[^'\\]|\\.)*)'" '|' r'"((?:[^"\\]|\\.)*)"',
+    r"'((?:[^'\\]|\\.)*)'"
+    '|'
+    r'"((?:[^"\\]|\\.)*)"',
   );
-  for (final f in Directory('lib').listSync(recursive: true).whereType<File>()) {
+  for (final f in Directory(
+    'lib',
+  ).listSync(recursive: true).whereType<File>()) {
     if (!f.path.endsWith('.dart')) continue;
     // Comments explain tr() with examples; they are not strings to show.
     final code = f

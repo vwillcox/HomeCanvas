@@ -40,14 +40,16 @@ class LockedFolderService extends ChangeNotifier {
     if (_client == null || _clientFor != base) {
       _client?.close();
       _clientFor = base;
-      _client = Dio(BaseOptions(
-        baseUrl: base,
-        headers: {'Accept': 'application/json'},
-        connectTimeout: const Duration(seconds: 12),
-        receiveTimeout: const Duration(seconds: 30),
-        // Accept 2xx-4xx so we can inspect status codes ourselves.
-        validateStatus: (s) => s != null && s < 500,
-      ));
+      _client = Dio(
+        BaseOptions(
+          baseUrl: base,
+          headers: {'Accept': 'application/json'},
+          connectTimeout: const Duration(seconds: 12),
+          receiveTimeout: const Duration(seconds: 30),
+          // Accept 2xx-4xx so we can inspect status codes ourselves.
+          validateStatus: (s) => s != null && s < 500,
+        ),
+      );
     }
     return _client!;
   }
@@ -58,10 +60,10 @@ class LockedFolderService extends ChangeNotifier {
     if (_token != null) return true;
     if (!canUse) return false;
     try {
-      final r = await _dio().post('/api/auth/login', data: {
-        'email': config.immichEmail,
-        'password': config.immichPassword,
-      });
+      final r = await _dio().post(
+        '/api/auth/login',
+        data: {'email': config.immichEmail, 'password': config.immichPassword},
+      );
       if (r.statusCode == 200 || r.statusCode == 201) {
         _token = (r.data as Map)['accessToken'] as String?;
         return _token != null;
@@ -78,10 +80,10 @@ class LockedFolderService extends ChangeNotifier {
     if (!await _ensureLoggedIn()) return UnlockResult.error;
     try {
       Future<Response<dynamic>> send() => _dio().post(
-            '/api/auth/session/unlock',
-            data: {'pinCode': pin},
-            options: _auth(),
-          );
+        '/api/auth/session/unlock',
+        data: {'pinCode': pin},
+        options: _auth(),
+      );
       var r = await send();
       // The session itself has lapsed — Immich signs sessions out, and the
       // panel stays up for weeks. Without a fresh one the right PIN was

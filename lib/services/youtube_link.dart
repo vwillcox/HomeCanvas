@@ -72,7 +72,9 @@ class YouTubeLink implements VideoLink {
   /// A `t=` value: plain seconds (`90`, `90s`) or `1h2m3s`.
   static Duration parseTime(String? t) {
     if (t == null || t.isEmpty) return Duration.zero;
-    final plain = int.tryParse(t.endsWith('s') ? t.substring(0, t.length - 1) : t);
+    final plain = int.tryParse(
+      t.endsWith('s') ? t.substring(0, t.length - 1) : t,
+    );
     if (plain != null) return Duration(seconds: plain);
     final m = RegExp(r'^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$').firstMatch(t);
     if (m == null) return Duration.zero;

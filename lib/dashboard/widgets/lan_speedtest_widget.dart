@@ -44,7 +44,10 @@ class _DashboardLanSpeedtestWidgetState
     };
 
     final label = switch (s.phase) {
-      LanPhase.idle => s.hasResult ? tr('widget.speedtest.tapToRetest', 'tap to retest') : tr('widget.speedtest.tapToStart', 'tap to start'),
+      LanPhase.idle =>
+        s.hasResult
+            ? tr('widget.speedtest.tapToRetest', 'tap to retest')
+            : tr('widget.speedtest.tapToStart', 'tap to start'),
       LanPhase.download => 'download',
       LanPhase.upload => 'upload',
       LanPhase.done => tr('widget.speedtest.tapToRetest', 'tap to retest'),

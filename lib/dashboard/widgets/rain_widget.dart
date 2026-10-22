@@ -31,7 +31,11 @@ class _RainWidgetState extends State<RainWidget>
     final slots = service.slots;
     if (slots == null) {
       return TileMessage(
-        service.error ?? tr('widget.rain.fetchingTheRainForecast', 'Fetching the rain forecast…'),
+        service.error ??
+            tr(
+              'widget.rain.fetchingTheRainForecast',
+              'Fetching the rain forecast…',
+            ),
         theme: t,
       );
     }
@@ -104,11 +108,9 @@ class _RainWidgetState extends State<RainWidget>
                     ),
                     const Spacer(),
                     Text(
-                      tr(
-                        'widget.rain.min',
-                        '+{length} min',
-                        {'length': (ahead.length / 4 * 60).round()},
-                      ),
+                      tr('widget.rain.min', '+{length} min', {
+                        'length': (ahead.length / 4 * 60).round(),
+                      }),
                       style: TextStyle(color: t.textSecondary, fontSize: 8),
                     ),
                   ],

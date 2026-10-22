@@ -94,8 +94,9 @@ class VoiceService extends ChangeNotifier {
   final Duration linger;
 
   final VoiceListenerOpener _open;
-  final RetrySchedule _schedule =
-      RetrySchedule(settled: const Duration(seconds: 5));
+  final RetrySchedule _schedule = RetrySchedule(
+    settled: const Duration(seconds: 5),
+  );
 
   VoiceListener? _listener;
   StreamSubscription<String>? _sub;
@@ -310,7 +311,13 @@ class VoiceService extends ChangeNotifier {
   /// The Python that has the recogniser in it, set up by the installer.
   static String get python => p.join(
     Platform.environment['HOME'] ?? '.',
-    '.local', 'share', 'homecanvas', 'voice', 'venv', 'bin', 'python', //
+    '.local',
+    'share',
+    'homecanvas',
+    'voice',
+    'venv',
+    'bin',
+    'python', //
   );
 
   /// The listener's own file: beside the build it came with, or where the
@@ -325,13 +332,17 @@ class VoiceService extends ChangeNotifier {
     }
     return p.join(
       Platform.environment['HOME'] ?? '.',
-      'homecanvas', 'deploy', 'voice_listener.py', //
+      'homecanvas',
+      'deploy',
+      'voice_listener.py', //
     );
   }
 
   static Future<VoiceListener> _startListener(WakeWord wake) async {
     if (!File(python).existsSync() || !File(script).existsSync()) {
-      throw ProcessException(python, [script], 'voice control is not installed');
+      throw ProcessException(python, [
+        script,
+      ], 'voice control is not installed');
     }
     // Below the panel's own work: it listens all day, and nothing it does
     // is worth a dropped frame.

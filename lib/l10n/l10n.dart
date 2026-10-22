@@ -120,8 +120,11 @@ class L10n extends ChangeNotifier {
   }
 
   /// [english] in the current language, by [key], with [args] filled in.
-  String t(String key, String english, [Map<String, Object?> args = const {}]) =>
-      format(_strings[key] ?? english, args, locale: _language.intlCode);
+  String t(
+    String key,
+    String english, [
+    Map<String, Object?> args = const {},
+  ]) => format(_strings[key] ?? english, args, locale: _language.intlCode);
 
   /// The translation of [key], or null where the pack has none — for text
   /// whose British original lives somewhere else, like a widget's settings.
@@ -133,7 +136,9 @@ class L10n extends ChangeNotifier {
     if (json is! Map) return const {};
     return {
       for (final e in json.entries)
-        if (e.key is String && !(e.key as String).startsWith('@') && e.value is String)
+        if (e.key is String &&
+            !(e.key as String).startsWith('@') &&
+            e.value is String)
           e.key as String: e.value as String,
     };
   }
@@ -203,8 +208,10 @@ String _argument(String body, Map<String, Object?> args, String locale) {
   if (kind == 'plural') {
     final n = value is num ? value : num.tryParse('$value');
     if (n == null) return pick(null);
-    final exact = cases['=${n is int || n == n.roundToDouble() ? n.round() : n}'];
-    final chosen = exact ??
+    final exact =
+        cases['=${n is int || n == n.roundToDouble() ? n.round() : n}'];
+    final chosen =
+        exact ??
         Intl.pluralLogic<String?>(
           n,
           locale: locale,

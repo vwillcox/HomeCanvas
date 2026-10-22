@@ -79,8 +79,10 @@ List<_Pick> _picks(
 }
 
 int _refreshMinutes(DashboardWidgetContext w) =>
-    (int.tryParse('${w.config.options['refreshMinutes'] ?? 5}') ?? 5)
-        .clamp(1, 1440);
+    (int.tryParse('${w.config.options['refreshMinutes'] ?? 5}') ?? 5).clamp(
+      1,
+      1440,
+    );
 
 /// A list of prices that keeps itself fresh while it is on screen, scrolls
 /// when there are more than fit, and fetches again when pulled down.
@@ -185,92 +187,99 @@ class _MarketsTileState extends State<_MarketsTile>
     Widget withUpdated(Widget list) => Refreshed(
       theme: t,
       at: Refreshed.oldest([
-        for (final pick in widget.picks)
-          widget.lookup(service, pick.entry).at,
+        for (final pick in widget.picks) widget.lookup(service, pick.entry).at,
       ]),
       child: list,
     );
 
     final view = widget.w.option('view', 'list');
     if (view == 'cards' || view == 'single') {
-      return withUpdated(withTotal(LayoutBuilder(
-        builder: (context, c) {
-          // As many at once as fit with room for a chart — all of them when
-          // they can — sharing the tile; the whole tile for one at a time.
-          final n = widget.picks.length;
-          const smallest = 240.0;
-          final atOnce = view == 'single' || c.maxHeight < smallest
-              ? 1
-              : (c.maxHeight / smallest).floor().clamp(1, n < 1 ? 1 : n);
-          final height = c.maxHeight / atOnce;
-          return _MoreBelow(
-            hidden: n - atOnce,
-            theme: t,
-            builder: (controller) => RefreshIndicator(
-            onRefresh: () => widget.fetch(service, force: true),
-            child: ListView.builder(
-              controller: controller,
-              padding: EdgeInsets.zero,
-              physics: const AlwaysScrollableScrollPhysics(),
-              itemExtent: height,
-              itemCount: widget.picks.length,
-              itemBuilder: (context, i) {
-                final pick = widget.picks[i];
-                final found = widget.lookup(service, pick.entry);
-                return Padding(
-                  // The gap between cards, but none under the last.
-                  padding: EdgeInsets.only(
-                    bottom: i == widget.picks.length - 1 ? 0 : 10,
-                  ),
-                  child: _Card(
-                    pick: pick,
-                    quote: found.quote,
-                    error: found.error,
-                    theme: t,
-                    status: status,
-                    span: widget.span,
-                    coins: widget.coins,
-                  ),
-                );
-              },
-            ),
-          ),
-          );
-        },
-      )));
-    }
-
-    return withUpdated(withTotal(LayoutBuilder(
-      builder: (context, c) {
-        // A sparkline squeezed under 60px says nothing; the price matters more.
-        final chart = showChart && c.maxWidth >= 300;
-        return RefreshIndicator(
-          onRefresh: () => widget.fetch(service, force: true),
-          child: ListView.separated(
-            padding: EdgeInsets.zero,
-            physics: const AlwaysScrollableScrollPhysics(),
-            itemCount: widget.picks.length,
-            separatorBuilder: (_, _) => Divider(
-              height: 12,
-              thickness: 1,
-              color: t.textSecondary.withValues(alpha: 0.15),
-            ),
-            itemBuilder: (context, i) {
-              final pick = widget.picks[i];
-              final found = widget.lookup(service, pick.entry);
-              return _Row(
-                pick: pick,
-                quote: found.quote,
-                error: found.error,
-                chart: chart,
+      return withUpdated(
+        withTotal(
+          LayoutBuilder(
+            builder: (context, c) {
+              // As many at once as fit with room for a chart — all of them when
+              // they can — sharing the tile; the whole tile for one at a time.
+              final n = widget.picks.length;
+              const smallest = 240.0;
+              final atOnce = view == 'single' || c.maxHeight < smallest
+                  ? 1
+                  : (c.maxHeight / smallest).floor().clamp(1, n < 1 ? 1 : n);
+              final height = c.maxHeight / atOnce;
+              return _MoreBelow(
+                hidden: n - atOnce,
                 theme: t,
-                status: status,
+                builder: (controller) => RefreshIndicator(
+                  onRefresh: () => widget.fetch(service, force: true),
+                  child: ListView.builder(
+                    controller: controller,
+                    padding: EdgeInsets.zero,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    itemExtent: height,
+                    itemCount: widget.picks.length,
+                    itemBuilder: (context, i) {
+                      final pick = widget.picks[i];
+                      final found = widget.lookup(service, pick.entry);
+                      return Padding(
+                        // The gap between cards, but none under the last.
+                        padding: EdgeInsets.only(
+                          bottom: i == widget.picks.length - 1 ? 0 : 10,
+                        ),
+                        child: _Card(
+                          pick: pick,
+                          quote: found.quote,
+                          error: found.error,
+                          theme: t,
+                          status: status,
+                          span: widget.span,
+                          coins: widget.coins,
+                        ),
+                      );
+                    },
+                  ),
+                ),
               );
             },
           ),
-        );
-      },
-    )));
+        ),
+      );
+    }
+
+    return withUpdated(
+      withTotal(
+        LayoutBuilder(
+          builder: (context, c) {
+            // A sparkline squeezed under 60px says nothing; the price matters more.
+            final chart = showChart && c.maxWidth >= 300;
+            return RefreshIndicator(
+              onRefresh: () => widget.fetch(service, force: true),
+              child: ListView.separated(
+                padding: EdgeInsets.zero,
+                physics: const AlwaysScrollableScrollPhysics(),
+                itemCount: widget.picks.length,
+                separatorBuilder: (_, _) => Divider(
+                  height: 12,
+                  thickness: 1,
+                  color: t.textSecondary.withValues(alpha: 0.15),
+                ),
+                itemBuilder: (context, i) {
+                  final pick = widget.picks[i];
+                  final found = widget.lookup(service, pick.entry);
+                  return _Row(
+                    pick: pick,
+                    quote: found.quote,
+                    error: found.error,
+                    chart: chart,
+                    theme: t,
+                    status: status,
+                  );
+                },
+              ),
+            );
+          },
+        ),
+      ),
+    );
   }
 }
 
@@ -351,7 +360,8 @@ class _Total extends StatelessWidget {
         if (known.isNotEmpty && cost > 0) ...[
           const SizedBox(width: lcarsLine),
           _ConsoleFigure(
-            text: '${formatGain(gain, currency)}  '
+            text:
+                '${formatGain(gain, currency)}  '
                 '${formatChange(gain / cost * 100)}',
             colour: gain < 0 ? status.bad : status.good,
             height: height,
@@ -399,7 +409,8 @@ class _Total extends StatelessWidget {
                   ),
                   if (known.isNotEmpty && cost > 0)
                     TextSpan(
-                      text: '   ${formatGain(gain, currency)}'
+                      text:
+                          '   ${formatGain(gain, currency)}'
                           '  ${formatChange(gain / cost * 100)}',
                       style: TextStyle(
                         color: colour,
@@ -468,7 +479,8 @@ class _Row extends StatelessWidget {
           ? status.bad
           : status.good;
     } else if (since != null) {
-      mine = '${formatChange(since.percent)} on '
+      mine =
+          '${formatChange(since.percent)} on '
           '${formatPrice(since.paid, q!.currency)}';
       mineColour = since.percent < 0 ? status.bad : status.good;
     } else {
@@ -546,9 +558,7 @@ class _Row extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                q == null
-                    ? (error ?? '…')
-                    : formatPrice(q.price, q.currency),
+                q == null ? (error ?? '…') : formatPrice(q.price, q.currency),
                 style: TextStyle(
                   color: q == null ? t.textSecondary : t.textPrimary,
                   fontSize: q == null ? 13 : 15,
@@ -745,11 +755,9 @@ class _Card extends StatelessWidget {
                 // compares with what you paid.
                 if (held != null) ...[
                   (
-                    tr(
-                      'widget.markets.your',
-                      'Your {coins}',
-                      {'coins': _howMany(held.quantity, coins)},
-                    ),
+                    tr('widget.markets.your', 'Your {coins}', {
+                      'coins': _howMany(held.quantity, coins),
+                    }),
                     formatPrice(held.value, held.currency),
                     null,
                   ),
@@ -769,11 +777,9 @@ class _Card extends StatelessWidget {
                     ),
                 ] else if (since != null)
                   (
-                    tr(
-                      'widget.markets.sinceYouPaid',
-                      'Since you paid {paid}',
-                      {'paid': money(since.paid)},
-                    ),
+                    tr('widget.markets.sinceYouPaid', 'Since you paid {paid}', {
+                      'paid': money(since.paid),
+                    }),
                     formatChange(since.percent),
                     since.percent < 0 ? status.bad : status.good,
                   ),
@@ -792,10 +798,12 @@ class _Card extends StatelessWidget {
           decoration: lcars
               ? null
               : BoxDecoration(
-            color: t.textPrimary.withValues(alpha: 0.04),
-            borderRadius: BorderRadius.circular(14 * k),
-            border: Border.all(color: t.textSecondary.withValues(alpha: 0.12)),
-          ),
+                  color: t.textPrimary.withValues(alpha: 0.04),
+                  borderRadius: BorderRadius.circular(14 * k),
+                  border: Border.all(
+                    color: t.textSecondary.withValues(alpha: 0.12),
+                  ),
+                ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -892,88 +900,88 @@ class _Card extends StatelessWidget {
                   ],
                 )
               else
-              Row(
-                children: [
-                  if (q?.image != null) ...[
-                    ClipOval(
-                      child: CachedNetworkImage(
-                        imageUrl: q!.image!,
-                        width: 32 * k,
-                        height: 32 * k,
-                        errorWidget: (_, _, _) => SizedBox(width: 32 * k),
+                Row(
+                  children: [
+                    if (q?.image != null) ...[
+                      ClipOval(
+                        child: CachedNetworkImage(
+                          imageUrl: q!.image!,
+                          width: 32 * k,
+                          height: 32 * k,
+                          errorWidget: (_, _, _) => SizedBox(width: 32 * k),
+                        ),
+                      ),
+                      SizedBox(width: 10 * k),
+                    ],
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: t.textPrimary,
+                              fontSize: 19 * k,
+                              height: 1.2,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          Text(
+                            sub,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: t.textSecondary,
+                              fontSize: 12 * k,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     SizedBox(width: 10 * k),
-                  ],
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: t.textPrimary,
-                            fontSize: 19 * k,
-                            height: 1.2,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        Text(
-                          sub,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: t.textSecondary,
-                            fontSize: 12 * k,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(width: 10 * k),
-                  // Shrinks on a narrow tile rather than pushing off its edge.
-                  ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: c.maxWidth * 0.55),
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerRight,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            q == null ? (error ?? '…') : money(q.price),
-                            style: TextStyle(
-                              color: q == null
-                                  ? t.textSecondary
-                                  : t.textPrimary,
-                              fontSize: (q == null ? 14 : 22) * k,
-                              height: 1.15,
-                              fontWeight: FontWeight.w700,
-                              fontFeatures: const [
-                                FontFeature.tabularFigures(),
-                              ],
-                            ),
-                          ),
-                          if (change != null)
+                    // Shrinks on a narrow tile rather than pushing off its edge.
+                    ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: c.maxWidth * 0.55),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
                             Text(
-                              [formatChange(change), ?moved].join('  '),
+                              q == null ? (error ?? '…') : money(q.price),
                               style: TextStyle(
-                                color: colour,
-                                fontSize: 13 * k,
-                                fontWeight: FontWeight.w600,
+                                color: q == null
+                                    ? t.textSecondary
+                                    : t.textPrimary,
+                                fontSize: (q == null ? 14 : 22) * k,
+                                height: 1.15,
+                                fontWeight: FontWeight.w700,
                                 fontFeatures: const [
                                   FontFeature.tabularFigures(),
                                 ],
                               ),
                             ),
-                        ],
+                            if (change != null)
+                              Text(
+                                [formatChange(change), ?moved].join('  '),
+                                style: TextStyle(
+                                  color: colour,
+                                  fontSize: 13 * k,
+                                  fontWeight: FontWeight.w600,
+                                  fontFeatures: const [
+                                    FontFeature.tabularFigures(),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
               SizedBox(height: 8 * k),
               Expanded(
                 child: q != null && q.history.length > 1
@@ -1003,11 +1011,13 @@ class _Card extends StatelessWidget {
                   builder: (context, row) {
                     // As many as fit side by side, the likeliest wanted first,
                     // and a second row on a card tall enough to spare it.
-                    final n = (row.maxWidth / (140 * k))
-                        .floor()
-                        .clamp(1, facts.length);
-                    final rows =
-                        c.maxHeight >= 300 * k && facts.length > n ? 2 : 1;
+                    final n = (row.maxWidth / (140 * k)).floor().clamp(
+                      1,
+                      facts.length,
+                    );
+                    final rows = c.maxHeight >= 300 * k && facts.length > n
+                        ? 2
+                        : 1;
                     final shown = facts.take(n * rows).toList();
                     if (lcars) {
                       // Blocks, a black line apart, the first of each row
@@ -1054,7 +1064,8 @@ class _Card extends StatelessWidget {
                                   if (i < shown.length)
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             shown[i].$1,
@@ -1070,7 +1081,8 @@ class _Card extends StatelessWidget {
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                             style: TextStyle(
-                                              color: shown[i].$3 ?? t.textPrimary,
+                                              color:
+                                                  shown[i].$3 ?? t.textPrimary,
                                               fontSize: 13 * k,
                                               fontWeight: FontWeight.w600,
                                               fontFeatures: const [
@@ -1159,26 +1171,50 @@ class _Card extends StatelessWidget {
     Quote q,
     String Function(double) money,
   ) {
-    String range(double? lo, double? hi) =>
-        '${money(lo!)} – ${money(hi!)}';
+    String range(double? lo, double? hi) => '${money(lo!)} – ${money(hi!)}';
     return [
       if (!coins && q.previousClose != null)
-        (tr('widget.markets.previousClose', 'Previous close'), money(q.previousClose!), null),
+        (
+          tr('widget.markets.previousClose', 'Previous close'),
+          money(q.previousClose!),
+          null,
+        ),
       if (q.low != null && q.high != null)
-        (coins ? tr('widget.markets.24hRange', '24h range') : tr('widget.markets.dayRange', 'Day range'), range(q.low, q.high), null),
+        (
+          coins
+              ? tr('widget.markets.24hRange', '24h range')
+              : tr('widget.markets.dayRange', 'Day range'),
+          range(q.low, q.high),
+          null,
+        ),
       if (q.marketCap != null)
-        (tr('widget.markets.marketCap', 'Market cap'), formatCompactPrice(q.marketCap!, q.currency), null),
+        (
+          tr('widget.markets.marketCap', 'Market cap'),
+          formatCompactPrice(q.marketCap!, q.currency),
+          null,
+        ),
       if (q.yearLow != null && q.yearHigh != null)
-        (tr('widget.markets.52WeekRange', '52-week range'), range(q.yearLow, q.yearHigh), null),
+        (
+          tr('widget.markets.52WeekRange', '52-week range'),
+          range(q.yearLow, q.yearHigh),
+          null,
+        ),
       if (q.volume != null)
         (
-          coins ? tr('widget.markets.volume24h', 'Volume (24h)') : tr('widget.markets.volume', 'Volume'),
+          coins
+              ? tr('widget.markets.volume24h', 'Volume (24h)')
+              : tr('widget.markets.volume', 'Volume'),
           coins
               ? formatCompactPrice(q.volume!, q.currency)
               : formatCompact(q.volume!),
           null,
         ),
-      if (q.allTimeHigh != null) (tr('widget.markets.allTimeHigh', 'All-time high'), money(q.allTimeHigh!), null),
+      if (q.allTimeHigh != null)
+        (
+          tr('widget.markets.allTimeHigh', 'All-time high'),
+          money(q.allTimeHigh!),
+          null,
+        ),
     ];
   }
 }
@@ -1226,8 +1262,7 @@ class _Chart extends CustomPainter {
     'week' => weekdayShort(t),
     // "Oct 25": a year's labels are months, and the year matters at its
     // start.
-    'year' =>
-      monthShortYear(t),
+    'year' => monthShortYear(t),
     _ => dayMonth(t),
   };
 
@@ -1277,8 +1312,7 @@ class _Chart extends CustomPainter {
 
     // Room on the right for the high and low, and below for the times.
     final gutter =
-        (hiText.width > loText.width ? hiText.width : loText.width) +
-        8 * scale;
+        (hiText.width > loText.width ? hiText.width : loText.width) + 8 * scale;
     final bottom = times.length == values.length ? 16.0 * scale : 0.0;
     final w = size.width - gutter;
     final h = size.height - bottom;
@@ -1308,7 +1342,8 @@ class _Chart extends CustomPainter {
       final c = paidColour ?? theme.accent;
       final chip = TextPainter(
         text: TextSpan(
-          text: 'Paid ${label(paid)}'
+          text:
+              'Paid ${label(paid)}'
               '${paidOnChart ? '' : (paid > hi ? ' · above the chart' : ' · below the chart')}',
           style: TextStyle(
             color: c,
@@ -1480,7 +1515,8 @@ const _boughtField = WidgetOption(
   label: 'Bought on',
   kind: OptionKind.date,
   defaultValue: '',
-  help: 'Optional — marked on the chart when it goes back that far, and '
+  help:
+      'Optional — marked on the chart when it goes back that far, and '
       'shown as how long you have held it.',
 );
 
@@ -1489,7 +1525,8 @@ const _feesField = WidgetOption(
   label: 'Fees paid',
   kind: OptionKind.number,
   defaultValue: '',
-  help: 'Optional — dealing charges and the like, in pounds (or the tile’s '
+  help:
+      'Optional — dealing charges and the like, in pounds (or the tile’s '
       'currency), added to what it cost you.',
 );
 
@@ -1503,7 +1540,8 @@ const _viewOption = WidgetOption(
     'cards': 'Cards — half the tile each, with a large chart and more figures',
     'single': 'One at a time — each card fills the tile',
   },
-  help: 'Cards show two at a time, or one, and scroll for the rest; their '
+  help:
+      'Cards show two at a time, or one, and scroll for the rest; their '
       'text and charts grow with the tile, so a tile half the screen is '
       'readable across the room.',
 );
@@ -1527,7 +1565,10 @@ class StocksWidget extends StatelessWidget {
     return _MarketsTile(
       w: w,
       picks: picks,
-      empty: tr('widget.markets.addTheSharesOrIndices', 'Add the shares or indices to follow in this widget’s settings.'),
+      empty: tr(
+        'widget.markets.addTheSharesOrIndices',
+        'Add the shares or indices to follow in this widget’s settings.',
+      ),
       span: switch (range) {
         '5d' => 'week',
         '1mo' => 'month',
@@ -1619,7 +1660,8 @@ final stocksWidgetType = DashboardWidgetType(
         '3mo': 'Quarterly — the last three months',
         '1y': 'Yearly — the last twelve months',
       },
-      help: 'The change beside each price is always today’s. Before the '
+      help:
+          'The change beside each price is always today’s. Before the '
           'market opens, a daily chart shows the last day it was open.',
     ),
     _viewOption,
@@ -1628,7 +1670,8 @@ final stocksWidgetType = DashboardWidgetType(
       label: 'Show a small chart',
       kind: OptionKind.boolean,
       defaultValue: true,
-      help: 'In the list, on a tile wide enough to leave room for the '
+      help:
+          'In the list, on a tile wide enough to leave room for the '
           'price. Cards always have one.',
     ),
     WidgetOption(
@@ -1675,7 +1718,10 @@ class CryptoWidget extends StatelessWidget {
     return _MarketsTile(
       w: w,
       picks: picks,
-      empty: tr('widget.markets.addTheCoinsToFollow', 'Add the coins to follow in this widget’s settings.'),
+      empty: tr(
+        'widget.markets.addTheCoinsToFollow',
+        'Add the coins to follow in this widget’s settings.',
+      ),
       span: switch (period) {
         '7d' => 'week',
         '30d' => 'month',
@@ -1774,7 +1820,8 @@ final cryptoWidgetType = DashboardWidgetType(
         '90d': 'Quarterly — the last 90 days',
         '1y': 'Yearly — the last twelve months',
       },
-      help: 'Monthly and longer charts are checked every half hour, '
+      help:
+          'Monthly and longer charts are checked every half hour, '
           'whatever the setting below — they barely change between checks.',
     ),
     _viewOption,
@@ -1783,7 +1830,8 @@ final cryptoWidgetType = DashboardWidgetType(
       label: 'Show a small chart',
       kind: OptionKind.boolean,
       defaultValue: true,
-      help: 'In the list, on a tile wide enough to leave room for the '
+      help:
+          'In the list, on a tile wide enough to leave room for the '
           'price. Cards always have one.',
     ),
     WidgetOption(
@@ -1803,7 +1851,8 @@ final cryptoWidgetType = DashboardWidgetType(
       label: 'CoinGecko API key',
       kind: OptionKind.secret,
       defaultValue: '',
-      help: 'Optional, free, and recommended: without one, CoinGecko shares a '
+      help:
+          'Optional, free, and recommended: without one, CoinGecko shares a '
           'small allowance between everyone at your address and often says '
           'it is busy. Sign up for a Demo key at coingecko.com/en/api.',
     ),
@@ -1872,9 +1921,14 @@ class _MoreBelowState extends State<_MoreBelow> {
             child: IgnorePointer(
               child: Center(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
-                    color: t.isLcars ? lcarsLit : t.accent.withValues(alpha: .92),
+                    color: t.isLcars
+                        ? lcarsLit
+                        : t.accent.withValues(alpha: .92),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
@@ -1884,17 +1938,22 @@ class _MoreBelowState extends State<_MoreBelow> {
                       const SizedBox(width: 4),
                       Flexible(
                         child: Text(
-                        _cased(t, tr('widget.markets.scrollForMore',
-                            'Scroll for {n, plural, one{# more} other{# more}}',
-                            {'n': widget.hidden})),
-                        style: TextStyle(
-                          color: ink,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
+                          _cased(
+                            t,
+                            tr(
+                              'widget.markets.scrollForMore',
+                              'Scroll for {n, plural, one{# more} other{# more}}',
+                              {'n': widget.hidden},
+                            ),
+                          ),
+                          style: TextStyle(
+                            color: ink,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
                       ),
                     ],
                   ),

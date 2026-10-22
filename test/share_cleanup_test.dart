@@ -23,22 +23,27 @@ void main() {
     final file = await photo('1.jpg');
     final inbox = ShareInboxService(ConfigService());
     await inbox.discard(
-        SharedItem(type: ShareType.image, sender: 'Sam', localPath: file.path));
+      SharedItem(type: ShareType.image, sender: 'Sam', localPath: file.path),
+    );
     expect(file.existsSync(), isFalse);
   });
 
   test('a text share has nothing to delete', () async {
     final inbox = ShareInboxService(ConfigService());
     await inbox.discard(
-        SharedItem(type: ShareType.text, sender: 'Sam', content: 'Milk'));
+      SharedItem(type: ShareType.text, sender: 'Sam', content: 'Milk'),
+    );
   });
 
   test('a file already gone is not an error', () async {
     final inbox = ShareInboxService(ConfigService());
-    await inbox.discard(SharedItem(
+    await inbox.discard(
+      SharedItem(
         type: ShareType.video,
         sender: 'Sam',
-        localPath: '${dir.path}/missing.mp4'));
+        localPath: '${dir.path}/missing.mp4',
+      ),
+    );
   });
 
   test('what a restart left behind is cleared, the folder kept', () async {

@@ -44,7 +44,9 @@ void main() {
 
   Future<(int, Map<String, dynamic>)> call(String method, String path) async {
     final req = await client.openUrl(
-        method, Uri.parse('http://127.0.0.1:${control.boundPort}$path'));
+      method,
+      Uri.parse('http://127.0.0.1:${control.boundPort}$path'),
+    );
     final res = await req.close();
     final body = await res.transform(utf8.decoder).join();
     return (res.statusCode, jsonDecode(body) as Map<String, dynamic>);
@@ -53,11 +55,16 @@ void main() {
   test('listens on the loopback address only', () async {
     // Asking on any other address of this machine must not reach it.
     final addresses = await NetworkInterface.list(
-        includeLoopback: false, type: InternetAddressType.IPv4);
+      includeLoopback: false,
+      type: InternetAddressType.IPv4,
+    );
     for (final a in addresses.expand((i) => i.addresses)) {
       await expectLater(
-        Socket.connect(a, control.boundPort!,
-            timeout: const Duration(seconds: 1)),
+        Socket.connect(
+          a,
+          control.boundPort!,
+          timeout: const Duration(seconds: 1),
+        ),
         throwsA(isA<SocketException>()),
         reason: 'reachable on ${a.address}',
       );
@@ -79,7 +86,10 @@ void main() {
   test('plays a YouTube link, and refuses anything else', () async {
     final link = Uri.encodeQueryComponent('https://youtu.be/aqz-KE-bpKQ');
     expect((await call('POST', '/youtube?url=$link')).$1, 200);
-    expect((await call('POST', '/youtube?url=https%3A%2F%2Fbbc.co.uk')).$1, 400);
+    expect(
+      (await call('POST', '/youtube?url=https%3A%2F%2Fbbc.co.uk')).$1,
+      400,
+    );
     expect(played, ['https://youtu.be/aqz-KE-bpKQ']);
   });
 

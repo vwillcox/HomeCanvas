@@ -70,14 +70,16 @@ class NumericKeypad extends StatelessWidget {
     }
 
     Widget digit(String d) => key(
-          Text(d,
-              style: TextStyle(
-                fontSize: keySize * 0.36,
-                fontWeight: FontWeight.w500,
-                color: fg,
-              )),
-          () => onDigit(d),
-        );
+      Text(
+        d,
+        style: TextStyle(
+          fontSize: keySize * 0.36,
+          fontWeight: FontWeight.w500,
+          color: fg,
+        ),
+      ),
+      () => onDigit(d),
+    );
 
     Widget row(List<Widget> children) =>
         Row(mainAxisSize: MainAxisSize.min, children: children);
@@ -89,17 +91,21 @@ class NumericKeypad extends StatelessWidget {
         row([digit('4'), digit('5'), digit('6')]),
         row([digit('7'), digit('8'), digit('9')]),
         row([
-          key(Icon(Icons.backspace_outlined, size: keySize * 0.32, color: fg),
-              onBackspace),
+          key(
+            Icon(Icons.backspace_outlined, size: keySize * 0.32, color: fg),
+            onBackspace,
+          ),
           digit('0'),
           key(
-            Icon(Icons.check,
-                size: keySize * 0.34,
-                color: enterEnabled ? context.look.textPrimary : context.look.wash(0.38)),
+            Icon(
+              Icons.check,
+              size: keySize * 0.34,
+              color: enterEnabled
+                  ? context.look.textPrimary
+                  : context.look.wash(0.38),
+            ),
             enterEnabled ? onEnter : null,
-            colour: enterEnabled
-                ? (enterColour ?? scheme.primary)
-                : bg,
+            colour: enterEnabled ? (enterColour ?? scheme.primary) : bg,
           ),
         ]),
       ],

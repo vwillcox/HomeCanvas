@@ -14,33 +14,37 @@ import 'new_widgets_fit_test.dart' show shapes, tile;
 
 void main() {
   group('Yahoo chart', () {
-    Map<String, dynamic> chart(Map<String, dynamic> meta, List<num?> closes) => {
-      'chart': {
-        'result': [
-          {
-            'meta': meta,
-            'indicators': {
-              'quote': [
-                {'close': closes},
-              ],
-            },
+    Map<String, dynamic> chart(Map<String, dynamic> meta, List<num?> closes) =>
+        {
+          'chart': {
+            'result': [
+              {
+                'meta': meta,
+                'indicators': {
+                  'quote': [
+                    {'close': closes},
+                  ],
+                },
+              },
+            ],
+            'error': null,
           },
-        ],
-        'error': null,
-      },
-    };
+        };
 
     test('a London share: pence, its plain name, today\'s change', () {
       final q = MarketsService.parseChart(
-        chart({
-          'symbol': 'VOD.L',
-          'currency': 'GBp',
-          'instrumentType': 'EQUITY',
-          'regularMarketPrice': 125.8,
-          'regularMarketChangePercent': 0.399,
-          'longName': 'Vodafone Group Public Limited Company',
-          'shortName': 'VODAFONE GROUP PLC ORD USD0.20 ',
-        }, [125.3, null, 125.9, 125.8]),
+        chart(
+          {
+            'symbol': 'VOD.L',
+            'currency': 'GBp',
+            'instrumentType': 'EQUITY',
+            'regularMarketPrice': 125.8,
+            'regularMarketChangePercent': 0.399,
+            'longName': 'Vodafone Group Public Limited Company',
+            'shortName': 'VODAFONE GROUP PLC ORD USD0.20 ',
+          },
+          [125.3, null, 125.9, 125.8],
+        ),
       )!;
       expect(q.symbol, 'VOD.L');
       expect(q.name, 'Vodafone Group');
@@ -131,9 +135,7 @@ void main() {
               'gmtoffset': 3600,
               'range': '5d',
             },
-            'timestamp': [
-              for (final t in at) t.millisecondsSinceEpoch ~/ 1000,
-            ],
+            'timestamp': [for (final t in at) t.millisecondsSinceEpoch ~/ 1000],
             'indicators': {
               'quote': [
                 {'close': closes},
@@ -185,43 +187,45 @@ void main() {
     expect(MarketsService.pickSearch('zzz', {'quotes': []}), isNull);
   });
 
-  test('a chart keeps its times alongside its prices, and the day\'s figures',
-      () {
-    final q = MarketsService.parseChart({
-      'chart': {
-        'result': [
-          {
-            'meta': {
-              'symbol': 'RPI.L',
-              'currency': 'GBp',
-              'regularMarketPrice': 711.5,
-              'previousClose': 700,
-              'regularMarketDayHigh': 715,
-              'regularMarketDayLow': 698,
-              'fiftyTwoWeekHigh': 800,
-              'fiftyTwoWeekLow': 300,
-              'regularMarketVolume': 1200000,
-              'exchangeName': 'LSE',
+  test(
+    'a chart keeps its times alongside its prices, and the day\'s figures',
+    () {
+      final q = MarketsService.parseChart({
+        'chart': {
+          'result': [
+            {
+              'meta': {
+                'symbol': 'RPI.L',
+                'currency': 'GBp',
+                'regularMarketPrice': 711.5,
+                'previousClose': 700,
+                'regularMarketDayHigh': 715,
+                'regularMarketDayLow': 698,
+                'fiftyTwoWeekHigh': 800,
+                'fiftyTwoWeekLow': 300,
+                'regularMarketVolume': 1200000,
+                'exchangeName': 'LSE',
+              },
+              'timestamp': [1000, 2000, 3000],
+              'indicators': {
+                'quote': [
+                  {
+                    'close': [700, null, 711.5],
+                  },
+                ],
+              },
             },
-            'timestamp': [1000, 2000, 3000],
-            'indicators': {
-              'quote': [
-                {
-                  'close': [700, null, 711.5],
-                },
-              ],
-            },
-          },
-        ],
-      },
-    })!;
-    expect(q.history, [700, 711.5]);
-    expect(q.times.map((t) => t.millisecondsSinceEpoch), [1000000, 3000000]);
-    expect(q.changePercent, closeTo(1.642857, 1e-5));
-    expect((q.low, q.high, q.yearLow, q.yearHigh), (698, 715, 300, 800));
-    expect(q.volume, 1200000);
-    expect(q.exchange, 'LSE');
-  });
+          ],
+        },
+      })!;
+      expect(q.history, [700, 711.5]);
+      expect(q.times.map((t) => t.millisecondsSinceEpoch), [1000000, 3000000]);
+      expect(q.changePercent, closeTo(1.642857, 1e-5));
+      expect((q.low, q.high, q.yearLow, q.yearHigh), (698, 715, 300, 800));
+      expect(q.volume, 1200000);
+      expect(q.exchange, 'LSE');
+    },
+  );
 
   test('a long coin history is thinned, keeping its first and latest', () {
     final start = DateTime.utc(2026, 1, 1).millisecondsSinceEpoch;
@@ -269,8 +273,12 @@ void main() {
     expect(h.bought, DateTime(2025, 3, 12));
 
     // A value without a price paid, and nothing without a quantity.
-    const btc = Quote(symbol: 'BTC', name: 'Bitcoin', price: 60000,
-        currency: 'GBP');
+    const btc = Quote(
+      symbol: 'BTC',
+      name: 'Bitcoin',
+      price: 60000,
+      currency: 'GBP',
+    );
     final coins = Holding.of(btc, quantity: '0.05', paid: '')!;
     expect(coins.value, closeTo(3000, 1e-9));
     expect(coins.gain, isNull);
@@ -429,8 +437,13 @@ void main() {
         );
       for (final view in ['list', 'cards', 'single']) {
         for (final (w, h) in shapes) {
-          await draw(tester, 'stocks', tile(w, h), markets,
-              options: {'view': view});
+          await draw(
+            tester,
+            'stocks',
+            tile(w, h),
+            markets,
+            options: {'view': view},
+          );
           expect(tester.takeException(), isNull, reason: '$view ${w}x$h');
         }
       }
@@ -444,16 +457,31 @@ void main() {
       };
       for (final view in ['list', 'cards', 'single']) {
         for (final (w, h) in shapes) {
-          await draw(tester, 'stocks', tile(w, h), markets,
-              options: {...paid, 'view': view});
+          await draw(
+            tester,
+            'stocks',
+            tile(w, h),
+            markets,
+            options: {...paid, 'view': view},
+          );
           expect(tester.takeException(), isNull, reason: 'paid $view ${w}x$h');
         }
       }
-      await draw(tester, 'stocks', tile(6, 4), markets,
-          options: {...paid, 'view': 'list'});
+      await draw(
+        tester,
+        'stocks',
+        tile(6, 4),
+        markets,
+        options: {...paid, 'view': 'list'},
+      );
       expect(find.textContaining('+0.05% on £10,690'), findsOneWidget);
-      await draw(tester, 'stocks', tile(6, 8), markets,
-          options: {...paid, 'view': 'single'});
+      await draw(
+        tester,
+        'stocks',
+        tile(6, 8),
+        markets,
+        options: {...paid, 'view': 'single'},
+      );
       expect(find.text('Since you paid £10,690'), findsOneWidget);
 
       // Holdings: a total above the list, and each one's worth and gain.
@@ -472,27 +500,47 @@ void main() {
       };
       for (final view in ['list', 'cards', 'single']) {
         for (final (w, h) in shapes) {
-          await draw(tester, 'stocks', tile(w, h), markets,
-              options: {...held, 'view': view});
+          await draw(
+            tester,
+            'stocks',
+            tile(w, h),
+            markets,
+            options: {...held, 'view': view},
+          );
           expect(tester.takeException(), isNull, reason: 'held $view ${w}x$h');
         }
       }
-      await draw(tester, 'stocks', tile(6, 8), markets,
-          options: {...held, 'view': 'single'});
+      await draw(
+        tester,
+        'stocks',
+        tile(6, 8),
+        markets,
+        options: {...held, 'view': 'single'},
+      );
       expect(find.text('Your 2 shares'), findsOneWidget);
       expect(find.text('£21,391'), findsOneWidget);
       expect(find.text('Holdings'), findsWidgets);
 
       // Three cards on a tall tile: all three, sharing it, nothing hidden.
-      await draw(tester, 'stocks', tile(6, 8), markets,
-          options: {'view': 'cards'});
+      await draw(
+        tester,
+        'stocks',
+        tile(6, 8),
+        markets,
+        options: {'view': 'cards'},
+      );
       for (final name in ['FTSE 100', 'S&P 500', 'Apple']) {
         expect(find.text(name), findsOneWidget, reason: name);
       }
       expect(find.textContaining('Scroll for'), findsNothing);
       // On a shorter one, what doesn't fit is said to be below.
-      await draw(tester, 'stocks', tile(6, 4), markets,
-          options: {'view': 'cards'});
+      await draw(
+        tester,
+        'stocks',
+        tile(6, 4),
+        markets,
+        options: {'view': 'cards'},
+      );
       expect(find.textContaining('Scroll for'), findsOneWidget);
 
       await draw(tester, 'stocks', tile(4, 3), markets);
@@ -531,8 +579,13 @@ void main() {
         // Long enough that nothing is fetched for real.
         'refreshMinutes': 1440,
       };
-      await draw(tester, 'stocks', const Size(480, 400), markets,
-          options: options);
+      await draw(
+        tester,
+        'stocks',
+        const Size(480, 400),
+        markets,
+        options: options,
+      );
       expect(find.text('Updated 09:05'), findsOneWidget);
 
       // A price from another day says which.
@@ -542,8 +595,13 @@ void main() {
       expect(find.text('Updated Fri 21:40'), findsOneWidget);
 
       // A strip of a tile keeps its room for the prices.
-      await draw(tester, 'stocks', const Size(480, 120), markets,
-          options: options);
+      await draw(
+        tester,
+        'stocks',
+        const Size(480, 120),
+        markets,
+        options: options,
+      );
       expect(find.textContaining('Updated'), findsNothing);
       expect(tester.takeException(), isNull);
     });
@@ -650,9 +708,7 @@ void main() {
             currency: 'GBP',
             changePercent: -1.2,
             history: const [1, 3, 2, 4],
-            times: [
-              for (var i = 0; i < 4; i++) DateTime(2026, 9, 28, 9 + i),
-            ],
+            times: [for (var i = 0; i < 4; i++) DateTime(2026, 9, 28, 9 + i)],
             high: price * 1.02,
             low: price * 0.97,
             marketCap: price * 2e7,
@@ -664,13 +720,23 @@ void main() {
       }
       for (final view in ['list', 'cards', 'single']) {
         for (final (w, h) in shapes) {
-          await draw(tester, 'crypto', tile(w, h), markets,
-              options: {'view': view});
+          await draw(
+            tester,
+            'crypto',
+            tile(w, h),
+            markets,
+            options: {'view': view},
+          );
           expect(tester.takeException(), isNull, reason: '$view ${w}x$h');
         }
       }
-      await draw(tester, 'crypto', tile(6, 8), markets,
-          options: {'view': 'cards'});
+      await draw(
+        tester,
+        'crypto',
+        tile(6, 8),
+        markets,
+        options: {'view': 'cards'},
+      );
       expect(find.text('Market cap'), findsWidgets);
       expect(find.text('£62,844'), findsOneWidget);
     });

@@ -65,7 +65,14 @@ class _ImmichLibraryWidgetState extends State<ImmichLibraryWidget>
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _error = tr('widget.immich_library.couldNotReachImmich', 'Could not reach Immich'));
+      if (mounted) {
+        setState(
+          () => _error = tr(
+            'widget.immich_library.couldNotReachImmich',
+            'Could not reach Immich',
+          ),
+        );
+      }
     }
   }
 
@@ -83,7 +90,12 @@ class _ImmichLibraryWidgetState extends State<ImmichLibraryWidget>
   Widget build(BuildContext context) {
     final t = widget.w.theme;
     final s = _stats;
-    if (s == null) return TileMessage(_error ?? tr('widget.immich_library.askingImmich', 'Asking Immich…'), theme: t);
+    if (s == null) {
+      return TileMessage(
+        _error ?? tr('widget.immich_library.askingImmich', 'Asking Immich…'),
+        theme: t,
+      );
+    }
     final media = context.read<ImmichService>();
     final showStrip =
         widget.w.option('showLatest', true) && s.latest.isNotEmpty;
@@ -118,7 +130,10 @@ class _ImmichLibraryWidgetState extends State<ImmichLibraryWidget>
             children: [
               TileLabel(
                 icon: Icons.photo_library_outlined,
-                text: tr('widget.immich_library.immichLibrary', 'Immich library'),
+                text: tr(
+                  'widget.immich_library.immichLibrary',
+                  'Immich library',
+                ),
                 theme: t,
                 size: 11,
               ),
@@ -134,7 +149,10 @@ class _ImmichLibraryWidgetState extends State<ImmichLibraryWidget>
                     figure(_count(s.videos), 'videos'),
                     if (s.bytes != null) ...[
                       const SizedBox(width: 18),
-                      figure(shortSize(s.bytes!), tr('widget.immich_library.inAll', 'in all')),
+                      figure(
+                        shortSize(s.bytes!),
+                        tr('widget.immich_library.inAll', 'in all'),
+                      ),
                     ],
                   ],
                 ),
@@ -142,7 +160,11 @@ class _ImmichLibraryWidgetState extends State<ImmichLibraryWidget>
               const Spacer(),
               Text(
                 s.addedRecently == 0
-                    ? tr('widget.immich_library.nothingNewInTheLast', 'Nothing new in the last {recentDays} days', {'recentDays': s.recentDays})
+                    ? tr(
+                        'widget.immich_library.nothingNewInTheLast',
+                        'Nothing new in the last {recentDays} days',
+                        {'recentDays': s.recentDays},
+                      )
                     : '${s.addedCapped ? 'Over ' : ''}${_count(s.addedRecently)} '
                           'added in the last ${s.recentDays} days',
                 maxLines: 1,

@@ -46,8 +46,9 @@ class MpvTuning {
     return {
       for (final pair in raw.split(','))
         if (pair.contains('='))
-          pair.substring(0, pair.indexOf('=')).trim():
-              pair.substring(pair.indexOf('=') + 1).trim(),
+          pair.substring(0, pair.indexOf('=')).trim(): pair
+              .substring(pair.indexOf('=') + 1)
+              .trim(),
     };
   }
 

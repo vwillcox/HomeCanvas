@@ -42,8 +42,9 @@ void main() {
     expect(s.milesFrom(51.8959, 0.8919), closeTo(50, 3));
   });
 
-  testWidgets('the tile fits every shape, cheapest first within the distance',
-      (tester) async {
+  testWidgets('the tile fits every shape, cheapest first within the distance', (
+    tester,
+  ) async {
     registerBuiltInWidgets();
     final config = ConfigService();
     config.config.weather
@@ -82,7 +83,12 @@ void main() {
       final w = DashboardWidgetContext(
         theme: kBuiltInThemes.first,
         config: DashboardWidgetConfig(
-          id: 'f', type: 'fuel', x: 0, y: 0, width: 3, height: 3,
+          id: 'f',
+          type: 'fuel',
+          x: 0,
+          y: 0,
+          width: 3,
+          height: 3,
           options: options,
         ),
       );

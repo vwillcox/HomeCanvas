@@ -114,11 +114,18 @@ class _LockedFolderScreenState extends State<LockedFolderScreen> {
         header: ScreenHeader(
           onBack: () => Navigator.of(context).maybePop(),
           title: tr('lockedFolder.lockedFolder', 'Locked Folder'),
-          subtitle: tr('lockedFolder.locksAgainWhenYouLeave', 'Locks again when you leave'),
+          subtitle: tr(
+            'lockedFolder.locksAgainWhenYouLeave',
+            'Locks again when you leave',
+          ),
           actions: [
             Padding(
               padding: EdgeInsets.all(15),
-              child: Icon(Icons.lock_outline, color: context.look.textPrimary, size: 30),
+              child: Icon(
+                Icons.lock_outline,
+                color: context.look.textPrimary,
+                size: 30,
+              ),
             ),
           ],
         ),
@@ -135,7 +142,11 @@ class _LockedFolderScreenState extends State<LockedFolderScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.error_outline, size: 48, color: context.look.textSecondary),
+              Icon(
+                Icons.error_outline,
+                size: 48,
+                color: context.look.textSecondary,
+              ),
               const SizedBox(height: 12),
               Text(_error!, textAlign: TextAlign.center),
               const SizedBox(height: 16),

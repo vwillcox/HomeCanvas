@@ -2,8 +2,11 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:home_canvas/services/feed_service.dart';
 
-FeedItem item(String title, {String? link, List<String> categories = const []}) =>
-    FeedItem(title: title, link: link, categories: categories);
+FeedItem item(
+  String title, {
+  String? link,
+  List<String> categories = const [],
+}) => FeedItem(title: title, link: link, categories: categories);
 
 void main() {
   group('promotions are hidden', () {
@@ -37,22 +40,36 @@ void main() {
 
     test('by their address, whatever the headline says', () {
       expect(
-          isPromotional(item('Save on your next order',
-              link: 'https://www.wired.com/story/peacock-promo-code/')),
-          isTrue);
+        isPromotional(
+          item(
+            'Save on your next order',
+            link: 'https://www.wired.com/story/peacock-promo-code/',
+          ),
+        ),
+        isTrue,
+      );
       expect(
-          isPromotional(item('Our friends at Acme',
-              link: 'https://example.com/sponsored/acme-feature')),
-          isTrue);
+        isPromotional(
+          item(
+            'Our friends at Acme',
+            link: 'https://example.com/sponsored/acme-feature',
+          ),
+        ),
+        isTrue,
+      );
     });
 
     test("by the publisher's own category", () {
       expect(
-          isPromotional(item('Stock Advisor, for less',
-              categories: ['Gear', 'Gear / Deals'])),
-          isTrue);
-      expect(isPromotional(item('Something', categories: ['Sponsored Content'])),
-          isTrue);
+        isPromotional(
+          item('Stock Advisor, for less', categories: ['Gear', 'Gear / Deals']),
+        ),
+        isTrue,
+      );
+      expect(
+        isPromotional(item('Something', categories: ['Sponsored Content'])),
+        isTrue,
+      );
     });
   });
 
@@ -81,19 +98,31 @@ void main() {
       }
     });
 
-    test('reviews and buying guides stay — editorial, even with commission',
-        () {
-      expect(
-          isPromotional(item('The Best Samsung Phones of 2026: Ultra, Fold, Budget',
+    test(
+      'reviews and buying guides stay — editorial, even with commission',
+      () {
+        expect(
+          isPromotional(
+            item(
+              'The Best Samsung Phones of 2026: Ultra, Fold, Budget',
               link: 'https://www.wired.com/gallery/best-samsung-phones/',
-              categories: ['Gear', 'Gear / Buying Guides'])),
-          isFalse);
-      expect(
-          isPromotional(item('Kiwibit Bird Feeder 2 Pro Review: Premium but Paywalled',
+              categories: ['Gear', 'Gear / Buying Guides'],
+            ),
+          ),
+          isFalse,
+        );
+        expect(
+          isPromotional(
+            item(
+              'Kiwibit Bird Feeder 2 Pro Review: Premium but Paywalled',
               link: 'https://www.wired.com/review/kiwibit-bird-feeder-2-pro/',
-              categories: ['Gear', 'Gear / Reviews'])),
-          isFalse);
-    });
+              categories: ['Gear', 'Gear / Reviews'],
+            ),
+          ),
+          isFalse,
+        );
+      },
+    );
 
     test('headlines that merely start with "ad"', () {
       for (final title in [
@@ -116,8 +145,14 @@ void main() {
 
     test('a news category that merely contains a trigger word', () {
       expect(
-          isPromotional(item('Retail sales slump', categories: ['Business / Deals and Mergers'])),
-          isFalse);
+        isPromotional(
+          item(
+            'Retail sales slump',
+            categories: ['Business / Deals and Mergers'],
+          ),
+        ),
+        isFalse,
+      );
     });
   });
 

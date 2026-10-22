@@ -63,7 +63,9 @@ class HomeCanvasCache {
         if (e is io.File) {
           try {
             total += await e.length();
-          } catch (_) {/* file vanished mid-scan */}
+          } catch (_) {
+            /* file vanished mid-scan */
+          }
         }
       }
     } catch (e) {

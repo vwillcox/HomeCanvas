@@ -32,8 +32,14 @@ class _ClockWidgetState extends State<ClockWidget> {
     final now = DateTime.now();
     final showSeconds = widget.w.option('seconds', false);
     final next = showSeconds
-        ? DateTime(now.year, now.month, now.day, now.hour, now.minute,
-            now.second + 1)
+        ? DateTime(
+            now.year,
+            now.month,
+            now.day,
+            now.hour,
+            now.minute,
+            now.second + 1,
+          )
         : DateTime(now.year, now.month, now.day, now.hour, now.minute + 1);
     _timer = Timer(next.difference(now), () {
       if (!mounted) return;
@@ -122,8 +128,10 @@ class _ClockWidgetState extends State<ClockWidget> {
       builder: (context, c) {
         // Sized from the tile rather than fixed, so the same widget reads well
         // whether it is two cells wide or the whole screen.
-        final size = (c.maxWidth / (time.length * 0.62))
-            .clamp(24.0, c.maxHeight * (showDate ? 0.62 : 0.9));
+        final size = (c.maxWidth / (time.length * 0.62)).clamp(
+          24.0,
+          c.maxHeight * (showDate ? 0.62 : 0.9),
+        );
         return Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -218,8 +226,12 @@ final clockWidgetType = DashboardWidgetType(
     return [
       PreviewLine(time, scale: 0.42, centre: true),
       if (config.options['showDate'] != false)
-        PreviewLine(_ClockWidgetState._dateLine(now),
-            scale: 0.11, muted: true, centre: true),
+        PreviewLine(
+          _ClockWidgetState._dateLine(now),
+          scale: 0.11,
+          muted: true,
+          centre: true,
+        ),
     ];
   },
   build: (context, w) => ClockWidget(w: w),

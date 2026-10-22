@@ -72,7 +72,11 @@ class _ChartPainter extends CustomPainter {
     const topPad = 14.0;
     const bottomPad = 26.0;
     final plot = Rect.fromLTRB(
-        leftPad, topPad, size.width - rightPad, size.height - bottomPad);
+      leftPad,
+      topPad,
+      size.width - rightPad,
+      size.height - bottomPad,
+    );
     if (plot.width <= 0 || plot.height <= 0) return;
 
     final temps = readings.map(_temp).toList();
@@ -102,7 +106,10 @@ class _ChartPainter extends CustomPainter {
     final grid = Paint()
       ..color = ink.withValues(alpha: 0.10)
       ..strokeWidth = 1;
-    final labelStyle = TextStyle(color: ink.withValues(alpha: 0.54), fontSize: 13);
+    final labelStyle = TextStyle(
+      color: ink.withValues(alpha: 0.54),
+      fontSize: 13,
+    );
 
     // Indoors the whole range can be under a degree, where whole numbers would
     // print the same label more than once.
@@ -113,12 +120,20 @@ class _ChartPainter extends CustomPainter {
       final v = minT + (maxT - minT) * i / 3;
       final y = yForTemp(v);
       canvas.drawLine(Offset(plot.left, y), Offset(plot.right, y), grid);
-      _text(canvas, '${v.toStringAsFixed(decimals)}°', Offset(4, y - 9),
-          labelStyle);
+      _text(
+        canvas,
+        '${v.toStringAsFixed(decimals)}°',
+        Offset(4, y - 9),
+        labelStyle,
+      );
       if (showHumidity) {
         final hv = (i / 3 * 100).round();
-        _text(canvas, '$hv%', Offset(plot.right + 6, y - 9),
-            labelStyle.copyWith(color: humColour.withValues(alpha: 0.7)));
+        _text(
+          canvas,
+          '$hv%',
+          Offset(plot.right + 6, y - 9),
+          labelStyle.copyWith(color: humColour.withValues(alpha: 0.7)),
+        );
       }
     }
 
@@ -127,19 +142,43 @@ class _ChartPainter extends CustomPainter {
     canvas.save();
     canvas.clipRect(plot);
     if (showHumidity) {
-      _drawLine(canvas, readings, xFor, (r) => yForHum(r.humidity), humColour,
-          2.0, 0.10, plot.bottom);
+      _drawLine(
+        canvas,
+        readings,
+        xFor,
+        (r) => yForHum(r.humidity),
+        humColour,
+        2.0,
+        0.10,
+        plot.bottom,
+      );
     }
-    _drawLine(canvas, readings, xFor, (r) => yForTemp(_temp(r)), tempColour,
-        3.0, 0.16, plot.bottom);
+    _drawLine(
+      canvas,
+      readings,
+      xFor,
+      (r) => yForTemp(_temp(r)),
+      tempColour,
+      3.0,
+      0.16,
+      plot.bottom,
+    );
     canvas.restore();
 
     // Time labels at each end.
-    _text(canvas, hhmm(readings.first.time),
-        Offset(plot.left, plot.bottom + 6), labelStyle);
+    _text(
+      canvas,
+      hhmm(readings.first.time),
+      Offset(plot.left, plot.bottom + 6),
+      labelStyle,
+    );
     final endLabel = hhmm(readings.last.time);
-    _text(canvas, endLabel,
-        Offset(plot.right - endLabel.length * 8.0, plot.bottom + 6), labelStyle);
+    _text(
+      canvas,
+      endLabel,
+      Offset(plot.right - endLabel.length * 8.0, plot.bottom + 6),
+      labelStyle,
+    );
   }
 
   void _drawLine(
@@ -167,10 +206,7 @@ class _ChartPainter extends CustomPainter {
       ..lineTo(xFor(data.last), baseline)
       ..lineTo(xFor(data.first), baseline)
       ..close();
-    canvas.drawPath(
-      fill,
-      Paint()..color = colour.withValues(alpha: fillAlpha),
-    );
+    canvas.drawPath(fill, Paint()..color = colour.withValues(alpha: fillAlpha));
     canvas.drawPath(
       path,
       Paint()

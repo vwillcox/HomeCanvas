@@ -356,21 +356,21 @@ class _Panel extends StatelessWidget {
               ),
             )
           : BoxDecoration(
-        // The theme's background, nearly solid — a card over a photo when
-        // small, the whole player when large.
-        color: context.look.background.first.withValues(
-          alpha: 0.66 + 0.22 * expansion,
-        ),
-        borderRadius: BorderRadius.circular(26 + 6 * expansion),
-        border: Border.all(color: context.look.wash(0.10)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.45),
-            blurRadius: 18 + 20 * expansion,
-            spreadRadius: 2,
-          ),
-        ],
-      ),
+              // The theme's background, nearly solid — a card over a photo when
+              // small, the whole player when large.
+              color: context.look.background.first.withValues(
+                alpha: 0.66 + 0.22 * expansion,
+              ),
+              borderRadius: BorderRadius.circular(26 + 6 * expansion),
+              border: Border.all(color: context.look.wash(0.10)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.45),
+                  blurRadius: 18 + 20 * expansion,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(lcars ? 0 : 26 + 6 * expansion),
         child: Stack(
@@ -610,17 +610,19 @@ class _DetailContent extends StatelessWidget {
                   ),
                 )
               else ...[
-              Icon(service.sourceIcon, color: context.look.accent, size: 26),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  n.deviceName.isEmpty ? tr('player.nowPlaying', 'Now playing') : n.deviceName,
-                  style: TextStyle(
-                    color: context.look.textSecondary,
-                    fontSize: 22,
+                Icon(service.sourceIcon, color: context.look.accent, size: 26),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    n.deviceName.isEmpty
+                        ? tr('player.nowPlaying', 'Now playing')
+                        : n.deviceName,
+                    style: TextStyle(
+                      color: context.look.textSecondary,
+                      fontSize: 22,
+                    ),
                   ),
                 ),
-              ),
               ],
               if (lcars) const SizedBox(width: 12),
               // Spotify-only: the AVRCP source has no notion of other
@@ -681,11 +683,11 @@ class _DetailContent extends StatelessWidget {
                   ),
                 )
               else
-              Icon(
-                Icons.close_fullscreen,
-                color: context.look.textSecondary,
-                size: 28,
-              ),
+                Icon(
+                  Icons.close_fullscreen,
+                  color: context.look.textSecondary,
+                  size: 28,
+                ),
             ],
           ),
           const SizedBox(height: 18),
@@ -1101,10 +1103,7 @@ class _PlaylistPickerDialogState extends State<_PlaylistPickerDialog> {
                         padding: EdgeInsets.symmetric(vertical: 48),
                         child: Center(
                           child: Text(
-                            tr(
-                              'player.noPlaylistsFound',
-                              'No playlists found',
-                            ),
+                            tr('player.noPlaylistsFound', 'No playlists found'),
                             style: TextStyle(
                               color: context.look.textSecondary,
                               fontSize: 16,
@@ -1300,9 +1299,7 @@ class _VolumeRow extends StatelessWidget {
                 inactiveTrackColor: context.look.wash(0.24),
                 thumbColor: muted ? context.look.textSecondary : accent,
                 // Big thumb and overlay: this is driven by fingers.
-                thumbShape: const RoundSliderThumbShape(
-                  enabledThumbRadius: 18,
-                ),
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 18),
                 overlayShape: const RoundSliderOverlayShape(overlayRadius: 32),
               ),
             ),

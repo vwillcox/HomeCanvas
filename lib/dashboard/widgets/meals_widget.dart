@@ -76,7 +76,11 @@ class _MealsWidgetState extends State<MealsWidget>
         children: [
           TileLabel(
             icon: Icons.restaurant_rounded,
-            text: isToday ? tr('widget.meals.tonight', 'Tonight') : tr('widget.meals.tomorrow2', 'Tomorrow · {first}', {'first': _dayName(first)}),
+            text: isToday
+                ? tr('widget.meals.tonight', 'Tonight')
+                : tr('widget.meals.tomorrow2', 'Tomorrow · {first}', {
+                    'first': _dayName(first),
+                  }),
             theme: t,
             size: 11,
           ),
@@ -88,7 +92,9 @@ class _MealsWidgetState extends State<MealsWidget>
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  a.isEmpty ? tr('widget.meals.nothingPlanned', 'Nothing planned') : a,
+                  a.isEmpty
+                      ? tr('widget.meals.nothingPlanned', 'Nothing planned')
+                      : a,
                   maxLines: 2,
                   style: TextStyle(
                     color: a.isEmpty ? t.textSecondary : t.textPrimary,
@@ -104,7 +110,9 @@ class _MealsWidgetState extends State<MealsWidget>
             TextSpan(
               children: [
                 TextSpan(
-                  text: isToday ? tr('widget.meals.tomorrow', 'Tomorrow  ') : '${_dayName(second)}  ',
+                  text: isToday
+                      ? tr('widget.meals.tomorrow', 'Tomorrow  ')
+                      : '${_dayName(second)}  ',
                   style: TextStyle(color: t.textSecondary, fontSize: 11),
                 ),
                 TextSpan(

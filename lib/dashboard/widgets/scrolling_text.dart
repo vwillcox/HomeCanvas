@@ -93,7 +93,8 @@ class _ScrollingTextState extends State<ScrollingText>
     // stopping at the end and jumping.
     final lap = _lap(textWidth);
     final travel = Duration(
-        milliseconds: (lap / widget.speed * 1000).round().clamp(600, 60000));
+      milliseconds: (lap / widget.speed * 1000).round().clamp(600, 60000),
+    );
     final total = widget.pause + travel;
     final pauseWeight = widget.pause.inMilliseconds / total.inMilliseconds;
     final travelWeight = travel.inMilliseconds / total.inMilliseconds;
@@ -102,8 +103,7 @@ class _ScrollingTextState extends State<ScrollingText>
     _offset = TweenSequence<double>([
       // Held at the start of each lap, so the beginning of a long title can
       // be read without waiting for it to come round.
-      TweenSequenceItem(
-          tween: ConstantTween<double>(0), weight: pauseWeight),
+      TweenSequenceItem(tween: ConstantTween<double>(0), weight: pauseWeight),
       TweenSequenceItem(
         tween: Tween<double>(begin: 0, end: -lap),
         weight: travelWeight,
@@ -157,8 +157,12 @@ class _ScrollingTextState extends State<ScrollingText>
         _ensureAnimation(painter.width);
         final offset = _offset;
         if (offset == null) {
-          return Text(widget.text,
-              maxLines: 1, overflow: TextOverflow.ellipsis, style: widget.style);
+          return Text(
+            widget.text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: widget.style,
+          );
         }
 
         // A Positioned inside a Stack, rather than a translated SizedBox.

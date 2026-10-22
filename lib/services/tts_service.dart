@@ -87,7 +87,9 @@ class TtsService {
         final dataset = j is Map ? j['dataset']?.toString() : null;
         final language = j is Map ? j['language'] : null;
         final lang = language is Map ? language['code']?.toString() : null;
-        if (dataset != null) label = lang == null ? dataset : '$dataset ($lang)';
+        if (dataset != null) {
+          label = lang == null ? dataset : '$dataset ($lang)';
+        }
       } catch (_) {}
       out[voiceId(v)] = v == _voice ? 'Main voice — $label' : label;
     }
@@ -143,18 +145,23 @@ class TtsService {
   ///
   /// Queued as one unit, so a second note arriving cannot slot itself between
   /// somebody's name and their message.
-  Future<void> speakAll(List<String> parts,
-      {double volume = 100, Duration gap = announcementGap}) {
+  Future<void> speakAll(
+    List<String> parts, {
+    double volume = 100,
+    Duration gap = announcementGap,
+  }) {
     final say = parts.map(_tidy).where((p) => p.isNotEmpty).toList();
     if (say.isEmpty) return Future.value();
-    return _queue = _queue.then((_) async {
-      for (var i = 0; i < say.length; i++) {
-        if (i > 0) await Future<void>.delayed(gap);
-        await _speakNow(say[i], volume);
-      }
-    }).catchError((Object e) {
-      debugPrint('Tts: $e');
-    });
+    return _queue = _queue
+        .then((_) async {
+          for (var i = 0; i < say.length; i++) {
+            if (i > 0) await Future<void>.delayed(gap);
+            await _speakNow(say[i], volume);
+          }
+        })
+        .catchError((Object e) {
+          debugPrint('Tts: $e');
+        });
   }
 
   /// Speaks [text], after anything already queued.
@@ -190,7 +197,8 @@ class TtsService {
     // recital. The panel still shows the whole thing.
     const limit = 600;
     if (out.length > limit) {
-      out = '${out.substring(0, limit).trimRight()}… and there is more on screen';
+      out =
+          '${out.substring(0, limit).trimRight()}… and there is more on screen';
     }
     return out;
   }
@@ -201,7 +209,11 @@ class TtsService {
   /// [speed] is how much faster than the voice's own pace: 1.15 is a
   /// little faster, 0.85 a little slower. Piper takes it as a length scale,
   /// the inverse; held to half to twice the pace.
-  Future<File?> synthesise(String text, {String? voice, double speed = 1}) async {
+  Future<File?> synthesise(
+    String text, {
+    String? voice,
+    double speed = 1,
+  }) async {
     if (text.trim().isEmpty || !await available()) return null;
     // Only ever a voice from the list — never a path from anywhere else.
     final model = voice != null && (await voices()).contains(voice)
@@ -215,10 +227,13 @@ class TtsService {
     // this one is being said, and piper takes every core it can get. The
     // sound playing, and the panel itself, come first.
     final piper = await Process.start('nice', [
-      '-n', '19',
+      '-n',
+      '19',
       _binary,
-      '--model', model,
-      '--output_file', wav.path,
+      '--model',
+      model,
+      '--output_file',
+      wav.path,
       if (pace != 1) ...['--length_scale', (1 / pace).toStringAsFixed(3)],
     ]);
     // Text arrives on stdin, which avoids any question of quoting or of a
@@ -255,8 +270,10 @@ class TtsService {
       await player.setVolume(volume);
       await player.open(Media(wav.path));
       // Held until it has been said, so the queue really is sequential.
-      await player.stream.completed.first
-          .timeout(const Duration(minutes: 2), onTimeout: () => true);
+      await player.stream.completed.first.timeout(
+        const Duration(minutes: 2),
+        onTimeout: () => true,
+      );
     } finally {
       try {
         if (await wav.exists()) await wav.delete();
@@ -284,8 +301,11 @@ class TtsService {
 
   /// Kept for the single-string case and for tests; the spoken path uses
   /// [announcementParts] so the gap can be real.
-  static String announcement(String text, String sender,
-      {bool withSender = true}) {
+  static String announcement(
+    String text,
+    String sender, {
+    bool withSender = true,
+  }) {
     final parts = announcementParts(text, sender, withSender: withSender);
     return parts.join(' ');
   }

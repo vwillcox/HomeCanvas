@@ -57,15 +57,27 @@ class _BinsWidgetState extends State<BinsWidget>
         next.stage == BinStage.today
             ? tr('widget.bins.collectionToday', 'Collection today')
             : tr('widget.bins.putOutForTomorrow', 'Put out for tomorrow'),
-        StatusChip(text: tr('widget.bins.out', 'Out ✓'), colour: status.good, size: 11),
+        StatusChip(
+          text: tr('widget.bins.out', 'Out ✓'),
+          colour: status.good,
+          size: 11,
+        ),
       ),
       BinStage.today => (
         tr('widget.bins.collectionToday', 'Collection today'),
-        StatusChip(text: tr('widget.bins.today', 'Today'), colour: t.accent, size: 11),
+        StatusChip(
+          text: tr('widget.bins.today', 'Today'),
+          colour: t.accent,
+          size: 11,
+        ),
       ),
       BinStage.tonight => (
         tr('widget.bins.putOutTonight', 'Put out tonight'),
-        StatusChip(text: tr('widget.bins.tonight', 'Tonight'), colour: status.warn, size: 11),
+        StatusChip(
+          text: tr('widget.bins.tonight', 'Tonight'),
+          colour: status.warn,
+          size: 11,
+        ),
       ),
       BinStage.later => (
         gap == 1
@@ -73,7 +85,11 @@ class _BinsWidgetState extends State<BinsWidget>
             : gap < 7
             ? weekdayName(next.day)
             : weekdayDayMonth(next.day),
-        StatusChip(text: tr('widget.bins.inDays', 'in {gap} days', {'gap': gap}), colour: t.textSecondary, size: 11),
+        StatusChip(
+          text: tr('widget.bins.inDays', 'in {gap} days', {'gap': gap}),
+          colour: t.textSecondary,
+          size: 11,
+        ),
       ),
     };
 

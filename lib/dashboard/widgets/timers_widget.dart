@@ -217,8 +217,15 @@ class _Ring extends StatelessWidget {
     return Semantics(
       button: true,
       label: done
-          ? tr('widget.timers.timerDoneTapToDismiss', '{label} timer done. Tap to dismiss.', {'label': timer.label})
-          : tr('widget.timers.timerLeft', '{label} timer, {now} left.', {'label': timer.label, 'now': clock(timer.remaining(now))}),
+          ? tr(
+              'widget.timers.timerDoneTapToDismiss',
+              '{label} timer done. Tap to dismiss.',
+              {'label': timer.label},
+            )
+          : tr('widget.timers.timerLeft', '{label} timer, {now} left.', {
+              'label': timer.label,
+              'now': clock(timer.remaining(now)),
+            }),
       child: GestureDetector(
         onTap: onTap,
         onLongPress: onLongPress,
@@ -242,7 +249,9 @@ class _Ring extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      done ? tr('widget.timers.done', 'Done') : clock(timer.remaining(now)),
+                      done
+                          ? tr('widget.timers.done', 'Done')
+                          : clock(timer.remaining(now)),
                       style: TextStyle(
                         color: done ? colour : theme.textPrimary,
                         fontSize: 34,
@@ -251,7 +260,9 @@ class _Ring extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      timer.paused ? tr('widget.timers.paused', 'Paused') : timer.label,
+                      timer.paused
+                          ? tr('widget.timers.paused', 'Paused')
+                          : timer.label,
                       maxLines: 1,
                       style: TextStyle(
                         color: theme.textSecondary,

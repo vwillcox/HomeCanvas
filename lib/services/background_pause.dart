@@ -19,8 +19,8 @@ class BackgroundPause {
     this.names = const ['wf-panel-pi', 'vidaa_remote'],
     Future<List<int>> Function(String name)? find,
     bool Function(int pid, ProcessSignal signal)? signal,
-  })  : _find = find ?? _pgrep,
-        _signal = signal ?? Process.killPid;
+  }) : _find = find ?? _pgrep,
+       _signal = signal ?? Process.killPid;
 
   /// Process names, exactly as `pgrep -x` matches them.
   final List<String> names;
@@ -33,8 +33,11 @@ class BackgroundPause {
   static Future<List<int>> _pgrep(String name) async {
     try {
       final user = Platform.environment['USER'];
-      final r = await Process.run(
-          'pgrep', ['-x', if (user != null) ...['-u', user], name]);
+      final r = await Process.run('pgrep', [
+        '-x',
+        if (user != null) ...['-u', user],
+        name,
+      ]);
       if (r.exitCode != 0) return const [];
       return [
         for (final line in (r.stdout as String).split('\n'))

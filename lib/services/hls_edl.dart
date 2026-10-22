@@ -72,8 +72,10 @@ class HlsEdl {
 
   /// [url]'s playlist as an EDL, or [url] itself when it cannot be — not
   /// HLS, not fragmented MP4, or unreachable.
-  static Future<String> resolve(String url,
-      {Map<String, String> headers = const {}}) async {
+  static Future<String> resolve(
+    String url, {
+    Map<String, String> headers = const {},
+  }) async {
     final uri = Uri.tryParse(url);
     if (uri == null || !uri.scheme.startsWith('http')) return url;
     final client = HttpClient()
@@ -91,11 +93,15 @@ class HlsEdl {
         if (bytes.length > 2 * 1024 * 1024) return url;
       }
       return fromPlaylist(
-              utf8.decode(bytes.takeBytes(), allowMalformed: true), uri) ??
+            utf8.decode(bytes.takeBytes(), allowMalformed: true),
+            uri,
+          ) ??
           url;
     } catch (e) {
-      debugPrint('Video: could not read the playlist, leaving it to ffmpeg: '
-          '$e');
+      debugPrint(
+        'Video: could not read the playlist, leaving it to ffmpeg: '
+        '$e',
+      );
       return url;
     } finally {
       client.close();

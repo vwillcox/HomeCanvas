@@ -123,8 +123,9 @@ void main() {
       expect(taps, 1);
     });
 
-    testWidgets('the empty space above the bars counts as a tap',
-        (tester) async {
+    testWidgets('the empty space above the bars counts as a tap', (
+      tester,
+    ) async {
       // Most of the band is empty most of the time. Having to land on a bar
       // would make it unusable.
       var taps = 0;
@@ -134,18 +135,22 @@ void main() {
       expect(taps, 1);
     });
 
-    testWidgets('switched off it leaves something to switch back on',
-        (tester) async {
+    testWidgets('switched off it leaves something to switch back on', (
+      tester,
+    ) async {
       var taps = 0;
       await show(tester, VisualiserStyle.off, () => taps++);
-      expect(tester.getRect(find.byType(AudioVisualiser)).height,
-          greaterThan(0));
+      expect(
+        tester.getRect(find.byType(AudioVisualiser)).height,
+        greaterThan(0),
+      );
       await tester.tap(find.byType(AudioVisualiser));
       expect(taps, 1, reason: 'off must not be a one-way door');
     });
 
-    testWidgets('with nothing to tap, off takes its space back',
-        (tester) async {
+    testWidgets('with nothing to tap, off takes its space back', (
+      tester,
+    ) async {
       await show(tester, VisualiserStyle.off, null);
       expect(tester.getRect(find.byType(AudioVisualiser)).height, 0);
     });

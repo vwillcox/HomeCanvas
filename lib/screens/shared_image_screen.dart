@@ -13,7 +13,11 @@ class SharedImageScreen extends StatelessWidget {
   final String path;
   final String sender;
 
-  const SharedImageScreen({super.key, required this.path, required this.sender});
+  const SharedImageScreen({
+    super.key,
+    required this.path,
+    required this.sender,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -27,11 +31,7 @@ class SharedImageScreen extends StatelessWidget {
               onZoomChanged: (_) {},
             ),
           ),
-          Positioned(
-            top: 24,
-            left: 16,
-            child: const BigBackButton(),
-          ),
+          Positioned(top: 24, left: 16, child: const BigBackButton()),
           Positioned(
             top: 36,
             left: 96,

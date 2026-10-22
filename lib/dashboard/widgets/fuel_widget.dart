@@ -64,9 +64,7 @@ class _FuelWidgetState extends State<FuelWidget>
 
   void _refresh() {
     if (!mounted) return;
-    unawaited(
-      context.read<FuelService>().ensure(_feeds, postcode: _postcode),
-    );
+    unawaited(context.read<FuelService>().ensure(_feeds, postcode: _postcode));
   }
 
   @override
@@ -79,10 +77,14 @@ class _FuelWidgetState extends State<FuelWidget>
       return TileMessage(
         postcode.isNotEmpty
             ? (service.placeUnknown(postcode)
-                  ? tr('widget.fuel.unknownPostcode',
-                      '“{postcode}” isn’t a UK postcode', {'postcode': postcode})
-                  : tr('widget.fuel.findingPostcode', 'Finding {postcode}…',
-                      {'postcode': postcode}))
+                  ? tr(
+                      'widget.fuel.unknownPostcode',
+                      '“{postcode}” isn’t a UK postcode',
+                      {'postcode': postcode},
+                    )
+                  : tr('widget.fuel.findingPostcode', 'Finding {postcode}…', {
+                      'postcode': postcode,
+                    }))
             : tr(
                 'widget.fuel.needsPlace',
                 'Set a place in Settings → Weather, or a postcode in the widget settings.',
@@ -103,7 +105,11 @@ class _FuelWidgetState extends State<FuelWidget>
     final near = [
       for (final s in all)
         if (s.prices[fuel] != null)
-          (station: s, miles: s.milesFrom(at.lat, at.lon), price: s.prices[fuel]!),
+          (
+            station: s,
+            miles: s.milesFrom(at.lat, at.lon),
+            price: s.prices[fuel]!,
+          ),
     ].where((e) => e.miles <= radius).toList();
     final byPrice = widget.w.option('sort', 'cheapest') == 'cheapest';
     near.sort(
@@ -131,10 +137,11 @@ class _FuelWidgetState extends State<FuelWidget>
             children: [
               TileLabel(
                 icon: Icons.local_gas_station_outlined,
-                text: tr('widget.fuel.heading', '{fuel} · within {miles} miles', {
-                  'fuel': _fuelName(fuel),
-                  'miles': radius.round(),
-                }),
+                text: tr(
+                  'widget.fuel.heading',
+                  '{fuel} · within {miles} miles',
+                  {'fuel': _fuelName(fuel), 'miles': radius.round()},
+                ),
                 theme: t,
                 size: 11,
               ),
@@ -143,8 +150,10 @@ class _FuelWidgetState extends State<FuelWidget>
                 Expanded(
                   child: Center(
                     child: Text(
-                      tr('widget.fuel.noneNear',
-                          'No stations publishing prices that close — try a wider distance.'),
+                      tr(
+                        'widget.fuel.noneNear',
+                        'No stations publishing prices that close — try a wider distance.',
+                      ),
                       textAlign: TextAlign.center,
                       style: TextStyle(color: t.textSecondary, fontSize: 13),
                     ),
@@ -309,7 +318,8 @@ final fuelWidgetType = DashboardWidgetType(
       key: 'postcode',
       label: 'Near',
       defaultValue: '',
-      help: 'Optional — a postcode, or just its first half (ME16). The place '
+      help:
+          'Optional — a postcode, or just its first half (ME16). The place '
           'in Settings → Weather is used otherwise.',
     ),
     WidgetOption(
@@ -323,7 +333,8 @@ final fuelWidgetType = DashboardWidgetType(
       label: 'Extra price feeds',
       kind: OptionKind.list,
       addLabel: 'Add a feed',
-      help: 'Optional. The address of a retailer’s fuel price JSON file, if '
+      help:
+          'Optional. The address of a retailer’s fuel price JSON file, if '
           'one is missing or has moved. BP and Tesco turn automated requests '
           'away, so they can’t be shown.',
       fields: [

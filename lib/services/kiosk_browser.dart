@@ -134,11 +134,13 @@ class KioskBrowser {
     try {
       if (browser == 'firefox') {
         if (dir != null) {
-          await _writeProfile(dir,
-              window: window,
-              screen: screen,
-              chromeless: chromeless,
-              extraPrefs: extraPrefs);
+          await _writeProfile(
+            dir,
+            window: window,
+            screen: screen,
+            chromeless: chromeless,
+            extraPrefs: extraPrefs,
+          );
         }
         return await Process.start(
           'firefox',
@@ -195,7 +197,11 @@ class KioskBrowser {
   }
 
   /// Where [browser] keeps [profile], or null without a home directory.
-  static String? profileDir(String browser, String profile, {bool keep = false}) {
+  static String? profileDir(
+    String browser,
+    String profile, {
+    bool keep = false,
+  }) {
     if (Platform.environment['HOME'] == null) return null;
     return keep
         ? '${AppPaths.profiles}/$browser-$profile'
@@ -227,18 +233,22 @@ class KioskBrowser {
   /// `user.js` rather than `prefs.js` because Firefox re-applies it on every
   /// start: a preference added in a later version of this app then takes
   /// effect on an existing profile, instead of only on a fresh one.
-  static Future<void> _writeProfile(String dir,
-      {Size? window,
-      Size? screen,
-      bool chromeless = false,
-      String extraPrefs = ''}) async {
+  static Future<void> _writeProfile(
+    String dir, {
+    Size? window,
+    Size? screen,
+    bool chromeless = false,
+    String extraPrefs = '',
+  }) async {
     try {
       await Directory(dir).create(recursive: true);
-      await File('$dir/user.js').writeAsString([
-        _prefs,
-        if (chromeless) _chromelessPrefs,
-        if (extraPrefs.isNotEmpty) extraPrefs,
-      ].join('\n'));
+      await File('$dir/user.js').writeAsString(
+        [
+          _prefs,
+          if (chromeless) _chromelessPrefs,
+          if (extraPrefs.isNotEmpty) extraPrefs,
+        ].join('\n'),
+      );
 
       // Firefox has no equivalent of Chromium's --app, and its --kiosk takes
       // the whole screen, so the chrome is hidden with a stylesheet instead.
@@ -297,8 +307,17 @@ class KioskBrowser {
     if (host.endsWith('youtube.com') || host == 'youtu.be') return false;
     final path = uri.path.toLowerCase();
     const notArticles = [
-      '/video', '/videos/', '/live/', '/av/', '/watch', '/sounds/',
-      '/iplayer/', '/gallery', '/galleries/', '/pictures/', '/in-pictures',
+      '/video',
+      '/videos/',
+      '/live/',
+      '/av/',
+      '/watch',
+      '/sounds/',
+      '/iplayer/',
+      '/gallery',
+      '/galleries/',
+      '/pictures/',
+      '/in-pictures',
     ];
     return !notArticles.any(path.contains);
   }
@@ -323,8 +342,11 @@ class KioskBrowser {
   ///
   /// [margin] is left for the reader's own toolbar, which sits in the left
   /// gutter beside the column and would otherwise be pushed over the text.
-  static int readerWidthStep(double windowWidth, int fontStep,
-      {double margin = 160}) {
+  static int readerWidthStep(
+    double windowWidth,
+    int fontStep, {
+    double margin = 160,
+  }) {
     final available = windowWidth - margin;
     final px = readerFontPx(fontStep);
     for (var n = 9; n >= 1; n--) {

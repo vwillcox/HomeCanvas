@@ -111,8 +111,7 @@ class DashboardNewsWidget extends StatelessWidget {
       reader,
       items: lists.length == 1
           ? lists.first
-          : FeedService.mix(lists,
-              max: lists.fold(0, (n, l) => n + l.length)),
+          : FeedService.mix(lists, max: lists.fold(0, (n, l) => n + l.length)),
       error: urls.map(feeds.errorFor).whereType<String>().firstOrNull,
       refresh: urls,
       sourceOf: w.option('showSource', true) ? sourceOf : null,
@@ -255,10 +254,12 @@ class DashboardNewsWidget extends StatelessWidget {
         ),
         itemBuilder: (context, i) {
           final item = shown[i];
-          final tappable = w.option('openOnTap', true) &&
+          final tappable =
+              w.option('openOnTap', true) &&
               (item.link != null || item.summary != null);
           // The headline being read aloud, marked so you can see which.
-          final beingRead = reader != null &&
+          final beingRead =
+              reader != null &&
               reader.active &&
               item.link != null &&
               reader.link == item.link;
@@ -266,73 +267,76 @@ class DashboardNewsWidget extends StatelessWidget {
             behavior: HitTestBehavior.opaque,
             onTap: tappable ? () => _open(context, item) : null,
             child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (sourceOf != null) ...[
-                    Padding(
-                      padding: const EdgeInsets.only(top: 1.5),
-                      child: _SourceIcon(
-                        icon: feeds.siteIcon(item.link ?? sourceOf[item]),
-                        name: names[sourceOf[item]] ?? '',
-                        link: item.link ?? sourceOf[item] ?? '',
-                        theme: t,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (sourceOf != null) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(top: 1.5),
+                        child: _SourceIcon(
+                          icon: feeds.siteIcon(item.link ?? sourceOf[item]),
+                          name: names[sourceOf[item]] ?? '',
+                          link: item.link ?? sourceOf[item] ?? '',
+                          theme: t,
+                        ),
+                      ),
+                      const SizedBox(width: 7),
+                    ],
+                    if (beingRead) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(top: 1),
+                        child: Icon(
+                          Icons.volume_up_rounded,
+                          size: 17,
+                          color: t.accent,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                    ],
+                    Expanded(
+                      child: Text(
+                        item.title,
+                        maxLines: showSummary ? 2 : 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: beingRead ? t.accent : t.textPrimary,
+                          fontSize: 15,
+                          height: 1.25,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 7),
                   ],
-                  if (beingRead) ...[
-                    Padding(
-                      padding: const EdgeInsets.only(top: 1),
-                      child: Icon(
-                        Icons.volume_up_rounded,
-                        size: 17,
-                        color: t.accent,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                  ],
-                  Expanded(
+                ),
+                if (showSummary && item.summary != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
                     child: Text(
-                      item.title,
-                      maxLines: showSummary ? 2 : 1,
+                      item.summary!,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: beingRead ? t.accent : t.textPrimary,
-                        fontSize: 15,
+                        color: t.textSecondary,
+                        fontSize: 13,
                         height: 1.25,
-                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
-                ],
-              ),
-              if (showSummary && item.summary != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Text(
-                    item.summary!,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        color: t.textSecondary, fontSize: 13, height: 1.25),
-                  ),
-                ),
-              if (showTime && item.published != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Text(
-                    ago(item.published!),
-                    style: TextStyle(
-                      color: t.textSecondary.withValues(alpha: 0.8),
-                      fontSize: 12,
+                if (showTime && item.published != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      ago(item.published!),
+                      style: TextStyle(
+                        color: t.textSecondary.withValues(alpha: 0.8),
+                        fontSize: 12,
+                      ),
                     ),
                   ),
-                ),
-            ],
-          ),
+              ],
+            ),
           );
         },
       ),
@@ -361,7 +365,12 @@ class DashboardNewsWidget extends StatelessWidget {
           width: 720,
           child: SingleChildScrollView(
             child: Text(
-              summary.isEmpty ? tr('widget.news.theFeedGivesNoSummary', 'The feed gives no summary of this one.') : summary,
+              summary.isEmpty
+                  ? tr(
+                      'widget.news.theFeedGivesNoSummary',
+                      'The feed gives no summary of this one.',
+                    )
+                  : summary,
               style: const TextStyle(fontSize: 18, height: 1.4),
             ),
           ),
@@ -385,10 +394,15 @@ class DashboardNewsWidget extends StatelessWidget {
                 );
               },
               icon: const Icon(Icons.record_voice_over_rounded, size: 26),
-              label: Text(tr('widget.news.readAloud', 'Read aloud'), style: TextStyle(fontSize: 20)),
+              label: Text(
+                tr('widget.news.readAloud', 'Read aloud'),
+                style: TextStyle(fontSize: 20),
+              ),
               style: OutlinedButton.styleFrom(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 26, vertical: 18),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 26,
+                  vertical: 18,
+                ),
               ),
             ),
           if (item.link != null)
@@ -398,20 +412,26 @@ class DashboardNewsWidget extends StatelessWidget {
                 _openPage(context, item);
               },
               icon: const Icon(Icons.open_in_browser, size: 26),
-              label: Text(tr('widget.news.readThePage', 'Read the page'),
-                  style: TextStyle(fontSize: 20)),
+              label: Text(
+                tr('widget.news.readThePage', 'Read the page'),
+                style: TextStyle(fontSize: 20),
+              ),
               style: FilledButton.styleFrom(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 26, vertical: 18),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 26,
+                  vertical: 18,
+                ),
               ),
             ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
             style: TextButton.styleFrom(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 26, vertical: 18),
+              padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 18),
             ),
-            child: Text(tr('widget.news.close', 'Close'), style: TextStyle(fontSize: 20)),
+            child: Text(
+              tr('widget.news.close', 'Close'),
+              style: TextStyle(fontSize: 20),
+            ),
           ),
         ],
       ),
@@ -426,13 +446,15 @@ class DashboardNewsWidget extends StatelessWidget {
       unawaited(context.read<VideoPlayerService>().play(video));
       return;
     }
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => LinkViewerScreen(
-        url: item.link!,
-        title: item.title,
-        reader: readerStyle(w),
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => LinkViewerScreen(
+          url: item.link!,
+          title: item.title,
+          reader: readerStyle(w),
+        ),
       ),
-    ));
+    );
   }
 
   /// Each voice's pace from the settings, by voice id. Until the list has
@@ -492,14 +514,22 @@ class DashboardNewsWidget extends StatelessWidget {
   }
 
   static int refreshMinutes(DashboardWidgetContext w) =>
-      (int.tryParse('${w.config.options['refreshMinutes'] ?? 15}') ?? 15)
-          .clamp(1, 1440);
+      (int.tryParse('${w.config.options['refreshMinutes'] ?? 15}') ?? 15).clamp(
+        1,
+        1440,
+      );
 
   static String ago(DateTime when) {
     final d = DateTime.now().difference(when);
     if (d.inMinutes < 1) return tr('widget.news.justNow', 'just now');
-    if (d.inMinutes < 60) return tr('widget.news.mAgo', '{inMinutes}m ago', {'inMinutes': d.inMinutes});
-    if (d.inHours < 24) return tr('widget.news.hAgo', '{inHours}h ago', {'inHours': d.inHours});
+    if (d.inMinutes < 60) {
+      return tr('widget.news.mAgo', '{inMinutes}m ago', {
+        'inMinutes': d.inMinutes,
+      });
+    }
+    if (d.inHours < 24) {
+      return tr('widget.news.hAgo', '{inHours}h ago', {'inHours': d.inHours});
+    }
     return tr('widget.news.dAgo', '{inDays}d ago', {'inDays': d.inDays});
   }
 }
@@ -623,7 +653,8 @@ final newsWidgetType = DashboardWidgetType(
       label: 'Feeds',
       kind: OptionKind.list,
       addLabel: 'Add a feed',
-      help: 'RSS or Atom. With more than one, headlines are blended: each is '
+      help:
+          'RSS or Atom. With more than one, headlines are blended: each is '
           'ranked on how recent it is and on how much that feed has already '
           'contributed, so a busy wire service can’t bury a quieter source.',
       fields: [
@@ -657,7 +688,8 @@ final newsWidgetType = DashboardWidgetType(
         'icon': 'Just the icon',
         'name': 'Just the name',
       },
-      help: 'Icons alone fit more tabs across a narrow tile. A feed with no '
+      help:
+          'Icons alone fit more tabs across a narrow tile. A feed with no '
           'name shows its site’s address.',
     ),
     WidgetOption(
@@ -674,7 +706,8 @@ final newsWidgetType = DashboardWidgetType(
         '180': 'Every 3 hours',
         '720': 'Twice a day',
       },
-      help: 'Little point checking a weekly blog every two minutes, or a wire '
+      help:
+          'Little point checking a weekly blog every two minutes, or a wire '
           'service twice a day.',
     ),
     WidgetOption(
@@ -688,7 +721,8 @@ final newsWidgetType = DashboardWidgetType(
       label: 'Show which feed each headline is from',
       kind: OptionKind.boolean,
       defaultValue: true,
-      help: 'A small icon — the site’s own, or the first letter of the '
+      help:
+          'A small icon — the site’s own, or the first letter of the '
           'feed’s name where it has none. Not needed with tabs, which say '
           'it already.',
     ),
@@ -703,7 +737,8 @@ final newsWidgetType = DashboardWidgetType(
       label: 'Open a headline when tapped',
       kind: OptionKind.boolean,
       defaultValue: true,
-      help: 'Shows the feed’s own summary, with the full page a tap further. '
+      help:
+          'Shows the feed’s own summary, with the full page a tap further. '
           'Turn off for a panel nobody should be browsing from.',
     ),
     WidgetOption(
@@ -711,7 +746,8 @@ final newsWidgetType = DashboardWidgetType(
       label: 'Hide promo codes, coupons and sponsored posts',
       kind: OptionKind.boolean,
       defaultValue: true,
-      help: 'Some feeds are more shopping than news — WIRED’s is mostly coupon '
+      help:
+          'Some feeds are more shopping than news — WIRED’s is mostly coupon '
           'posts. Judged from the headline, the address and the publisher’s '
           'own category. Reviews and buying guides are kept.',
     ),
@@ -720,7 +756,8 @@ final newsWidgetType = DashboardWidgetType(
       label: 'Open articles in reader view',
       kind: OptionKind.boolean,
       defaultValue: true,
-      help: 'Just the text and pictures — no adverts, cookie banners or '
+      help:
+          'Just the text and pictures — no adverts, cookie banners or '
           'autoplaying video — sized to fill the screen. Video and live pages '
           'open normally, since there is no article in them to show.',
     ),
@@ -734,7 +771,8 @@ final newsWidgetType = DashboardWidgetType(
         'large': 'Large — 40px',
         'huge': 'Very large — 56px, readable across a room',
       },
-      help: 'The column widens or narrows to fill the screen at whichever '
+      help:
+          'The column widens or narrows to fill the screen at whichever '
           'size you pick.',
     ),
     WidgetOption(
@@ -754,7 +792,8 @@ final newsWidgetType = DashboardWidgetType(
       label: 'Offer “Read aloud”',
       kind: OptionKind.boolean,
       defaultValue: true,
-      help: 'A button on each headline that reads the whole article out, a '
+      help:
+          'A button on each headline that reads the whole article out, a '
           'paragraph at a time, with pause and stop along the bottom of the '
           'screen. Needs piper on the Pi — see INSTALL.md — or an ElevenLabs '
           'account.',
@@ -775,7 +814,8 @@ final newsWidgetType = DashboardWidgetType(
         'piper': 'Piper, on the Pi (recommended)',
         'elevenlabs': 'ElevenLabs',
       },
-      help: 'Piper is free, works without the internet and sends nothing '
+      help:
+          'Piper is free, works without the internet and sends nothing '
           'anywhere. ElevenLabs sounds more natural, but sends each article '
           'to ElevenLabs and uses your account’s credits — about one per '
           'character with Flash. Piper reads whenever ElevenLabs can’t.',
@@ -785,14 +825,16 @@ final newsWidgetType = DashboardWidgetType(
       label: 'ElevenLabs API key',
       kind: OptionKind.secret,
       defaultValue: '',
-      help: 'On elevenlabs.io: your profile → API keys. A key limited to '
+      help:
+          'On elevenlabs.io: your profile → API keys. A key limited to '
           'Text to Speech is all it needs.',
     ),
     WidgetOption(
       key: 'elevenLabsVoice',
       label: 'ElevenLabs voice ID',
       defaultValue: '',
-      help: 'Optional — George, a British narrator, otherwise. Copy a voice’s '
+      help:
+          'Optional — George, a British narrator, otherwise. Copy a voice’s '
           'ID from the Voices page on elevenlabs.io.',
     ),
     WidgetOption(
@@ -810,7 +852,8 @@ final newsWidgetType = DashboardWidgetType(
       label: 'Voice speeds',
       kind: OptionKind.list,
       addLabel: 'Set a voice’s speed',
-      help: 'Each writer is read in one of the voices installed on the Pi, '
+      help:
+          'Each writer is read in one of the voices installed on the Pi, '
           'always the same one. Any voice not listed here reads at its own '
           'pace.',
       defaultValue: [
@@ -843,8 +886,7 @@ final newsWidgetType = DashboardWidgetType(
   preview: const [
     PreviewLine('Council approves new cycle route', scale: 0.13, px: 15),
     PreviewLine('2h ago', scale: 0.09, muted: true, px: 12),
-    PreviewLine('Storm expected to clear by Thursday',
-        scale: 0.13, px: 15),
+    PreviewLine('Storm expected to clear by Thursday', scale: 0.13, px: 15),
     PreviewLine('4h ago', scale: 0.09, muted: true, px: 12),
   ],
   live: (config, data) {
@@ -879,8 +921,12 @@ final newsWidgetType = DashboardWidgetType(
       for (final item in items) ...[
         PreviewLine(item.title, scale: 0.13, px: 15),
         if (config.options['showTime'] != false && item.published != null)
-          PreviewLine(DashboardNewsWidget.ago(item.published!),
-              scale: 0.09, muted: true, px: 12),
+          PreviewLine(
+            DashboardNewsWidget.ago(item.published!),
+            scale: 0.09,
+            muted: true,
+            px: 12,
+          ),
       ],
     ];
   },

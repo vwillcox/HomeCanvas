@@ -10,9 +10,7 @@ String plainText(String s) {
   if (_tag.hasMatch(out)) {
     // A break or the end of a block is a gap between words; without this,
     // "one</p><p>two" would run together as "onetwo".
-    out = out
-        .replaceAll(_blockEnd, ' ')
-        .replaceAll(_tag, '');
+    out = out.replaceAll(_blockEnd, ' ').replaceAll(_tag, '');
   }
   out = decodeEntities(out);
   return out
@@ -86,8 +84,19 @@ const _units = {
 };
 
 const _counts = [
-  'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight',
-  'nine', 'ten', 'eleven', 'twelve',
+  'zero',
+  'one',
+  'two',
+  'three',
+  'four',
+  'five',
+  'six',
+  'seven',
+  'eight',
+  'nine',
+  'ten',
+  'eleven',
+  'twelve',
 ];
 const _parts = {
   2: ('half', 'halves'),
@@ -122,7 +131,9 @@ final _oddSpaces = RegExp('[       　]');
 /// or say.
 final _invisible = RegExp('[​‌‍⁠﻿­]');
 
-final _entity = RegExp(r'&(#[xX][0-9a-fA-F]+|#[0-9]+|[a-zA-Z][a-zA-Z0-9]{1,31});');
+final _entity = RegExp(
+  r'&(#[xX][0-9a-fA-F]+|#[0-9]+|[a-zA-Z][a-zA-Z0-9]{1,31});',
+);
 
 /// Decodes HTML entities — every named one HTML knows (`&rsquo;`, `&hellip;`,
 /// `&eacute;`), and numeric ones in decimal or hex — in **one** pass.
@@ -134,28 +145,27 @@ final _entity = RegExp(r'&(#[xX][0-9a-fA-F]+|#[0-9]+|[a-zA-Z][a-zA-Z0-9]{1,31});
 /// never meant to be one. Numbers that are not characters, and names HTML
 /// does not know, are left exactly as they were.
 String decodeEntities(String s) => s.replaceAllMapped(_entity, (m) {
-      final body = m[1]!;
-      if (body.startsWith('#')) {
-        final hex = body.length > 1 && (body[1] == 'x' || body[1] == 'X');
-        final code = int.tryParse(
-          body.substring(hex ? 2 : 1),
-          radix: hex ? 16 : 10,
-        );
-        if (code == null ||
-            code < 0x20 ||
-            code > 0x10FFFF ||
-            (code >= 0xD800 && code <= 0xDFFF)) {
-          return m[0]!;
-        }
-        return String.fromCharCode(code);
-      }
-      // A named one: the HTML parser holds the full table. It also knows
-      // the old forms written without a semicolon, so "&notathing;" would
-      // come back as "¬athing;" — only a whole entity turned into a
-      // character or two counts.
-      final decoded = html.parseFragment(m[0]!).text ?? '';
-      final whole = decoded.isNotEmpty &&
-          decoded.runes.length <= 2 &&
-          !decoded.contains(';');
-      return whole ? decoded : m[0]!;
-    });
+  final body = m[1]!;
+  if (body.startsWith('#')) {
+    final hex = body.length > 1 && (body[1] == 'x' || body[1] == 'X');
+    final code = int.tryParse(
+      body.substring(hex ? 2 : 1),
+      radix: hex ? 16 : 10,
+    );
+    if (code == null ||
+        code < 0x20 ||
+        code > 0x10FFFF ||
+        (code >= 0xD800 && code <= 0xDFFF)) {
+      return m[0]!;
+    }
+    return String.fromCharCode(code);
+  }
+  // A named one: the HTML parser holds the full table. It also knows
+  // the old forms written without a semicolon, so "&notathing;" would
+  // come back as "¬athing;" — only a whole entity turned into a
+  // character or two counts.
+  final decoded = html.parseFragment(m[0]!).text ?? '';
+  final whole =
+      decoded.isNotEmpty && decoded.runes.length <= 2 && !decoded.contains(';');
+  return whole ? decoded : m[0]!;
+});

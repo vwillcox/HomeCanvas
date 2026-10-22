@@ -81,10 +81,12 @@ class CameraService extends ChangeNotifier {
   }
 
   final ConfigService _config;
-  final Dio _dio = Dio(BaseOptions(
-    connectTimeout: const Duration(seconds: 4),
-    receiveTimeout: const Duration(seconds: 5),
-  ));
+  final Dio _dio = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 4),
+      receiveTimeout: const Duration(seconds: 5),
+    ),
+  );
 
   CameraSettings get settings => _config.config.camera;
   bool get isConfigured => settings.isConfigured;
@@ -141,7 +143,9 @@ class CameraService extends ChangeNotifier {
     _ready = _applyStartupState();
     _statusTimer?.cancel();
     _statusTimer = Timer.periodic(
-        const Duration(seconds: 30), (_) => unawaited(refreshStatus()));
+      const Duration(seconds: 30),
+      (_) => unawaited(refreshStatus()),
+    );
   }
 
   void close() {
@@ -194,17 +198,19 @@ class CameraService extends ChangeNotifier {
         // front-facing-camera flag rather than by id.
         lenses: const [
           PhoneLens(
-              id: 'back',
-              label: 'Back',
-              facing: 'back',
-              minZoom: 1.0,
-              maxZoom: 10.0),
+            id: 'back',
+            label: 'Back',
+            facing: 'back',
+            minZoom: 1.0,
+            maxZoom: 10.0,
+          ),
           PhoneLens(
-              id: 'front',
-              label: 'Front',
-              facing: 'front',
-              minZoom: 1.0,
-              maxZoom: 10.0),
+            id: 'front',
+            label: 'Front',
+            facing: 'front',
+            minZoom: 1.0,
+            maxZoom: 10.0,
+          ),
         ],
         currentCameraId: _cameraId,
         currentStreamRes: cur['video_size'] as String?,
@@ -227,9 +233,10 @@ class CameraService extends ChangeNotifier {
       1.0;
 
   double get maxZoom {
-    final lens = _status?.lenses
-        .cast<PhoneLens?>()
-        .firstWhere((l) => l?.id == _cameraId, orElse: () => null);
+    final lens = _status?.lenses.cast<PhoneLens?>().firstWhere(
+      (l) => l?.id == _cameraId,
+      orElse: () => null,
+    );
     return lens?.maxZoom ?? settings.maxZoom;
   }
 

@@ -13,7 +13,8 @@ import 'package:flutter/foundation.dart';
 ///
 /// [hold] stops it without forgetting where it was — for while the progress
 /// cannot be seen.
-class SteppedTimeline extends ChangeNotifier implements ValueListenable<double> {
+class SteppedTimeline extends ChangeNotifier
+    implements ValueListenable<double> {
   SteppedTimeline({required this.onDone, this.steps = 44});
 
   /// Called when the value reaches 1.

@@ -47,8 +47,11 @@ class ArticleText {
     final author = _author(doc, record);
     for (final paragraphs in [_bodyOf(record), _fromPage(doc)]) {
       if (paragraphs == null) continue;
-      final article =
-          Article(title: title, paragraphs: paragraphs, author: author);
+      final article = Article(
+        title: title,
+        paragraphs: paragraphs,
+        author: author,
+      );
       if (article.length >= minLength) return article;
     }
     return null;
@@ -63,8 +66,9 @@ class ArticleText {
     List<String> tidy(Iterable<String> raw) {
       final out = <String>[];
       for (final c in raw) {
-        final n =
-            clean(c).replaceFirst(RegExp(r'^by\s+', caseSensitive: false), '');
+        final n = clean(
+          c,
+        ).replaceFirst(RegExp(r'^by\s+', caseSensitive: false), '');
         // A byline is a name or two, not a link or a sentence.
         if (n.isEmpty || n.startsWith('http') || n.contains('/')) continue;
         if (n.length > 80 || out.contains(n)) continue;
@@ -81,7 +85,8 @@ class ArticleText {
     if (names.isEmpty) {
       names = tidy([
         doc.querySelector('meta[name="author"]')?.attributes['content'] ?? '',
-        doc.querySelector('meta[property="article:author"]')
+        doc
+                .querySelector('meta[property="article:author"]')
                 ?.attributes['content'] ??
             '',
         doc.querySelector('[rel="author"]')?.text ?? '',
@@ -95,11 +100,11 @@ class ArticleText {
   /// Names from JSON-LD's author field, in any of its forms: a string, a
   /// Person or Organization, or a list of either.
   static List<String> _names(Object? v) => switch (v) {
-        String s => [s],
-        Map m => _names(m['name']),
-        List l => [for (final e in l) ..._names(e)],
-        _ => const [],
-      };
+    String s => [s],
+    Map m => _names(m['name']),
+    List l => [for (final e in l) ..._names(e)],
+    _ => const [],
+  };
 
   static String? _title(Document doc) {
     final og = doc
@@ -124,7 +129,9 @@ class ArticleText {
   /// is one, since that is the record that is really about this page.
   static Map? _jsonLdArticle(Document doc) {
     final found = <Map>[];
-    for (final s in doc.querySelectorAll('script[type="application/ld+json"]')) {
+    for (final s in doc.querySelectorAll(
+      'script[type="application/ld+json"]',
+    )) {
       try {
         _collect(jsonDecode(s.text), found);
       } catch (_) {
@@ -283,10 +290,10 @@ List<String> speakableChunks(List<String> paragraphs, {int max = 420}) {
     // A sentence ends at a stop *followed by a space* (or the end): the
     // point in "f/1.48" or "3.5 million" is not one. Splitting there, then
     // joining the pieces with a space, had the voice read "one. forty-eight".
-    final sentences = RegExp(r'.+?[.!?]+["”’)]*(?=\s|$)|.+$', dotAll: true)
-        .allMatches(p)
-        .map((m) => m[0]!.trim())
-        .where((s) => s.isNotEmpty);
+    final sentences = RegExp(
+      r'.+?[.!?]+["”’)]*(?=\s|$)|.+$',
+      dotAll: true,
+    ).allMatches(p).map((m) => m[0]!.trim()).where((s) => s.isNotEmpty);
     var run = '';
     for (final s in sentences) {
       if (run.isNotEmpty && run.length + s.length + 1 > max) {

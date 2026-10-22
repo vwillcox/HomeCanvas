@@ -9,7 +9,12 @@ import 'package:home_canvas/services/audio_analyser.dart';
 import 'package:home_canvas/services/audio_levels_service.dart';
 
 /// One frame of a sine at [hz], full scale unless told otherwise.
-Int16List tone(double hz, {int samples = 512, int rate = 16000, double amp = 1}) {
+Int16List tone(
+  double hz, {
+  int samples = 512,
+  int rate = 16000,
+  double amp = 1,
+}) {
   final out = Int16List(samples);
   for (var i = 0; i < samples; i++) {
     out[i] = (32767 * amp * math.sin(2 * math.pi * hz * i / rate)).round();
@@ -72,8 +77,11 @@ void main() {
       for (var i = 0; i < 300; i++) {
         a.analyse(Int16List(512));
       }
-      expect(a.referenceDb, settled,
-          reason: 'a gap between tracks must not become gain');
+      expect(
+        a.referenceDb,
+        settled,
+        reason: 'a gap between tracks must not become gain',
+      );
       expect(a.silent, isTrue);
     });
 
@@ -82,14 +90,18 @@ void main() {
       for (var i = 0; i < 200; i++) {
         loud.analyse(tone(1000));
       }
-      expect(loud.referenceDb,
-          lessThanOrEqualTo(AudioAnalyser.maxReferenceDb + 0.001));
+      expect(
+        loud.referenceDb,
+        lessThanOrEqualTo(AudioAnalyser.maxReferenceDb + 0.001),
+      );
       final faint = AudioAnalyser();
       for (var i = 0; i < 600; i++) {
         faint.analyse(tone(1000, amp: 0.004));
       }
-      expect(faint.referenceDb,
-          greaterThanOrEqualTo(AudioAnalyser.minReferenceDb - 0.001));
+      expect(
+        faint.referenceDb,
+        greaterThanOrEqualTo(AudioAnalyser.minReferenceDb - 0.001),
+      );
     });
 
     test('silence reads as silent', () {
@@ -132,9 +144,11 @@ void main() {
         for (var i = 0; i < 250; i++) {
           a.analyse(tone(400, amp: amp));
         }
-        expect(loudestOf(a.wave),
-            closeTo(AudioAnalyser.waveHeadroom, 0.08),
-            reason: 'amplitude $amp should still reach the top');
+        expect(
+          loudestOf(a.wave),
+          closeTo(AudioAnalyser.waveHeadroom, 0.08),
+          reason: 'amplitude $amp should still reach the top',
+        );
       }
     });
 
@@ -159,8 +173,10 @@ void main() {
       double loudestIn(List<double> w, int from, int to) =>
           w.sublist(from, to).map((v) => v.abs()).reduce(math.max);
       final n = a.wave.length;
-      expect(loudestIn(a.wave, 0, n ~/ 2),
-          greaterThan(loudestIn(a.wave, n ~/ 2, n) * 2));
+      expect(
+        loudestIn(a.wave, 0, n ~/ 2),
+        greaterThan(loudestIn(a.wave, n ~/ 2, n) * 2),
+      );
     });
 
     test('reset drops everything at once', () {
@@ -181,13 +197,12 @@ void main() {
       opened = 0;
       stopped = 0;
       pcm = StreamController<List<int>>.broadcast();
-      service = AudioLevelsService(open: () async {
-        opened++;
-        return PcmStream(
-          bytes: pcm.stream,
-          stop: () async => stopped++,
-        );
-      });
+      service = AudioLevelsService(
+        open: () async {
+          opened++;
+          return PcmStream(bytes: pcm.stream, stop: () async => stopped++);
+        },
+      );
     });
 
     tearDown(() async {
@@ -248,8 +263,11 @@ void main() {
       final all = bytesOf(tone(1000));
       pcm.add(all.sublist(0, 600));
       await Future<void>.delayed(Duration.zero);
-      expect(service.levels.every((l) => l == 0), isTrue,
-          reason: 'half a frame is not a frame');
+      expect(
+        service.levels.every((l) => l == 0),
+        isTrue,
+        reason: 'half a frame is not a frame',
+      );
       pcm.add(all.sublist(600));
       await Future<void>.delayed(Duration.zero);
       expect(service.levels.any((l) => l > 0.5), isTrue);
@@ -257,10 +275,12 @@ void main() {
 
     test('a missing capture command is reported once, not retried', () async {
       var attempts = 0;
-      final missing = AudioLevelsService(open: () async {
-        attempts++;
-        throw ProcessException('pw-record', const [], 'No such file', 2);
-      });
+      final missing = AudioLevelsService(
+        open: () async {
+          attempts++;
+          throw ProcessException('pw-record', const [], 'No such file', 2);
+        },
+      );
       missing.attach();
       await Future<void>.delayed(Duration.zero);
       expect(missing.supported, isFalse);
@@ -269,7 +289,11 @@ void main() {
       missing.detach();
       missing.attach();
       await Future<void>.delayed(Duration.zero);
-      expect(attempts, 1, reason: 'a machine without PipeWire will not grow one');
+      expect(
+        attempts,
+        1,
+        reason: 'a machine without PipeWire will not grow one',
+      );
     });
   });
 }

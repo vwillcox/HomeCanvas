@@ -179,7 +179,10 @@ class TransitousService extends ChangeNotifier {
       _fetched[dk] = DateTime.now();
     } catch (e) {
       debugPrint('Transitous ${found.id}: $e');
-      _errors[dk] = tr('widget.transit.unreachable', 'Could not reach Transitous');
+      _errors[dk] = tr(
+        'widget.transit.unreachable',
+        'Could not reach Transitous',
+      );
       // Tried again in a minute, like a success.
       _fetched[dk] = DateTime.now();
     } finally {
@@ -230,7 +233,9 @@ class TransitousService extends ChangeNotifier {
       );
       if (scheduled == null) continue;
       final expected =
-          DateTime.tryParse('${place['departure'] ?? place['arrival'] ?? ''}') ??
+          DateTime.tryParse(
+            '${place['departure'] ?? place['arrival'] ?? ''}',
+          ) ??
           scheduled;
       String? colour(Object? v) {
         final c = '${v ?? ''}'.replaceAll('#', '');

@@ -65,8 +65,8 @@ class ReadingBar extends StatelessWidget {
                           onPressed: reader.status == ReaderStatus.fetching
                               ? null
                               : () => reader.status == ReaderStatus.paused
-                                  ? reader.resume()
-                                  : reader.pause(),
+                                    ? reader.resume()
+                                    : reader.pause(),
                         ),
                         PillIconButton(
                           icon: Icons.skip_next_rounded,
@@ -104,13 +104,19 @@ class _Words extends StatelessWidget {
   Widget build(BuildContext context) {
     final look = context.look;
     final detail = switch (reader.status) {
-      ReaderStatus.fetching => tr('reader.gettingTheArticle', 'Getting the article…'),
+      ReaderStatus.fetching => tr(
+        'reader.gettingTheArticle',
+        'Getting the article…',
+      ),
       ReaderStatus.paused => tr('reader.paused', 'Paused'),
-      _ when reader.summaryOnly => tr('reader.readingTheSummary', 'Reading the summary'),
+      _ when reader.summaryOnly => tr(
+        'reader.readingTheSummary',
+        'Reading the summary',
+      ),
       _ when reader.total > 0 => [
-          if (reader.author != null) 'by ${reader.author}',
-          '${reader.position + 1} of ${reader.total}',
-        ].join(' · '),
+        if (reader.author != null) 'by ${reader.author}',
+        '${reader.position + 1} of ${reader.total}',
+      ].join(' · '),
       _ => tr('reader.readingAloud', 'Reading aloud'),
     };
     return Column(

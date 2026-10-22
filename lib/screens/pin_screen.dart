@@ -47,7 +47,12 @@ class _PinScreenState extends State<PinScreen> {
 
   void _submit() {
     if (_pin.length < 4) {
-      setState(() => _error = tr('pin.pinMustBeAtLeast', 'PIN must be at least 4 digits'));
+      setState(
+        () => _error = tr(
+          'pin.pinMustBeAtLeast',
+          'PIN must be at least 4 digits',
+        ),
+      );
       return;
     }
     final err = widget.validator?.call(_pin);
@@ -81,7 +86,10 @@ class _PinScreenState extends State<PinScreen> {
                   padding: const EdgeInsets.only(bottom: 16),
                   child: Text(
                     widget.subtitle,
-                    style: TextStyle(fontSize: 18, color: context.look.textSecondary),
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: context.look.textSecondary,
+                    ),
                   ),
                 ),
               // PIN dots

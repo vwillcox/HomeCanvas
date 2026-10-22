@@ -152,8 +152,11 @@ abstract class VideoSite extends ChangeNotifier {
   /// the password is typed there, not on the panel. Null when it worked,
   /// otherwise what went wrong, worded for the page.
   Future<String?> useCookies(String text) async {
-    final cookies =
-        CookieFile.filter(text, cookieDomains, mustHave: signInCookie);
+    final cookies = CookieFile.filter(
+      text,
+      cookieDomains,
+      mustHave: signInCookie,
+    );
     if (cookies == null) {
       return 'That file has no $name sign-in in it'
           '${signInCookie == null ? '' : ' (no $signInCookie cookie)'}. '
@@ -167,7 +170,11 @@ abstract class VideoSite extends ChangeNotifier {
     if (accepted == null) storedSignedIn = true;
     await _accountChanged();
     if (accepted == false) {
-      return tr('video.didNotAcceptThoseCookies', '{name} did not accept those cookies — they may have been signed out. Sign in again in a private window and export from there.', {'name': name});
+      return tr(
+        'video.didNotAcceptThoseCookies',
+        '{name} did not accept those cookies — they may have been signed out. Sign in again in a private window and export from there.',
+        {'name': name},
+      );
     }
     return null;
   }
@@ -227,8 +234,9 @@ abstract class VideoSite extends ChangeNotifier {
   /// Fifteen minutes between fetches once there is a feed to show; sooner,
   /// backing off, while there is not — the first fetch after a boot often
   /// beats the network up.
-  final RetrySchedule _retry =
-      RetrySchedule(settled: const Duration(minutes: 15));
+  final RetrySchedule _retry = RetrySchedule(
+    settled: const Duration(minutes: 15),
+  );
 
   /// Enough for the largest tile; each tile shows as many as it is set to.
   static const int _feedSize = 30;
@@ -283,7 +291,9 @@ abstract class VideoSite extends ChangeNotifier {
     } on VideoException catch (e) {
       error = e.message;
     } catch (e) {
-      error = tr('video.couldNotReach', 'Could not reach {name}.', {'name': name});
+      error = tr('video.couldNotReach', 'Could not reach {name}.', {
+        'name': name,
+      });
       debugPrint('$name: feed: $e');
     } finally {
       final wait = _retry.next(hasContent: _videos != null);

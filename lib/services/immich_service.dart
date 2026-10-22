@@ -34,12 +34,14 @@ class ImmichService with ImmichUrls implements MediaSource {
     if (_client == null || _clientFor != key) {
       _client?.close();
       _clientFor = key;
-      _client = Dio(BaseOptions(
-        baseUrl: _base,
-        headers: {'x-api-key': config.apiKey, 'Accept': 'application/json'},
-        connectTimeout: const Duration(seconds: 12),
-        receiveTimeout: const Duration(seconds: 30),
-      ));
+      _client = Dio(
+        BaseOptions(
+          baseUrl: _base,
+          headers: {'x-api-key': config.apiKey, 'Accept': 'application/json'},
+          connectTimeout: const Duration(seconds: 12),
+          receiveTimeout: const Duration(seconds: 30),
+        ),
+      );
     }
     return _client!;
   }
@@ -144,13 +146,17 @@ class ImmichService with ImmichUrls implements MediaSource {
     final raw = <Map<String, dynamic>>[];
     int? page = 1;
     while (page != null) {
-      final r = await dio.post('/api/search/metadata', data: {
-        'albumIds': [albumId],
-        'page': page,
-        'size': 250,
-        'order': 'desc',
-      });
-      final a = (r.data as Map<String, dynamic>)['assets'] as Map<String, dynamic>;
+      final r = await dio.post(
+        '/api/search/metadata',
+        data: {
+          'albumIds': [albumId],
+          'page': page,
+          'size': 250,
+          'order': 'desc',
+        },
+      );
+      final a =
+          (r.data as Map<String, dynamic>)['assets'] as Map<String, dynamic>;
       final items = (a['items'] as List).cast<Map<String, dynamic>>();
       raw.addAll(items);
       final next = a['nextPage'];
@@ -172,21 +178,21 @@ class ImmichService with ImmichUrls implements MediaSource {
   /// Deliberately not cached. A cached random photo is the same photo, which
   /// defeats the point.
   Future<List<Asset>> getRandomAssets({int count = 12}) async {
-    final r = await _dio().post('/api/search/random', data: {
-      'size': count,
-      // Videos have no still to show in a tile, and a widget that sometimes
-      // renders nothing looks broken rather than empty.
-      'type': 'IMAGE',
-      'withPeople': false,
-    });
+    final r = await _dio().post(
+      '/api/search/random',
+      data: {
+        'size': count,
+        // Videos have no still to show in a tile, and a widget that sometimes
+        // renders nothing looks broken rather than empty.
+        'type': 'IMAGE',
+        'withPeople': false,
+      },
+    );
     final data = r.data;
     // This endpoint answers with a bare array, unlike /search/metadata which
     // wraps its results in an assets object.
     if (data is! List) return const [];
-    return data
-        .whereType<Map<String, dynamic>>()
-        .map(Asset.fromJson)
-        .toList();
+    return data.whereType<Map<String, dynamic>>().map(Asset.fromJson).toList();
   }
 
   /// Today's "on this day" photos: Immich's own memories, newest year first.
@@ -195,19 +201,24 @@ class ImmichService with ImmichUrls implements MediaSource {
   /// rather than the photo's date, which can be wrong on a scanned print.
   Future<List<({Asset asset, int year})>> getMemories(DateTime day) async {
     // The date alone: Immich 3 answers a full timestamp with a 400.
-    final r = await _dio().get('/api/memories', queryParameters: {
-      'for': '${day.year.toString().padLeft(4, '0')}-'
-          '${day.month.toString().padLeft(2, '0')}-'
-          '${day.day.toString().padLeft(2, '0')}',
-    });
+    final r = await _dio().get(
+      '/api/memories',
+      queryParameters: {
+        'for':
+            '${day.year.toString().padLeft(4, '0')}-'
+            '${day.month.toString().padLeft(2, '0')}-'
+            '${day.day.toString().padLeft(2, '0')}',
+      },
+    );
     final data = r.data;
     if (data is! List) return const [];
     final out = <({Asset asset, int year})>[];
     for (final m in data.whereType<Map<String, dynamic>>()) {
       if (m['type'] != 'on_this_day') continue;
       final year = (m['data'] as Map?)?['year'];
-      for (final a in (m['assets'] as List? ?? const [])
-          .whereType<Map<String, dynamic>>()) {
+      for (final a
+          in (m['assets'] as List? ?? const [])
+              .whereType<Map<String, dynamic>>()) {
         final asset = Asset.fromJson(a);
         if (!asset.isImage) continue;
         out.add((
@@ -279,8 +290,10 @@ class ImmichService with ImmichUrls implements MediaSource {
 
   /// The people Immich knows by name, for the birthdays widget.
   Future<List<Person>> people() async {
-    final r = await _dio().get('/api/people',
-        queryParameters: {'withHidden': false, 'size': 1000});
+    final r = await _dio().get(
+      '/api/people',
+      queryParameters: {'withHidden': false, 'size': 1000},
+    );
     final d = r.data;
     final list = d is Map ? d['people'] : d;
     return [

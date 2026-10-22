@@ -56,7 +56,9 @@ class KioskSettings {
     final prefs = await SharedPreferences.getInstance();
     // Trailing slashes make for a doubled-up //share further down.
     await prefs.setString(
-        _addressKey, address.trim().replaceAll(RegExp(r'/+$'), ''));
+      _addressKey,
+      address.trim().replaceAll(RegExp(r'/+$'), ''),
+    );
     await prefs.setString(_tokenKey, token.trim());
   }
 }
@@ -65,6 +67,7 @@ class ShareLogEntry {
   final String label;
   final bool ok;
   final String? error;
+
   /// Null for the one "share received before setup" placeholder entry —
   /// nothing to resend there.
   final SharedMediaFile? file;
@@ -74,12 +77,13 @@ class ShareLogEntry {
   /// so the claim is about *this* message and not about the app in general.
   final String? sealedTo;
 
-  ShareLogEntry(
-      {required this.label,
-      required this.ok,
-      this.error,
-      this.file,
-      this.sealedTo});
+  ShareLogEntry({
+    required this.label,
+    required this.ok,
+    this.error,
+    this.file,
+    this.sealedTo,
+  });
 }
 
 class HomeScreen extends StatefulWidget {
@@ -134,12 +138,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _handleShares(List<SharedMediaFile> files) async {
     if (!_settings.isConfigured) {
-      setState(() => _log.insert(
+      setState(
+        () => _log.insert(
           0,
           ShareLogEntry(
-              label: 'Share received',
-              ok: false,
-              error: 'Set up the kiosk address and token first')));
+            label: 'Share received',
+            ok: false,
+            error: 'Set up the kiosk address and token first',
+          ),
+        ),
+      );
       return;
     }
     for (final f in files) {
@@ -166,11 +174,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (f.type == SharedMediaType.text || f.type == SharedMediaType.url) {
         final content = f.path.trim();
-        final isLink = f.type == SharedMediaType.url ||
+        final isLink =
+            f.type == SharedMediaType.url ||
             (Uri.tryParse(content)?.hasScheme ?? false);
         resp = await sender.send(
           utf8.encode(
-              jsonEncode({'type': isLink ? 'link' : 'text', 'content': content})),
+            jsonEncode({'type': isLink ? 'link' : 'text', 'content': content}),
+          ),
           'application/json',
         );
       } else {
@@ -179,7 +189,8 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       final ok = resp.statusCode == 200;
-      setState(() => _log.insert(
+      setState(
+        () => _log.insert(
           0,
           ShareLogEntry(
             label: label,
@@ -187,10 +198,16 @@ class _HomeScreenState extends State<HomeScreen> {
             error: ok ? null : 'HTTP ${resp.statusCode}: ${resp.body}',
             file: f,
             sealedTo: sender.lastSealedTo,
-          )));
+          ),
+        ),
+      );
     } catch (e) {
-      setState(() => _log.insert(
-          0, ShareLogEntry(label: label, ok: false, error: '$e', file: f)));
+      setState(
+        () => _log.insert(
+          0,
+          ShareLogEntry(label: label, ok: false, error: '$e', file: f),
+        ),
+      );
     }
   }
 
@@ -267,9 +284,13 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('End-to-end encrypted',
-                  style: small?.copyWith(
-                      color: Colors.green, fontWeight: FontWeight.w600)),
+              Text(
+                'End-to-end encrypted',
+                style: small?.copyWith(
+                  color: Colors.green,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               // The fingerprint is shown so it can be compared against the one
               // on the panel's own senders page. Matching ids mean the key
               // this phone seals to is the key that kiosk holds, which is the
@@ -349,89 +370,98 @@ class _HomeScreenState extends State<HomeScreen> {
       body: !_loaded
           ? const Center(child: CircularProgressIndicator())
           : Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _settings.isConfigured ? 'Ready to share' : 'Not set up yet',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      _settings.isConfigured
-                          ? _settings.address
-                          : "Tap the gear icon to enter your kiosk's address "
-                              'and token.',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    if (_settings.isConfigured) ...[
-                      const Divider(height: 22),
-                      _encryptionStatus(context),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text('Use the share button in any app (Photos, Chrome, '
-                  'a video) and pick Kiosk Share to send it here.'),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Expanded(
-            child: _log.isEmpty
-                ? const Center(child: Text('Nothing shared yet'))
-                : ListView.builder(
-                    itemCount: _log.length,
-                    itemBuilder: (context, i) {
-                      final entry = _log[i];
-                      return ListTile(
-                        leading: Icon(
-                          entry.ok ? Icons.check_circle : Icons.error,
-                          color: entry.ok ? Colors.green : Colors.redAccent,
-                        ),
-                        title: Row(
-                          children: [
-                            Text(entry.label),
-                            // Per message, and only when one was really
-                            // sealed — an entry without the padlock did not
-                            // get encrypted, whatever the card above says.
-                            if (entry.sealedTo != null) ...[
-                              const SizedBox(width: 6),
-                              const Icon(Icons.lock,
-                                  size: 14, color: Colors.green),
-                            ],
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _settings.isConfigured
+                                ? 'Ready to share'
+                                : 'Not set up yet',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            _settings.isConfigured
+                                ? _settings.address
+                                : "Tap the gear icon to enter your kiosk's address "
+                                      'and token.',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          if (_settings.isConfigured) ...[
+                            const Divider(height: 22),
+                            _encryptionStatus(context),
                           ],
-                        ),
-                        subtitle: Text(
-                          entry.error ??
-                              (entry.sealedTo != null
-                                  ? 'Encrypted to key ${entry.sealedTo}'
-                                  : 'Sent unencrypted'),
-                        ),
-                        trailing: entry.file == null
-                            ? null
-                            : IconButton(
-                                icon: const Icon(Icons.replay),
-                                tooltip: 'Resend',
-                                onPressed: () => _resend(entry.file!),
-                              ),
-                      );
-                    },
+                        ],
+                      ),
+                    ),
                   ),
-          ),
-        ],
-      ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Use the share button in any app (Photos, Chrome, '
+                      'a video) and pick Kiosk Share to send it here.',
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: _log.isEmpty
+                      ? const Center(child: Text('Nothing shared yet'))
+                      : ListView.builder(
+                          itemCount: _log.length,
+                          itemBuilder: (context, i) {
+                            final entry = _log[i];
+                            return ListTile(
+                              leading: Icon(
+                                entry.ok ? Icons.check_circle : Icons.error,
+                                color: entry.ok
+                                    ? Colors.green
+                                    : Colors.redAccent,
+                              ),
+                              title: Row(
+                                children: [
+                                  Text(entry.label),
+                                  // Per message, and only when one was really
+                                  // sealed — an entry without the padlock did not
+                                  // get encrypted, whatever the card above says.
+                                  if (entry.sealedTo != null) ...[
+                                    const SizedBox(width: 6),
+                                    const Icon(
+                                      Icons.lock,
+                                      size: 14,
+                                      color: Colors.green,
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              subtitle: Text(
+                                entry.error ??
+                                    (entry.sealedTo != null
+                                        ? 'Encrypted to key ${entry.sealedTo}'
+                                        : 'Sent unencrypted'),
+                              ),
+                              trailing: entry.file == null
+                                  ? null
+                                  : IconButton(
+                                      icon: const Icon(Icons.replay),
+                                      tooltip: 'Resend',
+                                      onPressed: () => _resend(entry.file!),
+                                    ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
     );
   }
 }
@@ -445,10 +475,12 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  late final TextEditingController _address =
-      TextEditingController(text: widget.current.address);
-  late final TextEditingController _token =
-      TextEditingController(text: widget.current.token);
+  late final TextEditingController _address = TextEditingController(
+    text: widget.current.address,
+  );
+  late final TextEditingController _token = TextEditingController(
+    text: widget.current.token,
+  );
 
   @override
   void dispose() {
@@ -460,10 +492,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _save() async {
     await KioskSettings.save(_address.text, _token.text);
     if (mounted) {
-      Navigator.of(context).pop(KioskSettings(
-        address: _address.text.trim().replaceAll(RegExp(r'/+$'), ''),
-        token: _token.text.trim(),
-      ));
+      Navigator.of(context).pop(
+        KioskSettings(
+          address: _address.text.trim().replaceAll(RegExp(r'/+$'), ''),
+          token: _token.text.trim(),
+        ),
+      );
     }
   }
 

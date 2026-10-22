@@ -578,7 +578,10 @@ class GlancesClient {
         smart: results[4],
       );
     } catch (e) {
-      return MachineStats(name: name, error: tr('widget.servers.notAnswering2', 'Not answering'));
+      return MachineStats(
+        name: name,
+        error: tr('widget.servers.notAnswering2', 'Not answering'),
+      );
     }
   }
 

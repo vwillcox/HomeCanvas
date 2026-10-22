@@ -32,8 +32,10 @@ void main() {
       expect(url, startsWith('about:reader?url='));
       // Unencoded, the & would end Firefox's url parameter early and the
       // reader would fetch a different page.
-      expect(Uri.decodeComponent(url.substring('about:reader?url='.length)),
-          article);
+      expect(
+        Uri.decodeComponent(url.substring('about:reader?url='.length)),
+        article,
+      );
       expect(url, isNot(contains('&at_campaign')));
     });
   });
@@ -41,13 +43,17 @@ void main() {
   group('what counts as an article', () {
     test('a news story does', () {
       expect(
-          KioskBrowser.looksLikeArticle(
-              'https://www.bbc.co.uk/news/articles/cjly4rv0q3l0o'),
-          isTrue);
+        KioskBrowser.looksLikeArticle(
+          'https://www.bbc.co.uk/news/articles/cjly4rv0q3l0o',
+        ),
+        isTrue,
+      );
       expect(
-          KioskBrowser.looksLikeArticle(
-              'https://www.theverge.com/2026/9/1/some-story'),
-          isTrue);
+        KioskBrowser.looksLikeArticle(
+          'https://www.theverge.com/2026/9/1/some-story',
+        ),
+        isTrue,
+      );
     });
 
     test('video and live pages do not, since there is no text to extract', () {
@@ -102,8 +108,11 @@ void main() {
           final n = KioskBrowser.readerWidthStep(width, step);
           final column = (20 + 5 * (n - 1)) * KioskBrowser.readerFontPx(step);
           if (n > 1) {
-            expect(column, lessThanOrEqualTo(width - 160),
-                reason: 'step $step in $width');
+            expect(
+              column,
+              lessThanOrEqualTo(width - 160),
+              reason: 'step $step in $width',
+            );
           }
         }
       }
@@ -114,8 +123,11 @@ void main() {
         final n = KioskBrowser.readerWidthStep(panelWindow, step);
         if (n < 9) {
           final wider = (20 + 5 * n) * KioskBrowser.readerFontPx(step);
-          expect(wider, greaterThan(panelWindow - 160),
-              reason: 'step $step could have gone wider than $n');
+          expect(
+            wider,
+            greaterThan(panelWindow - 160),
+            reason: 'step $step could have gone wider than $n',
+          );
         }
       }
     });
@@ -128,8 +140,9 @@ void main() {
   group('the preferences written', () {
     test('carry the size, the fitted width and the colours', () {
       final prefs = KioskBrowser.readerPrefs(
-          const ReaderStyle(fontStep: 11, colourScheme: 'dark'),
-          windowWidth: panelWindow);
+        const ReaderStyle(fontStep: 11, colourScheme: 'dark'),
+        windowWidth: panelWindow,
+      );
       expect(prefs, contains('user_pref("reader.font_size", 11);'));
       expect(prefs, contains('user_pref("reader.content_width", 5);'));
       expect(prefs, contains('user_pref("reader.color_scheme", "dark");'));
@@ -146,14 +159,17 @@ void main() {
 
     test('follows its settings', () {
       final style = DashboardNewsWidget.readerStyle(
-          news({'readerTextSize': 'huge', 'readerTheme': 'sepia'}));
+        news({'readerTextSize': 'huge', 'readerTheme': 'sepia'}),
+      );
       expect(style!.fontStep, 12);
       expect(style.colourScheme, 'sepia');
     });
 
     test('switched off, pages open as the site serves them', () {
-      expect(DashboardNewsWidget.readerStyle(news({'readerView': false})),
-          isNull);
+      expect(
+        DashboardNewsWidget.readerStyle(news({'readerView': false})),
+        isNull,
+      );
     });
   });
 }

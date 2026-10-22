@@ -58,7 +58,9 @@ class _CustomWidgetTileState extends State<CustomWidgetTile>
   /// Where to fetch from, with the settings filled in.
   String? get _url {
     final url = widget.spec.url;
-    return url == null ? null : customFill(url, options: _options, encode: true);
+    return url == null
+        ? null
+        : customFill(url, options: _options, encode: true);
   }
 
   @override
@@ -237,9 +239,9 @@ class _Cards extends StatelessWidget {
                 decoration: theme.isLcars
                     ? lcarsCard(theme, lit: false)
                     : BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
-                  color: theme.textSecondary.withValues(alpha: 0.07),
-                ),
+                        borderRadius: BorderRadius.circular(14),
+                        color: theme.textSecondary.withValues(alpha: 0.07),
+                      ),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
                   vertical: 8,

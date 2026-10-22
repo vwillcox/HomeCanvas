@@ -39,7 +39,8 @@ class _VideoOverlayState extends State<VideoOverlay> {
   @override
   Widget build(BuildContext context) {
     final closed = context.select<VideoPlayerService, bool>(
-        (y) => y.view == VideoView.closed);
+      (y) => y.view == VideoView.closed,
+    );
     if (closed) return const SizedBox.shrink();
     return Positioned.fill(
       child: Material(
@@ -109,25 +110,31 @@ class _BodyState extends State<_Body> {
     _duration = player.state.duration;
     _playing = player.state.playing;
     _rate = player.state.rate;
-    _subs.add(player.stream.position.listen((p) {
-      if (_seeking || !mounted) return;
-      // Many times a second. Only the full screen's controls show it, so
-      // the picture-in-picture window and a bare picture are not rebuilt
-      // for it; the next rebuild picks it up.
-      if (_shown == VideoView.full && _controls) {
-        setState(() => _position = p);
-      } else {
-        _position = p;
-      }
-    }));
-    _subs.add(player.stream.duration.listen((d) {
-      if (mounted) setState(() => _duration = d);
-    }));
-    _subs.add(player.stream.playing.listen((p) {
-      if (!mounted) return;
-      setState(() => _playing = p);
-      _scheduleHide();
-    }));
+    _subs.add(
+      player.stream.position.listen((p) {
+        if (_seeking || !mounted) return;
+        // Many times a second. Only the full screen's controls show it, so
+        // the picture-in-picture window and a bare picture are not rebuilt
+        // for it; the next rebuild picks it up.
+        if (_shown == VideoView.full && _controls) {
+          setState(() => _position = p);
+        } else {
+          _position = p;
+        }
+      }),
+    );
+    _subs.add(
+      player.stream.duration.listen((d) {
+        if (mounted) setState(() => _duration = d);
+      }),
+    );
+    _subs.add(
+      player.stream.playing.listen((p) {
+        if (!mounted) return;
+        setState(() => _playing = p);
+        _scheduleHide();
+      }),
+    );
     _scheduleHide();
   }
 
@@ -168,17 +175,19 @@ class _BodyState extends State<_Body> {
     if (link == null) return;
     final title = video.stream?.title;
     unawaited(video.close());
-    widget.navigatorKey.currentState?.push(MaterialPageRoute(
-      builder: (_) => LinkViewerScreen(
-        url: link.url,
-        title: title ?? tr('video.video', 'Video'),
-        // The site's own signed-in profile — named after the site, as
-        // VideoSite.loginProfile is.
-        profile: link.site,
-        keepProfile: true,
-        timeout: const Duration(hours: 1),
+    widget.navigatorKey.currentState?.push(
+      MaterialPageRoute(
+        builder: (_) => LinkViewerScreen(
+          url: link.url,
+          title: title ?? tr('video.video', 'Video'),
+          // The site's own signed-in profile — named after the site, as
+          // VideoSite.loginProfile is.
+          profile: link.site,
+          keepProfile: true,
+          timeout: const Duration(hours: 1),
+        ),
       ),
-    ));
+    );
   }
 
   @override
@@ -191,14 +200,16 @@ class _BodyState extends State<_Body> {
       _controls = true;
       _scheduleHide();
     }
-    return LayoutBuilder(builder: (context, c) {
-      final screen = c.biggest;
-      return switch (video.view) {
-        VideoView.closed => const SizedBox.shrink(),
-        VideoView.full => _full(video),
-        VideoView.pip => Stack(children: [_pip(video, screen)]),
-      };
-    });
+    return LayoutBuilder(
+      builder: (context, c) {
+        final screen = c.biggest;
+        return switch (video.view) {
+          VideoView.closed => const SizedBox.shrink(),
+          VideoView.full => _full(video),
+          VideoView.pip => Stack(children: [_pip(video, screen)]),
+        };
+      },
+    );
   }
 
   // --- Full screen ----------------------------------------------------------
@@ -207,8 +218,9 @@ class _BodyState extends State<_Body> {
     final player = video.player;
     final ready = !video.loading && video.error == null && player != null;
     final total = _duration.inMilliseconds.toDouble();
-    final pos =
-        _position.inMilliseconds.clamp(0, total <= 0 ? 0 : total).toDouble();
+    final pos = _position.inMilliseconds
+        .clamp(0, total <= 0 ? 0 : total)
+        .toDouble();
 
     return ColoredBox(
       color: Colors.black,
@@ -269,7 +281,8 @@ class _BodyState extends State<_Body> {
                       setState(() => _seeking = true);
                     },
                     onSeekChanged: (v) => setState(
-                        () => _position = Duration(milliseconds: v.toInt())),
+                      () => _position = Duration(milliseconds: v.toInt()),
+                    ),
                     onSeekEnd: (v) async {
                       await player.seek(Duration(milliseconds: v.toInt()));
                       if (mounted) setState(() => _seeking = false);
@@ -305,17 +318,22 @@ class _BodyState extends State<_Body> {
             if (_hud != null)
               Center(
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 26, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 26,
+                    vertical: 16,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.black.withValues(alpha: 0.66),
                     borderRadius: BorderRadius.circular(18),
                   ),
-                  child: Text(_hud!,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 34,
-                          fontWeight: FontWeight.w600)),
+                  child: Text(
+                    _hud!,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 34,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ),
           ],
@@ -347,7 +365,10 @@ class _BodyState extends State<_Body> {
           FilledButton.icon(
             onPressed: video.close,
             icon: const Icon(Icons.close, size: 30),
-            label: Text(tr('video.close', 'Close'), style: TextStyle(fontSize: 22)),
+            label: Text(
+              tr('video.close', 'Close'),
+              style: TextStyle(fontSize: 22),
+            ),
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFFB3261E),
               foregroundColor: Colors.white,
@@ -365,16 +386,18 @@ class _BodyState extends State<_Body> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w600),
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 if ((stream?.channel ?? '').isNotEmpty)
-                  Text(stream!.channel,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style:
-                          const TextStyle(color: Colors.white70, fontSize: 17)),
+                  Text(
+                    stream!.channel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white70, fontSize: 17),
+                  ),
               ],
             ),
           ),
@@ -383,11 +406,15 @@ class _BodyState extends State<_Body> {
             FilledButton.tonalIcon(
               onPressed: video.showPip,
               icon: const Icon(Icons.picture_in_picture_alt, size: 30),
-              label: Text(tr('video.pictureInPicture', 'Picture in picture'),
-                  style: TextStyle(fontSize: 20)),
+              label: Text(
+                tr('video.pictureInPicture', 'Picture in picture'),
+                style: TextStyle(fontSize: 20),
+              ),
               style: FilledButton.styleFrom(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 26, vertical: 20),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 26,
+                  vertical: 20,
+                ),
               ),
             ),
         ],
@@ -401,22 +428,27 @@ class _BodyState extends State<_Body> {
       fit: StackFit.expand,
       children: [
         if (link?.thumbnailUrl != null)
-          Image.network(link!.thumbnailUrl!,
-              fit: BoxFit.cover,
-              // Faded by the image itself, without an Opacity's extra layer.
-              opacity: const AlwaysStoppedAnimation(0.35),
-              errorBuilder: (_, _, _) => const SizedBox.shrink()),
+          Image.network(
+            link!.thumbnailUrl!,
+            fit: BoxFit.cover,
+            // Faded by the image itself, without an Opacity's extra layer.
+            opacity: const AlwaysStoppedAnimation(0.35),
+            errorBuilder: (_, _, _) => const SizedBox.shrink(),
+          ),
         Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               const SizedBox(
-                  width: 64,
-                  height: 64,
-                  child: CircularProgressIndicator(strokeWidth: 5)),
+                width: 64,
+                height: 64,
+                child: CircularProgressIndicator(strokeWidth: 5),
+              ),
               const SizedBox(height: 24),
-              Text('Fetching the video from ${link?.siteName ?? 'the site'}…',
-                  style: const TextStyle(color: Colors.white70, fontSize: 22)),
+              Text(
+                'Fetching the video from ${link?.siteName ?? 'the site'}…',
+                style: const TextStyle(color: Colors.white70, fontSize: 22),
+              ),
             ],
           ),
         ),
@@ -447,22 +479,30 @@ class _BodyState extends State<_Body> {
                 FilledButton.icon(
                   onPressed: () => _openInBrowser(video),
                   icon: const Icon(Icons.open_in_browser, size: 28),
-                  label: Text(tr('video.openInTheBrowser', 'Open in the browser'),
-                      style: TextStyle(fontSize: 20)),
+                  label: Text(
+                    tr('video.openInTheBrowser', 'Open in the browser'),
+                    style: TextStyle(fontSize: 20),
+                  ),
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 28, vertical: 20),
+                      horizontal: 28,
+                      vertical: 20,
+                    ),
                   ),
                 ),
                 OutlinedButton.icon(
                   onPressed: () => video.play(video.link!),
                   icon: const Icon(Icons.refresh, size: 28),
-                  label:
-                      Text(tr('video.tryAgain', 'Try again'), style: TextStyle(fontSize: 20)),
+                  label: Text(
+                    tr('video.tryAgain', 'Try again'),
+                    style: TextStyle(fontSize: 20),
+                  ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 28, vertical: 20),
+                      horizontal: 28,
+                      vertical: 20,
+                    ),
                   ),
                 ),
               ],
@@ -480,14 +520,20 @@ class _BodyState extends State<_Body> {
   Rect _defaultPip(Size screen) {
     final w = math.min(640.0, screen.width / 3);
     final h = w / _aspect;
-    return Rect.fromLTWH(screen.width - w - _margin,
-        screen.height - h - _margin, w, h);
+    return Rect.fromLTWH(
+      screen.width - w - _margin,
+      screen.height - h - _margin,
+      w,
+      h,
+    );
   }
 
   /// [r] kept on screen and within a sensible size, at 16:9.
   Rect _fit(Rect r, Size screen) {
-    final maxW = math.min(screen.width - _margin * 2,
-        (screen.height - _margin * 2) * _aspect);
+    final maxW = math.min(
+      screen.width - _margin * 2,
+      (screen.height - _margin * 2) * _aspect,
+    );
     final w = r.width.clamp(math.min(_minPipWidth, maxW), maxW).toDouble();
     final h = w / _aspect;
     final left = r.left.clamp(0.0, math.max(0.0, screen.width - w)).toDouble();
@@ -525,7 +571,11 @@ class _BodyState extends State<_Body> {
           final w = _pinchStartWidth * d.scale;
           final h = w / _aspect;
           final c = current.center + d.focalPointDelta;
-          _setPip(video, Rect.fromCenter(center: c, width: w, height: h), screen);
+          _setPip(
+            video,
+            Rect.fromCenter(center: c, width: w, height: h),
+            screen,
+          );
         },
         child: DecoratedBox(
           decoration: BoxDecoration(
@@ -557,9 +607,7 @@ class _BodyState extends State<_Body> {
                           children: [
                             _pipButton(Icons.close, video.close),
                             _pipButton(
-                              _playing
-                                  ? Icons.pause_circle
-                                  : Icons.play_circle,
+                              _playing ? Icons.pause_circle : Icons.play_circle,
                               () {
                                 player?.playOrPause();
                                 _scheduleHide();
@@ -647,8 +695,11 @@ class _ResizeHandle extends StatelessWidget {
               // open_in_full points up-right; turned to point out of whichever
               // corner the handle is on.
               angle: growLeft == growUp ? -math.pi / 2 : 0,
-              child: const Icon(Icons.open_in_full,
-                  color: Colors.white, size: 22),
+              child: const Icon(
+                Icons.open_in_full,
+                color: Colors.white,
+                size: 22,
+              ),
             ),
           ),
         ),

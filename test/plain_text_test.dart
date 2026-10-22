@@ -23,8 +23,10 @@ void main() {
 
     test('names HTML does not know, and numbers that are not characters, '
         'are left alone', () {
-      expect(plainText('&notathing; and &#99999999;'),
-          '&notathing; and &#99999999;');
+      expect(
+        plainText('&notathing; and &#99999999;'),
+        '&notathing; and &#99999999;',
+      );
       expect(plainText('100&#; off'), '100&#; off');
       expect(plainText('AT&T and R&D'), 'AT&T and R&D');
     });
@@ -32,8 +34,10 @@ void main() {
 
   group('markup', () {
     test('tags go, and a block end is a gap between words', () {
-      expect(plainText('<p>One.</p><p>Two <b>bold</b> words.</p>'),
-          'One. Two bold words.');
+      expect(
+        plainText('<p>One.</p><p>Two <b>bold</b> words.</p>'),
+        'One. Two bold words.',
+      );
       expect(plainText('Line<br>break'), 'Line break');
     });
 
@@ -54,8 +58,7 @@ void main() {
   });
 
   group('for the voice', () {
-    test('the camera article that read out "slash": f-stops and fractions',
-        () {
+    test('the camera article that read out "slash": f-stops and fractions', () {
       expect(
         speakable('manual mode: f/1.48, f/1.8, f/2.8, and f/4.'),
         'manual mode: f 1.48, f 1.8, f 2.8, and f 4.',
@@ -64,15 +67,26 @@ void main() {
         speakable('from f/1.48 to f/4.0 in 1/3 stop increments'),
         'from f 1.48 to f 4.0 in one third stop increments',
       );
-      expect(speakable('three quarters, or 3/4, and 1/2'),
-          'three quarters, or three quarters, and one half');
+      expect(
+        speakable('three quarters, or 3/4, and 1/2'),
+        'three quarters, or three quarters, and one half',
+      );
     });
 
     test('no slash is ever said', () {
       for (final s in [
-        'f/4', '1/3', '24/7', '120 km/h', '25/9/2026', 'and/or',
-        'iOS/Android', 'see wired.com/newsletters', 'https://x.com/a/b',
-        '7/9 of them', '4G/5G', 'Gear / Deals',
+        'f/4',
+        '1/3',
+        '24/7',
+        '120 km/h',
+        '25/9/2026',
+        'and/or',
+        'iOS/Android',
+        'see wired.com/newsletters',
+        'https://x.com/a/b',
+        '7/9 of them',
+        '4G/5G',
+        'Gear / Deals',
       ]) {
         expect(speakable(s), isNot(contains('/')), reason: s);
       }
@@ -84,8 +98,10 @@ void main() {
       expect(speakable('on 25/9/2026'), 'on 25 9 2026');
       expect(speakable('you and/or me'), 'you and or me');
       expect(speakable('iOS/Android apps'), 'iOS or Android apps');
-      expect(speakable('Read more at https://wired.com/story/x today'),
-          'Read more at a link today');
+      expect(
+        speakable('Read more at https://wired.com/story/x today'),
+        'Read more at a link today',
+      );
       expect(speakable('7/9 of them'), '7 9 of them');
     });
 
@@ -100,11 +116,12 @@ void main() {
   });
 
   group('in an article', () {
-    test('the embedded article body is decoded, and keeps its paragraphs',
-        () {
-      const p = 'The council agreed on Tuesday to extend the scheme for '
+    test('the embedded article body is decoded, and keeps its paragraphs', () {
+      const p =
+          'The council agreed on Tuesday to extend the scheme for '
           'another three years, after a consultation drew many responses.';
-      final page = '<html><head><meta property="og:title" '
+      final page =
+          '<html><head><meta property="og:title" '
           'content="It&amp;rsquo;s extended"><script type="application/ld+json">'
           '{"@type":"NewsArticle","articleBody":"<p>It&#8217;s done. $p</p>'
           '<p>Caf&eacute; owners &amp; others. $p</p><p>Third. $p</p>"}'

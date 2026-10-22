@@ -61,9 +61,11 @@ mixin BurnInDriftMixin<T extends StatefulWidget> on State<T> {
   /// Apply the drift to [rect], keeping it fully on screen.
   Rect applyDrift(Rect rect, Size screen) {
     final moved = rect.translate(drift.dx, drift.dy);
-    final dx = moved.left.clamp(0.0, max(0.0, screen.width - moved.width)) -
+    final dx =
+        moved.left.clamp(0.0, max(0.0, screen.width - moved.width)) -
         moved.left;
-    final dy = moved.top.clamp(0.0, max(0.0, screen.height - moved.height)) -
+    final dy =
+        moved.top.clamp(0.0, max(0.0, screen.height - moved.height)) -
         moved.top;
     return moved.translate(dx, dy);
   }

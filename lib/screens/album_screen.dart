@@ -116,7 +116,12 @@ class _AlbumScreenState extends State<AlbumScreen> {
     if (images.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(tr('album.noPhotosInThisAlbum', 'No photos in this album for a slideshow')),
+          content: Text(
+            tr(
+              'album.noPhotosInThisAlbum',
+              'No photos in this album for a slideshow',
+            ),
+          ),
         ),
       );
       return;
@@ -309,11 +314,8 @@ List<MonthGroup> groupAssets(List<Asset> assets, {int minPerGroup = 8}) {
 /// newest first, or arranged by hand — and regrouping would override it. A
 /// month that appears twice in a hand-arranged album gets two headings,
 /// which is the honest picture of that order.
-List<MonthGroup> groupByMonth(List<Asset> assets) => _runs(
-  assets,
-  (t) => t.year * 12 + t.month - 1,
-  monthYear,
-);
+List<MonthGroup> groupByMonth(List<Asset> assets) =>
+    _runs(assets, (t) => t.year * 12 + t.month - 1, monthYear);
 
 List<MonthGroup> _runs(
   List<Asset> assets,
@@ -432,7 +434,11 @@ class _ErrorState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.error_outline, size: 48, color: context.look.textSecondary),
+            Icon(
+              Icons.error_outline,
+              size: 48,
+              color: context.look.textSecondary,
+            ),
             const SizedBox(height: 12),
             Text(
               message,

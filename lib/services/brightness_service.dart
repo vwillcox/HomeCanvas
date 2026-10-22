@@ -24,12 +24,15 @@ class BrightnessService extends ChangeNotifier {
     this._backlightDir,
     this._base = 'http://127.0.0.1:8765',
     Future<void> Function()? save,
-  })  : _save = save ?? _config.save,
-        _dio = dio ??
-            Dio(BaseOptions(
-              connectTimeout: const Duration(seconds: 2),
-              receiveTimeout: const Duration(seconds: 2),
-            ));
+  }) : _save = save ?? _config.save,
+       _dio =
+           dio ??
+           Dio(
+             BaseOptions(
+               connectTimeout: const Duration(seconds: 2),
+               receiveTimeout: const Duration(seconds: 2),
+             ),
+           );
 
   /// Below this the panel is on but unreadable — as good as off, and "off"
   /// is the screen settings' job.
@@ -79,8 +82,10 @@ class BrightnessService extends ChangeNotifier {
 
   Future<void> _apply(int percent) async {
     try {
-      await _dio.get('$_base/screen/brightness',
-          queryParameters: {'value': percent});
+      await _dio.get(
+        '$_base/screen/brightness',
+        queryParameters: {'value': percent},
+      );
       return;
     } catch (e) {
       debugPrint('Brightness: screen_control unreachable ($e); writing sysfs');
@@ -89,7 +94,8 @@ class BrightnessService extends ChangeNotifier {
     if (dir == null) return;
     try {
       final max = int.parse(
-          (await File('$dir/max_brightness').readAsString()).trim());
+        (await File('$dir/max_brightness').readAsString()).trim(),
+      );
       final raw = (percent * max / 100).round().clamp(1, max);
       await File('$dir/brightness').writeAsString('$raw');
     } catch (e) {
@@ -107,9 +113,12 @@ class BrightnessService extends ChangeNotifier {
     final dir = await _backlight();
     if (dir == null) return null;
     try {
-      final now = int.parse((await File('$dir/brightness').readAsString()).trim());
+      final now = int.parse(
+        (await File('$dir/brightness').readAsString()).trim(),
+      );
       final max = int.parse(
-          (await File('$dir/max_brightness').readAsString()).trim());
+        (await File('$dir/max_brightness').readAsString()).trim(),
+      );
       return max == 0 ? null : (now * 100 / max).round();
     } catch (_) {
       return null;

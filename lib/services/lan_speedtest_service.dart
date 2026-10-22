@@ -50,15 +50,14 @@ class LanSpeedtestState {
     double? progress,
     String? error,
     DateTime? finishedAt,
-  }) =>
-      LanSpeedtestState(
-        phase: phase ?? this.phase,
-        downloadMbps: downloadMbps ?? this.downloadMbps,
-        uploadMbps: uploadMbps ?? this.uploadMbps,
-        progress: progress ?? this.progress,
-        error: error,
-        finishedAt: finishedAt ?? this.finishedAt,
-      );
+  }) => LanSpeedtestState(
+    phase: phase ?? this.phase,
+    downloadMbps: downloadMbps ?? this.downloadMbps,
+    uploadMbps: uploadMbps ?? this.uploadMbps,
+    progress: progress ?? this.progress,
+    error: error,
+    finishedAt: finishedAt ?? this.finishedAt,
+  );
 }
 
 class LanSpeedtestService extends ChangeNotifier {
@@ -96,8 +95,15 @@ class LanSpeedtestService extends ChangeNotifier {
     if (_state.running) return;
     final base = baseUrl.trim().replaceAll(RegExp(r'/+$'), '');
     if (base.isEmpty) {
-      _emit(LanSpeedtestState(
-          phase: LanPhase.failed, error: tr('widget.speedtest.noServerAddressSet', 'No server address set')));
+      _emit(
+        LanSpeedtestState(
+          phase: LanPhase.failed,
+          error: tr(
+            'widget.speedtest.noServerAddressSet',
+            'No server address set',
+          ),
+        ),
+      );
       return;
     }
 
@@ -117,8 +123,13 @@ class LanSpeedtestService extends ChangeNotifier {
         run: (c, stop) => _downloadStream(c, base, stop),
       );
       if (_cancelled) return;
-      _emit(_state.copyWith(
-          phase: LanPhase.upload, downloadMbps: down, progress: 0));
+      _emit(
+        _state.copyWith(
+          phase: LanPhase.upload,
+          downloadMbps: down,
+          progress: 0,
+        ),
+      );
 
       final up = await _measure(
         client: client,
@@ -127,17 +138,24 @@ class LanSpeedtestService extends ChangeNotifier {
       );
       if (_cancelled) return;
 
-      _emit(_state.copyWith(
-        phase: LanPhase.done,
-        downloadMbps: down,
-        uploadMbps: up,
-        progress: 1,
-        finishedAt: DateTime.now(),
-      ));
+      _emit(
+        _state.copyWith(
+          phase: LanPhase.done,
+          downloadMbps: down,
+          uploadMbps: up,
+          progress: 1,
+          finishedAt: DateTime.now(),
+        ),
+      );
     } catch (e) {
       if (!_cancelled) {
-        _emit(_state.copyWith(
-            phase: LanPhase.failed, error: _readable(e), progress: 0));
+        _emit(
+          _state.copyWith(
+            phase: LanPhase.failed,
+            error: _readable(e),
+            progress: 0,
+          ),
+        );
       }
     } finally {
       client.close(force: true);
@@ -147,12 +165,24 @@ class LanSpeedtestService extends ChangeNotifier {
   static String _readable(Object e) {
     final s = '$e';
     if (s.contains('Connection refused')) {
-      return tr('widget.speedtest.nothingAnsweringIsTheServer', 'Nothing answering — is the server running?');
+      return tr(
+        'widget.speedtest.nothingAnsweringIsTheServer',
+        'Nothing answering — is the server running?',
+      );
     }
-    if (s.contains('No route to host') || s.contains('Network is unreachable')) {
-      return tr('widget.speedtest.cannotReachThatAddressFrom', 'Cannot reach that address from here');
+    if (s.contains('No route to host') ||
+        s.contains('Network is unreachable')) {
+      return tr(
+        'widget.speedtest.cannotReachThatAddressFrom',
+        'Cannot reach that address from here',
+      );
     }
-    if (e is TimeoutException) return tr('widget.speedtest.theServerStoppedResponding', 'The server stopped responding');
+    if (e is TimeoutException) {
+      return tr(
+        'widget.speedtest.theServerStoppedResponding',
+        'The server stopped responding',
+      );
+    }
     return s.length > 90 ? '${s.substring(0, 90)}…' : s;
   }
 
@@ -175,12 +205,17 @@ class LanSpeedtestService extends ChangeNotifier {
       final elapsed = DateTime.now().difference(started);
       if (elapsed.inMilliseconds < 300) return;
       final mbps = _bytes * 8 / elapsed.inMicroseconds;
-      _emit(_state.copyWith(
-        phase: phase,
-        progress: (elapsed.inMilliseconds / _phase.inMilliseconds).clamp(0, 1),
-        downloadMbps: phase == LanPhase.download ? mbps : _state.downloadMbps,
-        uploadMbps: phase == LanPhase.upload ? mbps : _state.uploadMbps,
-      ));
+      _emit(
+        _state.copyWith(
+          phase: phase,
+          progress: (elapsed.inMilliseconds / _phase.inMilliseconds).clamp(
+            0,
+            1,
+          ),
+          downloadMbps: phase == LanPhase.download ? mbps : _state.downloadMbps,
+          uploadMbps: phase == LanPhase.upload ? mbps : _state.uploadMbps,
+        ),
+      );
     });
 
     final timer = Timer(_phase, () {
@@ -188,9 +223,7 @@ class LanSpeedtestService extends ChangeNotifier {
     });
 
     try {
-      await Future.wait([
-        for (var i = 0; i < _streams; i++) run(client, stop),
-      ]);
+      await Future.wait([for (var i = 0; i < _streams; i++) run(client, stop)]);
     } finally {
       ticker.cancel();
       timer.cancel();
@@ -206,11 +239,15 @@ class LanSpeedtestService extends ChangeNotifier {
   int _bytes = 0;
 
   Future<void> _downloadStream(
-      HttpClient client, String base, Completer<void> stop) async {
+    HttpClient client,
+    String base,
+    Completer<void> stop,
+  ) async {
     final rng = Random();
     while (!stop.isCompleted && !_cancelled) {
-      final req = await client
-          .getUrl(Uri.parse('$base/downloading?r=${rng.nextDouble()}'));
+      final req = await client.getUrl(
+        Uri.parse('$base/downloading?r=${rng.nextDouble()}'),
+      );
       final resp = await req.close();
       await for (final chunk in resp) {
         _bytes += chunk.length;
@@ -225,7 +262,10 @@ class LanSpeedtestService extends ChangeNotifier {
   }
 
   Future<void> _uploadStream(
-      HttpClient client, String base, Completer<void> stop) async {
+    HttpClient client,
+    String base,
+    Completer<void> stop,
+  ) async {
     // One buffer, sent repeatedly. Generating fresh random data per chunk
     // would measure the Pi's random number generator as much as its network.
     final block = Uint8List(256 * 1024);
@@ -235,9 +275,13 @@ class LanSpeedtestService extends ChangeNotifier {
     }
 
     while (!stop.isCompleted && !_cancelled) {
-      final req = await client
-          .postUrl(Uri.parse('$base/upload?r=${rng.nextDouble()}'));
-      req.headers.set(HttpHeaders.contentTypeHeader, 'application/octet-stream');
+      final req = await client.postUrl(
+        Uri.parse('$base/upload?r=${rng.nextDouble()}'),
+      );
+      req.headers.set(
+        HttpHeaders.contentTypeHeader,
+        'application/octet-stream',
+      );
       req.headers.chunkedTransferEncoding = true;
 
       // Roughly 16 MiB per request, or until the clock stops.

@@ -4,10 +4,10 @@ import 'package:home_canvas/services/retry_schedule.dart';
 
 void main() {
   RetrySchedule fresh() => RetrySchedule(
-        settled: const Duration(minutes: 15),
-        first: const Duration(seconds: 4),
-        ceiling: const Duration(seconds: 60),
-      );
+    settled: const Duration(minutes: 15),
+    first: const Duration(seconds: 4),
+    ceiling: const Duration(seconds: 60),
+  );
 
   group('while there is nothing to show', () {
     test('the first retry is soon, not a whole interval away', () {

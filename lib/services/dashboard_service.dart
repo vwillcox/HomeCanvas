@@ -39,11 +39,8 @@ import 'local_network.dart';
 /// than written into the page. That is what makes a new widget or theme show
 /// up in the browser without the editor being touched.
 class DashboardService extends ChangeNotifier {
-  DashboardService(
-    this._config, {
-    this._previewData,
-    this._albums,
-  }) : themes = ThemeRepository(ThemeRepository.defaultDirectory());
+  DashboardService(this._config, {this._previewData, this._albums})
+    : themes = ThemeRepository(ThemeRepository.defaultDirectory());
 
   final ConfigService _config;
 
@@ -154,7 +151,8 @@ class DashboardService extends ChangeNotifier {
   /// Rebinds when a port or the relay changes; otherwise leaves working
   /// servers alone.
   Future<void> refreshFromSettings() async {
-    final same = (_server != null) == settings.enabled &&
+    final same =
+        (_server != null) == settings.enabled &&
         (_server == null || _server!.port == settings.editorPort) &&
         _webBound == _webKey;
     if (same) return;
@@ -179,11 +177,17 @@ class DashboardService extends ChangeNotifier {
     if (settings.enabled) {
       try {
         _server = await HttpServer.bind(
-            InternetAddress.anyIPv4, settings.editorPort, shared: true);
+          InternetAddress.anyIPv4,
+          settings.editorPort,
+          shared: true,
+        );
         debugPrint('Dashboard editor on :${settings.editorPort}');
-        _server!.listen(_handle, onError: (Object e) {
-          debugPrint('Dashboard: server error: $e');
-        });
+        _server!.listen(
+          _handle,
+          onError: (Object e) {
+            debugPrint('Dashboard: server error: $e');
+          },
+        );
       } catch (e) {
         debugPrint('Dashboard: could not bind ${settings.editorPort}: $e');
       }
@@ -206,25 +210,35 @@ class DashboardService extends ChangeNotifier {
         : null;
     try {
       _webServer = await HttpServer.bind(
-          InternetAddress.anyIPv4, port, shared: true);
-      debugPrint('Dashboard editor also on :$port'
-          '${relay == null ? '' : ', passing Hue on to ${relay.target}'}');
-      _webServer!.listen((request) {
-        // Alexa, for the Hue bridge that used to have this port.
-        if (relay != null && HueRelay.handles(request.uri.path)) {
-          unawaited(relay.forward(request));
-        } else if (settings.enabled) {
-          unawaited(_handle(request));
-        } else {
-          request.response.statusCode = HttpStatus.notFound;
-          unawaited(request.response.close());
-        }
-      }, onError: (Object e) {
-        debugPrint('Dashboard: server error on :$port: $e');
-      });
+        InternetAddress.anyIPv4,
+        port,
+        shared: true,
+      );
+      debugPrint(
+        'Dashboard editor also on :$port'
+        '${relay == null ? '' : ', passing Hue on to ${relay.target}'}',
+      );
+      _webServer!.listen(
+        (request) {
+          // Alexa, for the Hue bridge that used to have this port.
+          if (relay != null && HueRelay.handles(request.uri.path)) {
+            unawaited(relay.forward(request));
+          } else if (settings.enabled) {
+            unawaited(_handle(request));
+          } else {
+            request.response.statusCode = HttpStatus.notFound;
+            unawaited(request.response.close());
+          }
+        },
+        onError: (Object e) {
+          debugPrint('Dashboard: server error on :$port: $e');
+        },
+      );
     } catch (e) {
-      debugPrint('Dashboard: could not bind :$port ($e) — the editor stays '
-          'on :${settings.editorPort}.');
+      debugPrint(
+        'Dashboard: could not bind :$port ($e) — the editor stays '
+        'on :${settings.editorPort}.',
+      );
       webPortNote = await _whyNotWebPort(e, port);
     }
     notifyListeners();
@@ -237,7 +251,11 @@ class DashboardService extends ChangeNotifier {
     const setup = 'bash scripts/setup-port-80.sh';
     final code = error is SocketException ? error.osError?.errorCode : null;
     if (code == 13) {
-      return tr('settings.notOnPortYetThe', 'Not on port {port} yet: the Pi needs setting up for it. Run {setup} on the Pi.', {'port': port, 'setup': setup});
+      return tr(
+        'settings.notOnPortYetThe',
+        'Not on port {port} yet: the Pi needs setting up for it. Run {setup} on the Pi.',
+        {'port': port, 'setup': setup},
+      );
     }
     if (code == 98 && await _hueBridgeOn(port)) {
       return tr(
@@ -247,23 +265,27 @@ class DashboardService extends ChangeNotifier {
         {'port': port, 'setup': setup},
       );
     }
-    return tr('settings.portIsInUseBy', 'Port {port} is in use by something else, so the editor has its own port.', {'port': port});
+    return tr(
+      'settings.portIsInUseBy',
+      'Port {port} is in use by something else, so the editor has its own port.',
+      {'port': port},
+    );
   }
 
   /// Whether a Hue bridge answers on [port] — at this machine's address,
   /// since emulated_hue listens there rather than on every interface.
   Future<bool> _hueBridgeOn(int port) async {
-    final client = HttpClient()
-      ..connectionTimeout = const Duration(seconds: 3);
+    final client = HttpClient()..connectionTimeout = const Duration(seconds: 3);
     try {
       for (final host in {?_ip, '127.0.0.1'}) {
         try {
           final req = await client.get(host, port, '/description.xml');
           final res = await req.close().timeout(const Duration(seconds: 3));
           final body = await utf8.decoder.bind(res).join();
-          if (RegExp('philips|hue bridge|home assistant bridge',
-                  caseSensitive: false)
-              .hasMatch(body)) {
+          if (RegExp(
+            'philips|hue bridge|home assistant bridge',
+            caseSensitive: false,
+          ).hasMatch(body)) {
             return true;
           }
         } catch (_) {}
@@ -277,8 +299,9 @@ class DashboardService extends ChangeNotifier {
   /// Interfaces that exist but are no use to a browser on the sofa. This Pi
   /// runs Docker, whose bridge answers first and would otherwise be shown on
   /// screen as the address to type.
-  static final RegExp _virtualInterface =
-      RegExp(r'^(docker|br-|veth|virbr|tun|tap|vmnet|zt)');
+  static final RegExp _virtualInterface = RegExp(
+    r'^(docker|br-|veth|virbr|tun|tap|vmnet|zt)',
+  );
 
   /// The address to type into a browser on the same network.
   static Future<String> _localAddress() async {
@@ -299,7 +322,8 @@ class DashboardService extends ChangeNotifier {
       // newer SDKs narrow this list to InterfaceAddress, and an orElse
       // returning a plain InternetAddress no longer type-checks there.
       final home = real.where(
-          (a) => a.address.startsWith('192.168.') || a.address.startsWith('10.'));
+        (a) => a.address.startsWith('192.168.') || a.address.startsWith('10.'),
+      );
       if (home.isNotEmpty) return home.first.address;
       if (real.isNotEmpty) return real.first.address;
     } catch (e) {
@@ -447,7 +471,8 @@ class DashboardService extends ChangeNotifier {
         if (request.method != 'GET' && !_fromThisSite(request)) {
           return await _status(request, HttpStatus.forbidden);
         }
-        if (path == '/api/widgets/build' || path.startsWith('/api/widgets/code')) {
+        if (path == '/api/widgets/build' ||
+            path.startsWith('/api/widgets/code')) {
           return await _codeWidgetsApi(request, path);
         }
         return await _widgetsApi(request, path);
@@ -539,18 +564,27 @@ class DashboardService extends ChangeNotifier {
       if (path == '/notes' || path == '/notes/') {
         if (!_requireLocal(request)) return;
         return await _serveAsset(
-            request, 'assets/dashboard/notes.html', ContentType.html);
+          request,
+          'assets/dashboard/notes.html',
+          ContentType.html,
+        );
       }
       // Custom widgets: installing them, and watching one build.
       if (path == '/widgets' || path == '/widgets/') {
         if (!_requireLocal(request)) return;
         return await _serveAsset(
-            request, 'assets/dashboard/widgets.html', ContentType.html);
+          request,
+          'assets/dashboard/widgets.html',
+          ContentType.html,
+        );
       }
       if (path == '/list' || path == '/list/') {
         if (!_requireLocal(request)) return;
         return await _serveAsset(
-            request, 'assets/dashboard/list.html', ContentType.html);
+          request,
+          'assets/dashboard/list.html',
+          ContentType.html,
+        );
       }
       if (path == '/api/list') {
         if (!_requireLocal(request)) return;
@@ -577,7 +611,10 @@ class DashboardService extends ChangeNotifier {
       if (_videoSiteAt(path, api: false) != null) {
         if (!_requireLocal(request)) return;
         return await _serveAsset(
-            request, 'assets/dashboard/sign_in.html', ContentType.html);
+          request,
+          'assets/dashboard/sign_in.html',
+          ContentType.html,
+        );
       }
       final signInApi = _videoSiteAt(path, api: true);
       if (signInApi != null) {
@@ -595,7 +632,10 @@ class DashboardService extends ChangeNotifier {
       if (path == '/senders' || path == '/senders/') {
         if (!_requireLocal(request)) return;
         return await _serveAsset(
-            request, 'assets/dashboard/senders.html', ContentType.html);
+          request,
+          'assets/dashboard/senders.html',
+          ContentType.html,
+        );
       }
       if (path == '/api/senders') {
         if (!_requireLocal(request)) return;
@@ -670,7 +710,10 @@ class DashboardService extends ChangeNotifier {
   final Map<String, String> _assets = {};
 
   Future<void> _serveAsset(
-      HttpRequest request, String asset, ContentType type) async {
+    HttpRequest request,
+    String asset,
+    ContentType type,
+  ) async {
     _assets[asset] ??= await rootBundle.loadString(asset);
     request.response
       ..headers.contentType = type
@@ -719,11 +762,11 @@ class DashboardService extends ChangeNotifier {
   /// sent back.
   Future<void> _accountApi(HttpRequest request, VideoSite site) async {
     Future<void> status([String? error]) async => _json(request, {
-          'signedIn': site.signedIn,
-          'how': await site.accountSource(),
-          'ready': site.ready,
-          'error': ?error,
-        });
+      'signedIn': site.signedIn,
+      'how': await site.accountSource(),
+      'ready': site.ready,
+      'error': ?error,
+    });
 
     switch (request.method) {
       case 'GET':
@@ -740,7 +783,8 @@ class DashboardService extends ChangeNotifier {
           }
         }
         return status(
-            await site.useCookies(utf8.decode(bytes, allowMalformed: true)));
+          await site.useCookies(utf8.decode(bytes, allowMalformed: true)),
+        );
     }
     return await _status(request, HttpStatus.methodNotAllowed);
   }
@@ -839,7 +883,8 @@ class DashboardService extends ChangeNotifier {
     // An IPv6 address in brackets, with or without a port.
     if (name.startsWith('[')) {
       final end = name.indexOf(']');
-      return end > 0 && InternetAddress.tryParse(name.substring(1, end)) != null;
+      return end > 0 &&
+          InternetAddress.tryParse(name.substring(1, end)) != null;
     }
     final colon = name.lastIndexOf(':');
     if (colon >= 0) name = name.substring(0, colon);
@@ -873,8 +918,9 @@ class DashboardService extends ChangeNotifier {
   /// Whether [request] came from one of this server's own pages, or from
   /// no web page at all — see [sameOrigin].
   static bool _fromThisSite(HttpRequest request) => sameOrigin(
-      request.headers.value('origin'),
-      request.headers.value(HttpHeaders.hostHeader));
+    request.headers.value('origin'),
+    request.headers.value(HttpHeaders.hostHeader),
+  );
 
   /// Whether a request's Origin, if it sent one, is this server. No Origin
   /// means it did not come from a web page at all — curl, or a same-origin
@@ -927,7 +973,10 @@ class DashboardService extends ChangeNotifier {
         final data = body.isEmpty ? null : jsonDecode(body);
         final text = data is Map ? '${data['text'] ?? ''}' : '';
         final from = data is Map ? '${data['from'] ?? ''}' : '';
-        if (board.add(text, from: from.length > 40 ? from.substring(0, 40) : from) ==
+        if (board.add(
+              text,
+              from: from.length > 40 ? from.substring(0, 40) : from,
+            ) ==
             null) {
           return await _status(request, HttpStatus.badRequest);
         }
@@ -975,13 +1024,16 @@ class DashboardService extends ChangeNotifier {
         'roundedCorners': data['roundedCorners'],
       if (data['tileShadows'] is bool) 'tileShadows': data['tileShadows'],
     });
-    final png = await render(TileRenderRequest(
-      config: DashboardWidgetConfig.fromJson(
-          (data['widget'] as Map).cast<String, dynamic>()),
-      theme: themes.byId('${data['themeId'] ?? settings.themeId}'),
-      settings: look,
-      size: size,
-    ));
+    final png = await render(
+      TileRenderRequest(
+        config: DashboardWidgetConfig.fromJson(
+          (data['widget'] as Map).cast<String, dynamic>(),
+        ),
+        theme: themes.byId('${data['themeId'] ?? settings.themeId}'),
+        settings: look,
+        size: size,
+      ),
+    );
     if (png == null) {
       return await _status(request, HttpStatus.serviceUnavailable);
     }
@@ -1316,10 +1368,7 @@ class DashboardService extends ChangeNotifier {
     }
     // Played on the panel, to hear how loud it is in the room.
     if (path == '/api/sounds/play' && request.method == 'POST') {
-      unawaited(sounds.play(
-        id,
-        volume: _config.config.shareInbox.timerVolume,
-      ));
+      unawaited(sounds.play(id, volume: _config.config.shareInbox.timerVolume));
       return await _json(request, {'playing': id});
     }
     if (path != '/api/sounds') {

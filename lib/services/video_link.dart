@@ -55,8 +55,9 @@ class FloatplaneLink implements VideoLink {
   Duration get start => Duration.zero;
 
   static final RegExp _post = RegExp(
-      r'^https?://(?:www\.|beta\.)?floatplane\.com/post/(\w+)',
-      caseSensitive: false);
+    r'^https?://(?:www\.|beta\.)?floatplane\.com/post/(\w+)',
+    caseSensitive: false,
+  );
 
   static FloatplaneLink? parse(String url) {
     final m = _post.firstMatch(url.trim());
@@ -91,7 +92,8 @@ class RailcamLink implements VideoLink {
   String get siteName => 'Railcam';
 
   @override
-  String get url => 'https://railcam.uk/site/watch/anycam.php'
+  String get url =>
+      'https://railcam.uk/site/watch/anycam.php'
       '?sz=xl&ti=${Uri.encodeQueryComponent(id)}';
 
   /// The site's own small picture of the view.
@@ -136,9 +138,10 @@ class NebulaLink implements VideoLink {
 
   /// Nebula has answered to three names; links to all of them still go round.
   static final RegExp _video = RegExp(
-      r'^https?://(?:www\.|beta\.)?(?:nebula\.tv|nebula\.app|watchnebula\.com)'
-      r'/videos/([\w-]+)',
-      caseSensitive: false);
+    r'^https?://(?:www\.|beta\.)?(?:nebula\.tv|nebula\.app|watchnebula\.com)'
+    r'/videos/([\w-]+)',
+    caseSensitive: false,
+  );
 
   static NebulaLink? parse(String url) {
     final m = _video.firstMatch(url.trim());
