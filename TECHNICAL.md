@@ -14,6 +14,7 @@ setting it up, see [INSTALL.md](INSTALL.md).
 - [One look throughout](#one-look-throughout)
 - [Talking to other things](#talking-to-other-things)
 - [Development](#development)
+- [Known gaps](#known-gaps)
 - [Third-party libraries](#third-party-libraries)
 - [Credits and sources](#credits-and-sources)
 
@@ -1030,6 +1031,23 @@ deploy/                        # systemd units, labwc config, screen control
 companion_app/                 # the Android share app
 test/                          # widget, logic and size-sweep tests
 ```
+
+---
+
+## Known gaps
+
+Things known to be missing, not yet fixed:
+
+- **Night hours for the screen.** The backlight stays at full brightness
+  whenever the dashboard is up, which is likely the biggest power draw left.
+- **UniFi certificate check.** With self-signed certificates allowed, any
+  certificate from the configured host is accepted, so someone on the
+  network could read the API key. The safe fix is to check it against the
+  console's `ui.direct` name.
+- **Home Assistant fetch.** It downloads every entity's state, not just the
+  ones the tiles show.
+- **Share uploads** have no size limit, and there's no cap on how many can
+  wait unopened.
 
 ---
 
