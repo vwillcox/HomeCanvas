@@ -1,0 +1,814 @@
+{
+  "about": "Written by test/installer_catalogue_test.dart from the app. Do not edit by hand.",
+  "categories": [
+    "Time & day",
+    "Weather & air",
+    "Photos, music & TV",
+    "Around the house",
+    "Getting out",
+    "News & reference",
+    "Network",
+    "UniFi",
+    "Homey",
+    "Home lab",
+    "Other"
+  ],
+  "widgets": [
+    {
+      "type": "air_quality",
+      "name": "Air & pollen",
+      "description": "Air quality, today’s pollen for grass, trees and weeds, and UV, for the place set in Settings → Weather. From Open-Meteo, like the weather.",
+      "category": "Weather & air",
+      "width": 3,
+      "height": 2
+    },
+    {
+      "type": "bins",
+      "name": "Bin day",
+      "description": "Which bins go out next and when. From the evening before it says to put them out; tap it once they are out.",
+      "category": "Around the house",
+      "width": 3,
+      "height": 2
+    },
+    {
+      "type": "birthdays",
+      "name": "Birthdays",
+      "description": "Birthdays coming up, with faces, from the people Immich recognises in your photos. Set a date of birth on a person in Immich and they appear here.",
+      "category": "Photos, music & TV",
+      "width": 3,
+      "height": 3
+    },
+    {
+      "type": "calendar",
+      "name": "Calendar",
+      "description": "Upcoming events from one or more published calendar links, as a schedule or a month.",
+      "category": "Time & day",
+      "width": 4,
+      "height": 3
+    },
+    {
+      "type": "certs",
+      "name": "Certificates",
+      "description": "Days left on your sites’ HTTPS certificates, the soonest to expire first — so a renewal that quietly failed is caught before visitors see a warning.",
+      "category": "Home lab",
+      "width": 4,
+      "height": 2
+    },
+    {
+      "type": "chores",
+      "name": "Chores & rewards",
+      "description": "A column per person with today’s chores to tap off. Each earns stars; a weekly goal unlocks a reward. \"Anyone\" chores appear for everybody and go to whoever does them. Resets each Monday.",
+      "category": "Around the house",
+      "width": 6,
+      "height": 4
+    },
+    {
+      "type": "clock",
+      "name": "Clock",
+      "description": "The time, with the date underneath.",
+      "category": "Time & day",
+      "width": 4,
+      "height": 2
+    },
+    {
+      "type": "countdowns",
+      "name": "Countdowns",
+      "description": "Days until the things you are looking forward to — birthdays, holidays, trips. The soonest first.",
+      "category": "Time & day",
+      "width": 3,
+      "height": 2
+    },
+    {
+      "type": "crypto",
+      "name": "Crypto",
+      "description": "Coin prices with their move over the last day or week and a small chart. From CoinGecko — no key needed.",
+      "category": "News & reference",
+      "width": 3,
+      "height": 3
+    },
+    {
+      "type": "floatplane",
+      "name": "Floatplane",
+      "description": "The latest videos from the creators you subscribe to on Floatplane. Touch one to watch it on the panel.",
+      "category": "Photos, music & TV",
+      "width": 4,
+      "height": 3
+    },
+    {
+      "type": "fuel",
+      "name": "Fuel prices",
+      "description": "The cheapest petrol or diesel near home, from the prices Asda, Shell, JET, Applegreen, Morrisons, Moto, MFG, Rontec and SGN publish under the UK’s open fuel price scheme — no key needed.",
+      "category": "Getting out",
+      "width": 3,
+      "height": 3
+    },
+    {
+      "type": "github",
+      "name": "GitHub repository",
+      "description": "Stars, issues, pull requests, releases and a weekly commit chart for your GitHub repositories — a tab each — and, with a token, who has been visiting. No token needed for public ones.",
+      "category": "Home lab",
+      "width": 4,
+      "height": 3
+    },
+    {
+      "type": "grid_carbon",
+      "name": "Grid carbon",
+      "description": "How clean the electricity is right now in your region, the next day as bars, and the greenest three hours to run the washing machine or dishwasher. From National Grid ESO — no key needed.",
+      "category": "Around the house",
+      "width": 3,
+      "height": 3
+    },
+    {
+      "type": "ha_bridge",
+      "name": "Home Assistant bridge",
+      "description": "Home Assistant as a starship’s console, for a page of its own: its rooms down the side, and each room’s lights and switches to tap, its temperatures, and all its lights on or off at once.",
+      "category": "Around the house",
+      "width": 12,
+      "height": 8
+    },
+    {
+      "type": "ha_energy",
+      "name": "Electricity",
+      "description": "Electricity used and what it cost — today, this week, this month or the last twelve, each against the one before, as bars. From your smart meter: today through Home Assistant, and the longer views from Bright, with its login in Settings. About half an hour behind, as the meter is.",
+      "category": "Around the house",
+      "width": 4,
+      "height": 3
+    },
+    {
+      "type": "history",
+      "name": "On this day in history",
+      "description": "Something that happened on this date, from Wikipedia — a new one every half minute, or tap for the next.",
+      "category": "News & reference",
+      "width": 4,
+      "height": 3
+    },
+    {
+      "type": "home_assistant",
+      "name": "Home Assistant",
+      "description": "Home Assistant entities you pick — temperatures, who is home, what is playing — each as a small card. Lights and switches change with a tap; locks and doors are only ever shown.",
+      "category": "Around the house",
+      "width": 4,
+      "height": 2
+    },
+    {
+      "type": "homey",
+      "name": "Homey devices",
+      "description": "Devices on your Homey that you pick — temperatures, doors, what a socket is drawing — each as a small card, changing as the device does. Lights and sockets switch with a tap; locks and doors are only ever shown. Your Homey’s address and API key are entered once, on the panel: Settings → Home → Homey.",
+      "category": "Homey",
+      "width": 4,
+      "height": 2
+    },
+    {
+      "type": "homey_alerts",
+      "name": "Homey alerts",
+      "description": "Only what wants attention: doors and windows open, alarms going, batteries low, devices Homey cannot reach. Says \"All quiet\" when there is nothing. Your Homey’s address and API key are entered once, on the panel: Settings → Home → Homey.",
+      "category": "Homey",
+      "width": 3,
+      "height": 2
+    },
+    {
+      "type": "homey_climate",
+      "name": "Homey climate",
+      "description": "Temperatures: what each room is at and how damp, and for a thermostat what it is set to, with a step up and down. Your Homey’s address and API key are entered once, on the panel: Settings → Home → Homey.",
+      "category": "Homey",
+      "width": 4,
+      "height": 2
+    },
+    {
+      "type": "homey_colour",
+      "name": "Homey light colour",
+      "description": "Lights that change colour: a bar from cool white to warm, and a row of colours to touch. Your Homey’s address and API key are entered once, on the panel: Settings → Home → Homey.",
+      "category": "Homey",
+      "width": 4,
+      "height": 3
+    },
+    {
+      "type": "homey_energy",
+      "name": "Homey energy",
+      "description": "What the house is drawing now, and what is drawing most of it. Needs sockets or a meter that tell Homey their power. Your Homey’s address and API key are entered once, on the panel: Settings → Home → Homey.",
+      "category": "Homey",
+      "width": 3,
+      "height": 2
+    },
+    {
+      "type": "homey_fan",
+      "name": "Homey fans",
+      "description": "Fans: a tap for on and off, a bar for how fast where the fan has one, and a button for turning its head. Your Homey’s address and API key are entered once, on the panel: Settings → Home → Homey.",
+      "category": "Homey",
+      "width": 3,
+      "height": 1
+    },
+    {
+      "type": "homey_flows",
+      "name": "Homey flows",
+      "description": "Buttons that start flows you have made in Homey — Goodnight, Movie time — with a tap. Your Homey’s address and API key are entered once, on the panel: Settings → Home → Homey.",
+      "category": "Homey",
+      "width": 3,
+      "height": 2
+    },
+    {
+      "type": "homey_history",
+      "name": "Homey history",
+      "description": "One of Homey’s logs as a line: a temperature over the day, a week of what a socket drew. Your Homey’s address and API key are entered once, on the panel: Settings → Home → Homey.",
+      "category": "Homey",
+      "width": 4,
+      "height": 2
+    },
+    {
+      "type": "homey_house",
+      "name": "Homey house",
+      "description": "Every room at once: how much is on in each, a tap to switch a room off or on, and one card that switches the whole house off. Your Homey’s address and API key are entered once, on the panel: Settings → Home → Homey.",
+      "category": "Homey",
+      "width": 4,
+      "height": 2
+    },
+    {
+      "type": "homey_lights",
+      "name": "Homey lights",
+      "description": "Your Homey’s lights, each with a bar to drag for how bright and a tap for on and off. Your Homey’s address and API key are entered once, on the panel: Settings → Home → Homey.",
+      "category": "Homey",
+      "width": 4,
+      "height": 3
+    },
+    {
+      "type": "homey_moods",
+      "name": "Homey moods",
+      "description": "Buttons that set a mood — a room’s lights as you saved them in Homey’s app. Your Homey’s address and API key are entered once, on the panel: Settings → Home → Homey.",
+      "category": "Homey",
+      "width": 3,
+      "height": 2
+    },
+    {
+      "type": "homey_presence",
+      "name": "Homey who’s home",
+      "description": "Who is home, who is out and who has gone to bed, as Homey has it. Your Homey’s address and API key are entered once, on the panel: Settings → Home → Homey.",
+      "category": "Homey",
+      "width": 3,
+      "height": 1
+    },
+    {
+      "type": "homey_room",
+      "name": "Homey room",
+      "description": "Everything Homey has in one room, each as a small card, with nothing to pick but the room — and a card for the room itself that switches the lot off, or on. Your Homey’s address and API key are entered once, on the panel: Settings → Home → Homey.",
+      "category": "Homey",
+      "width": 4,
+      "height": 3
+    },
+    {
+      "type": "homey_system",
+      "name": "Homey itself",
+      "description": "The Homey: what version it runs, how long it has been up, and how full its memory and storage are. Your Homey’s address and API key are entered once, on the panel: Settings → Home → Homey.",
+      "category": "Homey",
+      "width": 4,
+      "height": 1
+    },
+    {
+      "type": "homey_timeline",
+      "name": "Homey timeline",
+      "description": "What Homey has had to say lately — its timeline, the newest first. Your Homey’s address and API key are entered once, on the panel: Settings → Home → Homey.",
+      "category": "Homey",
+      "width": 4,
+      "height": 2
+    },
+    {
+      "type": "homey_variables",
+      "name": "Homey variables",
+      "description": "Homey’s logic variables: what each is, and a tap to flip one that is yes or no — \"Guests staying\". Your Homey’s address and API key are entered once, on the panel: Settings → Home → Homey.",
+      "category": "Homey",
+      "width": 3,
+      "height": 1
+    },
+    {
+      "type": "immich",
+      "name": "Photo",
+      "description": "A photo from your Immich server — at random from the whole library, or from one album. Changes on a timer, and on a tap.",
+      "category": "Photos, music & TV",
+      "width": 4,
+      "height": 3
+    },
+    {
+      "type": "immich_library",
+      "name": "Immich library",
+      "description": "Your Immich library in numbers — photos, videos, how much space it takes, how many added lately — with the newest photos along the bottom.",
+      "category": "Photos, music & TV",
+      "width": 4,
+      "height": 3
+    },
+    {
+      "type": "lan_speedtest",
+      "name": "LAN speed test",
+      "description": "Speed between this panel and another machine on your network, using a self-hosted OpenSpeedTest server. Tap to run. Measures your own wiring rather than your internet connection.",
+      "category": "Network",
+      "width": 4,
+      "height": 4
+    },
+    {
+      "type": "lights",
+      "name": "Lights",
+      "description": "Govee lights and plugs. Tap one to switch it, drag along its bar for brightness, tap a colour. Works over the home network for devices with LAN Control turned on in the Govee app, or through Govee with an API key.",
+      "category": "Around the house",
+      "width": 4,
+      "height": 2
+    },
+    {
+      "type": "meals",
+      "name": "Meal plan",
+      "description": "The week’s dinners: tonight’s large, tomorrow’s underneath. After dinner time it moves on to tomorrow.",
+      "category": "Around the house",
+      "width": 3,
+      "height": 2
+    },
+    {
+      "type": "memories",
+      "name": "On this day",
+      "description": "Your photos from this date in past years, from Immich’s memories, with how long ago and where. Tap or swipe for the next.",
+      "category": "Photos, music & TV",
+      "width": 4,
+      "height": 6
+    },
+    {
+      "type": "nebula",
+      "name": "Nebula",
+      "description": "The latest videos from the creators you follow on Nebula. Touch one to watch it on the panel.",
+      "category": "Photos, music & TV",
+      "width": 4,
+      "height": 3
+    },
+    {
+      "type": "news",
+      "name": "News feed",
+      "description": "Headlines from any RSS or Atom feed.",
+      "category": "News & reference",
+      "width": 4,
+      "height": 3
+    },
+    {
+      "type": "notes",
+      "name": "Notes",
+      "description": "Sticky notes for the household. Share text from the phone app, or post one from any phone on the home network at the editor’s address followed by /notes. Tap a note, then Done, to take it down.",
+      "category": "Around the house",
+      "width": 5,
+      "height": 3
+    },
+    {
+      "type": "omarchy",
+      "name": "Omarchy hotkeys",
+      "description": "The Omarchy keyboard shortcuts as a cheat sheet, one section at a time. Tap a section to jump to it, or tap the sheet to turn the page. Sized for a page of its own.",
+      "category": "News & reference",
+      "width": 12,
+      "height": 8
+    },
+    {
+      "type": "planes",
+      "name": "Planes overhead",
+      "description": "The aircraft in the sky around home: who they are, where they’re flying from and to, how high, and which way to look. From adsb.lol, the open network of volunteer ADS-B receivers, and adsbdb — no key needed.",
+      "category": "Getting out",
+      "width": 4,
+      "height": 3
+    },
+    {
+      "type": "railcam",
+      "name": "Railcam",
+      "description": "Lineside cameras from railcam.uk: pick any of its 300 and touch one to watch it live on the panel — or have them playing in the tile, small and silent. Needs your own railcam.uk account — supporters’ cameras, a supporter’s.",
+      "category": "Photos, music & TV",
+      "width": 4,
+      "height": 3
+    },
+    {
+      "type": "rain",
+      "name": "Rain soon",
+      "description": "Whether it is about to rain: the next two hours in a sentence — \"Rain from 14:20, light\" — and as bars. For the place in Settings → Weather.",
+      "category": "Weather & air",
+      "width": 3,
+      "height": 2
+    },
+    {
+      "type": "reminders",
+      "name": "Reminders",
+      "description": "Reminders shared from the phone app — “Remind me to put the bins out at 7pm”, “Don’t forget the dentist tomorrow at 9:30”. Said aloud when they fall due; tap one when it’s done.",
+      "category": "Time & day",
+      "width": 3,
+      "height": 3
+    },
+    {
+      "type": "servers",
+      "name": "Servers",
+      "description": "CPU, memory, disk and temperature for this Pi and your other machines, and whether their containers are running. Other machines need Glances — on CasaOS, one click in its app store.",
+      "category": "Home lab",
+      "width": 4,
+      "height": 3
+    },
+    {
+      "type": "services",
+      "name": "Services",
+      "description": "A light per thing that should be up — Immich, CasaOS, the router, the Mac mini — with how quickly it answers. Tap one to check again, or to wake a sleeping computer.",
+      "category": "Home lab",
+      "width": 4,
+      "height": 3
+    },
+    {
+      "type": "shopping",
+      "name": "Shopping list",
+      "description": "One list the whole house shares. Add to it from any phone on the home network at the editor’s address followed by /list; tap an item on the panel to tick it off. Ticked items clear themselves after half a day.",
+      "category": "Around the house",
+      "width": 4,
+      "height": 4
+    },
+    {
+      "type": "speedtest",
+      "name": "Speed test",
+      "description": "Runs Ookla speedtest and shows download and upload on one dial as it goes, with ping, jitter and packet loss. Tap to start. Needs the speedtest CLI installed — see INSTALL.md.",
+      "category": "Network",
+      "width": 4,
+      "height": 4
+    },
+    {
+      "type": "spotify",
+      "name": "Now playing",
+      "description": "The current track with transport controls. Shows Spotify when it is active, otherwise the phone over Bluetooth. The artwork moves to suit the tile’s shape.",
+      "category": "Photos, music & TV",
+      "width": 5,
+      "height": 2
+    },
+    {
+      "type": "stocks",
+      "name": "Stocks",
+      "description": "Share prices and indices, with today’s move and a small chart. From Yahoo Finance — no key needed. Prices can be 15 minutes behind.",
+      "category": "News & reference",
+      "width": 3,
+      "height": 3
+    },
+    {
+      "type": "sun_moon",
+      "name": "Sun & moon",
+      "description": "Sunrise and sunset, where the sun is now, how fast the days are changing, and the moon’s phase. Worked out on the panel from the place set in Settings → Weather.",
+      "category": "Time & day",
+      "width": 3,
+      "height": 2
+    },
+    {
+      "type": "tfl_arrivals",
+      "name": "London arrivals",
+      "description": "The next Tube, Elizabeth line, Overground, DLR, tram or bus at your stop, counting down in minutes. From TfL — no key needed.",
+      "category": "Getting out",
+      "width": 3,
+      "height": 3
+    },
+    {
+      "type": "tfl_lines",
+      "name": "London lines",
+      "description": "Whether the Tube, Elizabeth line, Overground, DLR and trams are running, each line in its own colour. Tap a line with trouble to read why. From TfL — no key needed.",
+      "category": "Getting out",
+      "width": 3,
+      "height": 4
+    },
+    {
+      "type": "tides",
+      "name": "Tides",
+      "description": "High and low tide times, whether the water is coming in or going out, and the sea’s height through the day — anywhere on the coast. From Open-Meteo’s tide model, no key needed. Modelled, not measured: fine for a walk on the beach, not for navigation.",
+      "category": "Getting out",
+      "width": 4,
+      "height": 3
+    },
+    {
+      "type": "timers",
+      "name": "Timers",
+      "description": "Kitchen timers. Tap a time to start one, tap its ring to pause, hold to cancel. When one is done it plays a sound and says which timer it was; tap the ring to stop it. They keep running when you leave the dashboard.",
+      "category": "Time & day",
+      "width": 3,
+      "height": 3
+    },
+    {
+      "type": "traffic_cams",
+      "name": "Traffic cameras",
+      "description": "Live pictures from the roads: any of London’s 900 TfL JamCams, found by road name or nearest home, or any other camera whose picture has a web address. Tap one to see it large. No key needed.",
+      "category": "Getting out",
+      "width": 4,
+      "height": 3
+    },
+    {
+      "type": "trains",
+      "name": "Train departures",
+      "description": "The next trains from your station, like the board on the platform: time, where to, platform, and whether it is on time. From Realtime Trains — it needs a free token from api-portal.rtt.io.",
+      "category": "Getting out",
+      "width": 5,
+      "height": 3
+    },
+    {
+      "type": "transit",
+      "name": "Departures (Europe & US)",
+      "description": "The next trains, trams, subways or buses from any station or stop across most of Europe and North America — the Netherlands, Germany, Switzerland, the Nordics, New York, Boston, Washington DC, Los Angeles and more — live where the operator shares it. From Transitous, the open journey planner — no key needed.",
+      "category": "Getting out",
+      "width": 4,
+      "height": 3
+    },
+    {
+      "type": "tv",
+      "name": "TV remote",
+      "description": "Controls a Hisense VIDAA television: power, volume, channel and a direction pad. Set the address in Settings → Television.",
+      "category": "Photos, music & TV",
+      "width": 3,
+      "height": 4
+    },
+    {
+      "type": "unifi_clients",
+      "name": "Network clients",
+      "description": "Everything connected, newest first, and which device each is connected through. The API reports no signal strength, so none is shown. Needs a UniFi API key — Network → Settings → Control Plane → Integrations.",
+      "category": "UniFi",
+      "width": 4,
+      "height": 4
+    },
+    {
+      "type": "unifi_devices",
+      "name": "UniFi devices",
+      "description": "Your router, switches and access points with model, firmware and uptime, and a marker against anything with an update. Needs a UniFi API key — Network → Settings → Control Plane → Integrations.",
+      "category": "UniFi",
+      "width": 4,
+      "height": 3
+    },
+    {
+      "type": "unifi_health",
+      "name": "Network health",
+      "description": "Whether the internet is up, current WAN speeds, client count, and any device offline or needing firmware. Needs a UniFi API key — Network → Settings → Control Plane → Integrations.",
+      "category": "UniFi",
+      "width": 4,
+      "height": 3
+    },
+    {
+      "type": "unifi_isp",
+      "name": "ISP speed test",
+      "description": "The router's own built-in speed test — what the line achieved, measured by the router rather than by this panel. Read only: the console runs it on its own schedule and cannot be asked to run one with an API key. Needs a UniFi API key — Network → Settings → Control Plane → Integrations.",
+      "category": "UniFi",
+      "width": 3,
+      "height": 2
+    },
+    {
+      "type": "unifi_presence",
+      "name": "Who's home",
+      "description": "Which devices are on the network right now. Presence on your own WiFi — not a location. Needs a UniFi API key — Network → Settings → Control Plane → Integrations.",
+      "category": "UniFi",
+      "width": 3,
+      "height": 4
+    },
+    {
+      "type": "unifi_throughput",
+      "name": "WAN throughput",
+      "description": "Live up and down rates on the internet connection, graphed over about the chosen window. Needs a UniFi API key — Network → Settings → Control Plane → Integrations.",
+      "category": "UniFi",
+      "width": 4,
+      "height": 3
+    },
+    {
+      "type": "updates",
+      "name": "Updates",
+      "description": "Updates waiting across the house: Immich against its latest release, Home Assistant’s own updates, and UniFi firmware — in one list, or a tick when there are none.",
+      "category": "Home lab",
+      "width": 4,
+      "height": 2
+    },
+    {
+      "type": "weather",
+      "name": "Weather",
+      "description": "Current conditions and a short forecast. Uses the location set in Settings → Weather.",
+      "category": "Weather & air",
+      "width": 4,
+      "height": 3
+    },
+    {
+      "type": "youtube",
+      "name": "YouTube",
+      "description": "The latest videos from your YouTube subscriptions: touch one to watch it on the panel. Can instead play one video in the tile, muted or with sound.",
+      "category": "Photos, music & TV",
+      "width": 4,
+      "height": 3
+    }
+  ],
+  "themes": [
+    {
+      "id": "glass",
+      "name": "Glass",
+      "background": [
+        "#0b0c10"
+      ],
+      "surface": "#12ffffff",
+      "border": "#1cffffff",
+      "textPrimary": "#ffffffff",
+      "textSecondary": "#99ffffff",
+      "accent": "#ffa6c8ff",
+      "glow": "#29a6c8ff"
+    },
+    {
+      "id": "aurora",
+      "name": "Aurora",
+      "background": [
+        "#07080e"
+      ],
+      "surface": "#14dde3ff",
+      "border": "#22e6eaff",
+      "textPrimary": "#fff6f7ff",
+      "textSecondary": "#9ef6f7ff",
+      "accent": "#ff8ff0dc",
+      "glow": "#338e7bff"
+    },
+    {
+      "id": "abyss",
+      "name": "Abyss",
+      "background": [
+        "#020a14"
+      ],
+      "surface": "#12bfe7ff",
+      "border": "#24bfe7ff",
+      "textPrimary": "#ffeaf8ff",
+      "textSecondary": "#99eaf8ff",
+      "accent": "#ff5ce1ff",
+      "glow": "#2e1e90ff"
+    },
+    {
+      "id": "obsidian",
+      "name": "Obsidian",
+      "background": [
+        "#050506",
+        "#111216"
+      ],
+      "surface": "#f0191a1f",
+      "border": "#2effffff",
+      "textPrimary": "#fff4f1ea",
+      "textSecondary": "#99f4f1ea",
+      "accent": "#ffe9c46a"
+    },
+    {
+      "id": "synthwave",
+      "name": "Synthwave",
+      "background": [
+        "#12002a"
+      ],
+      "surface": "#b3190733",
+      "border": "#66ff6ad5",
+      "textPrimary": "#fffdf0ff",
+      "textSecondary": "#b3f3d9ff",
+      "accent": "#ffff6ad5",
+      "glow": "#40ff2e97"
+    },
+    {
+      "id": "midnight",
+      "name": "Midnight",
+      "background": [
+        "#0b0f1a",
+        "#141c2e"
+      ],
+      "surface": "#14ffffff",
+      "border": "#1fffffff",
+      "textPrimary": "#fff2f5fa",
+      "textSecondary": "#99f2f5fa",
+      "accent": "#ff7dd3fc"
+    },
+    {
+      "id": "ember",
+      "name": "Ember",
+      "background": [
+        "#1a0f0b",
+        "#2e1710"
+      ],
+      "surface": "#1affb08a",
+      "border": "#33ffb08a",
+      "textPrimary": "#fffff1e8",
+      "textSecondary": "#99fff1e8",
+      "accent": "#ffff8a4c"
+    },
+    {
+      "id": "forest",
+      "name": "Forest",
+      "background": [
+        "#0c1512",
+        "#14241e"
+      ],
+      "surface": "#14a7f3d0",
+      "border": "#26a7f3d0",
+      "textPrimary": "#ffeaf6f0",
+      "textSecondary": "#99eaf6f0",
+      "accent": "#ff6ee7b7"
+    },
+    {
+      "id": "espresso",
+      "name": "Espresso",
+      "background": [
+        "#1c1410"
+      ],
+      "surface": "#ff2a1f19",
+      "border": "#00000000",
+      "textPrimary": "#fff3e6d8",
+      "textSecondary": "#99f3e6d8",
+      "accent": "#ffd9a066"
+    },
+    {
+      "id": "terminal",
+      "name": "Terminal",
+      "background": [
+        "#030805"
+      ],
+      "surface": "#0a39ff88",
+      "border": "#4d39ff88",
+      "textPrimary": "#ffc8ffd9",
+      "textSecondary": "#99c8ffd9",
+      "accent": "#ff39ff88",
+      "glow": "#1439ff88"
+    },
+    {
+      "id": "terminal-night",
+      "name": "Terminal Night",
+      "background": [
+        "#000000"
+      ],
+      "surface": "#0529d66f",
+      "border": "#2629d66f",
+      "textPrimary": "#ff7fd69a",
+      "textSecondary": "#8c7fd69a",
+      "accent": "#ff29c765"
+    },
+    {
+      "id": "lcars",
+      "name": "LCARS",
+      "background": [
+        "#000000"
+      ],
+      "surface": "#ff15131c",
+      "border": "#999999ff",
+      "textPrimary": "#ffffcc99",
+      "textSecondary": "#ffaaaaff",
+      "accent": "#ffff9900",
+      "style": "lcars",
+      "palette": [
+        "#ffff9900",
+        "#ffcc99cc",
+        "#ff9999ff",
+        "#ffffcc99",
+        "#ffcc6666",
+        "#ff99ccff",
+        "#ffffcc66"
+      ]
+    },
+    {
+      "id": "nightstand",
+      "name": "Nightstand",
+      "background": [
+        "#000000"
+      ],
+      "surface": "#00000000",
+      "border": "#00000000",
+      "textPrimary": "#ffffffff",
+      "textSecondary": "#8affffff",
+      "accent": "#ffffb300"
+    },
+    {
+      "id": "frost",
+      "name": "Frost",
+      "background": [
+        "#d5e1f2"
+      ],
+      "surface": "#8cffffff",
+      "border": "#ccffffff",
+      "textPrimary": "#ff1b2433",
+      "textSecondary": "#991b2433",
+      "accent": "#ff2f6feb",
+      "glow": "#99ffffff"
+    },
+    {
+      "id": "paper",
+      "name": "Paper",
+      "background": [
+        "#f6f4ef",
+        "#eae6dd"
+      ],
+      "surface": "#ffffffff",
+      "border": "#14000000",
+      "textPrimary": "#ff1e1b16",
+      "textSecondary": "#991e1b16",
+      "accent": "#ffb4531f"
+    },
+    {
+      "id": "sorbet",
+      "name": "Sorbet",
+      "background": [
+        "#ffe3d6",
+        "#ffcfe6"
+      ],
+      "surface": "#b3ffffff",
+      "border": "#e6ffffff",
+      "textPrimary": "#ff3d1e2e",
+      "textSecondary": "#993d1e2e",
+      "accent": "#ffe0245e"
+    },
+    {
+      "id": "swiss",
+      "name": "Swiss",
+      "background": [
+        "#ededea"
+      ],
+      "surface": "#ffffffff",
+      "border": "#00000000",
+      "textPrimary": "#ff111111",
+      "textSecondary": "#8c111111",
+      "accent": "#ffe30613"
+    }
+  ]
+}

@@ -1,0 +1,219 @@
+{
+  "about": "What the installer can set up beyond the app: software a widget needs, and the keys and addresses it asks for. Each is offered when any of its widgets is chosen. Hand-written; deploy/installer/plan.py reads it.",
+  "modules": [
+    {
+      "id": "weather",
+      "name": "Your location",
+      "about": "Where the weather, sunrise, pollen and tides are for. A postcode, town or city.",
+      "action": "Use {location} for the weather",
+      "widgets": [
+        "weather",
+        "sun_moon",
+        "air_quality",
+        "rain",
+        "tides",
+        "grid_carbon"
+      ],
+      "questions": [
+        {
+          "key": "location",
+          "label": "Postcode, town or city",
+          "example": "CO1 1ZY or Colchester"
+        }
+      ]
+    },
+    {
+      "id": "speech",
+      "name": "A voice for the panel",
+      "about": "Piper, which runs on the Pi: reads notes and news aloud, says when a timer is done and which bin goes out, and speaks Home Assistant's answers. About 100 MB. Nothing is sent anywhere.",
+      "action": "Install piper, a voice for the panel",
+      "widgets": [
+        "news",
+        "notes",
+        "timers",
+        "bins",
+        "reminders",
+        "home_assistant",
+        "ha_bridge"
+      ],
+      "with_voice": true,
+      "script": "scripts/setup-piper.sh"
+    },
+    {
+      "id": "videos",
+      "name": "Video player for YouTube, Floatplane and Nebula",
+      "about": "yt-dlp and deno, which find the video streams. Downloaded into ~/.local/share/homecanvas/bin, kept up to date by the panel. No root needed.",
+      "action": "Fetch yt-dlp and deno for the video player",
+      "widgets": [
+        "youtube",
+        "floatplane",
+        "nebula"
+      ],
+      "script": "scripts/setup-videos.sh"
+    },
+    {
+      "id": "spotify-connect",
+      "name": "Spotify on the panel's speakers",
+      "about": "librespot, so the panel shows up as “Kiosk” in Spotify's device list and plays through its own speakers. Needs Spotify Premium. Debian and Raspberry Pi OS only.",
+      "action": "Install librespot, so Spotify can play on the panel",
+      "widgets": [
+        "spotify"
+      ],
+      "apt_only": true,
+      "script": "scripts/setup-librespot.sh"
+    },
+    {
+      "id": "home-assistant",
+      "name": "Home Assistant",
+      "about": "For the Home Assistant widgets and the bridge page, and so voice control can pass on what the panel doesn't know (“turn off the lamp”). Make a token in Home Assistant: your name (bottom left) → Security → Long-lived access tokens.",
+      "action": "Connect to Home Assistant at {url}",
+      "widgets": [
+        "home_assistant",
+        "ha_bridge",
+        "ha_energy"
+      ],
+      "with_voice": true,
+      "questions": [
+        {
+          "key": "url",
+          "label": "Home Assistant address",
+          "example": "http://homeassistant.local:8123",
+          "default": "http://homeassistant.local:8123"
+        },
+        {
+          "key": "token",
+          "label": "Long-lived access token",
+          "secret": true
+        }
+      ],
+      "check": "home_assistant"
+    },
+    {
+      "id": "homey",
+      "name": "Homey",
+      "about": "For the Homey widgets. Make an API key at my.homey.app → Settings → API Keys, allowed to see and control devices and to see zones and flows.",
+      "action": "Connect to Homey at {address}",
+      "widgets": [
+        "homey",
+        "homey_alerts",
+        "homey_climate",
+        "homey_colour",
+        "homey_energy",
+        "homey_fan",
+        "homey_flows",
+        "homey_history",
+        "homey_house",
+        "homey_lights",
+        "homey_moods",
+        "homey_presence",
+        "homey_room",
+        "homey_system",
+        "homey_timeline",
+        "homey_variables"
+      ],
+      "questions": [
+        {
+          "key": "address",
+          "label": "Homey's address on your network",
+          "example": "192.168.1.50"
+        },
+        {
+          "key": "key",
+          "label": "Homey API key",
+          "secret": true
+        }
+      ],
+      "check": "homey"
+    }
+  ],
+  "presets": [
+    {
+      "id": "starter",
+      "name": "A good start",
+      "about": "The time, the weather, your calendar, the news, what's playing and a photo.",
+      "widgets": [
+        "clock",
+        "weather",
+        "calendar",
+        "news",
+        "spotify",
+        "immich",
+        "sun_moon",
+        "timers"
+      ]
+    },
+    {
+      "id": "family",
+      "name": "The family's board",
+      "about": "Calendar, bins, shopping, meals, chores, birthdays and countdowns, around the clock and weather.",
+      "widgets": [
+        "clock",
+        "weather",
+        "calendar",
+        "bins",
+        "shopping",
+        "notes",
+        "reminders",
+        "meals",
+        "chores",
+        "birthdays",
+        "countdowns",
+        "timers",
+        "memories"
+      ]
+    },
+    {
+      "id": "smart-home",
+      "name": "Smart home",
+      "about": "Home Assistant's rooms and lights, electricity, the weather and the TV remote.",
+      "widgets": [
+        "clock",
+        "weather",
+        "ha_bridge",
+        "home_assistant",
+        "ha_energy",
+        "lights",
+        "tv",
+        "grid_carbon"
+      ]
+    },
+    {
+      "id": "media",
+      "name": "Music, TV and video",
+      "about": "Now playing, YouTube, Floatplane and Nebula, the TV remote and your photo library.",
+      "widgets": [
+        "clock",
+        "spotify",
+        "youtube",
+        "floatplane",
+        "nebula",
+        "tv",
+        "immich_library",
+        "immich"
+      ]
+    },
+    {
+      "id": "home-lab",
+      "name": "Home lab",
+      "about": "Servers, services, certificates, updates, the network and speed tests.",
+      "widgets": [
+        "servers",
+        "services",
+        "certs",
+        "updates",
+        "speedtest",
+        "lan_speedtest",
+        "github",
+        "unifi_health",
+        "unifi_clients",
+        "unifi_throughput"
+      ]
+    },
+    {
+      "id": "choose",
+      "name": "I'll choose every widget myself",
+      "about": "Start with nothing ticked.",
+      "widgets": []
+    }
+  ]
+}

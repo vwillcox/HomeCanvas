@@ -7,6 +7,14 @@
 #
 #   --check   look at this machine and say what is missing; change nothing
 #   --yes     accept every default without asking (unattended installs)
+#   --voice   set up voice control and choose its wake word
+#   --classic plain questions, one at a time, instead of the full-screen
+#             installer
+#
+# On a terminal it opens the full-screen installer
+# (deploy/installer/homecanvas_setup.py), which asks everything first —
+# widgets, theme, voice control and its wake word, the extras — and then runs
+# this with --engine to do the building and installing.
 #
 # Run it on the machine that will show HomeCanvas, as your normal user — it
 # asks for your password (sudo) when it needs to install something. Run it
@@ -23,12 +31,19 @@ CONFIG="$HOME/.config/homecanvas/config.json"
 
 MODE="install"
 ASSUME_YES=0
+CLASSIC=0
+VOICE_ONLY=0
+ENGINE=0
 for arg in "$@"; do
   case "$arg" in
     --check) MODE="check" ;;
     --yes | -y) ASSUME_YES=1 ;;
+    --classic) CLASSIC=1 ;;
+    --voice) VOICE_ONLY=1 ;;
+    # Run by the full-screen installer, with its answers in HC_* variables.
+    --engine) ENGINE=1 ASSUME_YES=1 ;;
     -h | --help)
-      sed -n '2,15p' "$0" 2>/dev/null | sed 's/^# \{0,1\}//'
+      sed -n '2,23p' "$0" 2>/dev/null | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     *)
@@ -69,10 +84,15 @@ die() {
 TTY=/dev/tty
 have_tty() { [ "$ASSUME_YES" = 0 ] && { : <"$TTY"; } 2>/dev/null; }
 
-# ask "Question?" y|n  → true for yes. The default is what Enter gives, and
-# what --yes (or no keyboard to ask at) chooses.
+# ask "Question?" y|n [VAR] → true for yes. The default is what Enter gives,
+# and what --yes (or no keyboard to ask at) chooses — unless VAR, an HC_*
+# variable the full-screen installer sets, already holds the answer.
 ask() {
   local q="$1" def="${2:-y}" hint reply
+  if [ -n "${3:-}" ] && [ -n "${!3:-}" ]; then
+    [[ "${!3}" =~ ^[Yy] ]]
+    return
+  fi
   [ "$def" = y ] && hint="[Y/n]" || hint="[y/N]"
   if ! have_tty; then
     [ "$def" = y ]
@@ -164,6 +184,27 @@ APP_DIR="$SELF_DIR"
 # ---- about this machine ----------------------------------------------------
 
 [ "$(id -u)" -eq 0 ] && die "Run this as your normal user, not as root or with sudo — it asks for your password when it needs it."
+
+# On a terminal, the full-screen installer asks the questions: it needs only
+# the system's Python, which every desktop Linux has. Its input is the
+# keyboard even when this script arrived through curl | bash.
+if [ "$MODE" = install ] && [ "$ENGINE" = 0 ] && [ "$CLASSIC" = 0 ] && [ "$ASSUME_YES" = 0 ] &&
+  have_tty && [ -t 1 ] && command -v python3 >/dev/null &&
+  python3 -c 'import curses' 2>/dev/null; then
+  ARGS=()
+  [ "$VOICE_ONLY" = 1 ] && ARGS+=(--voice)
+  exec python3 -I "$APP_DIR/deploy/installer/homecanvas_setup.py" "${ARGS[@]}" <"$TTY"
+fi
+
+# Voice control without the full-screen installer: the speech engine, and
+# "hey canvas" — choosing another wake word needs the installer's wizard.
+if [ "$VOICE_ONLY" = 1 ]; then
+  echo "${B}Voice control${N}"
+  bash "$APP_DIR/scripts/setup-voice.sh" || die "Voice control couldn't be set up."
+  say "Switch it on in Settings → Screen → Voice control, and say “hey canvas”."
+  say "To choose another wake word, run this from a terminal window: bash $APP_DIR/install.sh --voice"
+  exit 0
+fi
 
 OS_NAME="Linux"
 OS_FAMILY=""
@@ -329,7 +370,7 @@ fi
 if [ -x "$BINARY" ] && [ -f "$UNIT" ]; then
   echo
   say "HomeCanvas is already installed here."
-  if ask "Update it to the latest version? (No goes through the whole setup again)" y; then
+  if ask "Update it to the latest version? (No goes through the whole setup again)" y HC_UPDATE; then
     step() { echo; echo "${B}${C}$*${N}"; }
     step "Updating"
     if [ -d "$APP_DIR/.git" ]; then
@@ -490,7 +531,9 @@ fi
 step "A name on your network"
 current=$(hostname)
 say "So you can reach it as ${B}<name>.local${N} instead of by its IP address."
-if [ "$current" = homecanvas ]; then
+if [ -n "${HC_HOSTNAME:-}" ]; then
+  NAME="$HC_HOSTNAME"
+elif [ "$current" = homecanvas ]; then
   NAME=homecanvas
   ok "Already called homecanvas"
   ask "Keep that name?" y || NAME=$(ask_text "New name (letters, digits, hyphens)" "homecanvas")
@@ -600,7 +643,7 @@ else
     else
       say "Touchscreen: ${B}$touch_dev${N} on display ${B}$out${N}"
       say "${DIM}Real touch events rather than a pretend mouse: needed for swiping.${N}"
-      if ask "Set it up?" y; then
+      if ask "Set it up?" y HC_TOUCH; then
         esc() { sed -e 's/&/\&amp;/g' -e 's/"/\&quot;/g' -e 's/</\&lt;/g'; }
         line="  <touch deviceName=\"$(echo "$touch_dev" | esc)\" mapToOutput=\"$(echo "$out" | esc)\" mouseEmulation=\"no\"/>"
         if [ -f "$RC" ]; then
@@ -645,10 +688,22 @@ echo
 # Only where polkit is what decides who may power off, as on Raspberry Pi OS.
 if [ -d /etc/polkit-1/rules.d ] && ! [ -f /etc/polkit-1/rules.d/50-homecanvas-power.rules ]; then
   say "One more: HomeCanvas has Restart and Power off buttons in its Settings."
-  if ask "Let them work without a password?" y; then
+  if ask "Let them work without a password?" y HC_POWEROFF; then
     run "Allowing restart and power off" sudo bash "$APP_DIR/deploy/enable-poweroff.sh" ||
       warn "Couldn't — see $LOG"
   fi
+fi
+
+# Voice control: asked here only without the full-screen installer, which
+# asks it among the rest and sets it up itself.
+if [ "$ENGINE" = 0 ]; then
+  say "Voice control: say “hey canvas, next page” to the panel. Heard on this"
+  say "machine, nothing sent anywhere. Needs a microphone and about 300 MB."
+  if ask "Set up voice control?" n; then
+    run "Setting up voice control (a few minutes)" bash "$APP_DIR/scripts/setup-voice.sh" ||
+      warn "Couldn't — see $LOG. Try again later: bash $APP_DIR/install.sh --voice"
+  fi
+  echo
 fi
 
 # The editor's address: plain if port 80 is set up, with :8090 otherwise.
