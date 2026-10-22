@@ -27,7 +27,7 @@ dependencies:
 
   # Video (libmpv-backed; supports playback speed on Linux)
   media_kit: ^1.1.11
-  media_kit_video: ^1.2.5
+  media_kit_video: ^2.0.1
   media_kit_libs_video: ^1.0.5
 
   # Path joining for cache locations
