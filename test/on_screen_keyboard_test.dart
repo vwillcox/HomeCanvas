@@ -91,4 +91,25 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byIcon(Icons.keyboard_hide_outlined), findsNothing);
   });
+
+  testWidgets('fills the screen when what it holds takes no space', (
+    tester,
+  ) async {
+    // As the app's Stack is with a full-screen video up: the page Offstage,
+    // and the video Positioned.fill over it.
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: OnScreenKeyboard(
+          child: Stack(
+            children: [
+              Offstage(child: SizedBox(width: 100, height: 100)),
+              Positioned.fill(child: ColoredBox(color: Colors.black)),
+            ],
+          ),
+        ),
+      ),
+    );
+    final screen = tester.view.physicalSize / tester.view.devicePixelRatio;
+    expect(tester.getSize(find.byType(ColoredBox).last), screen);
+  });
 }

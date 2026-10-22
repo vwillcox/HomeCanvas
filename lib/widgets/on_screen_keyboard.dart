@@ -163,7 +163,12 @@ class _OnScreenKeyboardState extends State<OnScreenKeyboard> {
 
     // The same shape with the keyboard up or down: anything else would
     // rebuild the whole app beneath it each time it came and went.
+    //
+    // Filling the screen whatever the app beneath measures: loose, the app's
+    // own Stack shrank to nothing the moment a full-screen video put the
+    // page Offstage, and took the video, sized to fill it, with it.
     return Stack(
+      fit: StackFit.expand,
       children: [
         MediaQuery(
           data: height == 0
