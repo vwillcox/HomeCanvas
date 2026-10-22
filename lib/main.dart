@@ -261,6 +261,10 @@ void main() async {
   // to the video. Carried on at start-up too, in case the kiosk stopped
   // mid-video with them paused. Chained, so a video going full screen and
   // straight back to picture-in-picture cannot leave them stopped.
+  //
+  // The kiosk comes to the front first: sent from the phone or by voice
+  // while the TV remote app was up, the video played behind it, and the
+  // remote, paused, was all there was to see.
   final background = BackgroundPause();
   var backgroundChange = background.resume(all: true);
   var coveredByVideo = false;
@@ -268,9 +272,11 @@ void main() async {
     final covered = player.view == VideoView.full;
     if (covered == coveredByVideo) return;
     coveredByVideo = covered;
-    backgroundChange = backgroundChange.then(
-      (_) => covered ? background.pause() : background.resume(),
-    );
+    backgroundChange = backgroundChange.then((_) async {
+      if (!covered) return background.resume();
+      await KioskBrowser.focusKiosk();
+      await background.pause();
+    });
   });
 
   // The backlight as it was left in Settings or the editor, rather than
