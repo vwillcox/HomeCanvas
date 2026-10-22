@@ -1,0 +1,4 @@
+# Formatting-only commits, skipped by git blame (git config blame.ignoreRevsFile .git-blame-ignore-revs) and GitHub.
+
+# Format with Flutter 3.47.7's dart format
+6ce388f582d893bf01d3baa79891914ffb42d001
