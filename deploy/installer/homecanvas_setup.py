@@ -277,8 +277,9 @@ class Setup:
 
         def detail(t):
             w = self.cat.widgets[t]
-            extra = f"  (Set up later: {', '.join(needs[t])}.)" if t in needs else ""
-            return w["description"] + extra
+            # First, so a long description can't push it out of sight.
+            extra = f"Needs {', '.join(needs[t])}. " if t in needs else ""
+            return extra + w["description"]
 
         chosen = self.ui.checklist(
             "Widgets",
