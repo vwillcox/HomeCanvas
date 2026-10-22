@@ -49,11 +49,12 @@ class VideoPlayerService extends ChangeNotifier {
   /// Decoded and drawn by the CPU, bar HEVC — see [VideoStream.prepare].
   ///
   /// media_kit's OpenGL output would take the drawing off the CPU, and was
-  /// tried: on this Pi it shows a solid blue picture even with decoding in
-  /// software, and dropped a third of a 60fps video's frames besides,
-  /// because it draws on the GTK thread the whole UI shares. The software
-  /// output draws each frame into memory for Flutter to upload instead; see
-  /// [MpvTuning] for what keeps that at 60fps.
+  /// tried. With media_kit 1 it showed a solid blue picture on this Pi. With
+  /// 2 the picture is right, but it is slower: measured with the same 1080p60
+  /// video, 519 frames dropped in its first 32 seconds against software's
+  /// 32, at 176% of a core against 145%, as it draws on the GTK thread the
+  /// whole UI shares. The software output draws each frame into memory for
+  /// Flutter to upload instead; see [MpvTuning] for what keeps that at 60fps.
   static const videoConfig = VideoControllerConfiguration(
     enableHardwareAcceleration: false,
     hwdec: 'no',
