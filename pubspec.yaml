@@ -18,7 +18,7 @@ dependencies:
   dio: ^5.7.0
 
   # Images with auth headers + disk cache
-  cached_network_image: ^3.4.1
+  cached_network_image: ^4.0.5
 
   # Disk cache control (pinned to the NVMe, not tmpfs /tmp)
   flutter_cache_manager: ^3.4.2
