@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:home_canvas/services/voice_service.dart';
+import 'package:home_canvas/services/wake_word.dart';
 
 void main() {
   late StreamController<String> lines;
@@ -13,9 +14,12 @@ void main() {
   late int wakes;
   late List<String> acted;
   late VoiceService voice;
+  late WakeWord words;
+  late String? heardFor;
 
-  Future<VoiceListener> open() async {
+  Future<VoiceListener> open(WakeWord wake) async {
     opened++;
+    heardFor = wake.phrase;
     lines = StreamController<String>();
     return VoiceListener(
     lines: lines.stream,
@@ -29,8 +33,11 @@ void main() {
     on = false;
     wakes = 0;
     acted = [];
+    words = WakeWord();
+    heardFor = null;
     voice = VoiceService(
     enabled: () => on,
+    wake: () => words,
     act: (heard) {
       acted.add(heard);
       return heard.contains('stocks') ? 'page 7' : null;
@@ -201,7 +208,7 @@ void main() {
     final none = VoiceService(
       enabled: () => true,
       act: (_) => null,
-      open: () async {
+      open: (_) async {
         opened++;
         throw const ProcessException('python', [], 'not installed');
       },
@@ -223,5 +230,23 @@ void main() {
     await tester.pump();
     expect(voice.status, VoiceStatus.listening);
     expect(acted, isEmpty);
+  });
+
+  testWidgets('other wake words start the listener again, listening for them', (tester) async {
+    on = true;
+    voice.sync();
+    await tester.pump();
+    expect(heardFor, 'hey canvas');
+
+    voice.sync(); // Nothing changed: left alone.
+    await tester.pump();
+    expect(opened, 1);
+
+    words = WakeWord(phrase: 'hey jarvis');
+    voice.sync();
+    await tester.pump();
+    expect(stopped, 1);
+    expect(opened, 2);
+    expect(heardFor, 'hey jarvis');
   });
 }

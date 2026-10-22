@@ -1,8 +1,7 @@
-import 'dart:math';
-
 import '../dashboard/dashboard_model.dart';
 import '../dashboard/schedule.dart';
 import '../dashboard/widget_registry.dart';
+import 'wake_word.dart';
 
 /// What the panel was asked to do, out loud.
 sealed class VoiceAction {
@@ -82,20 +81,29 @@ class VoiceCommands {
     required this.widgets,
     String? Function(String type)? nameOf,
     DateTime? now,
-  }) : _nameOf = nameOf ?? ((type) => WidgetRegistry.find(type)?.name),
+    WakeWord? wake,
+  }) : wake = wake ?? WakeWord(),
+       _nameOf = nameOf ?? ((type) => WidgetRegistry.find(type)?.name),
        _now = now ?? DateTime.now();
 
-  factory VoiceCommands.of(DashboardSettings settings, {DateTime? now}) =>
-      VoiceCommands(
-        pageCount: settings.pageCount,
-        pages: settings.pages,
-        widgets: settings.widgets,
-        now: now,
-      );
+  factory VoiceCommands.of(
+    DashboardSettings settings, {
+    DateTime? now,
+    WakeWord? wake,
+  }) => VoiceCommands(
+    pageCount: settings.pageCount,
+    pages: settings.pages,
+    widgets: settings.widgets,
+    now: now,
+    wake: wake,
+  );
 
   final int pageCount;
   final List<DashboardPage> pages;
   final List<DashboardWidgetConfig> widgets;
+
+  /// The words that wake the panel, to be passed over in what was said.
+  final WakeWord wake;
   final String? Function(String type) _nameOf;
   final DateTime _now;
 
@@ -148,9 +156,6 @@ class VoiceCommands {
   };
 
   static const _konami = 'up up down down left right left right';
-
-  /// The words that wake the listener, should it pass them on.
-  static const _wake = {'hey', 'hay', 'hi', 'canvas'};
 
   /// Words that ask without saying what for.
   static const _asking = {
@@ -297,37 +302,14 @@ class VoiceCommands {
       if (!_filler.contains(w) && w != 'page' && w != 'pages') w,
   ];
 
-  /// What "hey" has been heard as, and what "canvas" has been heard as
-  /// that is not within a letter or two of it — as `woken()` in
-  /// deploy/voice_listener.py has them.
-  static const _heys = {
-    'hey', 'hay', 'hi', 'he', 'a', 'eh', 'hate', 'hedy', 'hake', 'hae', //
-  };
-  static const _lookalikes = {
-    'cambus', 'campus', 'congress', 'douglas', 'countless', 'compass', //
-  };
-
   /// [heard] without the wake words in front, for something that wants
   /// only the request — Home Assistant's Assist, which would make nothing
-  /// of "hey canvas turn on the lamp". As the listener finds them: "canvas"
-  /// near the start, or a "hey" and something like it straight after.
+  /// of "hey canvas turn on the lamp". As the listener finds them — see
+  /// [WakeWord.ends]; "hey canvas" unless [wake] says otherwise.
   /// Heard without them — said after a pause — it is all request. The rest
   /// is left as it was heard, "what's" and all: Assist reads it as written.
-  static String afterWake(String heard) {
-    final said = words(heard);
-    var ends = 0;
-    for (final (i, w) in said.take(4).indexed) {
-      if (w == 'canvas' || w == 'canvass' || w == 'canvases') {
-        ends = i + 1;
-        break;
-      }
-    }
-    if (ends == 0 &&
-        said.length >= 2 &&
-        _heys.contains(said[0]) &&
-        (_slips(said[1], 'canvas') <= 2 || _lookalikes.contains(said[1]))) {
-      ends = 2;
-    }
+  static String afterWake(String heard, {WakeWord? wake}) {
+    var ends = (wake ?? WakeWord()).ends(heard);
     // As many of the words as heard as make up the wake words.
     final heardAs = heard.trim().split(RegExp(r'\s+'));
     var dropped = 0;
@@ -338,20 +320,6 @@ class VoiceCommands {
         .sublist(dropped)
         .join(' ')
         .replaceFirst(RegExp(r'^[^A-Za-z0-9]+'), '');
-  }
-
-  /// How many letters apart [a] and [b] are.
-  static int _slips(String a, String b) {
-    var row = [for (var j = 0; j <= b.length; j++) j];
-    for (var i = 1; i <= a.length; i++) {
-      final next = [i];
-      for (var j = 1; j <= b.length; j++) {
-        final swap = row[j - 1] + (a[i - 1] == b[j - 1] ? 0 : 1);
-        next.add([row[j] + 1, next[j - 1] + 1, swap].reduce(min));
-      }
-      row = next;
-    }
-    return row.last;
   }
 
   /// What [heard] asks for, or null when it asks for nothing known.
@@ -365,7 +333,7 @@ class VoiceCommands {
     // The directions are enough: "B, A" is two letters, and a recogniser
     // makes "be a", "bee hay" or nothing of them.
     if (said.join(' ').contains(_konami)) return const VoiceKonami();
-    final pages = !_forElsewhere(words(afterWake(heard)));
+    final pages = !_forElsewhere(words(afterWake(heard, wake: wake)));
     for (var from = 0; from < said.length; from++) {
       final action = _resolve(said.sublist(from), pages: pages);
       if (action != null) return action;
@@ -403,8 +371,8 @@ class VoiceCommands {
   /// [heard] as Home Assistant's Assist should have it: without the wake
   /// words, and with what "turn" is most often misheard as at the start
   /// put right — "term lounge one off".
-  static String forAssist(String heard) {
-    final request = afterWake(heard);
+  static String forAssist(String heard, {WakeWord? wake}) {
+    final request = afterWake(heard, wake: wake);
     return request.replaceFirst(
       RegExp(r'^(term|tern|turned|tum|tom)\b', caseSensitive: false),
       'turn',
@@ -412,8 +380,8 @@ class VoiceCommands {
   }
 
   VoiceAction? _resolve(List<String> said, {bool pages = true}) {
-    // "Hey canvas" itself, heard as itself.
-    while (said.isNotEmpty && _wake.contains(said.first)) {
+    // The wake words themselves, heard as themselves.
+    while (said.isNotEmpty && wake.isWakeWord(said.first)) {
       said = said.sublist(1);
     }
     final numbered = _numberedPage(said);

@@ -1,0 +1,42 @@
+{
+  "about": "Where the wake words end in what was heard, in words; 0 for not woken. Checked by deploy/test_wake_word.py and test/wake_word_test.dart, so the listener and the kiosk agree.",
+  "wakes": {
+    "default": null,
+    "jarvis": {"phrase": "hey jarvis", "lookalikes": ["service"], "variants": ["hijarvis", "hey jar this"]},
+    "computer": {"phrase": "computer"},
+    "house": {"phrase": "okay house", "lookalikes": [], "variants": []}
+  },
+  "cases": [
+    ["default", "Hey, canvas.", 2],
+    ["default", "hey canvas show stocks", 2],
+    ["default", "Canvas, next page.", 1],
+    ["default", "hey campus next page", 2],
+    ["default", "a canvas, show the weather", 2],
+    ["default", "hate canvass", 2],
+    ["default", "hey cannibus", 0],
+    ["default", "so hey canvas next page", 3],
+    ["default", "hey congress what's the time", 2],
+    ["default", "congress passed a bill", 0],
+    ["default", "show the stocks", 0],
+    ["default", "I bought a new canvas today for painting", 0],
+    ["default", "hey there", 0],
+    ["jarvis", "hey jarvis next page", 2],
+    ["jarvis", "Hey Jervis, open the remote.", 2],
+    ["jarvis", "hey service", 2],
+    ["jarvis", "hijarvis pause", 1],
+    ["jarvis", "hey jar this show the bridge", 3],
+    ["jarvis", "jarvis", 1],
+    ["jarvis", "hey canvas next page", 0],
+    ["jarvis", "the service was slow", 0],
+    ["computer", "computer, next page", 1],
+    ["computer", "Computer show stocks", 1],
+    ["computer", "commuter next page", 1],
+    ["computer", "my computer is slow", 2],
+    ["computer", "turn the heating up", 0],
+    ["house", "okay house next page", 2],
+    ["house", "OK house, pause", 2],
+    ["house", "o k house", 3],
+    ["house", "house", 1],
+    ["house", "okay hose", 2]
+  ]
+}

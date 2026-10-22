@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
-"""Listens for "hey canvas" and for what is said after it.
+"""Listens for the wake words — "hey canvas", or the ones chosen in the
+installer — and for what is said after it.
 
 Everything happens on this machine: the microphone is read through PipeWire
 and the speech is recognised here by sherpa-onnx. Nothing is sent anywhere
 and nothing is kept — the sound is held for a few seconds, in memory, and
 only the words made of it leave this program.
+
+The wake words come from the kiosk as `--wake` (see `wake_word.py`):
+the phrase, and what the installer heard it said as.
 
 This program only hears. What the words mean is the kiosk's business
 (`lib/services/voice_commands.dart`), which knows the dashboard's pages.
@@ -36,7 +40,6 @@ import collections
 import json
 import math
 import os
-import re
 import struct
 import subprocess
 import sys
@@ -44,6 +47,9 @@ import time
 import urllib.parse
 import urllib.request
 import wave
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from wake_word import WakeWord, words as wake_words  # noqa: E402
 
 RATE = 16000
 # A tenth of a second of 16-bit mono at a time.
@@ -144,42 +150,15 @@ class Hearing:
         return b"".join(said) if loud >= self.SHORTEST else None
 
 
-def words(text):
-    return re.sub(r"[^a-z0-9 ]+", " ", text.lower().replace("'", "")).split()
-
-
-def _slips(a, b):
-    """How many letters apart two words are."""
-    row = list(range(len(b) + 1))
-    for i, x in enumerate(a, 1):
-        last, row[0] = row[0], i
-        for j, y in enumerate(b, 1):
-            last, row[j] = row[j], min(row[j] + 1, row[j - 1] + 1, last + (x != y))
-    return row[-1]
-
-
-# What "hey" has been heard as.
-HEYS = {"hey", "hay", "hi", "he", "a", "eh", "hate", "hedy", "hake", "hae"}
-# What "canvas" has been heard as, after a "hey", that is not within a letter
-# or two of it. All of them from recordings at the panel.
-LOOKALIKES = {"cambus", "campus", "congress", "douglas", "countless", "compass"}
+# The wake words: "hey canvas" unless the kiosk says otherwise (--wake).
+WAKE = WakeWord()
+words = wake_words
 
 
 def woken(text):
     """Where the wake words end in [text], counted in words; 0 for nowhere.
-
-    "Canvas" itself, near the start, is enough. What a recogniser makes of
-    it otherwise — "cambus", "congress" — counts only straight after a "hey"
-    at the very start: nobody says "hey, Congress" to a room.
-    """
-    said = words(text)
-    for i, word in enumerate(said[:4]):
-        if word in ("canvas", "canvass", "canvases"):
-            return i + 1
-    if len(said) >= 2 and said[0] in HEYS:
-        if _slips(said[1], "canvas") <= 2 or said[1] in LOOKALIKES:
-            return 2
-    return 0
+    See WakeWord.ends."""
+    return WAKE.ends(text)
 
 
 def tell_kiosk(texts):
@@ -194,52 +173,77 @@ def tell_kiosk(texts):
             pass  # Not understood is a 404: the other hearing is tried.
 
 
+def load_recognisers():
+    """Both recognisers, loaded. Raises when sherpa-onnx or a model is not
+    there — for the caller to say so."""
+    import sherpa_onnx
+
+    return [
+        sherpa_onnx.OfflineRecognizer.from_moonshine(
+            preprocessor=os.path.join(model, "preprocess.onnx"),
+            encoder=os.path.join(model, "encode.int8.onnx"),
+            uncached_decoder=os.path.join(model, "uncached_decode.int8.onnx"),
+            cached_decoder=os.path.join(model, "cached_decode.int8.onnx"),
+            tokens=os.path.join(model, "tokens.txt"),
+            num_threads=2,
+        )
+        for model in MODELS
+    ]
+
+
+def transcribe(recognisers, sound):
+    """What was said in [sound], as each recogniser made it out."""
+    import numpy
+
+    samples = numpy.frombuffer(sound, dtype=numpy.int16).astype(numpy.float32) / 32768
+    texts = []
+    for recogniser in recognisers:
+        stream = recogniser.create_stream()
+        stream.accept_waveform(RATE, samples)
+        recogniser.decode_stream(stream)
+        texts.append(stream.result.text.lower().strip())
+    return texts
+
+
+def microphone(target=None):
+    """The microphone, as 16 kHz 16-bit mono from pw-record. With no
+    [target] it follows the default microphone, whichever that is at the
+    time."""
+    command = ["pw-record", "--channels=1", f"--rate={RATE}", "--format=s16",
+               "--latency=100ms"]
+    if target:
+        command.append(f"--target={target}")
+    return subprocess.Popen(
+        command + ["-"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+    ).stdout
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--post", action="store_true", help="tell the kiosk too")
     parser.add_argument("--keep", metavar="FOLDER", help="save what is said to it")
     parser.add_argument("--from", dest="file", help="hear a raw recording instead")
+    parser.add_argument("--wake", metavar="JSON", help="the wake words, as the kiosk keeps them")
     args = parser.parse_args()
+    global WAKE
+    if args.wake:
+        try:
+            WAKE = WakeWord.from_json(json.loads(args.wake))
+        except ValueError:
+            pass  # Not JSON: "hey canvas" it is.
 
     try:
-        import numpy
-        import sherpa_onnx
-
-        recognisers = [
-            sherpa_onnx.OfflineRecognizer.from_moonshine(
-                preprocessor=os.path.join(model, "preprocess.onnx"),
-                encoder=os.path.join(model, "encode.int8.onnx"),
-                uncached_decoder=os.path.join(model, "uncached_decode.int8.onnx"),
-                cached_decoder=os.path.join(model, "cached_decode.int8.onnx"),
-                tokens=os.path.join(model, "tokens.txt"),
-                num_threads=2,
-            )
-            for model in MODELS
-        ]
+        recognisers = load_recognisers()
         if args.file:
             mic = open(args.file, "rb")
         else:
-            # With no --target it follows the default microphone, whichever
-            # that is at the time.
-            mic = subprocess.Popen(
-                ["pw-record", "--channels=1", f"--rate={RATE}", "--format=s16",
-                 "--latency=100ms", "-"],
-                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-            ).stdout
+            mic = microphone()
     except Exception as exc:  # noqa: BLE001 - said, for the kiosk to show
         say("error", message=str(exc))
         return 1
 
     def heard(sound):
-        """What was said in [sound], as each recogniser made it out."""
-        samples = numpy.frombuffer(sound, dtype=numpy.int16).astype(numpy.float32) / 32768
-        texts = []
-        for recogniser in recognisers:
-            stream = recogniser.create_stream()
-            stream.accept_waveform(RATE, samples)
-            recogniser.decode_stream(stream)
-            texts.append(stream.result.text.lower().strip())
-        return texts
+        return transcribe(recognisers, sound)
 
     def keep(sound):
         if not args.keep:

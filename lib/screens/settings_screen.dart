@@ -1979,13 +1979,14 @@ class _VoiceControlTile extends StatelessWidget {
     if (!s.voiceControl) {
       state = tr(
         'settings.voiceOff',
-        'Say “hey canvas”, then “show stocks”, “next page” or “open the remote”. Heard and understood on this device; nothing is sent anywhere. The microphone is closed while this is off.',
+        'Say “{wake}”, then “show stocks”, “next page” or “open the remote”. Heard and understood on this device; nothing is sent anywhere. The microphone is closed while this is off. To choose other wake words, run the installer again: bash ~/homecanvas/install.sh --voice',
+        {'wake': s.wakeWord.phrase},
       );
     } else {
       state = switch (voice.status) {
         VoiceStatus.unavailable => tr(
           'settings.voiceNotInstalled',
-          'Voice control is not installed on this device — see INSTALL.md.',
+          'Voice control is not installed on this device. Run the installer again to add it: bash ~/homecanvas/install.sh --voice',
         ),
         VoiceStatus.starting when voice.error != null => tr(
           'settings.voiceNoMicrophone',
@@ -1995,7 +1996,8 @@ class _VoiceControlTile extends StatelessWidget {
         VoiceStatus.starting => tr('settings.voiceStarting', 'Starting…'),
         _ => tr(
           'settings.voiceListening',
-          'Listening for “hey canvas”. Heard and understood on this device; nothing is sent anywhere.',
+          'Listening for “{wake}”. Heard and understood on this device; nothing is sent anywhere.',
+          {'wake': s.wakeWord.phrase},
         ),
       };
     }

@@ -3,6 +3,7 @@ library;
 
 import '../dashboard/dashboard_model.dart';
 import '../l10n/l10n.dart';
+import '../services/wake_word.dart';
 
 enum SlideshowTransition { fade, slide, kenBurns, pageTurn }
 
@@ -663,9 +664,13 @@ class ScreenSettings {
   /// BrightnessService.
   int brightness;
 
-  /// Listen for "hey canvas" and do what is asked — see VoiceService. Off
-  /// means the microphone is not open at all.
+  /// Listen for the wake words and do what is asked — see VoiceService.
+  /// Off means the microphone is not open at all.
   bool voiceControl;
+
+  /// What wakes it: "hey canvas" unless chosen otherwise in the installer,
+  /// with what the installer heard it said as.
+  WakeWord wakeWord;
 
   ScreenSettings({
     this.autoOffEnabled = false,
@@ -673,7 +678,8 @@ class ScreenSettings {
     this.wakeOnMusic = true,
     this.brightness = 100,
     this.voiceControl = false,
-  });
+    WakeWord? wakeWord,
+  }) : wakeWord = wakeWord ?? WakeWord();
 
   factory ScreenSettings.fromJson(Map<String, dynamic> j) => ScreenSettings(
         autoOffEnabled: j['autoOffEnabled'] as bool? ?? false,
@@ -681,6 +687,7 @@ class ScreenSettings {
         wakeOnMusic: j['wakeOnMusic'] as bool? ?? true,
         brightness: ((j['brightness'] as num?)?.round() ?? 100).clamp(5, 100),
         voiceControl: j['voiceControl'] as bool? ?? false,
+        wakeWord: WakeWord.fromJson(j['wakeWord']),
       );
 
   Map<String, dynamic> toJson() => {
@@ -689,6 +696,7 @@ class ScreenSettings {
         'wakeOnMusic': wakeOnMusic,
         'brightness': brightness,
         'voiceControl': voiceControl,
+        'wakeWord': wakeWord.toJson(),
       };
 }
 

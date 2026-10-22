@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 
 import 'retry_schedule.dart';
+import 'wake_word.dart';
 
 /// The listener, running: what it says, a line at a time, and the way to
 /// shut it up again.
@@ -19,8 +20,9 @@ class VoiceListener {
   final Future<void> Function() stop;
 }
 
-/// Starts the listener. Injectable so the service can be tested without one.
-typedef VoiceListenerOpener = Future<VoiceListener> Function();
+/// Starts the listener, listening for [wake]. Injectable so the service can
+/// be tested without one.
+typedef VoiceListenerOpener = Future<VoiceListener> Function(WakeWord wake);
 
 /// Where voice control has got to, for the panel to show.
 enum VoiceStatus {
@@ -63,14 +65,20 @@ class VoiceService extends ChangeNotifier {
   VoiceService({
     required this.enabled,
     required this.act,
+    WakeWord Function()? wake,
     this.onWake,
     this.ask,
     VoiceListenerOpener? open,
     this.linger = const Duration(seconds: 4),
-  }) : _open = open ?? _startListener;
+  }) : wake = wake ?? WakeWord.new,
+       _open = open ?? _startListener;
 
   /// Whether voice control is switched on, asked whenever it may have changed.
   final bool Function() enabled;
+
+  /// The words that wake it, asked at the same times: the listener is
+  /// started again when they change.
+  final WakeWord Function() wake;
 
   /// Does what was said, and says what that was; null when it meant nothing.
   final String? Function(String heard) act;
@@ -96,6 +104,9 @@ class VoiceService extends ChangeNotifier {
   int _generation = 0;
   bool _wanted = false;
 
+  /// The wake words the running listener was started with, as JSON.
+  String? _listeningFor;
+
   VoiceStatus _status = VoiceStatus.off;
   VoiceStatus get status => _status;
 
@@ -119,6 +130,16 @@ class VoiceService extends ChangeNotifier {
   /// the settings change.
   void sync() {
     final want = enabled();
+    final words = jsonEncode(wake().toJson());
+    if (want && _wanted && words != _listeningFor) {
+      // Other wake words, chosen while it was listening: the listener is
+      // stopped and another started for them. Not one after the other — the
+      // old one's microphone is closed either way, and its stream winding
+      // up is nothing the new one need wait for.
+      unawaited(_stop(VoiceStatus.starting));
+      unawaited(_start());
+      return;
+    }
     if (want == _wanted) return;
     _wanted = want;
     if (want) {
@@ -136,7 +157,9 @@ class VoiceService extends ChangeNotifier {
     final generation = ++_generation;
     _set(VoiceStatus.starting);
     try {
-      final listener = await _open();
+      final words = wake();
+      _listeningFor = jsonEncode(words.toJson());
+      final listener = await _open(words);
       // Switched off again while it was starting.
       if (generation != _generation || !_wanted) {
         await listener.stop();
@@ -306,13 +329,16 @@ class VoiceService extends ChangeNotifier {
     );
   }
 
-  static Future<VoiceListener> _startListener() async {
+  static Future<VoiceListener> _startListener(WakeWord wake) async {
     if (!File(python).existsSync() || !File(script).existsSync()) {
       throw ProcessException(python, [script], 'voice control is not installed');
     }
     // Below the panel's own work: it listens all day, and nothing it does
     // is worth a dropped frame.
-    final process = await Process.start('nice', ['-n', '10', python, script]);
+    final process = await Process.start('nice', [
+      '-n', '10', python, script, //
+      '--wake', jsonEncode(wake.toJson()),
+    ]);
     // Drained so a chatty library cannot fill its pipe and wedge.
     unawaited(process.stderr.drain<void>().catchError((_) {}));
     return VoiceListener(

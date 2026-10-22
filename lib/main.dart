@@ -412,18 +412,21 @@ void main() async {
   // answer is shown, and said at the speech volume unless Do Not Disturb
   // is on.
   Future<String?> askHomeAssistant(String heard) async {
-    final answer = await homeAssistant.converse(VoiceCommands.forAssist(heard));
+    final answer = await homeAssistant.converse(
+      VoiceCommands.forAssist(heard, wake: config.config.screen.wakeWord),
+    );
     if (answer != null && !inbox().dndMuted) {
       unawaited(speech.speak(answer, volume: inbox().speechOut));
     }
     return answer;
   }
 
-  // "Hey canvas", and what is said after it: heard by a listener this
+  // The wake words, and what is said after them: heard by a listener this
   // starts while voice control is switched on, and done here. The screen
   // is lit on the wake words, before anything is asked for.
   final voice = VoiceService(
     enabled: () => config.config.screen.voiceControl,
+    wake: () => config.config.screen.wakeWord,
     act: (heard) => runVoiceCommand(heard, config, screenIdle),
     ask: askHomeAssistant,
     onWake: () {
@@ -604,7 +607,10 @@ String? runVoiceCommand(
   final context = rootNavigatorKey.currentContext;
   if (navigator == null || context == null) return null;
   final settings = config.config.dashboard;
-  final action = VoiceCommands.of(settings).resolve(heard);
+  final action = VoiceCommands.of(
+    settings,
+    wake: config.config.screen.wakeWord,
+  ).resolve(heard);
   if (action == null) return null;
 
   // Spoken to, so looked at: lit, and counted as use.
