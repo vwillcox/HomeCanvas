@@ -1,5 +1,37 @@
 # Changelog
 
+## 1.0.3.2
+
+Videos play with a picture again, and HomeCanvas is built with the latest
+Flutter and libraries.
+
+### Fixed
+
+- **Full-screen video shows the picture, not just the sound.** Since 1.0.3,
+  a YouTube or other video sent to the panel played its sound while the
+  screen stayed on whatever was there before. The on-screen keyboard added
+  in 1.0.3 left the video nothing to draw into.
+- **The control API** no longer leaves an error unhandled when a remote
+  hangs up halfway through a reply.
+
+### Changed
+
+- **Built with Flutter 3.47.7**, and every library at its latest version:
+  among them the video player (media_kit_video 2), the photo cache
+  (cached_network_image 4) and the feed reader (xml 7). The video player no
+  longer logs "No playback mixer element found" at every start.
+
+### Updating
+
+Run the installer again:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/vwillcox/HomeCanvas/main/install.sh | bash
+```
+
+If your panel has an older Flutter, the installer updates it first. That's
+a download of a few hundred MB, and the build takes a little longer.
+
 ## 1.0.3.1
 
 A small fix to the installer.
