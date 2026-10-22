@@ -1,5 +1,113 @@
 # Changelog
 
+## 1.0.3
+
+Voice control: say "hey canvas", or a wake word of your own, and the panel
+does what you ask. Anything it doesn't know goes to Home Assistant. It's all
+heard and understood on the Pi. There's a new installer too, full screen in
+the terminal. It asks everything first, including which widgets, theme and
+extras you want, then teaches the panel your wake word. Two new widgets
+bring it to 71.
+
+### Updating
+
+- **Update** by running the installer again. On an installed panel it now
+  opens full screen and offers **Update to the latest version**:
+
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/vwillcox/HomeCanvas/main/install.sh | bash
+  ```
+
+- **For voice control**, run `bash ~/homecanvas/install.sh --voice`
+  afterwards. It sets up the speech engine (about 300 MB), lets you choose a
+  wake word and teaches it how you say it. You need a microphone. See
+  [VOICE.md](VOICE.md).
+- **The old question-by-question installer** is still there:
+  `bash install.sh --classic`.
+
+### New
+
+**Voice control**
+- Say "hey canvas", then "show the stocks", "next page", "page three",
+  "open the remote", "forecast", "photos" or "back". A widget is found by
+  its name, part of its name or another word for it, and a page you ask for
+  stays put until you say "resume".
+- The music too: "play", "pause", "skip", "previous song", "volume up",
+  "mute". This works with Spotify, or a phone's music over Bluetooth.
+- "Open the remote" brings up the dashboard's TV remote at twice its size,
+  with the inputs.
+- Anything the panel doesn't know, and every question or switching
+  ("turn off the lamp", "what's the temperature indoors"), goes to Home
+  Assistant's Assist. Its answer is shown and spoken, unless Do Not Disturb
+  is on.
+- Heard and understood on the Pi, by sherpa-onnx with two Moonshine
+  recognisers. Nothing is sent anywhere, and with it switched off the
+  microphone is closed. Switch it on in **Settings → Screen → Voice
+  control**.
+- A strip at the top of the screen shows what it heard and what it did.
+- `POST /voice?say=…` on the local control port tries a phrase without
+  speaking.
+
+**A wake word of your own**
+- Choose "computer", "hey jarvis", "okay house", "hey panel", or type your
+  own. It's checked as you type: commands, common words and very short names
+  are caught.
+- The installer then listens to you say it five times and learns how the
+  recognisers hear you. An unusual name that came out as "hazor blacks" or
+  "hey sore blacks" went from 0 of 6 to 6 of 6. Two everyday sentences
+  check that it doesn't wake by itself, and then you try it for real.
+- It's kept in the config as `screen.wakeWord`, and the panel starts
+  listening for it as soon as it changes.
+
+**The installer, full screen**
+- Plain `curses` in the terminal, on the Pi or over SSH, styled like the
+  LCARS theme. It asks for your Immich address and key (checked), a name,
+  the dashboard, a theme, voice control and its wake word, and the extras
+  your widgets need. Then it shows the list, and only then changes anything.
+- **The dashboard:** start from a preset (*A good start*, *The family's
+  board*, *Smart home*, *Music, TV and video*, *Home lab*) and tick or untick
+  any widget. They're laid out a page per group, with a page added to an
+  existing dashboard or replacing it, as you choose.
+- **A theme**, with a preview of its colours as you move through the list,
+  and whether the panel starts on the dashboard or the albums.
+- **Extras:** your location for the weather, piper so the panel can speak,
+  yt-dlp for the video player, librespot for Spotify on the panel's own
+  speakers, and Home Assistant or Homey, with their keys checked as they're
+  typed. Each is a script of its own in `scripts/`.
+- On an installed panel it offers to update, to change widgets, theme and
+  extras, or to go straight to voice control.
+- It asks for your password only when something has to be installed
+  system-wide.
+
+**Two new widgets**
+- **Home Assistant bridge:** the house as a starship's console, on a page of
+  its own. Home Assistant's rooms are down an LCARS rail; for the chosen
+  room, its lights and switches are blocks to tap and its temperatures are
+  readouts.
+- **Electricity:** today's use and cost from the smart meter, through Home
+  Assistant, against yesterday's, hour by hour. With a Bright login it also
+  shows a week, a month and a year, each against the one before.
+
+**Smaller additions**
+- The panel has its own on-screen keyboard for every text field. The Pi's
+  own keyboard is drawn under the full-screen kiosk, where nobody could see
+  it.
+- [VOICE.md](VOICE.md): everything you can say, and how to set it up.
+- [THEMES.md](THEMES.md) shows LCARS on the real panel at last, with a
+  gallery; the README has the installer screen by screen.
+
+### Bug fixes
+
+- **TV remote:** the access token is renewed before it runs out, and a
+  dropped connection reconnects. It used to sit at "connecting" for days
+  once the token had expired, with every key lost.
+- **Railcam:** when railcam.uk is down, the tile says so instead of showing
+  a grid of blanks, and the cameras come back by themselves.
+- **Screen control:** pulling out a mouse's receiver no longer leaves the
+  touch watcher using a whole core.
+- **Voice:** "what's the weather?" asks Home Assistant instead of turning to
+  the weather widget's page.
+
 ## 1.0.2
 
 A seventeenth theme, LCARS, which draws the panel as a starship's console,
