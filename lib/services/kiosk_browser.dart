@@ -430,6 +430,13 @@ user_pref("browser.translations.automaticallyPopup", false);
 user_pref("app.update.auto", false);
 // No password prompts on a screen anyone walking past can see.
 user_pref("signon.rememberSignons", false);
+
+// --- Disk -----------------------------------------------------------------
+// Firefox sizes its cache to the free space, up to a gigabyte. A viewer
+// opened now and then for an article had kept 167 MB of it; 50 MB still
+// holds the pages anyone goes back to.
+user_pref("browser.cache.disk.smart_size.enabled", false);
+user_pref("browser.cache.disk.capacity", 51200);
 ''';
 
   /// Only for chrome-less windows: without this Firefox ignores
