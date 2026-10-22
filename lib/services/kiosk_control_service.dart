@@ -140,58 +140,64 @@ class KioskControlService {
     final path = request.uri.path;
     try {
       if (request.method == 'GET' && path == '/state') {
-        return reply(HttpStatus.ok, state().toJson());
+        return await reply(HttpStatus.ok, state().toJson());
       }
       if (request.method != 'POST') {
-        return reply(HttpStatus.methodNotAllowed, {'error': 'use POST'});
+        return await reply(HttpStatus.methodNotAllowed, {'error': 'use POST'});
       }
       if (path.startsWith('/open/')) {
         final place = places[path.substring('/open/'.length)];
         if (place == null) {
-          return reply(HttpStatus.notFound, {'error': 'no such place'});
+          return await reply(HttpStatus.notFound, {'error': 'no such place'});
         }
         run(place);
-        return reply(HttpStatus.ok, state().toJson());
+        return await reply(HttpStatus.ok, state().toJson());
       }
       if (path == '/camera') {
         run(KioskCommand.camera);
-        return reply(HttpStatus.ok, state().toJson());
+        return await reply(HttpStatus.ok, state().toJson());
       }
       if (path == '/dnd') {
         final muted = request.uri.queryParameters['muted'];
         if (muted != 'true' && muted != 'false') {
-          return reply(HttpStatus.badRequest, {'error': 'muted=true|false'});
+          return await reply(HttpStatus.badRequest, {
+            'error': 'muted=true|false',
+          });
         }
         setDnd(muted == 'true');
-        return reply(HttpStatus.ok, state().toJson());
+        return await reply(HttpStatus.ok, state().toJson());
       }
       if (path == '/screen' && screenLit != null) {
         final lit = request.uri.queryParameters['lit'];
         if (lit != 'true' && lit != 'false') {
-          return reply(HttpStatus.badRequest, {'error': 'lit=true|false'});
+          return await reply(HttpStatus.badRequest, {
+            'error': 'lit=true|false',
+          });
         }
         screenLit!(lit == 'true');
-        return reply(HttpStatus.ok, {'ok': true});
+        return await reply(HttpStatus.ok, {'ok': true});
       }
       if (path == '/voice' && voice != null) {
         final heard = request.uri.queryParameters['say'] ?? '';
         final did = await voice!(heard);
         if (did == null) {
-          return reply(HttpStatus.notFound, {
+          return await reply(HttpStatus.notFound, {
             'error': 'not understood',
             'heard': heard,
           });
         }
-        return reply(HttpStatus.ok, {'ok': true, 'did': did});
+        return await reply(HttpStatus.ok, {'ok': true, 'did': did});
       }
       if (path == '/youtube' && playVideo != null) {
         final url = request.uri.queryParameters['url'] ?? '';
         if (!playVideo!(url)) {
-          return reply(HttpStatus.badRequest, {'error': 'not a video link'});
+          return await reply(HttpStatus.badRequest, {
+            'error': 'not a video link',
+          });
         }
-        return reply(HttpStatus.ok, {'ok': true});
+        return await reply(HttpStatus.ok, {'ok': true});
       }
-      return reply(HttpStatus.notFound, {'error': 'not found'});
+      return await reply(HttpStatus.notFound, {'error': 'not found'});
     } catch (e) {
       return reply(HttpStatus.internalServerError, {'error': '$e'});
     }
