@@ -64,6 +64,28 @@ class TvService extends ChangeNotifier {
     ceiling: const Duration(seconds: 60),
   );
 
+  /// Fires shortly before the access token expires, to renew it while the
+  /// session is still up. Without it a panel left running past the token's
+  /// two days had nothing good to reconnect with, and one left past the
+  /// refresh token's thirty would have to pair again.
+  Timer? _renewal;
+
+  void _cancelRenewal() {
+    _renewal?.cancel();
+    _renewal = null;
+  }
+
+  void _scheduleRenewal() {
+    _cancelRenewal();
+    if (_accessToken == null || _accessExpiry == 0) return;
+    // _accessValid already allows five minutes; renew ten before the end.
+    final secs = (_accessExpiry - 600 - _nowSec()).clamp(60, 1 << 30);
+    _renewal = Timer(Duration(seconds: secs), () {
+      _renewal = null;
+      if (_wanted) unawaited(_attempt(renew: true));
+    });
+  }
+
   /// How many attempts have failed in a row. Zero once connected.
   int get failedAttempts => _schedule.failures;
 
@@ -222,7 +244,8 @@ class TvService extends ChangeNotifier {
   /// Build a fresh client (optionally token-authenticated) and connect it.
   Future<bool> _openAndConnect(String? token) async {
     _client?.disconnect();
-    _client = VidaaClient(
+    late final VidaaClient client;
+    client = VidaaClient(
       host: host,
       uuid: uuid,
       certBytes: _certBytes,
@@ -238,7 +261,13 @@ class TvService extends ChangeNotifier {
           debugPrint('[vidaa] could not keep the input list: $e');
         }
       },
+      onLost: () {
+        if (!identical(_client, client) || conn != ConnState.connected) return;
+        _cancelRenewal();
+        _setConn(ConnState.connecting, retry: true);
+      },
     );
+    _client = client;
     try {
       return await _client!.connect();
     } catch (e) {
@@ -271,6 +300,7 @@ class TvService extends ChangeNotifier {
       } catch (_) {}
     }
     _setConn(ConnState.connected);
+    _scheduleRenewal();
   }
 
   /// The television's inputs, empty until it has answered.
@@ -301,13 +331,17 @@ class TvService extends ChangeNotifier {
   void disconnect() {
     _wanted = false;
     _cancelRetry();
+    _cancelRenewal();
     _client?.disconnect();
     _client = null;
     _setConn(ConnState.disconnected);
   }
 
   /// One attempt: a saved or refreshed token if possible, else pairing.
-  Future<void> _attempt() async {
+  ///
+  /// [renew] goes straight to the refresh token, for a token still valid but
+  /// about to stop being.
+  Future<void> _attempt({bool renew = false}) async {
     // Nothing to connect to. Checked before anything else so an unconfigured
     // or switched-off television costs no socket, no timer and no error on
     // screen — and so the retry loop cannot spin on a blank address.
@@ -338,7 +372,7 @@ class TvService extends ChangeNotifier {
     await _loadToken();
 
     // A) Access token still valid -> use it directly.
-    if (_accessValid && await _openAndConnect(_accessToken)) {
+    if (!renew && _accessValid && await _openAndConnect(_accessToken)) {
       _finishConnected();
       return;
     }
@@ -457,6 +491,7 @@ class TvService extends ChangeNotifier {
   void dispose() {
     _wanted = false;
     _cancelRetry();
+    _cancelRenewal();
     _client?.disconnect();
     super.dispose();
   }

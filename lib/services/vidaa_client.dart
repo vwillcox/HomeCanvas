@@ -152,6 +152,10 @@ class VidaaClient {
   /// it — see [loadSourceList] for why.
   final void Function(String payload)? onSourceList;
 
+  /// Told when the TV drops a session this client had, as opposed to one it
+  /// closed itself. The owner reconnects: see [connect] for why this does not.
+  final void Function()? onLost;
+
   MqttServerClient? _client;
   late String _clientId;
   final TvState state;
@@ -177,6 +181,7 @@ class VidaaClient {
     this.onPinRequired,
     this.onLog,
     this.onSourceList,
+    this.onLost,
     TvState? state,
   }) : state = state ?? TvState();
 
@@ -209,11 +214,21 @@ class VidaaClient {
       ..onBadCertificate =
           ((Object cert) => true) // TV cert is self-signed
       ..keepAlivePeriod = 30
-      ..autoReconnect = true
+      // Not the library's own reconnect: it offers the same password again,
+      // and once the access token has expired the set refuses it forever —
+      // the client sat in "connecting" for days, every key dropped. The
+      // owner reconnects instead, through the refresh token.
+      ..autoReconnect = false
       ..logging(on: false);
 
     c.onConnected = () => _log('MQTT connected');
-    c.onDisconnected = () => _log('MQTT disconnected');
+    c.onDisconnected = () {
+      _log('MQTT disconnected');
+      final lost =
+          c.connectionStatus?.disconnectionOrigin ==
+          MqttDisconnectionOrigin.unsolicited;
+      if (lost && identical(_client, c)) onLost?.call();
+    };
     c.onSubscribeFail = (t) => _log('SUB FAIL $t');
 
     final password = accessToken ?? creds.password;
@@ -361,8 +376,16 @@ class VidaaClient {
   }
 
   void _publish(String topic, String payload) {
+    final c = _client;
+    // Dropped rather than thrown: a tap on a dead connection is not worth an
+    // unhandled exception, and the owner is already reconnecting.
+    if (c == null ||
+        c.connectionStatus?.state != MqttConnectionState.connected) {
+      _log('not sent, not connected: $topic');
+      return;
+    }
     final builder = MqttClientPayloadBuilder()..addString(payload);
-    _client?.publishMessage(topic, MqttQos.atMostOnce, builder.payload!);
+    c.publishMessage(topic, MqttQos.atMostOnce, builder.payload!);
   }
 
   // ---- High-level commands ----
