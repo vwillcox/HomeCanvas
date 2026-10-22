@@ -1,6 +1,7 @@
 # Voice control
 
-Say **"hey canvas"** to the panel, then what you want: *"show the stocks"*,
+Say **"hey canvas"** (or [a wake word of your own](#your-own-wake-word)) to
+the panel, then what you want: *"show the stocks"*,
 *"next page"*, *"open the remote"*, *"pause the music"*. Anything the panel
 doesn't know itself — *"turn off the lamp"*, *"what's the temperature
 indoors"* — is passed on to Home Assistant, if you have it, and its answer is
@@ -18,6 +19,7 @@ open.
 - [What you need](#what-you-need)
 - [Installing it](#installing-it)
 - [Switching it on](#switching-it-on)
+- [Your own wake word](#your-own-wake-word)
 - [How to talk to it](#how-to-talk-to-it)
 - [What you can say](#what-you-can-say)
 - [Asking Home Assistant](#asking-home-assistant)
@@ -44,8 +46,19 @@ open.
 
 ## Installing it
 
-`install.sh` doesn't set this up yet. On the Pi, as the kiosk's user (no root
-needed):
+```bash
+bash ~/homecanvas/install.sh --voice
+```
+
+That opens the installer straight at voice control. It sets up the speech
+engine, helps you choose a wake word, and [teaches it how you say
+it](#your-own-wake-word). It's also asked about in a full install. No root is
+needed unless `pw-record` or Python's `venv` is missing, and it says so first.
+
+### By hand
+
+`scripts/setup-voice.sh` does the setting up on its own (`--check` only
+looks). What it does, if you'd rather type it:
 
 ```bash
 V=~/.local/share/homecanvas/voice
@@ -76,8 +89,8 @@ Both models run on everything said. Neither hears "canvas" every time, but
 they miss it at different times: of twelve "hey canvas" recorded at the
 panel, one heard nine and the other ten, and between them eleven.
 
-Check it hears you before you switch it on in the kiosk. Run this, say
-*"hey canvas, next page"*, and press Ctrl-C:
+To check it hears you, run this, say *"hey canvas, next page"*, and press
+Ctrl-C:
 
 ```bash
 ~/.local/share/homecanvas/voice/venv/bin/python ~/homecanvas/deploy/voice_listener.py
@@ -99,13 +112,72 @@ going:
 
 | It says | Meaning |
 |---|---|
-| Listening for "hey canvas" | Ready. |
+| Listening for "hey canvas" (or your wake word) | Ready. |
 | Starting… | The listener is loading its models (a few seconds). |
 | Not listening: *reason*. Trying again. | It started but couldn't hear: usually the microphone. It keeps trying. |
 | Voice control is not installed on this device | The `venv` or models above are missing. |
 
 Turn it off and the listener stops and the microphone is released straight
 away.
+
+## Your own wake word
+
+"Hey canvas" works out of the box, but you can choose anything:
+
+```bash
+bash ~/homecanvas/install.sh --voice
+```
+
+Pick one of the suggestions ("computer", "hey jarvis", "okay house", "hey
+panel"), or type your own. It's checked as you type:
+
+- **Refused:** a command on its own ("next", "stop"), a word too common to
+  pick out ("the"), numbers written as digits, or more than four words.
+- **Warned about:** anything under three syllables, or a short name with no
+  greeting in front. They work, but they're misheard more and go off by
+  accident more.
+
+An unusual name with a greeting in front works best: "hey jarvis", "okay
+zephyr". Avoid the name of anyone in the house.
+
+Then it learns how you say it:
+
+1. **Microphone.** Choose which one, if there's more than one. It becomes the
+   machine's default. Say anything, and a level meter shows whether it hears
+   you above the room.
+2. **Five times.** Say the wake word on its own, five times, from where you'd
+   usually stand. Both recognisers write down what they heard each time.
+3. **Learning.** The recognisers turn speech into words; they don't spot a
+   sound. An unusual name comes out as whatever ordinary words it sounds
+   like: "hey Zorblax" was heard as "hazor blacks", "hey sore blacks" and
+   "hades or blacks". Those are kept, as *lookalikes* (another word in place of
+   the name, after the greeting) or *variants* (the whole phrase as heard).
+   With them, that wake word went from 0 of 6 to 6 of 6.
+4. **Everyday speech.** You read two ordinary sentences aloud. If anything it
+   learned would wake it on those, it's forgotten again. If the wake word
+   itself turns up in everyday speech, it tells you.
+5. **The verdict:** how often it heard you, before and after learning. You
+   can save it, try again, or choose another.
+6. **For real.** It saves the wake word, restarts the panel and asks you to
+   say "*your wake word*, next page", then shows what the panel made of it.
+
+It's kept in `~/.config/homecanvas/config.json`, under `screen` →
+`wakeWord`:
+
+```json
+"wakeWord": {
+  "phrase": "hey jarvis",
+  "lookalikes": ["service"],
+  "variants": ["hijarvis", "hey jar this"]
+}
+```
+
+You can edit that by hand: add a word you've seen it mishear, or delete one
+that sets it off. Stop the panel first (`systemctl --user stop homecanvas`)
+so it can't save over your edit, then start it again.
+
+Nothing about learning leaves the machine, and nothing is recorded: what you
+said is kept only as the words above.
 
 ## How to talk to it
 
@@ -275,13 +347,15 @@ two don't fight over the microphone:
 
 **It doesn't wake.** Watch for *Listening…* at the top. If it never appears:
 
-- Check Settings says *Listening for "hey canvas"*.
+- Check Settings says *Listening for "…"* with your wake word.
 - Check the right microphone is PipeWire's default (`wpctl status`).
 - Run the listener by hand ([above](#installing-it)) and see whether `wake`
   lines appear.
-- Say "hey canvas" a little more deliberately, as two words. Both
-  recognisers are tried, and common mishearings ("hey campus", "hi canvass",
-  "a canvas") are accepted.
+- Say the wake word a little more deliberately. Both recognisers are tried,
+  and common mishearings ("hey campus", "hi canvass", "a canvas") are
+  accepted.
+- Teach it again from where you usually stand: `bash ~/homecanvas/install.sh
+  --voice`. It learns how *you* say it.
 
 **It wakes but does the wrong thing.** Read the words it shows. If they're
 wrong, it misheard you: try a shorter phrase or another name for the widget.

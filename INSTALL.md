@@ -79,26 +79,51 @@ On the Pi, in a terminal:
 curl -fsSL https://raw.githubusercontent.com/vwillcox/HomeCanvas/main/install.sh | bash
 ```
 
-That's it — the installer asks a few questions and does the rest:
+That opens the installer, full screen in the terminal. It asks everything
+first, shows you the list, and only then changes anything:
 
-1. checks what's installed on your Linux and installs what's missing
-   (Raspberry Pi OS, Debian, Ubuntu, Fedora, Arch or openSUSE);
-2. installs Flutter and builds HomeCanvas;
-3. connects it to Immich — have your server's address and an API key
-   (**Account Settings → API Keys**) ready, or skip it and do it later;
-4. gives it a name on your network, so it's `homecanvas.local`;
-5. starts it with the desktop, finds the touchscreen and sets it up;
-6. puts the dashboard editor at `http://homecanvas.local`
-   ([details](#the-editor-on-port-80)).
+- **Photos:** your Immich server's address and an API key
+  (**Account Settings → API Keys**), checked as you type them. Or skip it and
+  connect later.
+- **A name** on your network, so the panel is `homecanvas.local`.
+- **The dashboard:** start from a set of widgets (*A good start*, *The
+  family's board*, *Smart home*, *Music, TV and video*, *Home lab*) and tick
+  or untick any of the 71 widgets. They're laid out a page per group, ready
+  to rearrange in the editor.
+- **A theme**, with a preview of its colours, and whether the panel starts on
+  the dashboard or the photo albums.
+- **Voice control**, and the words that wake it: "hey canvas", one of the
+  suggestions, or your own, checked as you type ([VOICE.md](VOICE.md)).
+- **Extras** for what you picked: your location for the weather, piper so the
+  panel can speak, the video player for YouTube, librespot for Spotify on the
+  panel's speakers, Home Assistant or Homey with their keys checked.
 
-It says what it's about to do before each step, keeps a full log in
-`~/homecanvas-install.log`, and can be run again safely: on an installed Pi
-it offers to **update** instead. If you already have a copy of the code,
-`bash install.sh` in it does the same.
+Then it does it all, showing each step and the log as it goes:
+
+1. installs what's missing (Raspberry Pi OS, Debian, Ubuntu, Fedora, Arch or
+   openSUSE), installs Flutter and builds HomeCanvas;
+2. names it, starts it with the desktop, sets up the touchscreen, and puts
+   the dashboard editor at `http://homecanvas.local`
+   ([details](#the-editor-on-port-80));
+3. sets up the extras, and the speech engine for voice control;
+4. **teaches it your wake word:** you say it five times, it learns how the
+   recognisers hear *you* saying it, checks that two everyday sentences
+   don't set it off, and then you try it for real.
+
+It needs a terminal at least 80×24, and asks for your password only if
+something has to be installed system-wide. Its log is
+`~/homecanvas-setup.log`, and the build's is `~/homecanvas-install.log`.
+
+Run it again at any time (`bash ~/homecanvas/install.sh`): on an installed
+panel it offers to **update**, to **change the widgets, theme and extras**,
+or to set up **voice control and the wake word**. Settings you don't change
+are kept, and the config it replaces is kept beside the new one.
 
 ```bash
-bash install.sh --check   # only look: what's installed, what's missing
-bash install.sh --yes     # no questions — take every default
+bash install.sh --check     # only look: what's installed, what's missing
+bash install.sh --voice     # straight to voice control and the wake word
+bash install.sh --classic   # plain questions, one at a time, no full screen
+bash install.sh --yes       # no questions: take every default
 ```
 
 ### By hand
@@ -730,8 +755,8 @@ That is a British female voice; any piper voice works if you keep the names
 ### Voice control
 
 "Hey canvas" needs a microphone, a speech engine and two small models, all
-running on the Pi. Setting them up, and everything you can say, is in
-**[VOICE.md](VOICE.md)**.
+running on the Pi. `bash install.sh --voice` sets them up and teaches it the
+wake word of your choice. Everything you can say is in **[VOICE.md](VOICE.md)**.
 
 ### A phone as a wireless camera
 
