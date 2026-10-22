@@ -33,6 +33,7 @@ Built with Flutter as a native Linux app, so it stays smooth on a Pi.
 |---|---|
 | **[Wiki](https://github.com/vwillcox/HomeCanvas/wiki)** | Start here: installing, what hardware you need, using it, every widget, the FAQ and troubleshooting. Questions go in [Discussions](https://github.com/vwillcox/HomeCanvas/discussions). |
 | **[INSTALL.md](INSTALL.md)** | Setting it up: the hardware, the install, and every optional feature — Spotify, Bluetooth, the camera, the share inbox, the dashboard's widgets, turning the screen off with Alexa. Troubleshooting too. |
+| **[VOICE.md](VOICE.md)** | Voice control: "hey canvas", heard and understood on the Pi — installing it, every command, and asking Home Assistant. |
 | **[THEMES.md](THEMES.md)** | The seventeen themes, each shown on the real panel, and how to make your own. |
 | **[TECHNICAL.md](TECHNICAL.md)** | How it works: the dashboard's widget registry and editor, the encryption, the visualiser, the APIs it talks to, the project layout, debug hooks and the libraries it is built on. |
 
@@ -183,6 +184,10 @@ camera in a corner window; pinch to drive the phone's own zoom.
 
 **Private content** — opens Immich's Locked Folder with your PIN, and re-locks
 when you leave.
+
+**Voice control** — say "hey canvas, show the stocks", "next page" or "pause the
+music"; anything else goes to Home Assistant. Heard and understood on the Pi;
+see [VOICE.md](VOICE.md).
 
 **Built for a wall** — panels drift slowly against burn-in; the screen turns
 itself off when idle and wakes on touch (or by voice, through Alexa); starts on

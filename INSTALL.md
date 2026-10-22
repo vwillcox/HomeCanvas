@@ -727,6 +727,12 @@ That is a British female voice; any piper voice works if you keep the names
 > Do **not** `apt install piper` — Debian's package of that name configures
 > gaming mice.
 
+### Voice control
+
+"Hey canvas" needs a microphone, a speech engine and two small models, all
+running on the Pi. Setting them up, and everything you can say, is in
+**[VOICE.md](VOICE.md)**.
+
 ### A phone as a wireless camera
 
 An old Android phone running
