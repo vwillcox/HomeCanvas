@@ -91,6 +91,7 @@ import 'screens/video_player_screen.dart';
 import 'widgets/camera_overlay.dart';
 import 'widgets/incoming_share_overlay.dart';
 import 'widgets/reading_bar.dart';
+import 'widgets/on_screen_keyboard.dart';
 import 'widgets/now_playing_overlay.dart';
 import 'widgets/video_overlay.dart';
 import 'app_paths.dart';
@@ -799,23 +800,26 @@ class HomeCanvasApp extends StatelessWidget {
         onPointerDown: (_) =>
             context.read<ScreenIdleService>().noteInteraction(),
         child: _RestWhileDark(
-          child: Stack(
-            children: [
-              if (child != null) _HiddenUnderVideo(child: child),
-              // A video sent to the panel, full screen or floating over
-              // whatever else is on it. Below the share popup, so something
-              // arriving mid-video still shows.
-              VideoOverlay(navigatorKey: rootNavigatorKey),
-              IncomingShareOverlay(navigatorKey: rootNavigatorKey),
-              // What is being read aloud, with its controls, over any screen.
-              const ReadingBar(),
-              // "Hey canvas" heard, and what was made of the rest.
-              const VoiceIndicator(),
-              const KonamiOverlay(),
-              CameraOverlay(navigatorKey: rootNavigatorKey),
-              // Draws tiles off screen for the dashboard editor's preview.
-              const TileRenderHost(),
-            ],
+          child: OnScreenKeyboard(
+            enabled: !Platform.environment.containsKey('FLUTTER_TEST'),
+            child: Stack(
+              children: [
+                if (child != null) _HiddenUnderVideo(child: child),
+                // A video sent to the panel, full screen or floating over
+                // whatever else is on it. Below the share popup, so something
+                // arriving mid-video still shows.
+                VideoOverlay(navigatorKey: rootNavigatorKey),
+                IncomingShareOverlay(navigatorKey: rootNavigatorKey),
+                // What is being read aloud, with its controls, over any screen.
+                const ReadingBar(),
+                // "Hey canvas" heard, and what was made of the rest.
+                const VoiceIndicator(),
+                const KonamiOverlay(),
+                CameraOverlay(navigatorKey: rootNavigatorKey),
+                // Draws tiles off screen for the dashboard editor's preview.
+                const TileRenderHost(),
+              ],
+            ),
           ),
         ),
       ),

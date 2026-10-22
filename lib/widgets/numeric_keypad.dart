@@ -3,10 +3,9 @@ import '../look.dart';
 
 /// A telephone-style number pad.
 ///
-/// This panel has no on-screen keyboard — it is a bare Wayland session with no
-/// desktop and nothing to raise one — so anywhere a number has to be typed
-/// needs its own. Shared between the Locked Folder's PIN and the television's
-/// pairing code rather than written twice, because two keypads drift.
+/// For a full-screen PIN entry, where the keypad is the page. A text field
+/// anywhere else gets the app-wide `OnScreenKeyboard` instead (see
+/// on_screen_keyboard.dart).
 ///
 /// Sized from [keySize] rather than fixed, so the same pad works full-screen
 /// and inside a dashboard tile.
