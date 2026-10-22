@@ -126,6 +126,21 @@ nothing, and all of it stops while the screen is dark.
 
 It follows the LCARS skin of TT Launcher, colour for colour.
 
+![LCARS](docs/screenshots/themes/lcars.jpg)
+
+More of it, on the same panel:
+
+| | |
+|---|---|
+| ![The Home Assistant bridge](docs/screenshots/themes/lcars/bridge.jpg) | ![Stocks and crypto](docs/screenshots/themes/lcars/markets.jpg) |
+| *The Home Assistant bridge, a page to itself* | *Stocks and crypto* |
+| ![Fuel, TfL, trains and planes](docs/screenshots/themes/lcars/travel.jpg) | ![Grid carbon, on this day, timers and GitHub](docs/screenshots/themes/lcars/carbon-history.jpg) |
+| *Fuel, TfL, trains and planes overhead* | *Grid carbon, on this day, timers and GitHub* |
+| ![The weather forecast](docs/screenshots/themes/lcars/forecast.jpg) | ![The TV remote](docs/screenshots/themes/lcars/tv-remote.jpg) |
+| *The weather tile, tapped: the full-screen forecast* | *"Hey canvas, open the remote"* |
+| ![A news story](docs/screenshots/themes/lcars/news-article.jpg) | ![Keyboard shortcuts](docs/screenshots/themes/lcars/shortcuts.jpg) |
+| *A news story, opened* | *A widget across the whole page: Omarchy's shortcuts* |
+
 ### Nightstand
 
 *Flat.* Deliberately plain and very high contrast: white and amber on black,
