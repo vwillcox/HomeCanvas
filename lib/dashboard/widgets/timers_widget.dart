@@ -11,6 +11,7 @@ import 'fit_canvas.dart';
 import 'tile_bits.dart';
 import '../../widgets/lcars.dart';
 import '../../l10n/l10n.dart';
+import '../../time_format.dart';
 
 /// Kitchen timers: tap a preset to start one, tap its ring to pause it, hold
 /// it to cancel. When one is done the panel says so, and a tap on the ring
@@ -202,8 +203,7 @@ class _Ring extends StatelessWidget {
   static String clock(Duration d) {
     final s = (d.inMilliseconds / 1000).ceil();
     final h = s ~/ 3600, m = (s % 3600) ~/ 60, sec = s % 60;
-    final mm = m.toString().padLeft(2, '0'),
-        ss = sec.toString().padLeft(2, '0');
+    final mm = two(m), ss = two(sec);
     return h > 0 ? '$h:$mm:$ss' : '$mm:$ss';
   }
 

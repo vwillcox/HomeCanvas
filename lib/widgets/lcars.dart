@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../dashboard/dashboard_theme.dart';
 import '../look.dart';
 import 'pause_when_hidden.dart';
+import '../time_format.dart';
 
 /// The drawing behind a theme whose style is [ThemeStyle.lcars]: a starship's
 /// console, in flat blocks of colour on black.
@@ -917,7 +918,7 @@ class LcarsRailBlock extends StatelessWidget {
                     top: 6,
                     right: 12,
                     child: Text(
-                      '${index + 1}'.padLeft(2, '0'),
+                      two(index + 1),
                       style: TextStyle(
                         color: lcarsInk.withValues(alpha: 0.55),
                         fontSize: 17,

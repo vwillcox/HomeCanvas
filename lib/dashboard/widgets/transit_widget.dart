@@ -30,9 +30,6 @@ Color _modeColour(String mode) => Color(switch (mode) {
 Color? _hex(String? h) =>
     h == null ? null : Color(0xFF000000 | int.parse(h, radix: 16));
 
-Color _inkOn(Color c) =>
-    c.computeLuminance() > 0.45 ? const Color(0xFF111111) : Colors.white;
-
 /// Departures from any stop Transitous knows — most of Europe's and North
 /// America's trains, subways, trams and buses, and more besides — live
 /// where the operator shares it.
@@ -206,7 +203,7 @@ class _DepartureRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = theme;
     final chip = _hex(d.colour) ?? _modeColour(d.mode);
-    final ink = _hex(d.textColour) ?? _inkOn(chip);
+    final ink = _hex(d.textColour) ?? inkOn(chip);
     final late = d.lateMinutes;
     final (String text, Color colour) = d.cancelled
         ? (tr('widget.trains.cancelled', 'Cancelled'), status.bad)

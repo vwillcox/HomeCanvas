@@ -11,6 +11,8 @@ import '../dashboard_theme.dart';
 import '../../l10n/l10n.dart';
 import '../../l10n/dates.dart';
 import '../../widgets/lcars.dart';
+import 'tile_bits.dart';
+import '../../time_format.dart';
 
 /// Opens the full forecast over the dashboard.
 ///
@@ -734,7 +736,7 @@ class _DayRow extends StatelessWidget {
           // Wide enough for "Wednesday" at this size — at 110 it wrapped.
           width: 150,
           child: Text(
-            t.isLcars ? lcarsCaps(dayName(day.date)) : dayName(day.date),
+            tileCased(t, dayName(day.date)),
             maxLines: 1,
             softWrap: false,
             style: TextStyle(
@@ -1133,9 +1135,8 @@ String dayName(DateTime d, {DateTime? now}) =>
     isToday(d, now: now) ? tr('common.today', 'Today') : weekdayName(d);
 
 /// "Now" for the first column, otherwise the hour on the 24-hour clock.
-String hourLabel(DateTime t, {bool first = false}) => first
-    ? tr('weather.now', 'Now')
-    : '${t.hour.toString().padLeft(2, '0')}:00';
+String hourLabel(DateTime t, {bool first = false}) =>
+    first ? tr('weather.now', 'Now') : '${two(t.hour)}:00';
 
 /// The coldest low and warmest high across [days].
 ///

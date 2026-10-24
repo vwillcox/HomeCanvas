@@ -9,6 +9,7 @@ import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'speed_gauge.dart';
 import '../../l10n/l10n.dart';
+import 'tile_bits.dart';
 
 /// Speed between this panel and another machine on the network.
 ///
@@ -161,7 +162,7 @@ class _Readout extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _readoutLine(
+            readoutLine(
               theme,
               Icons.download,
               tr('widget.speedtest.down', 'Down'),
@@ -170,7 +171,7 @@ class _Readout extends StatelessWidget {
               colour: theme.accent,
             ),
             const SizedBox(height: 6),
-            _readoutLine(
+            readoutLine(
               theme,
               Icons.upload,
               tr('widget.speedtest.up', 'Up'),
@@ -202,53 +203,6 @@ class _Readout extends StatelessWidget {
       : (v >= 1000
             ? '${(v / 1000).toStringAsFixed(2)} Gb'
             : v.toStringAsFixed(0));
-}
-
-/// Text that shrinks to its share of a row rather than running past the end.
-Widget _shrink(Widget child, {bool right = false}) => FittedBox(
-  fit: BoxFit.scaleDown,
-  alignment: right ? Alignment.centerRight : Alignment.centerLeft,
-  child: child,
-);
-
-/// A name and a value on one line, each in its own share of the row.
-Widget _readoutLine(
-  DashboardTheme theme,
-  IconData icon,
-  String name,
-  String value, {
-  required bool active,
-  required Color colour,
-}) {
-  return Row(
-    children: [
-      Icon(icon, size: 18, color: active ? colour : theme.textSecondary),
-      const SizedBox(width: 6),
-      Expanded(
-        flex: 4,
-        child: _shrink(
-          Text(
-            name,
-            style: TextStyle(color: theme.textSecondary, fontSize: 13),
-          ),
-        ),
-      ),
-      Expanded(
-        flex: 5,
-        child: _shrink(
-          Text(
-            value,
-            style: TextStyle(
-              color: active ? colour : theme.textPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          right: true,
-        ),
-      ),
-    ],
-  );
 }
 
 final lanSpeedtestWidgetType = DashboardWidgetType(

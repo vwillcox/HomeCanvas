@@ -226,7 +226,7 @@ class TileMessage extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 260),
           child: Text(
-            theme.isLcars ? lcarsCaps(text) : text,
+            tileCased(theme, text),
             textAlign: TextAlign.center,
             style: TextStyle(
               color: theme.textSecondary,
@@ -308,6 +308,58 @@ double tileCorner(DashboardTheme theme, double radius) =>
 /// Words as the theme letters them: capitals on a console.
 String tileCased(DashboardTheme theme, String s) =>
     theme.isLcars ? lcarsCaps(s) : s;
+
+/// Near-black or white, whichever reads on [c]: for words on a line's own
+/// colour, or on the theme's accent.
+Color inkOn(Color c) =>
+    c.computeLuminance() > 0.45 ? const Color(0xFF111111) : Colors.white;
+
+/// Text that shrinks to its share of a row rather than running past the end.
+Widget shrinkInRow(Widget child, {bool right = false}) => FittedBox(
+  fit: BoxFit.scaleDown,
+  alignment: right ? Alignment.centerRight : Alignment.centerLeft,
+  child: child,
+);
+
+/// A name and a value on one line, each in its own share of the row.
+Widget readoutLine(
+  DashboardTheme theme,
+  IconData icon,
+  String name,
+  String value, {
+  required bool active,
+  required Color colour,
+}) {
+  return Row(
+    children: [
+      Icon(icon, size: 18, color: active ? colour : theme.textSecondary),
+      const SizedBox(width: 6),
+      Expanded(
+        flex: 4,
+        child: shrinkInRow(
+          Text(
+            name,
+            style: TextStyle(color: theme.textSecondary, fontSize: 13),
+          ),
+        ),
+      ),
+      Expanded(
+        flex: 5,
+        child: shrinkInRow(
+          Text(
+            value,
+            style: TextStyle(
+              color: active ? colour : theme.textPrimary,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          right: true,
+        ),
+      ),
+    ],
+  );
+}
 
 /// A button inside a tile as a console draws one: a block of [colour] with
 /// its [child] in black. For the widgets to use where another theme has a
@@ -427,7 +479,7 @@ class _RefreshedState extends State<Refreshed> {
             Expanded(child: widget.child),
             const SizedBox(height: 4),
             Text(
-              t.isLcars ? lcarsCaps(updated) : updated,
+              tileCased(t, updated),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.right,

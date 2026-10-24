@@ -14,6 +14,7 @@ import '../../widgets/shown_timers.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'tile_bits.dart';
+import '../../time_format.dart';
 
 /// A day of electricity, from a smart meter's running total for the day —
 /// Hildebrand Glow's, which is what the Bright app shows.
@@ -304,7 +305,7 @@ class EnergyRange {
     return EnergyRange(
       bars: [for (final (i, b) in bars.indexed) i > slot ? null : b],
       axis: [
-        for (final h in [0, 6, 12, 18]) (h * per, h.toString().padLeft(2, '0')),
+        for (final h in [0, 6, 12, 18]) (h * per, two(h)),
       ],
       now: slot,
       total: today ?? ha?.today ?? glowSum,

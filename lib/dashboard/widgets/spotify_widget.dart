@@ -14,6 +14,7 @@ import '../widget_registry.dart';
 import 'scrolling_text.dart';
 import '../../l10n/l10n.dart';
 import '../../widgets/lcars.dart';
+import 'tile_bits.dart';
 
 /// What's playing, with transport controls.
 ///
@@ -327,7 +328,7 @@ class _Details extends StatelessWidget {
         // hides the part that says which version it is. Scrolls only when it
         // has to; a title that fits sits still.
         ScrollingText(
-          t.isLcars ? lcarsCaps(now.title) : now.title,
+          tileCased(t, now.title),
           align: centred ? TextAlign.center : TextAlign.start,
           style: TextStyle(
             color: t.textPrimary,

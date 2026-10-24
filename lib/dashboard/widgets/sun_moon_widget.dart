@@ -275,7 +275,7 @@ class _Times extends StatelessWidget {
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
-                      '${length.inHours} h ${(length.inMinutes % 60).toString().padLeft(2, '0')} · $changeText',
+                      '${length.inHours} h ${two(length.inMinutes % 60)} · $changeText',
                       maxLines: 1,
                       style: TextStyle(
                         color: theme.textSecondary,

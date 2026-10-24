@@ -12,6 +12,7 @@ import '../../widgets/shown_timers.dart';
 import '../../l10n/l10n.dart';
 import '../../map_text.dart';
 import '../../services/http_client.dart';
+import '../../time_format.dart';
 
 /// Something that happened on this date.
 @immutable
@@ -68,7 +69,7 @@ class _HistoryWidgetState extends State<HistoryWidget>
 
   String get _today {
     final n = DateTime.now();
-    return '${n.month.toString().padLeft(2, '0')}/${n.day.toString().padLeft(2, '0')}';
+    return '${two(n.month)}/${two(n.day)}';
   }
 
   @override

@@ -8,6 +8,7 @@ import '../../time_format.dart';
 import '../../l10n/dates.dart';
 import '../../l10n/l10n.dart';
 import '../../widgets/lcars.dart';
+import 'tile_bits.dart';
 
 /// One calendar feed and the colour its events are drawn in.
 class _Source {
@@ -240,7 +241,7 @@ class _MonthView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          t.isLcars ? lcarsCaps(monthYear(now)) : monthYear(now),
+          tileCased(t, monthYear(now)),
           style: TextStyle(
             color: t.isLcars ? t.accent : t.textPrimary,
             fontSize: 16,

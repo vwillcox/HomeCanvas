@@ -12,11 +12,6 @@ import '../widget_registry.dart';
 import 'fit_canvas.dart';
 import 'tile_bits.dart';
 
-/// Black text on the light line colours (Circle, Hammersmith & City,
-/// Waterloo & City, Lioness), white on the rest.
-Color _inkOn(Color c) =>
-    c.computeLuminance() > 0.45 ? const Color(0xFF111111) : Colors.white;
-
 // ------------------------------------------------------------------ lines
 
 /// Which modes a London lines tile covers, from its settings.
@@ -532,7 +527,7 @@ class _ArrivalRow extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: _inkOn(colour),
+                    color: inkOn(colour),
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                   ),

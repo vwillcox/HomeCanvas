@@ -285,9 +285,6 @@ class _MarketsTileState extends State<_MarketsTile>
   }
 }
 
-/// Words as the theme letters them: capitals on a console.
-String _cased(DashboardTheme t, String s) => t.isLcars ? lcarsCaps(s) : s;
-
 /// What everything held on the tile is worth, and what it has made or lost.
 /// A line for each currency, since pounds and dollars don't add up.
 class _Total extends StatelessWidget {
@@ -511,7 +508,7 @@ class _Row extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  t.isLcars ? lcarsCaps(name) : name,
+                  tileCased(t, name),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -1908,9 +1905,7 @@ class _MoreBelowState extends State<_MoreBelow> {
   @override
   Widget build(BuildContext context) {
     final t = widget.theme;
-    final ink = t.accent.computeLuminance() > 0.45
-        ? const Color(0xFF111111)
-        : Colors.white;
+    final ink = inkOn(t.accent);
     return Stack(
       children: [
         Positioned.fill(child: widget.builder(_controller)),
@@ -1939,7 +1934,7 @@ class _MoreBelowState extends State<_MoreBelow> {
                       const SizedBox(width: 4),
                       Flexible(
                         child: Text(
-                          _cased(
+                          tileCased(
                             t,
                             tr(
                               'widget.markets.scrollForMore',

@@ -9,6 +9,7 @@ import '../widget_registry.dart';
 import 'tv_inputs_sheet.dart';
 import '../../l10n/l10n.dart';
 import '../../widgets/lcars.dart';
+import 'tile_bits.dart';
 
 /// A remote control for the television.
 ///
@@ -139,7 +140,7 @@ class _Status extends StatelessWidget {
         const SizedBox(width: 8),
         Expanded(
           child: Text(
-            _cased(
+            tileCased(
               theme,
               bits.isEmpty
                   ? tr('widget.tv.television', 'Television')
@@ -156,10 +157,6 @@ class _Status extends StatelessWidget {
     );
   }
 }
-
-/// Words as the theme letters them: capitals on a console.
-String _cased(DashboardTheme theme, String s) =>
-    theme.isLcars ? lcarsCaps(s) : s;
 
 /// Opens the inputs pop-up.
 ///
@@ -633,7 +630,7 @@ class _Message extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            _cased(theme, text),
+            tileCased(theme, text),
             textAlign: TextAlign.center,
             style: TextStyle(color: theme.textSecondary, fontSize: 15),
           ),
