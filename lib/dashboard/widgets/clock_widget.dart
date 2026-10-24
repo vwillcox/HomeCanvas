@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../widget_registry.dart';
 import '../../l10n/dates.dart';
 import '../../widgets/lcars.dart';
+import '../../time_format.dart';
 
 /// Time and date.
 class ClockWidget extends StatefulWidget {
@@ -68,10 +69,10 @@ class _ClockWidgetState extends State<ClockWidget> {
       hour = hour % 12;
       if (hour == 0) hour = 12;
     }
-    final hh = twentyFour ? _two(hour) : '$hour';
+    final hh = twentyFour ? two(hour) : '$hour';
     final time = seconds
-        ? '$hh:${_two(_now.minute)}:${_two(_now.second)}$suffix'
-        : '$hh:${_two(_now.minute)}$suffix';
+        ? '$hh:${two(_now.minute)}:${two(_now.second)}$suffix'
+        : '$hh:${two(_now.minute)}$suffix';
 
     if (t.isLcars) {
       // A console's clock: the hour in the text colour and the rest in the
@@ -168,8 +169,6 @@ class _ClockWidgetState extends State<ClockWidget> {
     );
   }
 
-  static String _two(int v) => v.toString().padLeft(2, '0');
-
   /// "Monday 28 September", or "Monday, September 28" in US English.
   static String _dateLine(DateTime d) => longDate(d);
 }
@@ -219,10 +218,10 @@ final clockWidgetType = DashboardWidgetType(
       hour = hour % 12;
       if (hour == 0) hour = 12;
     }
-    final hh = twentyFour ? _ClockWidgetState._two(hour) : '$hour';
+    final hh = twentyFour ? two(hour) : '$hour';
     final time = seconds
-        ? '$hh:${_ClockWidgetState._two(now.minute)}:${_ClockWidgetState._two(now.second)}$suffix'
-        : '$hh:${_ClockWidgetState._two(now.minute)}$suffix';
+        ? '$hh:${two(now.minute)}:${two(now.second)}$suffix'
+        : '$hh:${two(now.minute)}$suffix';
     return [
       PreviewLine(time, scale: 0.42, centre: true),
       if (config.options['showDate'] != false)

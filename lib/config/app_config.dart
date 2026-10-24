@@ -4,6 +4,7 @@ library;
 import '../dashboard/dashboard_model.dart';
 import '../l10n/l10n.dart';
 import '../services/wake_word.dart';
+import '../services/http_client.dart';
 
 enum SlideshowTransition { fade, slide, kenBurns, pageTurn }
 
@@ -284,8 +285,9 @@ class HomeAssistantSettings {
       HomeAssistantSettings(
         // Absent means on, so an existing config keeps working.
         enabled: j['enabled'] as bool? ?? true,
-        baseUrl: (j['baseUrl'] as String? ?? 'http://localhost:8123')
-            .replaceAll(RegExp(r'/+$'), ''),
+        baseUrl: trimAddress(
+          j['baseUrl'] as String? ?? 'http://localhost:8123',
+        ),
         token: j['token'] as String? ?? '',
         temperatureEntity: j['temperatureEntity'] as String? ?? '',
         humidityEntity: j['humidityEntity'] as String? ?? '',
@@ -585,9 +587,9 @@ class UnifiSettings {
 
   factory UnifiSettings.fromJson(Map<String, dynamic> j) => UnifiSettings(
     enabled: j['enabled'] as bool? ?? false,
-    host: (j['host'] as String? ?? '192.168.1.1')
-        .replaceAll(RegExp(r'^https?://'), '')
-        .replaceAll(RegExp(r'/+$'), ''),
+    host: trimAddress(
+      j['host'] as String? ?? '192.168.1.1',
+    ).replaceAll(RegExp(r'^https?://'), ''),
     apiKey: j['apiKey'] as String? ?? '',
     siteId: j['siteId'] as String? ?? '',
     allowSelfSignedCert: j['allowSelfSignedCert'] as bool? ?? true,

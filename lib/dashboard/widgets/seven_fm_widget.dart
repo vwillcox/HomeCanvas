@@ -16,6 +16,7 @@ import '../widget_registry.dart';
 import 'radio_bits.dart';
 import 'scrolling_text.dart';
 import 'tile_bits.dart';
+import '../../time_format.dart';
 
 /// StreamingSoundtracks.com — or another of the 24seven.FM stations — with
 /// all the station says about what it plays: the album and its cover, how
@@ -541,11 +542,6 @@ class _ProgressState extends State<_Progress> {
     super.dispose();
   }
 
-  static String _mmss(Duration d) {
-    final s = d.inSeconds;
-    return '${s ~/ 60}:${(s % 60).toString().padLeft(2, '0')}';
-  }
-
   @override
   Widget build(BuildContext context) {
     final t = widget.theme;
@@ -563,7 +559,7 @@ class _ProgressState extends State<_Progress> {
         constraints: const BoxConstraints(maxWidth: 640),
         child: Row(
           children: [
-            Text(_mmss(gone), style: figures),
+            Text(playTime(gone), style: figures),
             const SizedBox(width: 12),
             Expanded(
               child: TileProgress(
@@ -573,7 +569,7 @@ class _ProgressState extends State<_Progress> {
               ),
             ),
             const SizedBox(width: 12),
-            Text(_mmss(length), style: figures),
+            Text(playTime(length), style: figures),
           ],
         ),
       ),

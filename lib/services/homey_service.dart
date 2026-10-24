@@ -412,7 +412,7 @@ class HomeyService extends ChangeNotifier {
 
   /// "192.168.1.50" as much as "http://192.168.1.50/".
   static String baseOf(String address) {
-    final a = address.trim().replaceAll(RegExp(r'/+$'), '');
+    final a = trimAddress(address);
     return a.isEmpty || a.contains('://') ? a : 'http://$a';
   }
 

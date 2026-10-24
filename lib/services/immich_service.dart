@@ -9,6 +9,7 @@ import 'media_cache.dart';
 import 'media_source.dart';
 import '../map_text.dart';
 import 'http_client.dart';
+import '../time_format.dart';
 
 /// Thin Immich REST client. Reads connection details live from [ConfigService]
 /// so reconnecting in Settings takes effect immediately. Also acts as a
@@ -58,7 +59,7 @@ class ImmichService with ImmichUrls implements MediaSource {
   /// Test arbitrary credentials without persisting them (used by setup/edit).
   Future<bool> testConnectionWith(String url, String key) async {
     try {
-      final base = url.trim().replaceAll(RegExp(r'/+$'), '');
+      final base = trimAddress(url);
       final r = await Dio().get(
         '$base/api/users/me',
         options: Options(
@@ -203,12 +204,7 @@ class ImmichService with ImmichUrls implements MediaSource {
     // The date alone: Immich 3 answers a full timestamp with a 400.
     final r = await _dio().get(
       '/api/memories',
-      queryParameters: {
-        'for':
-            '${day.year.toString().padLeft(4, '0')}-'
-            '${day.month.toString().padLeft(2, '0')}-'
-            '${day.day.toString().padLeft(2, '0')}',
-      },
+      queryParameters: {'for': isoDay(day)},
     );
     final data = r.data;
     if (data is! List) return const [];

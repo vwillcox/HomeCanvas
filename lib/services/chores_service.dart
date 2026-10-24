@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 
 import 'bin_schedule.dart' show Bin, dateOnly;
 import '../map_text.dart';
+import '../time_format.dart';
 
 /// A chore, as set up in the widget's settings.
 @immutable
@@ -97,8 +98,7 @@ class Done {
 
   Map<String, dynamic> toJson() => {
     'board': board,
-    'day':
-        '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}',
+    'day': isoDay(day),
     'chore': chore,
     'person': person,
     'stars': stars,

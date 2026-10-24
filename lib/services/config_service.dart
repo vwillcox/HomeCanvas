@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import '../config/app_config.dart';
 import '../l10n/l10n.dart';
 import 'private_file.dart';
+import 'http_client.dart';
 
 /// Loads/saves [AppConfig] to ~/.config/homecanvas/config.json and notifies
 /// listeners on change. A single instance is shared app-wide.
@@ -99,7 +100,7 @@ class ConfigService extends ChangeNotifier {
   }
 
   Future<void> setConnection(String url, String key) async {
-    _config.immichUrl = url.trim().replaceAll(RegExp(r'/+$'), '');
+    _config.immichUrl = trimAddress(url);
     _config.apiKey = key.trim();
     await save();
   }

@@ -5,6 +5,7 @@ import '../../l10n/l10n.dart';
 import '../../look.dart';
 import '../../widgets/lcars.dart';
 import '../dashboard_theme.dart';
+import '../../time_format.dart';
 
 /// Good, warning and bad, in shades that read on the theme's background.
 ///
@@ -385,8 +386,7 @@ class Refreshed extends StatefulWidget {
   /// [at] as a time of day, with the day before it when that isn't [now]'s:
   /// "09:14", "Sun 21:40".
   static String clock(DateTime at, DateTime now) {
-    String two(int n) => n.toString().padLeft(2, '0');
-    final time = '${two(at.hour)}:${two(at.minute)}';
+    final time = hhmm(at);
     final today =
         at.year == now.year && at.month == now.month && at.day == now.day;
     return today ? time : '${weekdayShort(at)} $time';

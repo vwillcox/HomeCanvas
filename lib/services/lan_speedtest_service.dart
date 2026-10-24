@@ -4,6 +4,7 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import '../l10n/l10n.dart';
+import 'http_client.dart';
 
 enum LanPhase { idle, download, upload, done, failed }
 
@@ -93,7 +94,7 @@ class LanSpeedtestService extends ChangeNotifier {
   /// Runs both phases against [baseUrl], e.g. `http://10.0.0.218:3000`.
   Future<void> run(String baseUrl) async {
     if (_state.running) return;
-    final base = baseUrl.trim().replaceAll(RegExp(r'/+$'), '');
+    final base = trimAddress(baseUrl);
     if (base.isEmpty) {
       _emit(
         LanSpeedtestState(

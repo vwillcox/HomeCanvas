@@ -39,6 +39,7 @@ import '../widgets/language_tile.dart';
 import '../l10n/l10n.dart';
 import 'about_screen.dart';
 import 'setup_screen.dart';
+import '../services/http_client.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -1145,7 +1146,7 @@ class _HomeAssistantSettingsTile extends StatelessWidget {
 
     if (saved != true) return;
     s.enabled = enabled;
-    s.baseUrl = url.text.trim().replaceAll(RegExp(r'/+$'), '');
+    s.baseUrl = trimAddress(url.text);
     s.token = token.text.trim();
     s.temperatureEntity = temp.text.trim();
     s.humidityEntity = hum.text.trim();

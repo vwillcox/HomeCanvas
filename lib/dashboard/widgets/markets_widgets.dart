@@ -14,6 +14,7 @@ import '../../l10n/dates.dart';
 import '../../l10n/l10n.dart';
 import '../../widgets/lcars.dart';
 import '../../map_text.dart';
+import '../../time_format.dart';
 
 /// One row a tile was asked for: what to look up, what to call it, and —
 /// as typed — what was paid for it, how many are held, when they were
@@ -1258,8 +1259,7 @@ class _Chart extends CustomPainter {
   final String Function(double) label;
 
   String _when(DateTime t) => switch (span) {
-    'day' =>
-      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}',
+    'day' => hhmm(t),
     'week' => weekdayShort(t),
     // "Oct 25": a year's labels are months, and the year matters at its
     // start.

@@ -14,6 +14,7 @@ import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import 'tile_bits.dart';
 import '../../map_text.dart';
+import '../../time_format.dart';
 
 /// Home Assistant as a starship's console, sized for a page of its own: a
 /// rail down the left of Home Assistant's areas, and for the one chosen its
@@ -247,9 +248,7 @@ class _Deck extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final active = group.controls.where((e) => e.on).length;
-    final now = TimeOfDay.now();
-    final clock =
-        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    final clock = hhmm(DateTime.now());
     final lights = group.lights;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

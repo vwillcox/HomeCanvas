@@ -514,7 +514,7 @@ class GlancesClient {
     if (!RegExp(r':\d+$').hasMatch(Uri.parse(b).authority)) {
       b = '$b:61208'; // Glances' own port.
     }
-    return b.replaceAll(RegExp(r'/+$'), '');
+    return trimAddress(b);
   }
 
   int? _version;

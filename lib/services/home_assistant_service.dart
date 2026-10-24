@@ -157,8 +157,7 @@ class HomeAssistantService extends ChangeNotifier {
   DateTime? _fetched;
   Future<void>? _inFlight;
 
-  String get _base =>
-      _config.config.homeAssistant.baseUrl.replaceAll(RegExp(r'/+$'), '');
+  String get _base => trimAddress(_config.config.homeAssistant.baseUrl);
   String get _token => _config.config.homeAssistant.token;
   bool get configured => _base.isNotEmpty && _token.isNotEmpty;
 

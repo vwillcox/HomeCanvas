@@ -18,14 +18,7 @@ import '../services/playback_source.dart';
 import '../services/spotify_service.dart';
 import 'spotify_panels.dart';
 import '../l10n/l10n.dart';
-
-String _fmt(Duration d) {
-  String two(int n) => n.toString().padLeft(2, '0');
-  final h = d.inHours;
-  final m = d.inMinutes.remainder(60);
-  final s = d.inSeconds.remainder(60);
-  return h > 0 ? '$h:${two(m)}:${two(s)}' : '${two(m)}:${two(s)}';
-}
+import '../time_format.dart';
 
 /// Shows what the paired phone is playing. Collapsed it's a corner card with
 /// artwork, title and progress; tapping expands it to a full-screen player with
@@ -565,7 +558,7 @@ class _CollapsedContent extends StatelessWidget {
                   ),
                 const SizedBox(height: 5),
                 Text(
-                  '${_fmt(n.position)} / ${_fmt(n.duration)}',
+                  '${playTime(n.position)} / ${playTime(n.duration)}',
                   style: TextStyle(
                     color: context.look.textSecondary,
                     fontSize: 15,
@@ -752,14 +745,14 @@ class _DetailContent extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              _fmt(n.position),
+                              playTime(n.position),
                               style: TextStyle(
                                 color: context.look.textSecondary,
                                 fontSize: 18,
                               ),
                             ),
                             Text(
-                              _fmt(n.duration),
+                              playTime(n.duration),
                               style: TextStyle(
                                 color: context.look.textSecondary,
                                 fontSize: 18,
