@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:html/parser.dart' as html;
 
 import 'radio_stations.dart';
 
@@ -160,7 +161,10 @@ class SevenTrack {
 List<SevenTrack> parseSevenTracks(String body) {
   final data = jsonDecode(body);
   if (data is! List) return const [];
-  String? text(Object? v) => v is String && v.trim().isNotEmpty ? v : null;
+  // These older lists come HTML-escaped: "Didn&#039;t", "&amp;".
+  String? text(Object? v) => v is String && v.trim().isNotEmpty
+      ? html.parseFragment(v).text?.trim()
+      : null;
   return [
     for (final item in data)
       if (item is Map && text(item['Track']) != null)

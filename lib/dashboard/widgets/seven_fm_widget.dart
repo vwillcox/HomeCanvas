@@ -603,15 +603,18 @@ class _Tracks extends StatelessWidget {
             tileCased(t, tr('widget.sevenFm.none', 'Nothing yet')),
             style: TextStyle(color: t.textSecondary, fontSize: 20),
           )
-        // As many as there is room for; the rest go off the bottom.
-        : SingleChildScrollView(
-            physics: const NeverScrollableScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (final (i, track) in tracks.indexed) _row(t, track, i),
-              ],
-            ),
+        // As many whole rows as there is room for.
+        : LayoutBuilder(
+            builder: (context, c) {
+              final fit = (c.maxHeight / _rowHeight).floor();
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final (i, track) in tracks.take(fit).indexed)
+                    _row(t, track, i),
+                ],
+              );
+            },
           );
     if (t.isLcars) {
       return LcarsPanel(
@@ -643,8 +646,12 @@ class _Tracks extends StatelessWidget {
     );
   }
 
+  static const _cover = 52.0;
+  static const _gap = 12.0;
+  static const _rowHeight = _cover + _gap;
+
   Widget _row(DashboardTheme t, SevenTrack track, int i) {
-    const cover = 52.0;
+    const cover = _cover;
     final lcars = t.isLcars;
     final under = [
       ?track.album,
@@ -652,69 +659,76 @@ class _Tracks extends StatelessWidget {
         tr('widget.sevenFm.askedBy', 'for {who}', {'who': who}),
     ].join(' · ');
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          if (lcars)
-            Container(
-              width: 16,
-              height: cover,
-              margin: const EdgeInsets.only(right: 8),
-              decoration: BoxDecoration(
-                color: track.requestedBy != null ? lcarsLit : t.block(seed + i),
-                borderRadius: const BorderRadius.horizontal(
-                  left: Radius.circular(8),
-                ),
-              ),
-            ),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(lcars ? 0 : 6),
-            child: SizedBox.square(
-              dimension: cover,
-              child: track.art == null
-                  ? ColoredBox(color: t.block(seed + i))
-                  : CachedNetworkImage(
-                      imageUrl: track.art!,
-                      fit: BoxFit.cover,
-                      memCacheWidth: 104,
-                      errorWidget: (_, _, _) =>
-                          ColoredBox(color: t.block(seed + i)),
-                    ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  tileCased(t, track.title),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: lcars && i == 0 ? t.accent : t.textPrimary,
-                    fontSize: lcars ? 22 : 19,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: lcars ? 0.6 : 0,
+      padding: const EdgeInsets.only(bottom: _gap),
+      child: SizedBox(
+        height: cover,
+        child: Row(
+          children: [
+            if (lcars)
+              Container(
+                width: 16,
+                height: cover,
+                margin: const EdgeInsets.only(right: 8),
+                decoration: BoxDecoration(
+                  color: track.requestedBy != null
+                      ? lcarsLit
+                      : t.block(seed + i),
+                  borderRadius: const BorderRadius.horizontal(
+                    left: Radius.circular(8),
                   ),
                 ),
-                if (under.isNotEmpty)
+              ),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(lcars ? 0 : 6),
+              child: SizedBox.square(
+                dimension: cover,
+                child: track.art == null
+                    ? ColoredBox(color: t.block(seed + i))
+                    : CachedNetworkImage(
+                        imageUrl: track.art!,
+                        fit: BoxFit.cover,
+                        memCacheWidth: 104,
+                        errorWidget: (_, _, _) =>
+                            ColoredBox(color: t.block(seed + i)),
+                      ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
                   Text(
-                    tileCased(t, under),
+                    tileCased(t, track.title),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: track.requestedBy != null
-                          ? t.accent
-                          : t.textSecondary,
-                      fontSize: lcars ? 17 : 15,
+                      color: lcars && i == 0 ? t.accent : t.textPrimary,
+                      fontSize: lcars ? 22 : 19,
+                      height: 1.2,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: lcars ? 0.6 : 0,
                     ),
                   ),
-              ],
+                  if (under.isNotEmpty)
+                    Text(
+                      tileCased(t, under),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: track.requestedBy != null
+                            ? t.accent
+                            : t.textSecondary,
+                        fontSize: lcars ? 17 : 15,
+                        height: 1.2,
+                      ),
+                    ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

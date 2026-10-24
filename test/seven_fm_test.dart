@@ -68,6 +68,12 @@ void main() {
     expect(tracks[1].artist, isNull);
     expect(tracks[1].album, 'TRON: Legacy');
     expect(parseSevenTracks('{"error":"x"}'), isEmpty);
+    // Sent HTML-escaped, shown as written.
+    final escaped = parseSevenTracks(
+      '[{"Track":"Didn&#039;t Go Inside","Album":"Action &amp; Adventure"}]',
+    ).single;
+    expect(escaped.title, "Didn't Go Inside");
+    expect(escaped.album, 'Action & Adventure');
   });
 
   test('the five stations, and which a stream is', () {
