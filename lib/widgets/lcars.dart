@@ -95,6 +95,95 @@ class LcarsBarNote extends InheritedWidget {
   bool updateShouldNotify(LcarsBarNote old) => old.note != note;
 }
 
+/// One block of a panel's wide side bar: a place or a choice, named in its
+/// bottom corner, near-white while it is the one in use.
+@immutable
+class LcarsSideBlock {
+  const LcarsSideBlock({
+    required this.label,
+    this.selected = false,
+    this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  /// Whether [other] looks the same, whatever it does when touched.
+  bool sameAs(LcarsSideBlock other) =>
+      other.label == label && other.selected == selected;
+}
+
+/// What a panel offers the widget inside it: to have its side bar drawn
+/// wide, as named blocks. See [LcarsSide].
+abstract interface class LcarsSideHost {
+  /// The blocks asked for last, or null.
+  List<LcarsSideBlock>? get sideBlocks;
+
+  /// Draws the side bar as [blocks] — or plain again, for null — from the
+  /// next frame.
+  void askSide(List<LcarsSideBlock>? blocks);
+}
+
+/// The panel a widget is in, for [LcarsSide] to find.
+class LcarsSideBlocks extends InheritedWidget {
+  const LcarsSideBlocks({super.key, required this.host, required super.child});
+
+  final LcarsSideHost host;
+
+  static LcarsSideHost? maybeOf(BuildContext context) =>
+      context.getInheritedWidgetOfExactType<LcarsSideBlocks>()?.host;
+
+  // The same panel for as long as it lasts.
+  @override
+  bool updateShouldNotify(LcarsSideBlocks old) => old.host != host;
+}
+
+/// Asks the panel [child] is in to draw its side bar wide, as [blocks] —
+/// the column of named blocks down a console's screen — for as long as
+/// [child] is shown. The panel does so only where it is a screen to itself;
+/// outside a panel nothing happens at all.
+class LcarsSide extends StatefulWidget {
+  const LcarsSide({super.key, required this.blocks, required this.child});
+
+  final List<LcarsSideBlock> blocks;
+  final Widget child;
+
+  @override
+  State<LcarsSide> createState() => _LcarsSideState();
+}
+
+class _LcarsSideState extends State<LcarsSide> {
+  LcarsSideHost? _host;
+
+  @override
+  void dispose() {
+    _host?.askSide(null);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final host = _host = LcarsSideBlocks.maybeOf(context);
+    final blocks = widget.blocks;
+    final had = host?.sideBlocks;
+    final same =
+        had != null &&
+        had.length == blocks.length &&
+        [
+          for (var i = 0; i < had.length; i++) had[i].sameAs(blocks[i]),
+        ].every((b) => b);
+    // Touches go to the newest blocks either way; only a new look has the
+    // panel lay itself out again.
+    if (same) {
+      had.setAll(0, blocks);
+    } else {
+      host?.askSide(List.of(blocks));
+    }
+    return widget.child;
+  }
+}
+
 /// A panel: a bar down the left that sweeps round the top corner into a bar
 /// across the top — or, with [down], round the bottom corner and across the
 /// bottom — with its [label] lettered on the bar, and the [child] on black
@@ -141,6 +230,10 @@ class LcarsPanel extends StatefulWidget {
   /// The bar down the side.
   static const side = 20.0;
 
+  /// The least a panel must be to have its side bar drawn wide when the
+  /// widget in it asks (see [LcarsSide]): a screen to itself, or near it.
+  static const wideFrom = Size(900, 560);
+
   /// How heavy a panel of [size] is drawn: 0, 1 or 2.
   static int weightFor(Size size) => size.width >= 420 && size.height >= 260
       ? 2
@@ -159,7 +252,8 @@ class LcarsPanel extends StatefulWidget {
 }
 
 class LcarsPanelState extends State<LcarsPanel>
-    with PauseWhenHidden<LcarsPanel> {
+    with PauseWhenHidden<LcarsPanel>
+    implements LcarsSideHost {
   /// Between one length coming up and the next.
   static const _beat = Duration(milliseconds: 70);
 
@@ -170,6 +264,19 @@ class LcarsPanelState extends State<LcarsPanel>
   final _note = ValueNotifier<({String words, String brief})?>(null);
   Timer? _timer;
   bool _still = false;
+
+  @override
+  List<LcarsSideBlock>? sideBlocks;
+
+  @override
+  void askSide(List<LcarsSideBlock>? blocks) {
+    sideBlocks = blocks;
+    // Asked while the widget inside is built, or as it goes, and so laid
+    // out again after this frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() {});
+    });
+  }
 
   // By the panel's name, so each keeps its own rhythm and no two blink
   // together.
@@ -256,9 +363,22 @@ class LcarsPanelState extends State<LcarsPanel>
         final weight = heavy ? 2 : LcarsPanel.weightFor(size);
         final rail = heavy ? 38.0 : LcarsPanel.railFor(weight);
         final across = rail + lcarsLine;
+        // A screen to itself, asked for one, has its side bar drawn wide:
+        // the elbow, and the widget's blocks down from it.
+        final blocks = sideBlocks;
+        final wide =
+            framed &&
+            !down &&
+            blocks != null &&
+            blocks.isNotEmpty &&
+            size.width >= LcarsPanel.wideFrom.width &&
+            size.height >= LcarsPanel.wideFrom.height;
+        final side = wide
+            ? (size.width * 0.09).clamp(140.0, 190.0)
+            : LcarsPanel.side;
         final inside = Padding(
           padding: EdgeInsets.fromLTRB(
-            LcarsPanel.side + lcarsLine + (heavy ? 4 : 8 * scale),
+            side + lcarsLine + (heavy ? 4 : 8 * scale),
             (down ? 0 : across) + (heavy ? 4 : 5 * scale),
             heavy ? 0 : 10 * scale,
             (down ? across : 0) + (heavy ? 4 : 5 * scale),
@@ -267,6 +387,9 @@ class LcarsPanelState extends State<LcarsPanel>
         );
         if (!framed) return inside;
         final seed = lcarsIndex(label ?? '');
+        final outer = square ? 0.0 : const [26.0, 38.0, 54.0][weight];
+        // Where the elbow ends and the blocks begin.
+        final elbowEnd = wide ? (size.height * 0.2).clamp(140.0, 260.0) : null;
         // The bars and what is inside them are painted apart, so a length
         // that blinks is drawn again without the widget, and the widget
         // without the bars.
@@ -283,8 +406,12 @@ class LcarsPanelState extends State<LcarsPanel>
                     second: theme.block(seed + 2),
                     third: theme.block(seed + 4),
                     rail: rail,
-                    outer: square ? 0 : const [26.0, 38.0, 54.0][weight],
-                    inner: square ? 0 : const [10.0, 14.0, 20.0][weight],
+                    side: side,
+                    elbowEnd: elbowEnd,
+                    outer: wide ? outer * 1.6 : outer,
+                    inner: square
+                        ? 0
+                        : const [10.0, 14.0, 20.0][weight] * (wide ? 2 : 1),
                     down: down,
                     label: label == null ? null : lcarsCaps(label),
                     fontFamily: theme.fontFamily,
@@ -294,9 +421,25 @@ class LcarsPanelState extends State<LcarsPanel>
             ),
             RepaintBoundary(
               child: ClipRect(
-                child: LcarsBarNote(note: _note, child: inside),
+                child: LcarsSideBlocks(
+                  host: this,
+                  child: LcarsBarNote(note: _note, child: inside),
+                ),
               ),
             ),
+            if (elbowEnd != null)
+              Positioned(
+                left: 0,
+                top: elbowEnd + lcarsLine,
+                width: side,
+                bottom: 0,
+                child: _SideColumn(
+                  blocks: blocks!,
+                  theme: theme,
+                  seed: seed,
+                  foot: outer * 1.6,
+                ),
+              ),
           ],
         );
       },
@@ -312,9 +455,11 @@ class _PanelPainter extends CustomPainter {
     required this.second,
     required this.third,
     required this.rail,
+    required this.side,
     required this.outer,
     required this.inner,
     required this.down,
+    this.elbowEnd,
     this.label,
     this.fontFamily,
   }) : super(repaint: Listenable.merge([lit, note]));
@@ -329,6 +474,13 @@ class _PanelPainter extends CustomPainter {
   final Color second;
   final Color third;
   final double rail;
+
+  /// How wide the bar down the side is.
+  final double side;
+
+  /// Where the elbow ends when the side bar is drawn wide, with the
+  /// widget's blocks below it in place of the foot; null otherwise.
+  final double? elbowEnd;
   final double outer;
   final double inner;
   final bool down;
@@ -338,7 +490,7 @@ class _PanelPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width, h = size.height;
-    const s = LcarsPanel.side;
+    final s = side;
     if (w <= s * 2 || h <= rail * 1.5) return;
     final paint = Paint()..isAntiAlias = true;
     final on = lit.value;
@@ -354,7 +506,7 @@ class _PanelPainter extends CustomPainter {
         ..scale(1, -1);
     }
     final foot = (h * 0.3).clamp(0.0, 56.0);
-    final barEnd = h - foot - lcarsLine;
+    final barEnd = elbowEnd ?? h - foot - lcarsLine;
     final sweep = outer.clamp(0.0, h / 2);
     final bend = inner.clamp(0.0, (h - rail - foot - lcarsLine).clamp(0.0, h));
     final firstEnd = w * 0.58, secondEnd = w * 0.8;
@@ -398,10 +550,12 @@ class _PanelPainter extends CustomPainter {
       ),
       paint..color = shade(third, 4),
     );
-    canvas.drawRect(
-      Rect.fromLTRB(0, barEnd + lcarsLine, s, h),
-      paint..color = shade(second, 8),
-    );
+    if (elbowEnd == null) {
+      canvas.drawRect(
+        Rect.fromLTRB(0, barEnd + lcarsLine, s, h),
+        paint..color = shade(second, 8),
+      );
+    }
     canvas.restore();
 
     // Lettered at the end of a length, as a console letters its bars. With
@@ -455,11 +609,142 @@ class _PanelPainter extends CustomPainter {
       old.second != second ||
       old.third != third ||
       old.rail != rail ||
+      old.side != side ||
+      old.elbowEnd != elbowEnd ||
       old.outer != outer ||
       old.inner != inner ||
       old.down != down ||
       old.label != label ||
       old.fontFamily != fontFamily;
+}
+
+/// A wide side bar's blocks, one above another under the elbow: uneven in
+/// height, as a console's are, each named in its bottom corner and numbered
+/// at its top, and the last swept round at the foot.
+class _SideColumn extends StatelessWidget {
+  const _SideColumn({
+    required this.blocks,
+    required this.theme,
+    required this.seed,
+    required this.foot,
+  });
+
+  final List<LcarsSideBlock> blocks;
+  final DashboardTheme theme;
+  final int seed;
+
+  /// How far the last block's corner is swept.
+  final double foot;
+
+  static const _flex = [4, 5, 4, 6, 5, 4];
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, c) {
+        final n = blocks.length;
+        final tall = (c.maxHeight - lcarsLine * (n - 1)) / n;
+        final type = (tall * 0.22).clamp(14.0, 24.0);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (var i = 0; i < n; i++) ...[
+              if (i > 0) const SizedBox(height: lcarsLine),
+              Expanded(
+                flex: _flex[i % _flex.length],
+                child: _SideBlock(
+                  block: blocks[i],
+                  number: i + 1,
+                  colour: theme.block(seed + 3 + i),
+                  type: type,
+                  fontFamily: theme.fontFamily,
+                  foot: i == n - 1 ? foot : 0,
+                ),
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _SideBlock extends StatelessWidget {
+  const _SideBlock({
+    required this.block,
+    required this.number,
+    required this.colour,
+    required this.type,
+    required this.fontFamily,
+    required this.foot,
+  });
+
+  final LcarsSideBlock block;
+  final int number;
+  final Color colour;
+  final double type;
+  final String? fontFamily;
+  final double foot;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: block.onTap != null,
+      selected: block.selected,
+      label: block.label,
+      child: Material(
+        color: block.selected ? lcarsLit : colour,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.only(bottomLeft: Radius.circular(foot)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: block.onTap,
+          splashFactory: NoSplash.splashFactory,
+          highlightColor: lcarsLit.withValues(alpha: 0.7),
+          child: LayoutBuilder(
+            builder: (context, c) => Stack(
+              children: [
+                if (c.maxHeight >= type * 3.4)
+                  Positioned(
+                    top: 6,
+                    right: 12,
+                    child: Text(
+                      two(number),
+                      style: TextStyle(
+                        color: lcarsInk.withValues(alpha: 0.55),
+                        fontFamily: fontFamily,
+                        fontSize: type * 0.75,
+                        height: 1,
+                      ),
+                    ),
+                  ),
+                Positioned(
+                  left: 8,
+                  right: 12,
+                  bottom: 6,
+                  child: Text(
+                    lcarsCaps(block.label),
+                    maxLines: 1,
+                    textAlign: TextAlign.right,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: lcarsInk,
+                      fontFamily: fontFamily,
+                      fontSize: type,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1,
+                      height: 1,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// Where a block sits in a strip of them, which decides which of its ends

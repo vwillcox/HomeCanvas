@@ -38,7 +38,12 @@ class _SevenFmWidgetState extends State<SevenFmWidget> {
   SevenFmService? _service;
   SevenFeed? _feed;
 
-  SevenStation get _station => sevenStation(widget.w.option('station', 'sst'));
+  /// A station tuned to from the console's side bar, in place of the one
+  /// in the settings until those change.
+  String? _tuned;
+
+  SevenStation get _station =>
+      sevenStation(_tuned ?? widget.w.option('station', 'sst'));
 
   @override
   void didChangeDependencies() {
@@ -50,8 +55,27 @@ class _SevenFmWidgetState extends State<SevenFmWidget> {
   @override
   void didUpdateWidget(SevenFmWidget old) {
     super.didUpdateWidget(old);
+    if (old.w.option('station', 'sst') != widget.w.option('station', 'sst')) {
+      _tuned = null;
+    }
     _follow();
   }
+
+  /// Shows [station] and plays it.
+  void _tune(SevenStation station) {
+    setState(() => _tuned = station.id);
+    _follow();
+    unawaited(
+      context.read<RadioService>().play(
+        station.radio,
+        volume: widget.w.option<double>('volume', 35),
+      ),
+    );
+  }
+
+  /// A station's name short enough for a block of the side bar.
+  static String _short(SevenStation station) =>
+      station.id == 'sst' ? 'Soundtracks' : station.name;
 
   /// The feed for the station picked, given up for the one before.
   void _follow() {
@@ -88,11 +112,24 @@ class _SevenFmWidgetState extends State<SevenFmWidget> {
         return LayoutBuilder(
           builder: (context, c) {
             if (c.maxWidth >= 560 && c.maxHeight >= 360) {
-              return _BigLook(
+              final big = _BigLook(
                 s: s,
                 size: c.biggest,
                 lists: lists,
                 visualiser: visualiser,
+              );
+              if (!w.theme.isLcars) return big;
+              // On a console, the sister stations down the side bar.
+              return LcarsSide(
+                blocks: [
+                  for (final station in sevenStations)
+                    LcarsSideBlock(
+                      label: _short(station),
+                      selected: station.id == feed.station.id,
+                      onTap: () => _tune(station),
+                    ),
+                ],
+                child: big,
               );
             }
             return _SmallLook(s: s, size: c.biggest);
