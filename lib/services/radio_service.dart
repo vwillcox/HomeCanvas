@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:html/parser.dart' as html;
 import 'package:media_kit/media_kit.dart';
 
 import '../l10n/l10n.dart';
@@ -30,6 +31,60 @@ class RadioSong {
   return (
     artist: title.substring(0, at).trim(),
     song: title.substring(at + 3).trim(),
+  );
+}
+
+/// Whether two names are of the same song or album: alike once case and
+/// punctuation are gone, or one the other with a subtitle or "(Remastered)"
+/// after it.
+bool sameName(String a, String b) {
+  String plain(String s) => s
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^a-z0-9 ]+'), ' ')
+      .trim()
+      .replaceAll(RegExp(r' +'), ' ');
+  final x = plain(a), y = plain(b);
+  if (x.isEmpty || y.isEmpty) return false;
+  return x == y || x.startsWith('$y ') || y.startsWith('$x ');
+}
+
+/// Stations that say what they are playing at /playing.php?format=json:
+/// StreamingSoundtracks.com and the others of its network.
+const radioNowPlayingHosts = {
+  'streamingsoundtracks.com',
+  '1980s.fm',
+  'adagio.fm',
+  'death.fm',
+  'entranced.fm',
+};
+
+/// What one of [radioNowPlayingHosts] says is on: the cover is a path on
+/// the station's own site, and only an album's — not the station's logo.
+({String song, String? artist, String? album, String? cover})?
+parseStationNowPlaying(String body) {
+  final data = jsonDecode(body);
+  if (data is! Map) return null;
+  final parts = data['parts'];
+  final track = parts is Map ? parts['track'] : null;
+  final markup = track is Map ? track['html'] : null;
+  if (markup is! String) return null;
+  final doc = html.parseFragment(markup);
+  final song = doc.querySelector('h2')?.text.trim();
+  if (song == null || song.isEmpty) return null;
+  String? album, artist;
+  for (final a in doc.querySelectorAll('.np-album a')) {
+    final href = a.attributes['href'] ?? '';
+    final text = a.text.trim();
+    if (text.isEmpty) continue;
+    if (href.contains('name=Album')) album = text;
+    if (href.contains('artist=')) artist = text;
+  }
+  final cover = data['cover'];
+  return (
+    song: song,
+    artist: artist,
+    album: album,
+    cover: cover is String && cover.startsWith('/images/cover/') ? cover : null,
   );
 }
 
@@ -370,7 +425,7 @@ class RadioService extends ChangeNotifier {
         _history.insert(0, RadioSong(title, station.name, DateTime.now()));
         if (_history.length > historyLength) _history.removeLast();
       }
-      unawaited(_lookupArt(title));
+      unawaited(_lookupArt(title, station));
     }
     notifyListeners();
   }
@@ -378,7 +433,11 @@ class RadioService extends ChangeNotifier {
   /// Cover art for the song [title] names, as the Now playing tile finds it
   /// for a phone's music. Only for "Artist - Title": a title without a
   /// dash is a programme's name, and iTunes would find a song called that.
-  Future<void> _lookupArt(String title) async {
+  ///
+  /// A station that says which album it is playing is asked first: a film
+  /// score's cues share their names with half of iTunes, and the composer
+  /// alone picks out none of them.
+  Future<void> _lookupArt(String title, RadioStation station) async {
     final parts = splitRadioTitle(title);
     final artist = parts.artist;
     if (artist == null) return;
@@ -388,39 +447,106 @@ class RadioService extends ChangeNotifier {
       return;
     }
     String? art;
-    try {
-      final r = await _dio.get(
-        'https://itunes.apple.com/search',
-        queryParameters: {
-          'term': '$artist ${parts.song}',
-          'entity': 'song',
-          'limit': 3,
-        },
-        options: Options(
-          // iTunes answers as text/javascript, which Dio leaves undecoded.
-          responseType: ResponseType.plain,
-          sendTimeout: const Duration(seconds: 8),
-          receiveTimeout: const Duration(seconds: 8),
-        ),
-      );
-      final body = jsonDecode(r.data as String) as Map<String, dynamic>;
-      final first = artist.toLowerCase().split(' ').first;
-      for (final item in (body['results'] as List?) ?? const []) {
-        // Only a result by the same artist: a near miss is a wrong cover.
-        final a = '${item['artistName'] ?? ''}'.toLowerCase();
-        if (!a.contains(first)) continue;
-        final url = '${item['artworkUrl100'] ?? ''}';
-        if (url.isNotEmpty) art = url.replaceAll('100x100bb', '600x600bb');
-        break;
-      }
-    } catch (e) {
-      debugPrint('Radio: artwork lookup failed: $e');
+    final host = Uri.tryParse(station.url)?.host;
+    if (host != null && radioNowPlayingHosts.contains(host)) {
+      art = await _stationArt(host, parts.song);
     }
+    art ??= await _itunesArt(artist, parts.song);
     _artCache[title] = art;
     if (_title == title) {
       _artUrl = art;
       notifyListeners();
     }
+  }
+
+  /// The cover from the station's own now-playing — sharper from iTunes
+  /// when iTunes has the same album. Asked a few times, as the station's
+  /// page can be a few seconds behind the stream's title.
+  Future<String?> _stationArt(String host, String song) async {
+    for (var i = 0; i < 3; i++) {
+      if (i > 0) await Future<void>.delayed(const Duration(seconds: 5));
+      try {
+        final r = await _dio.get(
+          'https://$host/playing.php',
+          queryParameters: {'format': 'json'},
+          options: Options(
+            responseType: ResponseType.plain,
+            receiveTimeout: const Duration(seconds: 8),
+          ),
+        );
+        final now = parseStationNowPlaying(r.data as String);
+        if (now == null || !sameName(now.song, song)) continue;
+        final cover = now.cover;
+        if (cover == null) return null;
+        final album = now.album;
+        final artist = now.artist;
+        if (album != null && artist != null) {
+          final sharper = await _itunesAlbumArt(artist, album);
+          if (sharper != null) return sharper;
+        }
+        return Uri.https(host, cover).toString();
+      } catch (e) {
+        debugPrint('Radio: $host now playing failed: $e');
+        return null;
+      }
+    }
+    return null;
+  }
+
+  Future<List<Map<String, dynamic>>> _itunes(String term, String entity) async {
+    final r = await _dio.get(
+      'https://itunes.apple.com/search',
+      queryParameters: {'term': term, 'entity': entity, 'limit': 5},
+      options: Options(
+        // iTunes answers as text/javascript, which Dio leaves undecoded.
+        responseType: ResponseType.plain,
+        sendTimeout: const Duration(seconds: 8),
+        receiveTimeout: const Duration(seconds: 8),
+      ),
+    );
+    final body = jsonDecode(r.data as String) as Map<String, dynamic>;
+    return [
+      for (final item in (body['results'] as List?) ?? const [])
+        if (item is Map<String, dynamic>) item,
+    ];
+  }
+
+  /// Only a result by the same artist and of the same song: the artist
+  /// alone found a different film's score for a cue it did not have.
+  Future<String?> _itunesArt(String artist, String song) async {
+    try {
+      for (final item in await _itunes('$artist $song', 'song')) {
+        if (!_byArtist(item, artist)) continue;
+        if (!sameName('${item['trackName'] ?? ''}', song)) continue;
+        return _big(item);
+      }
+    } catch (e) {
+      debugPrint('Radio: artwork lookup failed: $e');
+    }
+    return null;
+  }
+
+  Future<String?> _itunesAlbumArt(String artist, String album) async {
+    try {
+      for (final item in await _itunes('$artist $album', 'album')) {
+        if (!_byArtist(item, artist)) continue;
+        if (!sameName('${item['collectionName'] ?? ''}', album)) continue;
+        return _big(item);
+      }
+    } catch (e) {
+      debugPrint('Radio: artwork lookup failed: $e');
+    }
+    return null;
+  }
+
+  static bool _byArtist(Map<String, dynamic> item, String artist) =>
+      '${item['artistName'] ?? ''}'.toLowerCase().contains(
+        artist.toLowerCase().split(' ').first,
+      );
+
+  static String? _big(Map<String, dynamic> item) {
+    final url = '${item['artworkUrl100'] ?? ''}';
+    return url.isEmpty ? null : url.replaceAll('100x100bb', '600x600bb');
   }
 
   @override
