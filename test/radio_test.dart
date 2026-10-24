@@ -74,7 +74,6 @@ void main() {
     expect(radioBadge('KEXP Seattle'), 'KEXP');
     expect(radioBadge('Classic FM'), 'CFM');
     expect(radioBadge('Smooth Radio'), 'SR');
-    expect(radioStation('streamingsoundtracks')!.letters, 'SST');
     expect(radioBadge('SomaFM Groove Salad'), 'SG');
     expect(radioBadge('talkSPORT'), 'T');
     expect(radioBadge(''), '?');
@@ -127,33 +126,6 @@ void main() {
       expect(sameName('Jai Jai Ram (Orchestral)', 'X-MT'), isFalse);
       expect(sameName('Time', 'Timeless'), isFalse);
       expect(sameName('', 'X'), isFalse);
-    });
-
-    test('what StreamingSoundtracks.com says is on', () {
-      // As /playing.php?format=json sends it, cut down.
-      const body =
-          r'{"version":1,"parts":{"track":{"html":"<div class=\"np-copy\">'
-          r'<div class=\"np-album\"><a href=\"\/modules.php?name=Album&amp;'
-          r'asin=B07VLCHDXD\" >Xperiments From Dark Phoenix<\/a> - <a href='
-          r'\"\/modules.php?name=Requests&amp;postartistsearch=true&amp;artist='
-          r'Hans%20Zimmer\" target=\"_blank\">Hans Zimmer<\/a><\/div><h2>'
-          r'X-MT<\/h2><\/div>"}},"cover":"\/images\/cover\/B07VLCHDXD.jpg"}';
-      final now = parseStationNowPlaying(body)!;
-      expect(now.song, 'X-MT');
-      expect(now.artist, 'Hans Zimmer');
-      expect(now.album, 'Xperiments From Dark Phoenix');
-      expect(now.cover, '/images/cover/B07VLCHDXD.jpg');
-
-      // The station's logo is not a cover, and a pause is nothing at all.
-      final logo = body.replaceAll(
-        r'\/images\/cover\/B07VLCHDXD.jpg',
-        r'\/images\/logos\/logo-sst.png',
-      );
-      expect(parseStationNowPlaying(logo)!.cover, isNull);
-      expect(
-        parseStationNowPlaying('{"error":"Now Playing unavailable"}'),
-        isNull,
-      );
     });
   });
 

@@ -415,6 +415,14 @@
       "height": 3
     },
     {
+      "type": "sevenFm",
+      "name": "StreamingSoundtracks",
+      "description": "StreamingSoundtracks.com — film, game and TV scores — on the panel’s speakers, with the album and its cover, how far through the track is, what is coming up and who asked for it, and what played before. Or one of its sister stations: 1980s.FM, Adagio.FM, Death.FM or Entranced.FM.",
+      "category": "Photos, music & TV",
+      "width": 4,
+      "height": 2
+    },
+    {
       "type": "shopping",
       "name": "Shopping list",
       "description": "One list the whole house shares. Add to it from any phone on the home network at the editor’s address followed by /list; tap an item on the panel to tick it off. Ticked items clear themselves after half a day.",

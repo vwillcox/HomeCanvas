@@ -4,11 +4,11 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:html/parser.dart' as html;
 import 'package:media_kit/media_kit.dart';
 
 import '../l10n/l10n.dart';
 import 'radio_stations.dart';
+import 'seven_fm.dart';
 
 /// A song the radio played, for the tile's list of recent ones.
 class RadioSong {
@@ -46,46 +46,6 @@ bool sameName(String a, String b) {
   final x = plain(a), y = plain(b);
   if (x.isEmpty || y.isEmpty) return false;
   return x == y || x.startsWith('$y ') || y.startsWith('$x ');
-}
-
-/// Stations that say what they are playing at /playing.php?format=json:
-/// StreamingSoundtracks.com and the others of its network.
-const radioNowPlayingHosts = {
-  'streamingsoundtracks.com',
-  '1980s.fm',
-  'adagio.fm',
-  'death.fm',
-  'entranced.fm',
-};
-
-/// What one of [radioNowPlayingHosts] says is on: the cover is a path on
-/// the station's own site, and only an album's — not the station's logo.
-({String song, String? artist, String? album, String? cover})?
-parseStationNowPlaying(String body) {
-  final data = jsonDecode(body);
-  if (data is! Map) return null;
-  final parts = data['parts'];
-  final track = parts is Map ? parts['track'] : null;
-  final markup = track is Map ? track['html'] : null;
-  if (markup is! String) return null;
-  final doc = html.parseFragment(markup);
-  final song = doc.querySelector('h2')?.text.trim();
-  if (song == null || song.isEmpty) return null;
-  String? album, artist;
-  for (final a in doc.querySelectorAll('.np-album a')) {
-    final href = a.attributes['href'] ?? '';
-    final text = a.text.trim();
-    if (text.isEmpty) continue;
-    if (href.contains('name=Album')) album = text;
-    if (href.contains('artist=')) artist = text;
-  }
-  final cover = data['cover'];
-  return (
-    song: song,
-    artist: artist,
-    album: album,
-    cover: cover is String && cover.startsWith('/images/cover/') ? cover : null,
-  );
 }
 
 /// Internet radio, played on the panel's own speakers.
@@ -447,10 +407,8 @@ class RadioService extends ChangeNotifier {
       return;
     }
     String? art;
-    final host = Uri.tryParse(station.url)?.host;
-    if (host != null && radioNowPlayingHosts.contains(host)) {
-      art = await _stationArt(host, parts.song);
-    }
+    final seven = sevenStationAt(Uri.tryParse(station.url)?.host ?? '');
+    if (seven != null) art = await _stationArt(seven, parts.song);
     art ??= await _itunesArt(artist, parts.song);
     _artCache[title] = art;
     if (_title == title) {
@@ -459,34 +417,24 @@ class RadioService extends ChangeNotifier {
     }
   }
 
-  /// The cover from the station's own now-playing — sharper from iTunes
-  /// when iTunes has the same album. Asked a few times, as the station's
-  /// page can be a few seconds behind the stream's title.
-  Future<String?> _stationArt(String host, String song) async {
+  /// The cover from a 24seven.FM station's own now-playing. Asked a few
+  /// times, as the station's feed can be a few seconds ahead of or behind
+  /// the stream's title.
+  Future<String?> _stationArt(SevenStation station, String song) async {
     for (var i = 0; i < 3; i++) {
       if (i > 0) await Future<void>.delayed(const Duration(seconds: 5));
       try {
         final r = await _dio.get(
-          'https://$host/playing.php',
-          queryParameters: {'format': 'json'},
+          '${station.site}/now-playing.php',
           options: Options(
             responseType: ResponseType.plain,
             receiveTimeout: const Duration(seconds: 8),
           ),
         );
-        final now = parseStationNowPlaying(r.data as String);
-        if (now == null || !sameName(now.song, song)) continue;
-        final cover = now.cover;
-        if (cover == null) return null;
-        final album = now.album;
-        final artist = now.artist;
-        if (album != null && artist != null) {
-          final sharper = await _itunesAlbumArt(artist, album);
-          if (sharper != null) return sharper;
-        }
-        return Uri.https(host, cover).toString();
+        final now = parseSevenNowPlaying(r.data as String).track;
+        if (now != null && sameName(now.title, song)) return now.art;
       } catch (e) {
-        debugPrint('Radio: $host now playing failed: $e');
+        debugPrint('Radio: ${station.name} now playing failed: $e');
         return null;
       }
     }
@@ -518,19 +466,6 @@ class RadioService extends ChangeNotifier {
       for (final item in await _itunes('$artist $song', 'song')) {
         if (!_byArtist(item, artist)) continue;
         if (!sameName('${item['trackName'] ?? ''}', song)) continue;
-        return _big(item);
-      }
-    } catch (e) {
-      debugPrint('Radio: artwork lookup failed: $e');
-    }
-    return null;
-  }
-
-  Future<String?> _itunesAlbumArt(String artist, String album) async {
-    try {
-      for (final item in await _itunes('$artist $album', 'album')) {
-        if (!_byArtist(item, artist)) continue;
-        if (!sameName('${item['collectionName'] ?? ''}', album)) continue;
         return _big(item);
       }
     } catch (e) {

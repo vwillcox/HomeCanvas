@@ -32,6 +32,7 @@ import 'memories_widget.dart';
 import 'notes_widget.dart';
 import 'servers_widget.dart';
 import 'services_widget.dart';
+import 'seven_fm_widget.dart';
 import 'shopping_widget.dart';
 import 'speedtest_widget.dart';
 import 'sun_moon_widget.dart';
@@ -62,6 +63,7 @@ void registerBuiltInWidgets() {
     weatherWidgetType,
     spotifyWidgetType,
     radioWidgetType,
+    sevenFmWidgetType,
     calendarWidgetType,
     newsWidgetType,
     stocksWidgetType,

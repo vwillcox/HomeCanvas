@@ -21,7 +21,7 @@ void main() {
   final rows = [
     for (final id in [
       'bbc_radio_4', 'bbc_6music', 'classic_fm', 'fip', 'kexp', 'fm4', //
-      'nrk_p1', 'triple_j', 'streamingsoundtracks', 'somafm_groove_salad',
+      'nrk_p1', 'triple_j', 'bbc_radio_2', 'somafm_groove_salad',
       'swiss_jazz', 'rte_radio_1',
     ])
       {'station': id, 'name': '', 'url': ''},

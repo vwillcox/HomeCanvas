@@ -19,6 +19,7 @@ import 'services/brightness_service.dart';
 import 'services/bins_service.dart';
 import 'services/carbon_service.dart';
 import 'services/markets_service.dart';
+import 'services/seven_fm.dart';
 import 'services/tfl_service.dart';
 import 'services/transitous_service.dart';
 import 'services/planes_service.dart';
@@ -481,6 +482,7 @@ void main() async {
         ChangeNotifierProvider.value(value: nowPlaying),
         ChangeNotifierProvider.value(value: spotify),
         ChangeNotifierProvider.value(value: radio),
+        Provider(create: (_) => SevenFmService()),
         ChangeNotifierProvider.value(value: indoor),
         ChangeNotifierProvider.value(value: shareInbox),
         ChangeNotifierProvider.value(value: ytDlp),

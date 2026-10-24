@@ -587,15 +587,6 @@ final List<RadioStation> radioStations = [
     'Internet',
     'https://ice1.somafm.com/indiepop-128-mp3',
   ),
-  // Film, game and TV scores. Its every "listen" link — MP3 or AAC+, high
-  // or low — now leads to this one stream, 192 kbps AAC+, its best.
-  RadioStation(
-    'streamingsoundtracks',
-    'StreamingSoundtracks.com',
-    'Internet',
-    'https://streamingsoundtracks.com/live',
-    badge: 'SST',
-  ),
 ];
 
 final Map<String, RadioStation> _byId = {
