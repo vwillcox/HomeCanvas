@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../../config/app_config.dart';
 import '../../l10n/l10n.dart';
+import '../../services/itunes_art.dart';
 import '../../services/radio_service.dart';
 import '../../services/seven_fm.dart';
 import '../../widgets/audio_visualiser.dart';

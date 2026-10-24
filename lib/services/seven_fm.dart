@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:html/parser.dart' as html;
 
+import 'http_client.dart';
 import 'radio_stations.dart';
 
 /// One of the five stations of 24seven.FM, the network StreamingSoundtracks
@@ -276,7 +277,8 @@ class SevenFeed extends ChangeNotifier {
 /// The feeds the panel's StreamingSoundtracks tiles show, each asked only
 /// while some tile shows it.
 class SevenFmService {
-  SevenFmService({Dio? dio}) : _dio = dio ?? Dio();
+  SevenFmService({Dio? dio})
+    : _dio = dio ?? httpClient(headers: {'User-Agent': homeCanvasAgent});
 
   final Dio _dio;
   final _feeds = <String, SevenFeed>{};

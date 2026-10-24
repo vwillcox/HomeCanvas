@@ -1,12 +1,12 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:dbus/dbus.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' show Icons, IconData;
 
+import 'http_client.dart';
+import 'itunes_art.dart';
 import 'playback_source.dart';
 import 'screen_state.dart';
 
@@ -137,6 +137,7 @@ class NowPlayingService extends ChangeNotifier implements PlaybackSource {
   String? get artUrl => _artUrl;
   String _artForKey = '';
   final Map<String, String?> _artCache = {};
+  final _dio = httpClient();
 
   Future<void> start() async {
     try {
@@ -549,52 +550,11 @@ class NowPlayingService extends ChangeNotifier implements PlaybackSource {
     }
     _artUrl = null;
     notifyListeners();
-    try {
-      final r = await Dio().get(
-        'https://itunes.apple.com/search',
-        queryParameters: {
-          'term': '$artist $title'.trim(),
-          'entity': 'song',
-          'limit': 3,
-        },
-        options: Options(
-          // iTunes replies with Content-Type: text/javascript, so Dio won't
-          // decode it automatically — take the body as text and parse it here.
-          responseType: ResponseType.plain,
-          sendTimeout: const Duration(seconds: 8),
-          receiveTimeout: const Duration(seconds: 8),
-        ),
-      );
-      final body = r.data is String
-          ? jsonDecode(r.data as String) as Map<String, dynamic>
-          : (r.data as Map).cast<String, dynamic>();
-      final results = (body['results'] as List?) ?? const [];
-      String? art;
-      for (final item in results) {
-        final a = (item['artistName'] ?? '').toString().toLowerCase();
-        // Prefer a result whose artist actually matches.
-        if (artist.isEmpty ||
-            a.contains(artist.toLowerCase().split(' ').first)) {
-          art = (item['artworkUrl100'] ?? '').toString();
-          break;
-        }
-      }
-      art ??= results.isNotEmpty
-          ? (results.first['artworkUrl100'] ?? '').toString()
-          : null;
-      if (art != null && art.isNotEmpty) {
-        art = art.replaceAll('100x100bb', '600x600bb');
-      } else {
-        art = null;
-      }
-      _artCache[key] = art;
-      if (_artForKey == key) {
-        _artUrl = art;
-        notifyListeners();
-      }
-    } catch (e) {
-      debugPrint('artwork lookup error: $e');
-      _artCache[key] = null;
+    final art = await itunesSongArt(_dio, artist: artist, song: title);
+    _artCache[key] = art;
+    if (_artForKey == key) {
+      _artUrl = art;
+      notifyListeners();
     }
   }
 

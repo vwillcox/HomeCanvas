@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:home_canvas/dashboard/dashboard_model.dart';
+import 'package:home_canvas/services/itunes_art.dart';
 import 'package:home_canvas/services/radio_service.dart';
 import 'package:home_canvas/services/radio_stations.dart';
 import 'package:home_canvas/services/voice_commands.dart';
@@ -126,6 +127,8 @@ void main() {
       expect(sameName('Jai Jai Ram (Orchestral)', 'X-MT'), isFalse);
       expect(sameName('Time', 'Timeless'), isFalse);
       expect(sameName('', 'X'), isFalse);
+      // Any alphabet, not only A to Z.
+      expect(sameName('残酷な天使のテーゼ', '残酷な天使のテーゼ (TV Size)'), isTrue);
     });
   });
 

@@ -7,6 +7,8 @@ import 'package:flutter/foundation.dart';
 import 'package:media_kit/media_kit.dart';
 
 import '../l10n/l10n.dart';
+import 'http_client.dart';
+import 'itunes_art.dart';
 import 'radio_stations.dart';
 import 'seven_fm.dart';
 
@@ -34,20 +36,6 @@ class RadioSong {
   );
 }
 
-/// Whether two names are of the same song or album: alike once case and
-/// punctuation are gone, or one the other with a subtitle or "(Remastered)"
-/// after it.
-bool sameName(String a, String b) {
-  String plain(String s) => s
-      .toLowerCase()
-      .replaceAll(RegExp(r'[^a-z0-9 ]+'), ' ')
-      .trim()
-      .replaceAll(RegExp(r' +'), ' ');
-  final x = plain(a), y = plain(b);
-  if (x.isEmpty || y.isEmpty) return false;
-  return x == y || x.startsWith('$y ') || y.startsWith('$x ');
-}
-
 /// Internet radio, played on the panel's own speakers.
 ///
 /// One player for the whole app rather than one per tile, so the station
@@ -55,7 +43,8 @@ bool sameName(String a, String b) {
 /// cannot talk over each other. Made on first use: most panels never play
 /// the radio.
 class RadioService extends ChangeNotifier {
-  RadioService({this.onStart, this.file, Dio? dio}) : _dio = dio ?? Dio();
+  RadioService({this.onStart, this.file, Dio? dio})
+    : _dio = dio ?? httpClient();
 
   final Dio _dio;
 
@@ -409,7 +398,7 @@ class RadioService extends ChangeNotifier {
     String? art;
     final seven = sevenStationAt(Uri.tryParse(station.url)?.host ?? '');
     if (seven != null) art = await _stationArt(seven, parts.song);
-    art ??= await _itunesArt(artist, parts.song);
+    art ??= await itunesSongArt(_dio, artist: artist, song: parts.song);
     _artCache[title] = art;
     if (_title == title) {
       _artUrl = art;
@@ -439,49 +428,6 @@ class RadioService extends ChangeNotifier {
       }
     }
     return null;
-  }
-
-  Future<List<Map<String, dynamic>>> _itunes(String term, String entity) async {
-    final r = await _dio.get(
-      'https://itunes.apple.com/search',
-      queryParameters: {'term': term, 'entity': entity, 'limit': 5},
-      options: Options(
-        // iTunes answers as text/javascript, which Dio leaves undecoded.
-        responseType: ResponseType.plain,
-        sendTimeout: const Duration(seconds: 8),
-        receiveTimeout: const Duration(seconds: 8),
-      ),
-    );
-    final body = jsonDecode(r.data as String) as Map<String, dynamic>;
-    return [
-      for (final item in (body['results'] as List?) ?? const [])
-        if (item is Map<String, dynamic>) item,
-    ];
-  }
-
-  /// Only a result by the same artist and of the same song: the artist
-  /// alone found a different film's score for a cue it did not have.
-  Future<String?> _itunesArt(String artist, String song) async {
-    try {
-      for (final item in await _itunes('$artist $song', 'song')) {
-        if (!_byArtist(item, artist)) continue;
-        if (!sameName('${item['trackName'] ?? ''}', song)) continue;
-        return _big(item);
-      }
-    } catch (e) {
-      debugPrint('Radio: artwork lookup failed: $e');
-    }
-    return null;
-  }
-
-  static bool _byArtist(Map<String, dynamic> item, String artist) =>
-      '${item['artistName'] ?? ''}'.toLowerCase().contains(
-        artist.toLowerCase().split(' ').first,
-      );
-
-  static String? _big(Map<String, dynamic> item) {
-    final url = '${item['artworkUrl100'] ?? ''}';
-    return url.isEmpty ? null : url.replaceAll('100x100bb', '600x600bb');
   }
 
   @override
