@@ -74,8 +74,27 @@ void main() {
         )
         .color!;
     expect(colourOf('TWO'), lcarsLit);
-    expect(colourOf('ONE'), isNot(lcarsLit));
+    expect(colourOf('THREE'), isNot(lcarsLit));
   });
+
+  testWidgets(
+    'the first is the foot of the elbow, and the last block is bare',
+    (tester) async {
+      final tapped = await panel(tester, const Size(1920, 1100));
+      // Above the column of blocks, on the elbow, and a touch there counts.
+      expect(
+        tester.getTopLeft(find.text('ONE')).dy,
+        lessThan(tester.getTopLeft(find.text('TWO')).dy),
+      );
+      await tester.tap(find.text('ONE'));
+      expect(tapped, ['One']);
+      // Two of the three in the column under the elbow, and an empty foot:
+      // numbered 02 and 03, with no 04.
+      expect(find.text('02'), findsOneWidget);
+      expect(find.text('03'), findsOneWidget);
+      expect(find.text('04'), findsNothing);
+    },
+  );
 
   testWidgets('a small panel keeps its plain bar, whatever is asked', (
     tester,

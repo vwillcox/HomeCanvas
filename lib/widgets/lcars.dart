@@ -402,7 +402,10 @@ class LcarsPanelState extends State<LcarsPanel>
                   painter: _PanelPainter(
                     lit: _lit,
                     note: _note,
-                    first: theme.block(seed),
+                    // The elbow is the first block's, and lit as it is.
+                    first: wide && blocks.first.selected
+                        ? lcarsLit
+                        : theme.block(seed),
                     second: theme.block(seed + 2),
                     third: theme.block(seed + 4),
                     rail: rail,
@@ -427,19 +430,37 @@ class LcarsPanelState extends State<LcarsPanel>
                 ),
               ),
             ),
-            if (elbowEnd != null)
+            if (elbowEnd != null) ...[
+              // The first block is the foot of the elbow, painted with it:
+              // only its name and its touch are laid over it, below the
+              // sweep of the corner.
+              Positioned(
+                left: 0,
+                top: outer * 1.6,
+                width: side,
+                height: elbowEnd - outer * 1.6,
+                child: _SideBlock(
+                  block: blocks!.first,
+                  number: 1,
+                  colour: null,
+                  type: _SideColumn.typeFor(size.height - elbowEnd, blocks),
+                  fontFamily: theme.fontFamily,
+                  foot: 0,
+                ),
+              ),
               Positioned(
                 left: 0,
                 top: elbowEnd + lcarsLine,
                 width: side,
                 bottom: 0,
                 child: _SideColumn(
-                  blocks: blocks!,
+                  blocks: blocks.skip(1).toList(),
                   theme: theme,
                   seed: seed,
                   foot: outer * 1.6,
                 ),
               ),
+            ],
           ],
         );
       },
@@ -618,9 +639,10 @@ class _PanelPainter extends CustomPainter {
       old.fontFamily != fontFamily;
 }
 
-/// A wide side bar's blocks, one above another under the elbow: uneven in
-/// height, as a console's are, each named in its bottom corner and numbered
-/// at its top, and the last swept round at the foot.
+/// A wide side bar's blocks after the first, one above another under the
+/// elbow: uneven in height, as a console's are, each named in its bottom
+/// corner and numbered at its top. Under them a last block with nothing on
+/// it, swept round at the foot.
 class _SideColumn extends StatelessWidget {
   const _SideColumn({
     required this.blocks,
@@ -638,13 +660,20 @@ class _SideColumn extends StatelessWidget {
 
   static const _flex = [4, 5, 4, 6, 5, 4];
 
+  /// The size names are lettered in, for a column [height] tall below the
+  /// elbow holding all but the first of [blocks] and the empty foot.
+  static double typeFor(double height, List<LcarsSideBlock> blocks) {
+    final n = blocks.length;
+    return ((height - lcarsLine * (n - 1)) / n * 0.22).clamp(14.0, 24.0);
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, c) {
-        final n = blocks.length;
-        final tall = (c.maxHeight - lcarsLine * (n - 1)) / n;
-        final type = (tall * 0.22).clamp(14.0, 24.0);
+        final all = [...blocks, const LcarsSideBlock(label: '')];
+        final n = all.length;
+        final type = typeFor(c.maxHeight, all.sublist(1));
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -653,8 +682,8 @@ class _SideColumn extends StatelessWidget {
               Expanded(
                 flex: _flex[i % _flex.length],
                 child: _SideBlock(
-                  block: blocks[i],
-                  number: i + 1,
+                  block: all[i],
+                  number: i + 2,
                   colour: theme.block(seed + 3 + i),
                   type: type,
                   fontFamily: theme.fontFamily,
@@ -681,7 +710,10 @@ class _SideBlock extends StatelessWidget {
 
   final LcarsSideBlock block;
   final int number;
-  final Color colour;
+
+  /// Null for a block painted by the panel — the elbow's — with only its
+  /// name and its touch here.
+  final Color? colour;
   final double type;
   final String? fontFamily;
   final double foot;
@@ -693,7 +725,8 @@ class _SideBlock extends StatelessWidget {
       selected: block.selected,
       label: block.label,
       child: Material(
-        color: block.selected ? lcarsLit : colour,
+        type: colour == null ? MaterialType.transparency : MaterialType.canvas,
+        color: colour == null ? null : (block.selected ? lcarsLit : colour),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.only(bottomLeft: Radius.circular(foot)),
         ),
@@ -705,7 +738,7 @@ class _SideBlock extends StatelessWidget {
           child: LayoutBuilder(
             builder: (context, c) => Stack(
               children: [
-                if (c.maxHeight >= type * 3.4)
+                if (block.label.isNotEmpty && c.maxHeight >= type * 3.4)
                   Positioned(
                     top: 6,
                     right: 12,
@@ -719,29 +752,30 @@ class _SideBlock extends StatelessWidget {
                       ),
                     ),
                   ),
-                Positioned(
-                  left: 8,
-                  right: 12,
-                  // Above the sweep of the foot, which would cut into it.
-                  bottom: foot > 0 ? foot * 0.45 : 6,
-                  // A long name made smaller rather than cut short.
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      lcarsCaps(block.label),
-                      maxLines: 1,
-                      style: TextStyle(
-                        color: lcarsInk,
-                        fontFamily: fontFamily,
-                        fontSize: type,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1,
-                        height: 1,
+                if (block.label.isNotEmpty)
+                  Positioned(
+                    left: 8,
+                    right: 12,
+                    // Above the sweep of the foot, which would cut into it.
+                    bottom: foot > 0 ? foot * 0.45 : 6,
+                    // A long name made smaller rather than cut short.
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        lcarsCaps(block.label),
+                        maxLines: 1,
+                        style: TextStyle(
+                          color: lcarsInk,
+                          fontFamily: fontFamily,
+                          fontSize: type,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1,
+                          height: 1,
+                        ),
                       ),
                     ),
                   ),
-                ),
               ],
             ),
           ),
