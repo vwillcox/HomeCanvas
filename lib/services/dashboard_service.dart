@@ -345,6 +345,10 @@ class DashboardService extends ChangeNotifier {
         await request.response.close();
         return;
       }
+      // Everything here sets up the panel, with nothing to sign in with, so
+      // only the home network is answered — whatever a router has been told
+      // to pass on. Alexa's Hue requests are dealt with before they get here.
+      if (!_requireLocal(request)) return;
       // Nothing here says a page from elsewhere may read the answer, so a
       // browser will not let one: the editor's pages are served from here,
       // and ask as themselves. Widgets' settings have passwords in them.
@@ -404,7 +408,7 @@ class DashboardService extends ChangeNotifier {
         return await _render(request);
       }
       if (path == '/api/dashboard' && request.method == 'GET') {
-        return await _json(request, settings.toJson());
+        return await _json(request, maskSecrets(settings.toJson()));
       }
       if (path == '/api/dashboard' && request.method == 'PUT') {
         // Only from the editor itself: otherwise any web page open in the
@@ -736,7 +740,9 @@ class DashboardService extends ChangeNotifier {
   bool _requireLocal(HttpRequest request) {
     final remote = request.connectionInfo?.remoteAddress;
     if (_isLocal(remote)) return true;
-    debugPrint('Dashboard: refused senders page from ${remote?.address}');
+    debugPrint(
+      'Dashboard: refused ${request.uri.path} from ${remote?.address}',
+    );
     request.response.statusCode = HttpStatus.forbidden;
     request.response.write('Available on the local network only.');
     unawaited(request.response.close());
@@ -1024,11 +1030,13 @@ class DashboardService extends ChangeNotifier {
         'roundedCorners': data['roundedCorners'],
       if (data['tileShadows'] is bool) 'tileShadows': data['tileShadows'],
     });
+    final config = DashboardWidgetConfig.fromJson(
+      (data['widget'] as Map).cast<String, dynamic>(),
+    );
+    keepSecrets(config, settings.widgets);
     final png = await render(
       TileRenderRequest(
-        config: DashboardWidgetConfig.fromJson(
-          (data['widget'] as Map).cast<String, dynamic>(),
-        ),
+        config: config,
         theme: themes.byId('${data['themeId'] ?? settings.themeId}'),
         settings: look,
         size: size,
@@ -1107,6 +1115,9 @@ class DashboardService extends ChangeNotifier {
 
     final incoming = DashboardSettings.fromJson(data);
     final current = settings;
+    for (final w in incoming.widgets) {
+      keepSecrets(w, current.widgets);
+    }
     // The editor owns the layout and the theme; it has no business changing
     // whether the mode exists or which port it is served on, both of which
     // belong to the kiosk's own settings screen — nor whether someone has
@@ -1127,6 +1138,68 @@ class DashboardService extends ChangeNotifier {
     notifyListeners();
 
     await _json(request, {'ok': true, 'widgets': current.widgets.length});
+  }
+
+  /// What a secret setting — an API key, a password — is sent to the editor
+  /// as. The key itself never leaves the panel: the editor shows this as
+  /// dots and sends it back unchanged if it is left alone, and
+  /// [keepSecrets] puts the saved key back in its place.
+  static const secretMask = '••••••••';
+
+  static Set<String> _secretKeys(String type) => {
+    for (final o in WidgetRegistry.find(type)?.options ?? const [])
+      if (o.kind == OptionKind.secret) o.key,
+  };
+
+  /// A dashboard's [json] with every secret setting that has a value shown
+  /// as [secretMask].
+  @visibleForTesting
+  static Map<String, dynamic> maskSecrets(Map<String, dynamic> json) {
+    Object? masked(Object? w) {
+      if (w is! Map || w['options'] is! Map) return w;
+      final secret = _secretKeys('${w['type']}');
+      if (secret.isEmpty) return w;
+      return {
+        ...w.cast<String, dynamic>(),
+        'options': {
+          for (final e in (w['options'] as Map).entries)
+            '${e.key}': secret.contains(e.key) && '${e.value ?? ''}'.isNotEmpty
+                ? secretMask
+                : e.value,
+        },
+      };
+    }
+
+    return {
+      ...json,
+      if (json['widgets'] is List)
+        'widgets': [for (final w in json['widgets'] as List) masked(w)],
+    };
+  }
+
+  /// Puts back the key saved for [w] wherever it has only [secretMask] —
+  /// taken from the tile of the same id and type in [saved], and from no
+  /// other, so a tile cannot borrow another's key. With none saved, the
+  /// setting is left empty.
+  @visibleForTesting
+  static void keepSecrets(
+    DashboardWidgetConfig w,
+    List<DashboardWidgetConfig> saved,
+  ) {
+    final secret = _secretKeys(w.type);
+    if (secret.isEmpty) return;
+    final before = saved
+        .where((s) => s.id == w.id && s.type == w.type)
+        .firstOrNull;
+    for (final key in secret) {
+      if (w.options[key] != secretMask) continue;
+      final kept = before?.options[key];
+      if (kept == null) {
+        w.options.remove(key);
+      } else {
+        w.options[key] = kept;
+      }
+    }
   }
 
   /// Album names for the editor, or nothing if they cannot be fetched.

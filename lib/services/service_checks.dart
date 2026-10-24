@@ -124,6 +124,11 @@ class ServiceChecker {
   }
 
   Future<CheckResult> _ping(String host) async {
+    // A name only, never an option: "-i 0.002" would otherwise reach ping
+    // as one, from a tile's settings.
+    if (!RegExp(r'^[A-Za-z0-9][A-Za-z0-9.:\-]*$').hasMatch(host)) {
+      return const CheckResult(CheckState.down, detail: 'not a host');
+    }
     final r = await Process.run('ping', [
       '-c',
       '1',

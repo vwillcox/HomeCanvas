@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
@@ -217,6 +218,10 @@ class ShareInboxService extends ChangeNotifier {
         await request.response.close();
         return;
       }
+    } on _TooLarge {
+      debugPrint('ShareInbox: refused an oversized share from $sender');
+      request.response.statusCode = HttpStatus.requestEntityTooLarge;
+      await request.response.close();
     } on SealedAuthException catch (e) {
       debugPrint('ShareInbox: rejected a sealed share from $sender: $e');
       request.response.statusCode = HttpStatus.unauthorized;
@@ -314,11 +319,7 @@ class ShareInboxService extends ChangeNotifier {
     );
 
     if (open.mime == 'application/json') {
-      final bytes = <int>[];
-      await for (final chunk in plaintext.stream) {
-        bytes.addAll(chunk);
-      }
-      await _handleJson(request, bytes, sender);
+      await _handleJson(request, await _drain(plaintext.stream), sender);
       return;
     }
     await _handleFile(request, plaintext.stream, sender, open.mime);
@@ -369,7 +370,7 @@ class ShareInboxService extends ChangeNotifier {
     try {
       // A sealed stream raises at the end if it was cut short, so reaching
       // the end of this without error is what proves the file whole.
-      await sink.addStream(body);
+      await sink.addStream(_capped(body, maxFileBytes));
       await sink.close();
     } catch (e) {
       await sink.close();
@@ -391,12 +392,31 @@ class ShareInboxService extends ChangeNotifier {
     await request.response.close();
   }
 
+  /// The most a link or a piece of text may run to: a phone's share of
+  /// either is a few hundred bytes.
+  static const maxJsonBytes = 1024 * 1024;
+
+  /// The most a shared file may run to — a long video from a phone — so
+  /// that a sender, or a stolen token, cannot fill the card.
+  static const maxFileBytes = 2 * 1024 * 1024 * 1024;
+
   Future<List<int>> _drain(Stream<List<int>> stream) async {
-    final bytes = <int>[];
-    await for (final chunk in stream) {
-      bytes.addAll(chunk);
+    final bytes = BytesBuilder(copy: false);
+    await for (final chunk in _capped(stream, maxJsonBytes)) {
+      bytes.add(chunk);
     }
-    return bytes;
+    return bytes.takeBytes();
+  }
+
+  /// [stream] as it is, until it has sent more than [max] bytes: then it
+  /// ends with [_TooLarge].
+  static Stream<List<int>> _capped(Stream<List<int>> stream, int max) async* {
+    var total = 0;
+    await for (final chunk in stream) {
+      total += chunk.length;
+      if (total > max) throw const _TooLarge();
+      yield chunk;
+    }
   }
 
   ShareType? _typeForMime(String mime) {
@@ -519,4 +539,9 @@ class ShareInboxService extends ChangeNotifier {
     _chime?.dispose();
     super.dispose();
   }
+}
+
+/// A share bigger than the inbox takes.
+class _TooLarge implements Exception {
+  const _TooLarge();
 }

@@ -94,6 +94,9 @@ class ConfigService extends ChangeNotifier {
         _file.path,
         const JsonEncoder.withIndent('  ').convert(_config.toJson()),
       );
+      // The folder too: uploaded widgets' Dart is built from in here, so
+      // nobody else on the machine may add to it.
+      await Process.run('chmod', ['700', _file.parent.path]);
     } catch (e) {
       debugPrint('ConfigService.save error: $e');
     }
