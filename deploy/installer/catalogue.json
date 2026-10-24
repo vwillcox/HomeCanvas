@@ -367,6 +367,14 @@
       "height": 3
     },
     {
+      "type": "radio",
+      "name": "Radio",
+      "description": "Internet radio on the panel’s speakers. Pick stations from around the world, or add any stream by its address, then tap one to tune in. It keeps playing when the dashboard turns the page. Given a page to itself it can show the song’s cover and what played before, an old set’s tuning dial, or a grid of stations.",
+      "category": "Photos, music & TV",
+      "width": 4,
+      "height": 3
+    },
+    {
       "type": "railcam",
       "name": "Railcam",
       "description": "Lineside cameras from railcam.uk: pick any of its 300 and touch one to watch it live on the panel — or have them playing in the tile, small and silent. Needs your own railcam.uk account — supporters’ cameras, a supporter’s.",

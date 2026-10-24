@@ -1,6 +1,7 @@
 import '../dashboard/dashboard_model.dart';
 import '../dashboard/schedule.dart';
 import '../dashboard/widget_registry.dart';
+import 'radio_stations.dart';
 import 'wake_word.dart';
 
 /// What the panel was asked to do, out loud.
@@ -47,6 +48,19 @@ enum VoiceMusicAsk {
 class VoiceMusic extends VoiceAction {
   const VoiceMusic(this.ask);
   final VoiceMusicAsk ask;
+}
+
+/// What can be asked of the radio.
+enum VoiceRadioAsk { play, stop, next, previous }
+
+/// Tune the radio in, step it along its stations, or stop it.
+class VoiceRadio extends VoiceAction {
+  const VoiceRadio(this.ask, [this.station]);
+  final VoiceRadioAsk ask;
+
+  /// The station as it was said — "radio four" — for [VoiceRadioAsk.play].
+  /// Null for whichever was on last.
+  final String? station;
 }
 
 /// Up, up, down, down, left, right, left, right, B, A.
@@ -116,6 +130,7 @@ class VoiceCommands {
     'stocks': ['shares', 'markets', 'stock market'],
     'crypto': ['bitcoin', 'cryptocurrency'],
     'spotify': ['music', 'spotify'],
+    'radio': ['wireless', 'stations'],
     'news': ['headlines'],
     'calendar': ['diary', 'events'],
     'immich': ['pictures'],
@@ -219,6 +234,19 @@ class VoiceCommands {
     'weather forecast': VoiceGo(VoicePlace.forecast),
     // The music. "Play", "pause", "stop" and "skip" on their own are the
     // music's; the pages are held and let go with "hold" and "resume".
+    // The radio, by name; a station by its own name is "play" and the name,
+    // worked out in _resolve.
+    'play radio': VoiceRadio(VoiceRadioAsk.play),
+    'start radio': VoiceRadio(VoiceRadioAsk.play),
+    'listen radio': VoiceRadio(VoiceRadioAsk.play),
+    'stop radio': VoiceRadio(VoiceRadioAsk.stop),
+    'radio off': VoiceRadio(VoiceRadioAsk.stop),
+    'off radio': VoiceRadio(VoiceRadioAsk.stop),
+    'next station': VoiceRadio(VoiceRadioAsk.next),
+    'change station': VoiceRadio(VoiceRadioAsk.next),
+    'previous station': VoiceRadio(VoiceRadioAsk.previous),
+    'last station': VoiceRadio(VoiceRadioAsk.previous),
+    'station before': VoiceRadio(VoiceRadioAsk.previous),
     'play': VoiceMusic(VoiceMusicAsk.play),
     'play music': VoiceMusic(VoiceMusicAsk.play),
     'play spotify': VoiceMusic(VoiceMusicAsk.play),
@@ -397,6 +425,20 @@ class VoiceCommands {
         _fixed[asked.where((w) => w != 'page' && w != 'pages').join(' ')];
     if (fixed != null) return fixed;
 
+    // "Turn the radio on": "on" is filler everywhere else.
+    if (asked.length == 1 && asked.single == 'radio' && said.contains('on')) {
+      return const VoiceRadio(VoiceRadioAsk.play);
+    }
+    // "Play Radio 4", "listen to six music" — but only a station there is:
+    // "play the news" is still the news page.
+    if ((asked.first == 'play' || asked.first == 'listen') &&
+        asked.length > 1) {
+      final name = asked.skip(1).join(' ');
+      if (stationFor(name) != null) {
+        return VoiceRadio(VoiceRadioAsk.play, name);
+      }
+    }
+
     if (!pages) return null;
     final page = _pageFor(asked.where((w) => w != 'page' && w != 'pages'));
     return page == null ? null : VoiceShowPage(page);
@@ -438,6 +480,19 @@ class VoiceCommands {
       }
     }
   }
+
+  /// The stations of the dashboard's Radio tiles, in order.
+  List<RadioStation> get radioStationsHere => [
+    for (final w in widgets)
+      if (w.type == 'radio') ...radioStationsFrom(w.options['stations']),
+  ];
+
+  /// The station [said] names: one of the Radio tiles' first, by any part
+  /// of its name, then any in the catalogue by the whole of it — or "play
+  /// the news" would be NPR News.
+  RadioStation? stationFor(String said) =>
+      matchRadioStation(said, radioStationsHere) ??
+      matchRadioStation(said, radioStations, whole: true);
 
   /// Every phrase the dashboard answers to as it stands — for a listener
   /// that does better when told what it might hear.

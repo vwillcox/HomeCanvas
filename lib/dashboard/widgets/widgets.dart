@@ -17,6 +17,7 @@ import 'custom/custom_registry.dart';
 import 'homey_widgets.dart';
 import 'news_widget.dart';
 import 'omarchy_widget.dart';
+import 'radio_widget.dart';
 import 'railcam_widget.dart';
 import 'rain_widget.dart';
 import 'reminders_widget.dart';
@@ -60,6 +61,7 @@ void registerBuiltInWidgets() {
     clockWidgetType,
     weatherWidgetType,
     spotifyWidgetType,
+    radioWidgetType,
     calendarWidgetType,
     newsWidgetType,
     stocksWidgetType,

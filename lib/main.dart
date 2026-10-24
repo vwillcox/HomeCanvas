@@ -33,6 +33,8 @@ import 'services/custom_widgets.dart';
 import 'services/glowmarkt_service.dart';
 import 'services/home_assistant_service.dart';
 import 'services/homey_service.dart';
+import 'services/radio_service.dart';
+import 'services/radio_stations.dart';
 import 'services/railcam_service.dart';
 import 'services/rain_service.dart';
 import 'services/notes_service.dart';
@@ -138,6 +140,18 @@ void main() async {
   final spotify = SpotifyService(config)..screen = screen;
   unawaited(spotify.start());
 
+  // Internet radio for the Radio widget. Music already playing is paused
+  // rather than talked over.
+  final radio = RadioService(
+    file: p.join(AppPaths.config, 'radio.json'),
+    onStart: () {
+      for (final PlaybackSource p in [spotify, nowPlaying]) {
+        if (p.available && p.now.isPlaying) unawaited(p.playPause());
+      }
+    },
+  );
+  unawaited(radio.load());
+
   // Lets the companion phone app share a photo/GIF/video/link/note to the
   // kiosk directly — no separate relay, just a small HTTP listener here.
   // Reads shared notes aloud. Built here and handed over rather than owned by
@@ -150,6 +164,8 @@ void main() async {
   // Reads a news article aloud, pausing whatever is playing while it does
   // and carrying it on afterwards — only if it was playing to begin with.
   PlaybackSource? pausedForReading;
+  // The radio has no pause, so it is stopped and tuned in again after.
+  RadioStation? radioForReading;
   final reader = ArticleReader(
     output: PiperSpeechOutput(speech),
     voiceFor: speech.voiceFor,
@@ -158,6 +174,11 @@ void main() async {
     // off mid-article brings the voice straight back.
     volume: () => config.config.shareInbox.readerOut,
     onStart: () {
+      if (radio.playing) {
+        radioForReading = radio.station;
+        unawaited(radio.stop());
+        return;
+      }
       for (final PlaybackSource p in [spotify, nowPlaying]) {
         if (p.available && p.now.isPlaying) {
           pausedForReading = p;
@@ -167,6 +188,9 @@ void main() async {
       }
     },
     onEnd: () {
+      final station = radioForReading;
+      radioForReading = null;
+      if (station != null) unawaited(radio.play(station));
       final p = pausedForReading;
       pausedForReading = null;
       if (p != null && p.available && !p.now.isPlaying) {
@@ -236,6 +260,7 @@ void main() async {
   // playing keeps the screen on.
   final player = VideoPlayerService(config, ytDlp, sites)
     ..onStart = () {
+      unawaited(radio.stop());
       for (final PlaybackSource p in [spotify, nowPlaying]) {
         if (p.available && p.now.isPlaying) unawaited(p.playPause());
       }
@@ -250,6 +275,8 @@ void main() async {
   // the cameras YouTube carries.
   final railcam = RailcamService();
   dashboard.railcams = railcam.choices;
+  // The Radio widget's dropdown of stations that come with the app.
+  dashboard.extraLists['radioStations'] = () async => radioStationChoices();
   player.finders['railcam'] = (link, height) => railcam.find(
     link,
     maxHeight: height,
@@ -453,6 +480,7 @@ void main() async {
         ChangeNotifierProvider.value(value: weather),
         ChangeNotifierProvider.value(value: nowPlaying),
         ChangeNotifierProvider.value(value: spotify),
+        ChangeNotifierProvider.value(value: radio),
         ChangeNotifierProvider.value(value: indoor),
         ChangeNotifierProvider.value(value: shareInbox),
         ChangeNotifierProvider.value(value: ytDlp),
@@ -613,10 +641,11 @@ String? runVoiceCommand(
   final context = rootNavigatorKey.currentContext;
   if (navigator == null || context == null) return null;
   final settings = config.config.dashboard;
-  final action = VoiceCommands.of(
+  final commands = VoiceCommands.of(
     settings,
     wake: config.config.screen.wakeWord,
-  ).resolve(heard);
+  );
+  final action = commands.resolve(heard);
   if (action == null) return null;
 
   // Spoken to, so looked at: lit, and counted as use.
@@ -624,7 +653,52 @@ String? runVoiceCommand(
   // The TV remote app, or a browser, may be in front of the kiosk.
   unawaited(KioskBrowser.focusKiosk());
 
+  final radio = context.read<RadioService>();
+  // Steps the radio along the dashboard's stations, or the catalogue's
+  // when it has no Radio tile.
+  String? stepRadio(int by) {
+    final here = commands.radioStationsHere;
+    final next = radio.stepFrom(here.isEmpty ? radioStations : here, by);
+    if (next == null) return null;
+    unawaited(radio.play(next));
+    return next.name;
+  }
+
   switch (action) {
+    case VoiceRadio(:final ask, :final station):
+      switch (ask) {
+        case VoiceRadioAsk.play:
+          final pick = station == null
+              ? (radio.station ?? commands.radioStationsHere.firstOrNull)
+              : commands.stationFor(station);
+          if (pick == null) return null;
+          unawaited(radio.play(pick));
+          return pick.name;
+        case VoiceRadioAsk.stop:
+          unawaited(radio.stop());
+          return 'radio off';
+        case VoiceRadioAsk.next:
+          return stepRadio(1);
+        case VoiceRadioAsk.previous:
+          return stepRadio(-1);
+      }
+    // While the radio plays, "stop", "louder" and "next" are its.
+    case VoiceMusic(:final ask) when radio.playing:
+      switch (ask) {
+        case VoiceMusicAsk.pause || VoiceMusicAsk.mute:
+          unawaited(radio.stop());
+          return 'radio off';
+        case VoiceMusicAsk.louder || VoiceMusicAsk.quieter:
+          final up = ask == VoiceMusicAsk.louder;
+          unawaited(radio.setVolume(radio.volume + (up ? 10 : -10)));
+          return up ? 'louder' : 'quieter';
+        case VoiceMusicAsk.next:
+          return stepRadio(1);
+        case VoiceMusicAsk.previous:
+          return stepRadio(-1);
+        case VoiceMusicAsk.play || VoiceMusicAsk.unmute:
+          return 'playing';
+      }
     case VoiceMusic(:final ask):
       // Whatever the panel's own player would be showing: Spotify when it
       // has something, a phone over Bluetooth otherwise.
