@@ -55,6 +55,13 @@ class RadioService extends ChangeNotifier {
   final _subs = <StreamSubscription<Object?>>[];
   Timer? _titlePoll;
 
+  /// Watches a station starting, for one that never does.
+  Timer? _startWatch;
+
+  /// How long a station has to start before it is asked for again, and
+  /// then given up on.
+  static const startWait = Duration(seconds: 12);
+
   RadioStation? _station;
   bool _loading = false;
   String? _error;
@@ -200,21 +207,56 @@ class RadioService extends ChangeNotifier {
     _error = null;
     _loading = true;
     notifyListeners();
-    onStart?.call();
+    _watchStart(station);
     try {
-      final player = _ensurePlayer();
-      await player.setVolume(_volume);
-      await player.open(Media(station.url));
+      onStart?.call();
+      await _open(station);
     } catch (e) {
       debugPrint('Radio: could not play ${station.url}: $e');
-      _loading = false;
-      _error = tr('widget.radio.wouldNotPlay', 'The station would not play.');
-      notifyListeners();
+      _failed();
     }
+  }
+
+  Future<void> _open(RadioStation station) async {
+    final player = _ensurePlayer();
+    await player.setVolume(_volume);
+    await player.open(Media(station.url));
+  }
+
+  /// The first station after a restart sometimes never starts: mpv is
+  /// handed it, says nothing, and the tile says "Tuning in…" for ever.
+  /// Asking for it again starts it, so that is done once, unasked; a
+  /// second silence is the station's, and says so.
+  void _watchStart(RadioStation station, {bool again = false}) {
+    _startWatch?.cancel();
+    _startWatch = Timer(startWait, () {
+      if (!_loading || _station?.url != station.url) return;
+      if (again) {
+        debugPrint('Radio: ${station.url} never started');
+        _failed();
+        return;
+      }
+      debugPrint('Radio: ${station.url} has not started, asking again');
+      _watchStart(station, again: true);
+      unawaited(
+        _player?.stop().then((_) => _open(station)).catchError((Object e) {
+          debugPrint('Radio: could not play ${station.url}: $e');
+          _failed();
+        }),
+      );
+    });
+  }
+
+  void _failed() {
+    _startWatch?.cancel();
+    _loading = false;
+    _error = tr('widget.radio.wouldNotPlay', 'The station would not play.');
+    notifyListeners();
   }
 
   Future<void> stop() async {
     _loading = false;
+    _startWatch?.cancel();
     _title = null;
     _artUrl = null;
     _titlePoll?.cancel();
@@ -266,6 +308,7 @@ class RadioService extends ChangeNotifier {
         player.stream.playing.listen((on) {
           if (on) {
             _loading = false;
+            _startWatch?.cancel();
             _error = null;
             _pollTitle();
           } else {
@@ -281,12 +324,7 @@ class RadioService extends ChangeNotifier {
           // about a dropped packet, not the station.
           if (!_loading) return;
           debugPrint('Radio: mpv could not play ${_station?.url}: $e');
-          _loading = false;
-          _error = tr(
-            'widget.radio.wouldNotPlay',
-            'The station would not play.',
-          );
-          notifyListeners();
+          _failed();
         }),
       )
       ..add(
@@ -388,6 +426,7 @@ class RadioService extends ChangeNotifier {
   @override
   void dispose() {
     _titlePoll?.cancel();
+    _startWatch?.cancel();
     _sleep?.cancel();
     for (final s in _subs) {
       unawaited(s.cancel());
