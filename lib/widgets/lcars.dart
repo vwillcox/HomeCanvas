@@ -722,19 +722,23 @@ class _SideBlock extends StatelessWidget {
                 Positioned(
                   left: 8,
                   right: 12,
-                  bottom: 6,
-                  child: Text(
-                    lcarsCaps(block.label),
-                    maxLines: 1,
-                    textAlign: TextAlign.right,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: lcarsInk,
-                      fontFamily: fontFamily,
-                      fontSize: type,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1,
-                      height: 1,
+                  // Above the sweep of the foot, which would cut into it.
+                  bottom: foot > 0 ? foot * 0.45 : 6,
+                  // A long name made smaller rather than cut short.
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      lcarsCaps(block.label),
+                      maxLines: 1,
+                      style: TextStyle(
+                        color: lcarsInk,
+                        fontFamily: fontFamily,
+                        fontSize: type,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1,
+                        height: 1,
+                      ),
                     ),
                   ),
                 ),
