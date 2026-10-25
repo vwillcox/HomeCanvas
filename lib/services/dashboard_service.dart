@@ -371,21 +371,14 @@ class DashboardService extends ChangeNotifier {
               .toList(),
           'fonts': kDashboardFonts.map((f) => f.toJson()).toList(),
           'fontScales': kFontScales,
-          // Choice lists the widgets cannot declare for themselves, keyed by
-          // the name an option asks for with `choicesFrom`.
-          'lists': {
-            'albums': await _albumChoices(),
-            'haEntities': await _haChoices(),
-            'homeyDevices': await _choices(homeyDevices),
-            'homeyLights': await _choices(homeyLights),
-            'homeyZones': await _choices(homeyZones),
-            'homeyFlows': await _choices(homeyFlows),
-            for (final e in extraLists.entries) e.key: await _choices(e.value),
-            'voices': await _voiceChoices(),
-            'timerSounds': await _timerSoundChoices(),
-            'railcams': await _choices(railcams),
-          },
         });
+      }
+      // Choice lists the widgets cannot declare for themselves, keyed by the
+      // name an option asks for with `choicesFrom`. Not in the schema: one
+      // from a device that is not answering takes seconds, and the editor
+      // draws itself without them.
+      if (path == '/api/lists' && request.method == 'GET') {
+        return await _json(request, await _lists());
       }
       if (path == '/api/preview' && request.method == 'GET') {
         return await _json(request, _previewLines());
@@ -1376,6 +1369,25 @@ class DashboardService extends ChangeNotifier {
   /// More pickers' lists, by the name a widget's option asks for them
   /// under: whoever supplies one puts it here.
   final Map<String, Future<Map<String, String>> Function()> extraLists = {};
+
+  /// Every picker's list, asked for at once: what they take is the slowest
+  /// of them, not all of them added up. The Homey lists share one look at
+  /// it, which [homeyDevices] starts — so it is asked first.
+  Future<Map<String, Map<String, String>>> _lists() async {
+    final asked = {
+      'albums': _albumChoices(),
+      'haEntities': _haChoices(),
+      'homeyDevices': _choices(homeyDevices),
+      'homeyLights': _choices(homeyLights),
+      'homeyZones': _choices(homeyZones),
+      'homeyFlows': _choices(homeyFlows),
+      for (final e in extraLists.entries) e.key: _choices(e.value),
+      'voices': _voiceChoices(),
+      'timerSounds': _timerSoundChoices(),
+      'railcams': _choices(railcams),
+    };
+    return Map.fromIterables(asked.keys, await Future.wait(asked.values));
+  }
 
   /// A picker's list, or nothing when whoever supplies it is not answering.
   Future<Map<String, String>> _choices(

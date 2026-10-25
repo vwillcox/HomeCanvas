@@ -2639,7 +2639,11 @@ async function load(quiet) {
       loadPanels(),
       loadWords(),
     ]);
+    // The pickers' lists come on their own: those there were are kept until
+    // they do.
+    schema.lists = (state.schema && state.schema.lists) || {};
     state.schema = schema;
+    loadLists();
     state.dashboard = dashboard;
     state.selectedId = null;
     state.dirty = false;
@@ -2666,6 +2670,23 @@ async function load(quiet) {
   } catch (e) {
     setStatus(t("web.editor.couldNotReachTheKiosk", "Could not reach the kiosk"), true);
     console.error(e);
+  }
+}
+
+/* The lists pickers choose from — albums, Homey's devices, Home Assistant's
+   entities — asked for apart from the schema, since a device that is not
+   answering can hold them up for seconds. A picker drawn before they arrive
+   offers its declared choices, and is drawn again with them unless someone
+   is typing in the form. */
+async function loadLists() {
+  try {
+    state.schema.lists = await api.get("/api/lists");
+  } catch (e) {
+    return;
+  }
+  renderPhoto();
+  if (!document.getElementById("settings").contains(document.activeElement)) {
+    renderSettings();
   }
 }
 
@@ -2752,7 +2773,7 @@ async function renderHomey() {
     try {
       show(await api.put("/api/homey", { address: address.value, key: key.value }));
       // The pickers: what the Homey has is now there to choose from.
-      state.schema.lists = (await api.get("/api/schema")).lists;
+      state.schema.lists = await api.get("/api/lists");
       render();
     } catch (e) {
       status.textContent = e.status === 409

@@ -39,6 +39,7 @@ void main() {
       '/',
       '/notes',
       '/api/schema',
+      '/api/lists',
       '/api/dashboard',
       '/api/volume',
       '/api/sounds/file',

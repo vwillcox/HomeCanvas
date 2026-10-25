@@ -111,7 +111,8 @@ browser cannot post to them.
 | Request | Does |
 |---|---|
 | `GET /` | the editor (`assets/dashboard/editor.html`) |
-| `GET /api/schema` | the widget types, groups, themes, fonts, sizes and dynamic lists (Home Assistant entities, albums) |
+| `GET /api/schema` | the widget types, groups, themes, fonts and sizes |
+| `GET /api/lists` | the pickers' dynamic lists (Home Assistant entities, Homey devices, albums), all asked for at once |
 | `GET /api/dashboard`, `PUT /api/dashboard` | the saved dashboard |
 | `GET /api/preview` | the panel's live content, for the editor's chrome |
 | `POST /api/render` | a PNG of one widget, drawn by the app |
