@@ -1121,10 +1121,13 @@ class _SegmentsPainter extends CustomPainter {
 /// lit near-white; touched once, or moved from elsewhere, it counts to the
 /// new level a segment at a time, as [LcarsSegments] do.
 ///
-/// Upright it is the whole control, filling the box it is given: its
-/// [readout] above the slot, a scale of quarters beside it and its [label]
-/// on a block of its colour below. Lying down ([Axis.horizontal]) it is the
-/// slot alone, lit from the left, for a strip of blocks.
+/// It is the whole control, filling the box it is given, with a scale
+/// marked every 5% and written every 10% — every 25% where it is short.
+/// Upright: its [readout] above the slot, the scale beside it and its
+/// [label] on a block of its colour below. Lying down ([Axis.horizontal]),
+/// lit from the left: its label on a block capped at the left end, the
+/// scale under the slot and its readout after it. [bare], it is the slot
+/// alone, for a strip of blocks.
 class LcarsTransporter extends StatefulWidget {
   const LcarsTransporter({
     super.key,
@@ -1136,6 +1139,7 @@ class LcarsTransporter extends StatefulWidget {
     this.axis = Axis.vertical,
     this.label,
     this.readout,
+    this.bare = false,
   });
 
   final DashboardTheme theme;
@@ -1156,8 +1160,11 @@ class LcarsTransporter extends StatefulWidget {
   /// What it sets, on its block and for a screen reader.
   final String? label;
 
-  /// The level as it is written above the slot: "35".
+  /// The level as it is written beside the slot: "35".
   final String? readout;
+
+  /// The slot alone, its [label] only for a screen reader.
+  final bool bare;
 
   @override
   State<LcarsTransporter> createState() => LcarsTransporterState();
@@ -1220,7 +1227,7 @@ class LcarsTransporterState extends State<LcarsTransporter>
   }
 
   void _slide(Offset at, Size size) {
-    final v = _Transporter(size, widget.axis).levelAt(at);
+    final v = _Transporter(size, widget.axis, scale: !widget.bare).levelAt(at);
     setState(() {
       _finger = v;
       _chase();
@@ -1264,8 +1271,13 @@ class LcarsTransporterState extends State<LcarsTransporter>
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
           dragStartBehavior: DragStartBehavior.down,
-          onTapUp: (d) =>
-              _set(_Transporter(size, widget.axis).levelAt(d.localPosition)),
+          onTapUp: (d) => _set(
+            _Transporter(
+              size,
+              widget.axis,
+              scale: !widget.bare,
+            ).levelAt(d.localPosition),
+          ),
           onVerticalDragStart: upright ? start : null,
           onVerticalDragUpdate: upright ? slide : null,
           onVerticalDragEnd: upright ? end : null,
@@ -1280,6 +1292,7 @@ class LcarsTransporterState extends State<LcarsTransporter>
               painter: _TransporterPainter(
                 theme: t,
                 axis: widget.axis,
+                scale: !widget.bare,
                 value: _drawn,
                 colour: colour,
                 touched: _finger != null,
@@ -1300,7 +1313,8 @@ class LcarsTransporterState extends State<LcarsTransporter>
       onDecrease: () => _set((widget.value - _stride).clamp(0.0, 1.0)),
       child: slot,
     );
-    if (!upright) return control;
+    if (widget.bare) return control;
+    if (!upright) return _lying(control, colour);
     return LayoutBuilder(
       builder: (context, c) {
         final gutter = _Transporter.gutterFor(c.maxWidth);
@@ -1361,26 +1375,97 @@ class LcarsTransporterState extends State<LcarsTransporter>
       },
     );
   }
+
+  /// Lying down: its name on a block capped at the left, the slot, and its
+  /// figure after it, as tall and as wide as it is given.
+  Widget _lying(Widget control, Color colour) {
+    final t = widget.theme;
+    return LayoutBuilder(
+      builder: (context, c) {
+        final h = c.maxHeight;
+        final type = (h * 0.5).clamp(14.0, 34.0);
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (widget.label case final label?) ...[
+              Container(
+                padding: EdgeInsets.fromLTRB(h * 0.45, 0, 10, h * 0.1),
+                alignment: Alignment.bottomRight,
+                decoration: BoxDecoration(
+                  color: colour,
+                  borderRadius: BorderRadius.horizontal(
+                    left: Radius.circular(h / 2),
+                  ),
+                ),
+                child: Text(
+                  lcarsCaps(label),
+                  maxLines: 1,
+                  textScaler: TextScaler.noScaling,
+                  style: TextStyle(
+                    color: lcarsInk,
+                    fontFamily: t.fontFamily,
+                    fontSize: type * 0.62,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1,
+                    height: 1,
+                  ),
+                ),
+              ),
+              const SizedBox(width: lcarsLine * 2),
+            ],
+            Expanded(child: control),
+            if (widget.readout case final readout?)
+              // As wide as "100", so the slot does not move as it changes;
+              // level with the slot, above the scale.
+              Container(
+                width: type * 1.8,
+                padding: EdgeInsets.only(bottom: _Transporter.footFor(h)),
+                alignment: Alignment.centerRight,
+                child: Text(
+                  lcarsCaps(readout),
+                  maxLines: 1,
+                  textScaler: TextScaler.noScaling,
+                  style: TextStyle(
+                    color: t.textSecondary,
+                    fontFamily: t.fontFamily,
+                    fontSize: type,
+                    fontWeight: FontWeight.w700,
+                    height: 1,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
 }
 
-/// Where a transporter's parts are, in a box [size]: the scale's gutter
-/// down the left of an upright one, the slot, and the segments inside it.
+/// Where a transporter's parts are, in a box [size]: the room for its
+/// [scale], the slot, and the segments inside it. Lying down, more of them
+/// and narrower, as a long slot has room for.
 class _Transporter {
-  _Transporter(Size size, this.axis) {
+  _Transporter(Size size, this.axis, {required bool scale}) {
     if (axis == Axis.vertical) {
-      gutter = gutterFor(size.width);
+      gutter = scale ? gutterFor(size.width) : 0;
       over = overFor(size.width - gutter);
       slot = Rect.fromLTRB(gutter + over, 0, size.width - over, size.height);
     } else {
-      gutter = 0;
-      over = (size.height * 0.08).clamp(2.0, 6.0);
-      slot = Rect.fromLTRB(0, over, size.width, size.height - over);
+      gutter = scale ? footFor(size.height) : 0;
+      over = (size.height * 0.06).clamp(2.0, 5.0);
+      slot = Rect.fromLTRB(0, over, size.width, size.height - gutter - over);
     }
     area = slot.deflate((slot.shortestSide * 0.08).clamp(3.0, 10.0));
-    count = (along / 12).floor().clamp(6, 20);
+    count = upright
+        ? (along / 12).floor().clamp(6, 20)
+        : (along / 14).floor().clamp(6, 40);
   }
 
   final Axis axis;
+
+  /// Room for the scale: down the left of an upright one, under one lying
+  /// down.
   late final double gutter;
 
   /// How far the bar at the level stands out past the slot.
@@ -1392,9 +1477,10 @@ class _Transporter {
   bool get upright => axis == Axis.vertical;
   double get along => upright ? area.height : area.width;
 
-  /// Room for the scale's figures, where the control is wide enough.
+  /// Room for the scale, where the control is wide enough, or tall enough.
   static double gutterFor(double width) =>
       width < 80 ? 0 : (width * 0.26).clamp(0.0, 40.0);
+  static double footFor(double height) => height < 44 ? 0 : height * 0.4;
   static double overFor(double width) => (width * 0.06).clamp(3.0, 8.0);
 
   /// The level at [p], from the bottom of the segments or their left.
@@ -1413,6 +1499,7 @@ class _TransporterPainter extends CustomPainter {
   _TransporterPainter({
     required this.theme,
     required this.axis,
+    required this.scale,
     required this.value,
     required this.colour,
     required this.touched,
@@ -1420,13 +1507,14 @@ class _TransporterPainter extends CustomPainter {
 
   final DashboardTheme theme;
   final Axis axis;
+  final bool scale;
   final double value;
   final Color colour;
   final bool touched;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final p = _Transporter(size, axis);
+    final p = _Transporter(size, axis, scale: scale);
     final paint = Paint();
     canvas.drawRRect(
       RRect.fromRectAndRadius(
@@ -1480,20 +1568,30 @@ class _TransporterPainter extends CustomPainter {
       paint..color = lcarsLit,
     );
 
-    // The scale, in quarters, down the gutter.
+    // The scale: down the gutter, or under the slot.
     if (p.gutter <= 0) return;
     final ink = theme.textSecondary.withValues(alpha: 0.6);
     final tick = Paint()
       ..color = ink
       ..strokeWidth = 2;
-    final type = (p.gutter * 0.36).clamp(10.0, 14.0);
-    final right = p.gutter - 2;
-    for (final f in const [1.0, 0.75, 0.5, 0.25, 0.0]) {
-      final y = p.at(f);
-      canvas.drawLine(Offset(right - 8, y), Offset(right, y), tick);
+    final type = (p.gutter * (p.upright ? 0.3 : 0.4)).clamp(9.0, 13.0);
+    // Every 10% written where "100%" fits between, every 25% otherwise.
+    final step = p.along / 10 >= type * 3.6 ? 10 : 25;
+    for (var k = 0; k <= 100; k += 5) {
+      final at = p.at(k / 100);
+      final named = k % step == 0;
+      final long = named ? 8.0 : 4.0;
+      if (p.upright) {
+        final right = p.gutter - 2;
+        canvas.drawLine(Offset(right - long, at), Offset(right, at), tick);
+      } else {
+        final top = p.slot.bottom + p.over + 2;
+        canvas.drawLine(Offset(at, top), Offset(at, top + long), tick);
+      }
+      if (!named) continue;
       final figure = TextPainter(
         text: TextSpan(
-          text: '${(f * 100).round()}',
+          text: '$k%',
           style: TextStyle(
             color: ink,
             fontSize: type,
@@ -1505,7 +1603,12 @@ class _TransporterPainter extends CustomPainter {
       )..layout();
       figure.paint(
         canvas,
-        Offset(right - 12 - figure.width, y - figure.height / 2),
+        p.upright
+            ? Offset(p.gutter - 14 - figure.width, at - figure.height / 2)
+            : Offset(
+                (at - figure.width / 2).clamp(0.0, size.width - figure.width),
+                p.slot.bottom + p.over + 11,
+              ),
       );
       figure.dispose();
     }
@@ -1517,6 +1620,7 @@ class _TransporterPainter extends CustomPainter {
       old.touched != touched ||
       old.colour != colour ||
       old.axis != axis ||
+      old.scale != scale ||
       old.theme != theme;
 }
 

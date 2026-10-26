@@ -74,29 +74,29 @@ class RadioBadge extends StatelessWidget {
 }
 
 /// The volume as a slider: the level follows the finger, and is kept once
-/// it lifts. On a console it is a transporter's touch slider — upright
-/// ([Axis.vertical]) beside the track where there is room for one, lying in
-/// the transport's strip where there is not.
+/// it lifts. On a console it is a transporter's touch slider.
+///
+/// In the transport's strip it is three and a bit times as long as [size];
+/// with [fill], a row of its own [size] tall and as wide as it is given,
+/// named and with its figure.
 class RadioVolume extends StatelessWidget {
   const RadioVolume({
     super.key,
     required this.theme,
     required this.radio,
-    this.axis = Axis.horizontal,
     this.size = 56,
     this.showLevel = false,
+    this.fill = false,
   });
 
   final DashboardTheme theme;
   final RadioService radio;
-
-  /// Upright fills the box it is given; lying down it is [size] tall and
-  /// three and a bit times as long.
-  final Axis axis;
   final double size;
 
-  /// The level as a figure after it, lying down. Upright it always has one.
+  /// The level as a figure after it, in the strip. With [fill] it always
+  /// has one.
   final bool showLevel;
+  final bool fill;
 
   /// While the finger moves, only as the level changes by a whole step:
   /// each step is a rebuild of the tile.
@@ -112,17 +112,6 @@ class RadioVolume extends StatelessWidget {
     final t = theme;
     final level = radio.volume.round();
     final name = tr('widget.radio.volume', 'Volume');
-    if (t.isLcars && axis == Axis.vertical) {
-      return LcarsTransporter(
-        theme: t,
-        value: radio.volume / 100,
-        onChanged: _slide,
-        onChangeEnd: _lift,
-        colour: t.block(2),
-        label: name,
-        readout: '$level',
-      );
-    }
     final figure = Padding(
       padding: EdgeInsets.only(left: size * 0.12),
       child: Text(
@@ -137,72 +126,75 @@ class RadioVolume extends StatelessWidget {
     );
     final Widget slider;
     if (t.isLcars) {
-      slider = SizedBox(
-        width: size * 3.2,
-        height: size * 0.72,
-        child: LcarsTransporter(
-          theme: t,
-          value: radio.volume / 100,
-          onChanged: _slide,
-          onChangeEnd: _lift,
-          colour: t.block(2),
-          axis: Axis.horizontal,
-          label: name,
-        ),
+      final slot = LcarsTransporter(
+        theme: t,
+        value: radio.volume / 100,
+        onChanged: _slide,
+        onChangeEnd: _lift,
+        colour: t.block(2),
+        axis: Axis.horizontal,
+        label: name,
+        readout: '$level',
+        bare: !fill,
       );
+      if (fill) return SizedBox(height: size, child: slot);
+      slider = SizedBox(width: size * 3.2, height: size * 0.72, child: slot);
     } else {
-      slider = Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            level == 0
-                ? Icons.volume_mute_rounded
-                : level < 50
-                ? Icons.volume_down_rounded
-                : Icons.volume_up_rounded,
-            color: t.textSecondary,
-            size: size * 0.42,
-          ),
-          SizedBox(
-            width: size * 2.8,
-            height: size,
-            child: Material(
-              type: MaterialType.transparency,
-              child: SliderTheme(
-                data: SliderTheme.of(context).copyWith(
-                  trackHeight: (size * 0.12).clamp(4.0, 10.0),
-                  activeTrackColor: t.accent,
-                  inactiveTrackColor: t.wash(0.24),
-                  thumbColor: t.accent,
-                  overlayColor: t.accent.withValues(alpha: 0.16),
-                  thumbShape: RoundSliderThumbShape(
-                    enabledThumbRadius: (size * 0.2).clamp(8.0, 18.0),
-                  ),
-                  overlayShape: RoundSliderOverlayShape(
-                    overlayRadius: (size * 0.4).clamp(16.0, 32.0),
-                  ),
-                ),
-                child: Slider(
-                  value: radio.volume / 100,
-                  onChanged: _slide,
-                  onChangeEnd: _lift,
-                  semanticFormatterCallback: (v) =>
-                      '$name ${(v * 100).round()}',
-                ),
+      final icon = Icon(
+        level == 0
+            ? Icons.volume_mute_rounded
+            : level < 50
+            ? Icons.volume_down_rounded
+            : Icons.volume_up_rounded,
+        color: t.textSecondary,
+        size: size * 0.42,
+      );
+      final track = SizedBox(
+        width: fill ? null : size * 2.8,
+        height: size,
+        child: Material(
+          type: MaterialType.transparency,
+          child: SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              trackHeight: (size * 0.12).clamp(4.0, 10.0),
+              activeTrackColor: t.accent,
+              inactiveTrackColor: t.wash(0.24),
+              thumbColor: t.accent,
+              overlayColor: t.accent.withValues(alpha: 0.16),
+              thumbShape: RoundSliderThumbShape(
+                enabledThumbRadius: (size * 0.2).clamp(8.0, 18.0),
+              ),
+              overlayShape: RoundSliderOverlayShape(
+                overlayRadius: (size * 0.4).clamp(16.0, 32.0),
               ),
             ),
+            child: Slider(
+              value: radio.volume / 100,
+              onChanged: _slide,
+              onChangeEnd: _lift,
+              semanticFormatterCallback: (v) => '$name ${(v * 100).round()}',
+            ),
           ),
-        ],
+        ),
       );
+      if (fill) {
+        return SizedBox(
+          height: size,
+          child: Row(
+            children: [
+              icon,
+              Expanded(child: track),
+              figure,
+            ],
+          ),
+        );
+      }
+      slider = Row(mainAxisSize: MainAxisSize.min, children: [icon, track]);
     }
-    final lying = Row(
+    return Row(
       mainAxisSize: MainAxisSize.min,
       children: [slider, if (showLevel) figure],
     );
-    // Upright off a console: the same slider, turned.
-    return axis == Axis.vertical
-        ? RotatedBox(quarterTurns: 3, child: lying)
-        : lying;
   }
 }
 

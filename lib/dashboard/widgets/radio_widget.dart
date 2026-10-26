@@ -270,9 +270,20 @@ class _StudioLook extends StatelessWidget {
     final showHistory = w >= 1000 && (history.isNotEmpty || t.isLcars);
     final strip = r.many && h >= 480;
     final bars = visualiser && h >= 420;
-    // On a console with the room, the volume stands beside the words.
-    final pad = t.isLcars && w >= 900;
-    final art = (h * (strip ? 0.5 : 0.62)).clamp(120.0, w * (pad ? 0.32 : 0.4));
+    final control = (h * 0.11).clamp(48.0, 96.0);
+    var art = (h * (strip ? 0.5 : 0.62)).clamp(120.0, w * 0.4);
+    // On a console with the room, the volume under the cover and the
+    // track, as far as the lists: the cover made smaller where it would not
+    // fit above it.
+    final wide = t.isLcars && w >= 900;
+    final volume = control * 0.72;
+    if (wide) {
+      final room =
+          h -
+          (bars ? 12 + (h * 0.14).clamp(60.0, 150.0) : 0) -
+          (strip ? 14 + 48 : 0);
+      art = math.min(art, room - volume - 16);
+    }
     final song = (h * 0.075).clamp(22.0, 64.0);
 
     final words = Column(
@@ -346,14 +357,19 @@ class _StudioLook extends StatelessWidget {
           ),
         ],
         SizedBox(height: song * 0.6),
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: _Transport(
-            r: r,
-            size: (h * 0.11).clamp(48.0, 96.0),
-            showLevel: true,
-            volume: !pad,
+        // With the volume under the cover, the keys against the right of
+        // their section.
+        Align(
+          alignment: wide ? Alignment.centerRight : Alignment.centerLeft,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: wide ? Alignment.centerRight : Alignment.centerLeft,
+            child: _Transport(
+              r: r,
+              size: control,
+              showLevel: true,
+              volume: !wide,
+            ),
           ),
         ),
       ],
@@ -390,24 +406,47 @@ class _StudioLook extends StatelessWidget {
             Expanded(
               child: Row(
                 children: [
-                  SizedBox.square(
-                    dimension: art,
-                    child: _Cover(r: r, size: art),
-                  ),
-                  SizedBox(width: w * 0.035),
-                  Expanded(child: words),
-                  if (pad) ...[
-                    SizedBox(width: w * 0.02),
-                    SizedBox(
-                      width: (w * 0.07).clamp(110.0, 150.0),
-                      height: art,
-                      child: RadioVolume(
-                        theme: t,
-                        radio: r.radio,
-                        axis: Axis.vertical,
-                      ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: Row(
+                            children: [
+                              SizedBox.square(
+                                dimension: art,
+                                child: _Cover(r: r, size: art),
+                              ),
+                              SizedBox(width: w * 0.035),
+                              // Made smaller, rather than cut off, on a tile
+                              // too short for all of it.
+                              Expanded(
+                                child: LayoutBuilder(
+                                  builder: (context, c) => FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: SizedBox(
+                                      width: c.maxWidth,
+                                      child: words,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (wide) ...[
+                          const SizedBox(height: 16),
+                          RadioVolume(
+                            theme: t,
+                            radio: r.radio,
+                            size: volume,
+                            fill: true,
+                          ),
+                        ],
+                      ],
                     ),
-                  ],
+                  ),
                   if (showHistory) ...[
                     SizedBox(width: w * 0.03),
                     SizedBox(

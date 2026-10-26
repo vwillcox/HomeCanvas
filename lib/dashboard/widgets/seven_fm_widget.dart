@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -25,7 +26,7 @@ import '../../time_format.dart';
 ///
 /// Played on the same player as the Radio tile, so the two never talk over
 /// each other, at the volume that tile keeps. On a console with the room,
-/// the volume is a transporter's slider standing beside the track.
+/// the volume is a transporter's slider under the cover and the track.
 class SevenFmWidget extends StatefulWidget {
   const SevenFmWidget({super.key, required this.w});
 
@@ -339,9 +340,17 @@ class _BigLook extends StatelessWidget {
     final track = s.track;
     final side = lists && w >= 1000;
     final bars = visualiser && h >= 420;
-    // On a console with the room, the volume stands beside the words.
-    final pad = t.isLcars && w >= 900;
-    final art = (h * (bars ? 0.62 : 0.72)).clamp(120.0, w * (pad ? 0.3 : 0.36));
+    final control = (h * 0.11).clamp(48.0, 96.0);
+    var art = (h * (bars ? 0.62 : 0.72)).clamp(120.0, w * 0.36);
+    // On a console with the room, the volume under the cover and the
+    // track, as far as the lists: the cover made smaller where it would not
+    // fit above it.
+    final wide = t.isLcars && w >= 900;
+    final volume = control * 0.72;
+    if (wide) {
+      final room = h - (bars ? 12 + (h * 0.14).clamp(60.0, 150.0) : 0);
+      art = math.min(art, room - volume - 16);
+    }
     final big = (h * 0.075).clamp(22.0, 64.0);
     final status = StatusColours.of(t);
 
@@ -443,14 +452,14 @@ class _BigLook extends StatelessWidget {
           ),
         ],
         SizedBox(height: big * 0.5),
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: _transport(
-            s,
-            (h * 0.11).clamp(48.0, 96.0),
-            level: true,
-            volume: !pad,
+        // With the volume under the cover, the keys against the right of
+        // their section.
+        Align(
+          alignment: wide ? Alignment.centerRight : Alignment.centerLeft,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: wide ? Alignment.centerRight : Alignment.centerLeft,
+            child: _transport(s, control, level: true, volume: !wide),
           ),
         ),
       ],
@@ -484,38 +493,54 @@ class _BigLook extends StatelessWidget {
             Expanded(
               child: Row(
                 children: [
-                  SizedBox.square(
-                    dimension: art,
-                    child: _Cover(s: s, size: art),
-                  ),
-                  SizedBox(width: w * 0.035),
-                  // Made smaller, rather than cut off, on a tile too short
-                  // for all of it.
                   Expanded(
-                    child: LayoutBuilder(
-                      builder: (context, c) => FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: SizedBox(width: c.maxWidth, child: words),
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: Row(
+                            children: [
+                              SizedBox.square(
+                                dimension: art,
+                                child: _Cover(s: s, size: art),
+                              ),
+                              SizedBox(width: w * 0.035),
+                              // Made smaller, rather than cut off, on a tile
+                              // too short for all of it.
+                              Expanded(
+                                child: LayoutBuilder(
+                                  builder: (context, c) => FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: SizedBox(
+                                      width: c.maxWidth,
+                                      child: words,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (wide) ...[
+                          const SizedBox(height: 16),
+                          RadioVolume(
+                            theme: t,
+                            radio: s.radio,
+                            size: volume,
+                            fill: true,
+                          ),
+                        ],
+                      ],
                     ),
                   ),
-                  if (pad) ...[
-                    SizedBox(width: w * 0.02),
-                    SizedBox(
-                      width: (w * 0.07).clamp(110.0, 150.0),
-                      height: art,
-                      child: RadioVolume(
-                        theme: t,
-                        radio: s.radio,
-                        axis: Axis.vertical,
-                      ),
-                    ),
-                  ],
                   if (side) ...[
                     SizedBox(width: w * 0.03),
                     SizedBox(
-                      width: (w * (t.isLcars ? 0.3 : 0.28)).clamp(280.0, 600.0),
+                      width: (w * (t.isLcars ? 0.32 : 0.28)).clamp(
+                        280.0,
+                        600.0,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
