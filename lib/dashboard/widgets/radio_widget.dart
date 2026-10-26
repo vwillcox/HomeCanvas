@@ -120,8 +120,14 @@ class _Radio {
     if (next != null) radio.play(next, volume: volume);
   }
 
-  void quieter() => radio.setVolume(radio.volume - 10);
-  void louder() => radio.setVolume(radio.volume + 10);
+  /// Who asked for the song, on a station that plays what its listeners
+  /// ask for.
+  String? get asked => switch (playing ? radio.requestedBy : null) {
+    final who? => tr('widget.radio.requestedBy', 'Requested by {who}', {
+      'who': who,
+    }),
+    null => null,
+  };
 
   /// The line under the station's name: what is playing, or what is
   /// happening instead.
@@ -130,7 +136,7 @@ class _Radio {
       (loading
           ? tr('widget.radio.tuning', 'Tuning in…')
           : playing
-          ? (radio.title ?? current.country)
+          ? [radio.title ?? current.country, ?asked].join(' · ')
           : tr('widget.radio.tapToListen', 'Tap play to listen'));
 
   Color get detailColour =>
@@ -264,7 +270,9 @@ class _StudioLook extends StatelessWidget {
     final showHistory = w >= 1000 && (history.isNotEmpty || t.isLcars);
     final strip = r.many && h >= 480;
     final bars = visualiser && h >= 420;
-    final art = (h * (strip ? 0.5 : 0.62)).clamp(120.0, w * 0.4);
+    // On a console with the room, the volume stands beside the words.
+    final pad = t.isLcars && w >= 900;
+    final art = (h * (strip ? 0.5 : 0.62)).clamp(120.0, w * (pad ? 0.32 : 0.4));
     final song = (h * 0.075).clamp(22.0, 64.0);
 
     final words = Column(
@@ -324,6 +332,19 @@ class _StudioLook extends StatelessWidget {
             ),
           ),
         ],
+        if (r.asked case final asked?) ...[
+          SizedBox(height: song * 0.16),
+          Text(
+            asked,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: t.accent,
+              fontSize: song * 0.4,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
         SizedBox(height: song * 0.6),
         FittedBox(
           fit: BoxFit.scaleDown,
@@ -332,6 +353,7 @@ class _StudioLook extends StatelessWidget {
             r: r,
             size: (h * 0.11).clamp(48.0, 96.0),
             showLevel: true,
+            volume: !pad,
           ),
         ),
       ],
@@ -374,6 +396,18 @@ class _StudioLook extends StatelessWidget {
                   ),
                   SizedBox(width: w * 0.035),
                   Expanded(child: words),
+                  if (pad) ...[
+                    SizedBox(width: w * 0.02),
+                    SizedBox(
+                      width: (w * 0.07).clamp(110.0, 150.0),
+                      height: art,
+                      child: RadioVolume(
+                        theme: t,
+                        radio: r.radio,
+                        axis: Axis.vertical,
+                      ),
+                    ),
+                  ],
                   if (showHistory) ...[
                     SizedBox(width: w * 0.03),
                     SizedBox(
@@ -1239,11 +1273,13 @@ class _Transport extends StatelessWidget {
     required this.r,
     required this.size,
     this.showLevel = false,
+    this.volume = true,
   });
 
   final _Radio r;
   final double size;
   final bool showLevel;
+  final bool volume;
 
   @override
   Widget build(BuildContext context) => RadioTransport(
@@ -1251,6 +1287,7 @@ class _Transport extends StatelessWidget {
     radio: r.radio,
     size: size,
     showLevel: showLevel,
+    volume: volume,
     playing: r.playing,
     loading: r.loading,
     live: r.live,
@@ -1336,7 +1373,7 @@ final radioWidgetType = DashboardWidgetType(
       defaultValue: 35,
       help:
           'Out of 100, for the very first station only. Once the volume is '
-          'changed with the tile’s buttons, or by voice, the radio keeps '
+          'changed with the tile’s slider, or by voice, the radio keeps '
           'that level for every station after — restarts too.',
     ),
     WidgetOption(

@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:html/parser.dart' as html;
 
 import 'http_client.dart';
+import 'itunes_art.dart';
 import 'radio_stations.dart';
 
 /// One of the five stations of 24seven.FM, the network StreamingSoundtracks
@@ -113,6 +114,18 @@ class SevenTrack {
   /// This play of it, for the track on now: the same song played again
   /// is a different play.
   final String? play;
+
+  /// The same track, asked for by [who].
+  SevenTrack requested(String? who) => SevenTrack(
+    title: title,
+    artist: artist,
+    album: album,
+    art: art,
+    started: started,
+    length: length,
+    requestedBy: who,
+    play: play,
+  );
 }
 
 /// The track on now, from a station's now-playing.php; null when there is
@@ -162,25 +175,63 @@ class SevenTrack {
 List<SevenTrack> parseSevenTracks(String body) {
   final data = jsonDecode(body);
   if (data is! List) return const [];
-  // These older lists come HTML-escaped: "Didn&#039;t", "&amp;".
+  return [
+    for (final item in data)
+      if (item is Map) ?_oldTrack(item),
+  ];
+}
+
+/// The track on now, from a station's GetCurrentlyPlaying: the older feed,
+/// which still says who asked for it, as now-playing.php does not.
+SevenTrack? parseSevenCurrent(String body) {
+  final data = jsonDecode(body);
+  return data is Map ? _oldTrack(data) : null;
+}
+
+/// One track of the older feeds, or null for one with no name.
+SevenTrack? _oldTrack(Map item) {
+  // These come HTML-escaped: "Didn&#039;t", "&amp;".
   String? text(Object? v) => v is String && v.trim().isNotEmpty
       ? html.parseFragment(v).text?.trim()
       : null;
-  return [
-    for (final item in data)
-      if (item is Map && text(item['Track']) != null)
-        SevenTrack(
-          title: text(item['Track'])!,
-          artist: text(item['Artist']),
-          album: text(item['Album']),
-          art: text(item['CoverLink']),
-          requestedBy: switch (text(item['RequestedBy'])) {
-            // The station's own pick.
-            'System/Admin' => null,
-            final who => who,
-          },
-        ),
-  ];
+  final title = text(item['Track']);
+  if (title == null) return null;
+  return SevenTrack(
+    title: title,
+    artist: text(item['Artist']),
+    album: text(item['Album']),
+    art: text(item['CoverLink']),
+    requestedBy: switch (text(item['RequestedBy'])) {
+      // The station's own pick.
+      'System/Admin' => null,
+      final who => who,
+    },
+  );
+}
+
+/// Who asked for the track called [title] on [station]: [who] is null for
+/// the station's own pick, and [known] false when the station's older feed
+/// says it is playing another — a few seconds behind the new one, or on to
+/// the next.
+Future<({bool known, String? who})> askSevenRequester(
+  Dio dio,
+  SevenStation station,
+  String title,
+) async {
+  final r = await dio.get(
+    '${station.site}/soap/FM24sevenJSON.php',
+    queryParameters: {'action': 'GetCurrentlyPlaying'},
+    options: Options(
+      responseType: ResponseType.plain,
+      receiveTimeout: const Duration(seconds: 10),
+      sendTimeout: const Duration(seconds: 10),
+    ),
+  );
+  final now = parseSevenCurrent(r.data as String);
+  if (now == null || !sameName(now.title, title)) {
+    return (known: false, who: null);
+  }
+  return (known: true, who: now.requestedBy);
 }
 
 /// What one station is playing, kept up to date while a tile shows it.
@@ -233,13 +284,18 @@ class SevenFeed extends ChangeNotifier {
     try {
       final read = parseSevenNowPlaying(await _get('now-playing.php'));
       wait = read.refresh;
-      final changed = read.track?.play != now?.play || read.track == null;
-      now = read.track;
+      final track = read.track;
+      final changed = track?.play != now?.play || track == null;
+      // Who asked for it is kept for the rest of the play, once found.
+      now = track == null || changed
+          ? track
+          : track.requested(now?.requestedBy);
       offline = false;
       _failures = 0;
       // The lists on a new track, and once a minute between for requests
       // added to the queue.
       if (changed || _polls++ % 6 == 0) await _lists();
+      await _whoAsked();
     } catch (e) {
       debugPrint('24seven: ${station.name} not reached: $e');
       now = null;
@@ -264,6 +320,26 @@ class SevenFeed extends ChangeNotifier {
       before = parseSevenTracks(h).where((t) => t.title != now?.title).toList();
     } catch (e) {
       debugPrint('24seven: ${station.name} lists not read: $e');
+    }
+  }
+
+  /// Which play [_whoAsked] has the answer for.
+  String? _askedAbout;
+
+  /// Who asked for the track on now. Once a play — or again at the next
+  /// poll, while the older feed is still on the track before.
+  Future<void> _whoAsked() async {
+    final on = now;
+    if (on == null || on.play == _askedAbout) return;
+    try {
+      final asked = await askSevenRequester(_dio, station, on.title);
+      if (!asked.known) return;
+      _askedAbout = on.play;
+      if (now?.play == on.play) now = now!.requested(asked.who);
+    } catch (e) {
+      // Not asked again this play: the track is still shown without.
+      _askedAbout = on.play;
+      debugPrint('24seven: ${station.name} requester not read: $e');
     }
   }
 

@@ -1,6 +1,20 @@
+import 'dart:async';
+
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:home_canvas/services/seven_fm.dart';
+
+/// Answers as the station would, without the network.
+class _Station extends Interceptor {
+  _Station(this.answer);
+
+  final String Function(RequestOptions o) answer;
+
+  @override
+  void onRequest(RequestOptions o, RequestInterceptorHandler handler) => handler
+      .resolve(Response(requestOptions: o, data: answer(o), statusCode: 200));
+}
 
 void main() {
   // As https://streamingsoundtracks.com/now-playing.php sent it.
@@ -74,6 +88,73 @@ void main() {
     ).single;
     expect(escaped.title, "Didn't Go Inside");
     expect(escaped.album, 'Action & Adventure');
+  });
+
+  group('who asked for the track on now', () {
+    test('from the older feed, which still says', () {
+      // As GetCurrentlyPlaying sent it.
+      const current = '''
+{"Album":"Video Games Live, Vol. 1","Track":"Advent Rising Suite",
+ "Artist":"Tommy Tallarico","Length":"387560",
+ "PlayStart":"2026-10-26T07:24:03","SystemTime":"2026-10-26T07:27:23",
+ "CoverLink":"https://streamingsoundtracks.com/images/cover/B000VO8O6W.jpg",
+ "RequestedBy":"Atman94","ListenerCount":"101","Message":null}
+''';
+      final t = parseSevenCurrent(current)!;
+      expect(t.title, 'Advent Rising Suite');
+      expect(t.requestedBy, 'Atman94');
+      expect(
+        parseSevenCurrent(
+          '{"Track":"Main Title","RequestedBy":"System/Admin"}',
+        )?.requestedBy,
+        isNull,
+      );
+      expect(parseSevenCurrent('[]'), isNull);
+    });
+
+    test('kept with the rest of the track', () {
+      final t = parseSevenNowPlaying(nowPlaying, now: at).track!;
+      final asked = t.requested('Atman94');
+      expect(asked.requestedBy, 'Atman94');
+      expect(asked.play, t.play);
+      expect(asked.started, t.started);
+      expect(asked.art, t.art);
+    });
+
+    for (final (on, who) in [
+      ('The Spirit Of Man', 'Atman94'),
+      // The older feed still on the track before: not this one's.
+      ('Forever Autumn', null),
+    ]) {
+      test('on the feed, while the older one says "$on"', () async {
+        final fresh = nowPlaying.replaceFirst(
+          '2026-10-24T13:05:41+00:00',
+          DateTime.now().toUtc().toIso8601String(),
+        );
+        final dio = Dio()
+          ..interceptors.add(
+            _Station(
+              (o) => switch (o.queryParameters['action']) {
+                'GetCurrentlyPlaying' =>
+                  '{"Track":"$on","RequestedBy":"Atman94"}',
+                null => fresh,
+                _ => '[]',
+              },
+            ),
+          );
+        final service = SevenFmService(dio: dio);
+        final station = sevenStation('sst');
+        final feed = service.watch(station);
+        addTearDown(() => service.unwatch(station));
+        final told = Completer<void>();
+        feed.addListener(() {
+          if (!told.isCompleted) told.complete();
+        });
+        await told.future.timeout(const Duration(seconds: 5));
+        expect(feed.now?.title, 'The Spirit Of Man');
+        expect(feed.now?.requestedBy, who);
+      });
+    }
   });
 
   test('the five stations, and which a stream is', () {

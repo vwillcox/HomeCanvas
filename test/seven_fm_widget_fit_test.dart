@@ -29,6 +29,18 @@ class _Station extends Interceptor {
   @override
   void onRequest(RequestOptions o, RequestInterceptorHandler handler) {
     final started = now.subtract(const Duration(minutes: 2)).toUtc();
+    if (o.queryParameters['action'] == 'GetCurrentlyPlaying') {
+      handler.resolve(
+        Response(
+          requestOptions: o,
+          data:
+              '{"Track":"The Spirit Of Man And Everything After It, '
+              'Extended","RequestedBy":"SomebodyWithAVeryLongName1388"}',
+          statusCode: 200,
+        ),
+      );
+      return;
+    }
     final body = o.path.endsWith('now-playing.php')
         ? '{"schema_version":1,"status":"playing",'
               '"generated_at":"${now.toUtc().toIso8601String()}",'

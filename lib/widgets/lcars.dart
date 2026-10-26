@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../dashboard/dashboard_theme.dart';
@@ -25,7 +26,10 @@ import '../time_format.dart';
 ///  * a **text bar** ([LcarsTextBar]) heads a screen: an end cap, the title
 ///    in the accent, and a bar carrying the small print;
 ///  * a **rail** ([LcarsRailBlock]) lists places to go as square blocks of
-///    uneven height, each named in its bottom corner.
+///    uneven height, each named in its bottom corner;
+///  * a **transporter** ([LcarsTransporter]) is a touch slider, as the
+///    transporter's are: a dark slot of segments lit up to the level, with a
+///    near-white bar across it there.
 ///
 /// There is no frame round the screen: the panels are the frame.
 ///
@@ -1108,6 +1112,412 @@ class _SegmentsPainter extends CustomPainter {
   @override
   bool shouldRepaint(_SegmentsPainter old) =>
       old.value != value || old.theme != theme || old.colour != colour;
+}
+
+/// A console's touch slider, as a transporter's are: a dark slot of
+/// segments lit in [colour] from the bottom up to the level, and a
+/// near-white bar across the slot at the level, standing out past its
+/// sides. Under a finger it follows the finger, and the top lit segment is
+/// lit near-white; touched once, or moved from elsewhere, it counts to the
+/// new level a segment at a time, as [LcarsSegments] do.
+///
+/// Upright it is the whole control, filling the box it is given: its
+/// [readout] above the slot, a scale of quarters beside it and its [label]
+/// on a block of its colour below. Lying down ([Axis.horizontal]) it is the
+/// slot alone, lit from the left, for a strip of blocks.
+class LcarsTransporter extends StatefulWidget {
+  const LcarsTransporter({
+    super.key,
+    required this.theme,
+    required this.value,
+    required this.onChanged,
+    this.onChangeEnd,
+    this.colour,
+    this.axis = Axis.vertical,
+    this.label,
+    this.readout,
+  });
+
+  final DashboardTheme theme;
+
+  /// 0 to 1.
+  final double value;
+
+  /// With the level under the finger, as it moves.
+  final ValueChanged<double> onChanged;
+
+  /// With the level the finger left, as it lifts.
+  final ValueChanged<double>? onChangeEnd;
+
+  /// The lit segments' colour, and the label block's; the accent without.
+  final Color? colour;
+  final Axis axis;
+
+  /// What it sets, on its block and for a screen reader.
+  final String? label;
+
+  /// The level as it is written above the slot: "35".
+  final String? readout;
+
+  @override
+  State<LcarsTransporter> createState() => LcarsTransporterState();
+}
+
+class LcarsTransporterState extends State<LcarsTransporter>
+    with PauseWhenHidden<LcarsTransporter> {
+  /// A twentieth at a time, so the whole slot in 0.6 s.
+  static const _stride = 1 / 20;
+  static const _beat = Duration(milliseconds: 30);
+
+  double _drawn = 0;
+
+  /// The level under the finger, while there is one on the slot.
+  double? _finger;
+  Timer? _timer;
+
+  /// The level as it is drawn now, on its way to the widget's.
+  @visibleForTesting
+  double get drawn => _drawn;
+
+  double get _target => (_finger ?? widget.value).clamp(0.0, 1.0);
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _chase();
+  }
+
+  @override
+  void didUpdateWidget(LcarsTransporter oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _chase();
+  }
+
+  /// As [LcarsSegmentsState]'s, but never behind a finger.
+  void _chase() {
+    final still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    if (_finger != null ||
+        still ||
+        !shown ||
+        (_target - _drawn).abs() <= _stride) {
+      _timer?.cancel();
+      _timer = null;
+      _drawn = _target;
+      return;
+    }
+    _timer ??= Timer.periodic(_beat, (_) {
+      final gap = _target - _drawn;
+      setState(() {
+        if (gap.abs() <= _stride) {
+          _drawn = _target;
+          _timer?.cancel();
+          _timer = null;
+        } else {
+          _drawn += gap.sign * _stride;
+        }
+      });
+    });
+  }
+
+  void _slide(Offset at, Size size) {
+    final v = _Transporter(size, widget.axis).levelAt(at);
+    setState(() {
+      _finger = v;
+      _chase();
+    });
+    widget.onChanged(v);
+  }
+
+  void _lift() {
+    final v = _finger;
+    if (v == null) return;
+    widget.onChangeEnd?.call(v);
+    setState(() {
+      _finger = null;
+      _chase();
+    });
+  }
+
+  /// A touch without a slide: the level set there, and counted to.
+  void _set(double v) {
+    widget.onChanged(v);
+    widget.onChangeEnd?.call(v);
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = widget.theme;
+    final colour = widget.colour ?? t.accent;
+    final upright = widget.axis == Axis.vertical;
+    final slot = LayoutBuilder(
+      builder: (context, c) {
+        final size = c.biggest;
+        void slide(DragUpdateDetails d) => _slide(d.localPosition, size);
+        void start(DragStartDetails d) => _slide(d.localPosition, size);
+        void end(DragEndDetails _) => _lift();
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          dragStartBehavior: DragStartBehavior.down,
+          onTapUp: (d) =>
+              _set(_Transporter(size, widget.axis).levelAt(d.localPosition)),
+          onVerticalDragStart: upright ? start : null,
+          onVerticalDragUpdate: upright ? slide : null,
+          onVerticalDragEnd: upright ? end : null,
+          onVerticalDragCancel: upright ? _lift : null,
+          onHorizontalDragStart: upright ? null : start,
+          onHorizontalDragUpdate: upright ? null : slide,
+          onHorizontalDragEnd: upright ? null : end,
+          onHorizontalDragCancel: upright ? null : _lift,
+          child: RepaintBoundary(
+            child: CustomPaint(
+              size: size,
+              painter: _TransporterPainter(
+                theme: t,
+                axis: widget.axis,
+                value: _drawn,
+                colour: colour,
+                touched: _finger != null,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+    final percent = (widget.value * 100).round();
+    final control = Semantics(
+      slider: true,
+      label: widget.label,
+      value: '$percent%',
+      increasedValue: '${min(100, percent + 5)}%',
+      decreasedValue: '${max(0, percent - 5)}%',
+      onIncrease: () => _set((widget.value + _stride).clamp(0.0, 1.0)),
+      onDecrease: () => _set((widget.value - _stride).clamp(0.0, 1.0)),
+      child: slot,
+    );
+    if (!upright) return control;
+    return LayoutBuilder(
+      builder: (context, c) {
+        final gutter = _Transporter.gutterFor(c.maxWidth);
+        final over = _Transporter.overFor(c.maxWidth - gutter);
+        final type = ((c.maxWidth - gutter) * 0.3).clamp(16.0, 34.0);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (widget.readout case final readout?)
+              Padding(
+                padding: EdgeInsets.only(left: gutter, bottom: type * 0.3),
+                child: Text(
+                  lcarsCaps(readout),
+                  maxLines: 1,
+                  textAlign: TextAlign.center,
+                  textScaler: TextScaler.noScaling,
+                  style: TextStyle(
+                    color: t.textSecondary,
+                    fontFamily: t.fontFamily,
+                    fontSize: type,
+                    fontWeight: FontWeight.w700,
+                    height: 1,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ),
+            Expanded(child: control),
+            if (widget.label case final label?)
+              Container(
+                height: (type * 1.5).clamp(30.0, 48.0),
+                margin: EdgeInsets.only(
+                  left: gutter + over,
+                  right: over,
+                  top: lcarsLine * 2,
+                ),
+                padding: const EdgeInsets.fromLTRB(6, 3, 8, 4),
+                alignment: Alignment.bottomRight,
+                color: colour,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    lcarsCaps(label),
+                    maxLines: 1,
+                    textScaler: TextScaler.noScaling,
+                    style: TextStyle(
+                      color: lcarsInk,
+                      fontFamily: t.fontFamily,
+                      fontSize: type * 0.62,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1,
+                      height: 1,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// Where a transporter's parts are, in a box [size]: the scale's gutter
+/// down the left of an upright one, the slot, and the segments inside it.
+class _Transporter {
+  _Transporter(Size size, this.axis) {
+    if (axis == Axis.vertical) {
+      gutter = gutterFor(size.width);
+      over = overFor(size.width - gutter);
+      slot = Rect.fromLTRB(gutter + over, 0, size.width - over, size.height);
+    } else {
+      gutter = 0;
+      over = (size.height * 0.08).clamp(2.0, 6.0);
+      slot = Rect.fromLTRB(0, over, size.width, size.height - over);
+    }
+    area = slot.deflate((slot.shortestSide * 0.08).clamp(3.0, 10.0));
+    count = (along / 12).floor().clamp(6, 20);
+  }
+
+  final Axis axis;
+  late final double gutter;
+
+  /// How far the bar at the level stands out past the slot.
+  late final double over;
+  late final Rect slot;
+  late final Rect area;
+  late final int count;
+
+  bool get upright => axis == Axis.vertical;
+  double get along => upright ? area.height : area.width;
+
+  /// Room for the scale's figures, where the control is wide enough.
+  static double gutterFor(double width) =>
+      width < 80 ? 0 : (width * 0.26).clamp(0.0, 40.0);
+  static double overFor(double width) => (width * 0.06).clamp(3.0, 8.0);
+
+  /// The level at [p], from the bottom of the segments or their left.
+  double levelAt(Offset p) =>
+      (upright
+              ? (area.bottom - p.dy) / area.height
+              : (p.dx - area.left) / area.width)
+          .clamp(0.0, 1.0);
+
+  /// Where the level [v] is along the slot.
+  double at(double v) =>
+      upright ? area.bottom - v * area.height : area.left + v * area.width;
+}
+
+class _TransporterPainter extends CustomPainter {
+  _TransporterPainter({
+    required this.theme,
+    required this.axis,
+    required this.value,
+    required this.colour,
+    required this.touched,
+  });
+
+  final DashboardTheme theme;
+  final Axis axis;
+  final double value;
+  final Color colour;
+  final bool touched;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = _Transporter(size, axis);
+    final paint = Paint();
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        p.slot,
+        Radius.circular((p.slot.shortestSide * 0.12).clamp(3.0, 12.0)),
+      ),
+      paint..color = theme.textSecondary.withValues(alpha: 0.08),
+    );
+
+    // Segments from the bottom, or the left, with a black line between.
+    final n = p.count;
+    final gap = p.along / n >= 14 ? lcarsLine : 2.0;
+    final each = (p.along + gap) / n;
+    final lit = value <= 0 ? 0 : max(1, (value * n).round());
+    final unlit = theme.textSecondary.withValues(alpha: 0.2);
+    final a = p.area;
+    for (var i = 0; i < n; i++) {
+      final from = i * each;
+      final to = from + each - gap;
+      canvas.drawRect(
+        p.upright
+            ? Rect.fromLTRB(a.left, a.bottom - to, a.right, a.bottom - from)
+            : Rect.fromLTRB(a.left + from, a.top, a.left + to, a.bottom),
+        paint
+          ..color = i >= lit
+              ? unlit
+              : (touched && i == lit - 1 ? lcarsLit : colour),
+      );
+    }
+
+    // The bar at the level, across the slot and out past it.
+    final bar = (p.slot.shortestSide * 0.06).clamp(3.0, 7.0);
+    final at = p.at(value);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        p.upright
+            ? Rect.fromLTRB(
+                p.slot.left - p.over,
+                at - bar / 2,
+                p.slot.right + p.over,
+                at + bar / 2,
+              )
+            : Rect.fromLTRB(
+                at - bar / 2,
+                p.slot.top - p.over,
+                at + bar / 2,
+                p.slot.bottom + p.over,
+              ),
+        Radius.circular(bar / 2),
+      ),
+      paint..color = lcarsLit,
+    );
+
+    // The scale, in quarters, down the gutter.
+    if (p.gutter <= 0) return;
+    final ink = theme.textSecondary.withValues(alpha: 0.6);
+    final tick = Paint()
+      ..color = ink
+      ..strokeWidth = 2;
+    final type = (p.gutter * 0.36).clamp(10.0, 14.0);
+    final right = p.gutter - 2;
+    for (final f in const [1.0, 0.75, 0.5, 0.25, 0.0]) {
+      final y = p.at(f);
+      canvas.drawLine(Offset(right - 8, y), Offset(right, y), tick);
+      final figure = TextPainter(
+        text: TextSpan(
+          text: '${(f * 100).round()}',
+          style: TextStyle(
+            color: ink,
+            fontSize: type,
+            fontFamily: theme.fontFamily,
+            height: 1,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      figure.paint(
+        canvas,
+        Offset(right - 12 - figure.width, y - figure.height / 2),
+      );
+      figure.dispose();
+    }
+  }
+
+  @override
+  bool shouldRepaint(_TransporterPainter old) =>
+      old.value != value ||
+      old.touched != touched ||
+      old.colour != colour ||
+      old.axis != axis ||
+      old.theme != theme;
 }
 
 /// The head of a screen: an end cap, the [title] in the accent, then a bar

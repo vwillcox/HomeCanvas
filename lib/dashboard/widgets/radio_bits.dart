@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../l10n/l10n.dart';
@@ -71,6 +73,139 @@ class RadioBadge extends StatelessWidget {
   }
 }
 
+/// The volume as a slider: the level follows the finger, and is kept once
+/// it lifts. On a console it is a transporter's touch slider — upright
+/// ([Axis.vertical]) beside the track where there is room for one, lying in
+/// the transport's strip where there is not.
+class RadioVolume extends StatelessWidget {
+  const RadioVolume({
+    super.key,
+    required this.theme,
+    required this.radio,
+    this.axis = Axis.horizontal,
+    this.size = 56,
+    this.showLevel = false,
+  });
+
+  final DashboardTheme theme;
+  final RadioService radio;
+
+  /// Upright fills the box it is given; lying down it is [size] tall and
+  /// three and a bit times as long.
+  final Axis axis;
+  final double size;
+
+  /// The level as a figure after it, lying down. Upright it always has one.
+  final bool showLevel;
+
+  /// While the finger moves, only as the level changes by a whole step:
+  /// each step is a rebuild of the tile.
+  void _slide(double v) {
+    final level = (v * 100).roundToDouble();
+    if (level != radio.volume) unawaited(radio.setVolume(level, keep: false));
+  }
+
+  void _lift(double v) => unawaited(radio.setVolume((v * 100).roundToDouble()));
+
+  @override
+  Widget build(BuildContext context) {
+    final t = theme;
+    final level = radio.volume.round();
+    final name = tr('widget.radio.volume', 'Volume');
+    if (t.isLcars && axis == Axis.vertical) {
+      return LcarsTransporter(
+        theme: t,
+        value: radio.volume / 100,
+        onChanged: _slide,
+        onChangeEnd: _lift,
+        colour: t.block(2),
+        label: name,
+        readout: '$level',
+      );
+    }
+    final figure = Padding(
+      padding: EdgeInsets.only(left: size * 0.12),
+      child: Text(
+        '$level',
+        style: TextStyle(
+          color: t.textSecondary,
+          fontSize: size * 0.3,
+          fontWeight: FontWeight.w600,
+          fontFeatures: const [FontFeature.tabularFigures()],
+        ),
+      ),
+    );
+    final Widget slider;
+    if (t.isLcars) {
+      slider = SizedBox(
+        width: size * 3.2,
+        height: size * 0.72,
+        child: LcarsTransporter(
+          theme: t,
+          value: radio.volume / 100,
+          onChanged: _slide,
+          onChangeEnd: _lift,
+          colour: t.block(2),
+          axis: Axis.horizontal,
+          label: name,
+        ),
+      );
+    } else {
+      slider = Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            level == 0
+                ? Icons.volume_mute_rounded
+                : level < 50
+                ? Icons.volume_down_rounded
+                : Icons.volume_up_rounded,
+            color: t.textSecondary,
+            size: size * 0.42,
+          ),
+          SizedBox(
+            width: size * 2.8,
+            height: size,
+            child: Material(
+              type: MaterialType.transparency,
+              child: SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  trackHeight: (size * 0.12).clamp(4.0, 10.0),
+                  activeTrackColor: t.accent,
+                  inactiveTrackColor: t.wash(0.24),
+                  thumbColor: t.accent,
+                  overlayColor: t.accent.withValues(alpha: 0.16),
+                  thumbShape: RoundSliderThumbShape(
+                    enabledThumbRadius: (size * 0.2).clamp(8.0, 18.0),
+                  ),
+                  overlayShape: RoundSliderOverlayShape(
+                    overlayRadius: (size * 0.4).clamp(16.0, 32.0),
+                  ),
+                ),
+                child: Slider(
+                  value: radio.volume / 100,
+                  onChanged: _slide,
+                  onChangeEnd: _lift,
+                  semanticFormatterCallback: (v) =>
+                      '$name ${(v * 100).round()}',
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+    final lying = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [slider, if (showLevel) figure],
+    );
+    // Upright off a console: the same slider, turned.
+    return axis == Axis.vertical
+        ? RotatedBox(quarterTurns: 3, child: lying)
+        : lying;
+  }
+}
+
 /// Which of the transport's keys a key is: play is the big one, and sleep
 /// says when it will stop.
 enum _Key { plain, play, sleep }
@@ -87,6 +222,7 @@ class RadioTransport extends StatelessWidget {
     required this.onToggle,
     this.onStep,
     this.showLevel = false,
+    this.volume = true,
   });
 
   final DashboardTheme theme;
@@ -102,8 +238,12 @@ class RadioTransport extends StatelessWidget {
   /// Back or on through the stations by one; no keys for it when null.
   final void Function(int by)? onStep;
 
-  /// The volume as a figure between its two buttons.
+  /// The volume as a figure after its slider.
   final bool showLevel;
+
+  /// The volume's slider, before the sleep key; false where the tile has
+  /// it somewhere else.
+  final bool volume;
 
   @override
   Widget build(BuildContext context) {
@@ -124,18 +264,6 @@ class RadioTransport extends StatelessWidget {
       ),
       if (step != null) (Icons.skip_next, () => step(1), 1.0, _Key.plain),
       (
-        Icons.volume_down_rounded,
-        () => radio.setVolume(radio.volume - 10),
-        0.85,
-        _Key.plain,
-      ),
-      (
-        Icons.volume_up_rounded,
-        () => radio.setVolume(radio.volume + 10),
-        0.85,
-        _Key.plain,
-      ),
-      (
         sleepAt == null ? Icons.bedtime_outlined : Icons.bedtime,
         // Nothing to stop while nothing is on.
         live ? radio.cycleSleep : null,
@@ -143,7 +271,7 @@ class RadioTransport extends StatelessWidget {
         _Key.sleep,
       ),
     ];
-    final volumeUp = keys.length - 2;
+    final sleep = keys.length - 1;
     final sleepLabel = sleepAt == null
         ? tr('widget.radio.sleepTimer', 'Sleep timer')
         : tr('widget.radio.offAt', 'Off at {time}', {'time': hhmm(sleepAt)});
@@ -156,10 +284,9 @@ class RadioTransport extends StatelessWidget {
         fontFeatures: const [FontFeature.tabularFigures()],
       ),
     );
-    final level = Padding(
-      padding: EdgeInsets.symmetric(horizontal: size * 0.1),
-      child: figure('${radio.volume.round()}', t.textSecondary),
-    );
+    final slider = volume
+        ? RadioVolume(theme: t, radio: radio, size: size, showLevel: showLevel)
+        : null;
 
     if (t.isLcars) {
       // One strip of blocks, rounded at its two ends, play lit while on and
@@ -168,7 +295,11 @@ class RadioTransport extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           for (final (i, k) in keys.indexed) ...[
-            if (showLevel && i == volumeUp) level,
+            if (slider != null && i == sleep)
+              Padding(
+                padding: const EdgeInsets.only(left: lcarsLine),
+                child: slider,
+              ),
             Padding(
               padding: EdgeInsets.only(left: i == 0 ? 0 : lcarsLine),
               child: Semantics(
@@ -212,7 +343,10 @@ class RadioTransport extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         for (final (i, k) in keys.indexed) ...[
-          if (showLevel && i == volumeUp) level,
+          if (slider != null && i == sleep) ...[
+            slider,
+            SizedBox(width: size * 0.1),
+          ],
           if (k.$4 == _Key.play && loading)
             SizedBox(
               width: size * k.$3,

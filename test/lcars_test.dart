@@ -273,6 +273,74 @@ void main() {
     expect(value, closeTo(0.5, 0.05));
   });
 
+  testWidgets('a transporter follows a finger, counts to a touch, and '
+      'reports as the finger lifts', (tester) async {
+    var value = 0.2;
+    final kept = <double>[];
+    await tester.pumpWidget(
+      console(
+        Center(
+          child: SizedBox(
+            width: 130,
+            height: 500,
+            child: StatefulBuilder(
+              builder: (context, setState) => LcarsTransporter(
+                theme: lcars,
+                value: value,
+                onChanged: (v) => setState(() => value = v),
+                onChangeEnd: kept.add,
+                label: 'Volume',
+                readout: '${(value * 100).round()}',
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    double drawn() => tester
+        .state<LcarsTransporterState>(find.byType(LcarsTransporter))
+        .drawn;
+    await tester.pump(const Duration(seconds: 1));
+    expect(tester.takeException(), isNull);
+    expect(drawn(), 0.2);
+    expect(find.text('VOLUME'), findsOneWidget);
+    expect(find.text('20'), findsOneWidget);
+
+    final slot = tester.getRect(
+      find
+          .descendant(
+            of: find.byType(LcarsTransporter),
+            matching: find.byType(GestureDetector),
+          )
+          .first,
+    );
+    // Slid up: the level is the finger's all the way, and kept once, as
+    // the finger lifts.
+    final finger = await tester.startGesture(
+      Offset(slot.center.dx, slot.bottom - slot.height * 0.3),
+    );
+    await finger.moveBy(const Offset(0, -30));
+    await tester.pump();
+    await finger.moveTo(Offset(slot.center.dx, slot.top + slot.height * 0.25));
+    await tester.pump();
+    expect(value, closeTo(0.75, 0.05));
+    expect(drawn(), value);
+    expect(kept, isEmpty);
+    await finger.up();
+    await tester.pump();
+    expect(kept, [value]);
+
+    // Touched lower down: set there at once, and counted down to.
+    await tester.tapAt(Offset(slot.center.dx, slot.bottom - slot.height * 0.1));
+    await tester.pump();
+    expect(value, closeTo(0.1, 0.05));
+    expect(kept.last, value);
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(drawn(), inExclusiveRange(value, 0.7));
+    await tester.pump(const Duration(seconds: 1));
+    expect(drawn(), value);
+  });
+
   group('what moves on a console', () {
     Widget panel({bool still = false}) => console(
       MediaQuery(

@@ -80,6 +80,7 @@ class RadioService extends ChangeNotifier {
   final List<RadioSong> _history = [];
   final Map<String, String?> _artCache = {};
   String? _artUrl;
+  String? _requestedBy;
 
   Timer? _sleep;
   DateTime? _sleepAt;
@@ -107,11 +108,13 @@ class RadioService extends ChangeNotifier {
   void debugPlaying(
     RadioStation station, {
     String? title,
+    String? requestedBy,
     List<RadioSong> history = const [],
   }) {
     _pretend = true;
     _station = station;
     _title = title;
+    _requestedBy = requestedBy;
     _history
       ..clear()
       ..addAll(history);
@@ -132,6 +135,10 @@ class RadioService extends ChangeNotifier {
   /// Cover art for [title], from the iTunes Search API. Null until found,
   /// and for anything it does not know — speech, jingles, adverts.
   String? get artUrl => _artUrl;
+
+  /// Who asked for [title], on a 24seven.FM station — they play what their
+  /// listeners ask for. Null for the station's own pick, and on any other.
+  String? get requestedBy => _requestedBy;
 
   /// When the sleep timer will stop the radio, or null when it is off.
   DateTime? get sleepAt => _sleepAt;
@@ -208,6 +215,7 @@ class RadioService extends ChangeNotifier {
     _station = station;
     _title = null;
     _artUrl = null;
+    _requestedBy = null;
     _error = null;
     _loading = true;
     notifyListeners();
@@ -263,6 +271,7 @@ class RadioService extends ChangeNotifier {
     _startWatch?.cancel();
     _title = null;
     _artUrl = null;
+    _requestedBy = null;
     _titlePoll?.cancel();
     _sleep?.cancel();
     _sleep = null;
@@ -278,12 +287,14 @@ class RadioService extends ChangeNotifier {
       : play(station, volume: volume);
 
   /// Sets the level, and keeps it for every station after, restarts too.
-  Future<void> setVolume(double v) async {
+  /// A slider passes [keep] false while the finger is still on it, so the
+  /// level is written down once, when it lifts.
+  Future<void> setVolume(double v, {bool keep = true}) async {
     _volume = v.clamp(0, 100).toDouble();
     _volumeSet = true;
     notifyListeners();
     await _player?.setVolume(_volume);
-    await _keepVolume();
+    if (keep) await _keepVolume();
   }
 
   Future<void> _keepVolume() async {
@@ -368,6 +379,7 @@ class RadioService extends ChangeNotifier {
     if (title == _title) return;
     _title = title;
     _artUrl = null;
+    _requestedBy = null;
     final station = _station;
     if (title != null && station != null) {
       if (_history.isEmpty || _history.first.title != title) {
@@ -375,6 +387,7 @@ class RadioService extends ChangeNotifier {
         if (_history.length > historyLength) _history.removeLast();
       }
       unawaited(_lookupArt(title, station));
+      unawaited(_whoAsked(title, station));
     }
     notifyListeners();
   }
@@ -428,6 +441,31 @@ class RadioService extends ChangeNotifier {
       }
     }
     return null;
+  }
+
+  /// Who asked for the song [title] names, on a 24seven.FM station. Asked a
+  /// few times, as for the cover: the station's feed can be a few seconds
+  /// behind the stream's title.
+  Future<void> _whoAsked(String title, RadioStation station) async {
+    final seven = sevenStationAt(Uri.tryParse(station.url)?.host ?? '');
+    if (seven == null) return;
+    final song = splitRadioTitle(title).song;
+    for (var i = 0; i < 3; i++) {
+      if (i > 0) await Future<void>.delayed(const Duration(seconds: 5));
+      if (_title != title) return;
+      try {
+        final asked = await askSevenRequester(_dio, seven, song);
+        if (!asked.known) continue;
+        if (_title == title) {
+          _requestedBy = asked.who;
+          notifyListeners();
+        }
+        return;
+      } catch (e) {
+        debugPrint('Radio: ${seven.name} requester not read: $e');
+        return;
+      }
+    }
   }
 
   @override

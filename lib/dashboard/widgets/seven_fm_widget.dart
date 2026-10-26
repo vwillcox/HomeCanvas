@@ -20,11 +20,12 @@ import '../../time_format.dart';
 
 /// StreamingSoundtracks.com — or another of the 24seven.FM stations — with
 /// all the station says about what it plays: the album and its cover, how
-/// far through the track is, what is coming up and who asked for it, and
-/// what played before.
+/// far through the track is, who asked for it, what is coming up and who
+/// asked for that, and what played before.
 ///
 /// Played on the same player as the Radio tile, so the two never talk over
-/// each other, at the volume that tile keeps.
+/// each other, at the volume that tile keeps. On a console with the room,
+/// the volume is a transporter's slider standing beside the track.
 class SevenFmWidget extends StatefulWidget {
   const SevenFmWidget({super.key, required this.w});
 
@@ -196,6 +197,14 @@ class _Seven {
     (null, final b?) => b,
     _ => null,
   };
+
+  /// Who asked for [t], when a listener did.
+  static String? askedLine(SevenTrack t) => switch (t.requestedBy) {
+    final who? => tr('widget.radio.requestedBy', 'Requested by {who}', {
+      'who': who,
+    }),
+    null => null,
+  };
 }
 
 // --- Small --------------------------------------------------------------------
@@ -248,7 +257,7 @@ class _SmallLook extends StatelessWidget {
           SizedBox(
             height: 22,
             child: ScrollingText(
-              _Seven.albumLine(track)!,
+              [_Seven.albumLine(track)!, ?_Seven.askedLine(track)].join(' · '),
               style: TextStyle(color: t.textSecondary, fontSize: 14),
             ),
           ),
@@ -287,22 +296,28 @@ class _SmallLook extends StatelessWidget {
   }
 }
 
-RadioTransport _transport(_Seven s, double size, {bool level = false}) =>
-    RadioTransport(
-      theme: s.theme,
-      radio: s.radio,
-      size: size,
-      showLevel: level,
-      playing: s.playing,
-      loading: s.loading,
-      live: s.live,
-      onToggle: s.toggle,
-    );
+RadioTransport _transport(
+  _Seven s,
+  double size, {
+  bool level = false,
+  bool volume = true,
+}) => RadioTransport(
+  theme: s.theme,
+  radio: s.radio,
+  size: size,
+  showLevel: level,
+  volume: volume,
+  playing: s.playing,
+  loading: s.loading,
+  live: s.live,
+  onToggle: s.toggle,
+);
 
 // --- Big ----------------------------------------------------------------------
 
 /// For a page to itself: the cover large, the track, album and composer,
-/// how far through it is, and beside them what is coming up and what played.
+/// who asked for it, how far through it is, and beside them what is coming
+/// up and what played.
 class _BigLook extends StatelessWidget {
   const _BigLook({
     required this.s,
@@ -324,7 +339,9 @@ class _BigLook extends StatelessWidget {
     final track = s.track;
     final side = lists && w >= 1000;
     final bars = visualiser && h >= 420;
-    final art = (h * (bars ? 0.62 : 0.72)).clamp(120.0, w * 0.36);
+    // On a console with the room, the volume stands beside the words.
+    final pad = t.isLcars && w >= 900;
+    final art = (h * (bars ? 0.62 : 0.72)).clamp(120.0, w * (pad ? 0.3 : 0.36));
     final big = (h * 0.075).clamp(22.0, 64.0);
     final status = StatusColours.of(t);
 
@@ -394,6 +411,20 @@ class _BigLook extends StatelessWidget {
             style: TextStyle(color: t.textSecondary, fontSize: big * 0.45),
           ),
         ],
+        if (track == null ? null : _Seven.askedLine(track)
+            case final asked?) ...[
+          SizedBox(height: big * 0.16),
+          Text(
+            asked,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: t.accent,
+              fontSize: big * 0.4,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
         if (track?.started != null && track?.length != null) ...[
           SizedBox(height: big * 0.4),
           _Progress(theme: t, track: track!, size: big * 0.34),
@@ -415,7 +446,12 @@ class _BigLook extends StatelessWidget {
         FittedBox(
           fit: BoxFit.scaleDown,
           alignment: Alignment.centerLeft,
-          child: _transport(s, (h * 0.11).clamp(48.0, 96.0), level: true),
+          child: _transport(
+            s,
+            (h * 0.11).clamp(48.0, 96.0),
+            level: true,
+            volume: !pad,
+          ),
         ),
       ],
     );
@@ -453,14 +489,33 @@ class _BigLook extends StatelessWidget {
                     child: _Cover(s: s, size: art),
                   ),
                   SizedBox(width: w * 0.035),
-                  Expanded(child: words),
+                  // Made smaller, rather than cut off, on a tile too short
+                  // for all of it.
+                  Expanded(
+                    child: LayoutBuilder(
+                      builder: (context, c) => FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: SizedBox(width: c.maxWidth, child: words),
+                      ),
+                    ),
+                  ),
+                  if (pad) ...[
+                    SizedBox(width: w * 0.02),
+                    SizedBox(
+                      width: (w * 0.07).clamp(110.0, 150.0),
+                      height: art,
+                      child: RadioVolume(
+                        theme: t,
+                        radio: s.radio,
+                        axis: Axis.vertical,
+                      ),
+                    ),
+                  ],
                   if (side) ...[
                     SizedBox(width: w * 0.03),
                     SizedBox(
-                      width: (w * (t.isLcars ? 0.32 : 0.28)).clamp(
-                        280.0,
-                        600.0,
-                      ),
+                      width: (w * (t.isLcars ? 0.3 : 0.28)).clamp(280.0, 600.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -798,7 +853,7 @@ final sevenFmWidgetType = DashboardWidgetType(
       kind: OptionKind.number,
       defaultValue: 35,
       help:
-          'Out of 100, until the volume is changed with the buttons. After '
+          'Out of 100, until the volume is changed with the slider. After '
           'that it keeps the level last set, as the Radio tile does.',
     ),
     const WidgetOption(
