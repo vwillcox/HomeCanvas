@@ -25,7 +25,8 @@ Browse your albums, pinch to zoom photos, play videos, run a slideshow, and see
 the local weather. It doubles as a speaker (Bluetooth or Spotify Connect), takes
 photos and notes shared from a phone, and switches to a dashboard of nearly
 forty widgets — clock, weather, calendar, news, trains, bins, chores, your
-network and your servers — that you arrange from a browser.
+network and your servers — that you arrange from a browser. It comes in
+[fourteen languages](#features), from Welsh and Irish to Polish and Swedish.
 
 Built with Flutter as a native Linux app, so it stays smooth on a Pi.
 
@@ -220,6 +221,16 @@ when you leave.
 **Voice control** — say "hey canvas, show the stocks", "next page" or "pause the
 music"; anything else goes to Home Assistant. Heard and understood on the Pi;
 see [VOICE.md](VOICE.md).
+
+**In your language** — British English, American English, French, German,
+Spanish, Italian, Dutch, European Portuguese, Polish, Swedish, Norwegian,
+Danish, Welsh and Irish, all bundled in: pick one under Settings → System →
+Language on the panel, or under Screen in the editor, and both change together.
+Every language but British English was translated by AI and hasn't been
+checked by a person yet, which the picker says beside its name; anything a pack
+lacks shows in British English. Corrections from native speakers are welcome
+in [Discussions](https://github.com/vwillcox/HomeCanvas/discussions). Voice
+commands stay in British English for now.
 
 **Built for a wall** — panels drift slowly against burn-in; the screen turns
 itself off when idle and wakes on touch (or by voice, through Alexa); starts on
