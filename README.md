@@ -197,7 +197,7 @@ queue.
 | Photos, music & TV | Now playing, TV remote, Photo, On this day, Immich library, Birthdays |
 | Around the house | Bin day, Notes, Shopping list, Grid carbon, Lights (Govee), Home Assistant, Meal plan, Chores & rewards |
 | Getting out | Train departures |
-| News & reference | News feeds (with adverts filtered out), On this day in history, Omarchy hotkeys |
+| News & reference | News feeds (with adverts filtered out), Mastodon, Bluesky, On this day in history, Omarchy hotkeys |
 | Network | UniFi health, Who's home, UniFi devices, Network clients, WAN throughput, ISP speed test, Speed test, LAN speed test |
 | Home lab | Servers (with SMART disk health), Services, Certificates, Updates |
 
@@ -208,7 +208,8 @@ of your own photos behind the tiles.
 **Share Inbox** — a companion Android app (in this repo) shares photos, GIFs,
 videos, links and notes to the kiosk from any app's share sheet, from anywhere,
 **end-to-end encrypted** with a fresh key per message. Notes can be read aloud
-by a voice that runs on the Pi.
+by a voice that runs on the Pi. New Mastodon and Bluesky notifications can pop
+up on the panel the same way, from the accounts their tiles sign in to.
 
 **A phone as a camera** — an old Android phone running IP Webcam becomes a
 camera in a corner window; pinch to drive the phone's own zoom.

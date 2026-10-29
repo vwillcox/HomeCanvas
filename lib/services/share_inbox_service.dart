@@ -15,7 +15,9 @@ import 'sealed_stream.dart';
 import 'tts_service.dart';
 import 'media_cache.dart';
 
-enum ShareType { link, text, image, gif, video }
+/// What arrived. [notice] is the panel's own news rather than a share — a
+/// Mastodon or Bluesky notification — given the same card and chime.
+enum ShareType { link, text, image, gif, video, notice }
 
 /// One thing someone shared to the kiosk from the companion app.
 class SharedItem {
@@ -28,11 +30,16 @@ class SharedItem {
   /// Local file path, for [ShareType.image]/[ShareType.gif]/[ShareType.video].
   final String? localPath;
 
+  /// For [ShareType.notice]: what the card says, where a share says who it
+  /// is from. [sender] is then where the notice is from — "Mastodon".
+  final String? title;
+
   SharedItem({
     required this.type,
     required this.sender,
     this.content,
     this.localPath,
+    this.title,
   });
 }
 
@@ -444,6 +451,22 @@ class ShareInboxService extends ChangeNotifier {
         return mime.startsWith('image/') ? '.jpg' : '.bin';
     }
   }
+
+  /// Puts up a card of the panel's own — [title] on it, [text] when it is
+  /// opened — with the chime a share gets, and wakes the screen for it,
+  /// unless Do Not Disturb is on.
+  void notice({
+    required String from,
+    required String title,
+    required String text,
+  }) => _enqueue(
+    SharedItem(
+      type: ShareType.notice,
+      sender: from,
+      title: title,
+      content: text,
+    ),
+  );
 
   void _enqueue(SharedItem item) {
     _queue.add(item);

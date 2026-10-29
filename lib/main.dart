@@ -71,6 +71,7 @@ import 'widgets/voice_indicator.dart';
 import 'widgets/konami_overlay.dart';
 import 'services/screen_state.dart';
 import 'services/share_inbox_service.dart';
+import 'services/social_notifier.dart';
 import 'services/spotify_service.dart';
 import 'services/lan_speedtest_service.dart';
 import 'services/speedtest_service.dart';
@@ -395,6 +396,10 @@ void main() async {
       await speech.speak(text, volume: inbox().speechOut);
     },
   )..start();
+
+  // New Mastodon and Bluesky notifications, for the accounts whose tiles
+  // ask, popped up as a share is: the card, the chime, the screen woken.
+  SocialNotifier(config, onNotices: shareInbox.notice).start();
 
   // Home Assistant entities for the dashboard, over the connection set up
   // for the indoor sensor. Idle until a widget asks; the editor's entity

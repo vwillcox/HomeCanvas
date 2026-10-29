@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parent.parent
 # back in the original's case.
 SPELLING = {
     "colour": "color", "colours": "colors", "coloured": "colored",
-    "favourite": "favorite", "favourites": "favorites",
+    "favourite": "favorite", "favourites": "favorites", "favourited": "favorited",
     "centre": "center", "centres": "centers", "centred": "centered",
     "metre": "meter", "metres": "meters",
     "kilometre": "kilometer", "kilometres": "kilometers", "litre": "liter", "litres": "liters",

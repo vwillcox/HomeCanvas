@@ -39,6 +39,14 @@
       "height": 3
     },
     {
+      "type": "bluesky",
+      "name": "Bluesky",
+      "description": "Who you follow, Discover, your notifications, a custom feed or one of your lists, signed in with an app password — and, if you like, a card on the panel when a notification comes in.",
+      "category": "News & reference",
+      "width": 4,
+      "height": 4
+    },
+    {
       "type": "calendar",
       "name": "Calendar",
       "description": "Upcoming events from one or more published calendar links, as a schedule or a month.",
@@ -309,6 +317,14 @@
       "category": "Around the house",
       "width": 4,
       "height": 2
+    },
+    {
+      "type": "mastodon",
+      "name": "Mastodon",
+      "description": "Your home timeline, notifications, a hashtag, a list or your server’s local feed, signed in with an access token — and, if you like, a card on the panel when a notification comes in.",
+      "category": "News & reference",
+      "width": 4,
+      "height": 4
     },
     {
       "type": "meals",

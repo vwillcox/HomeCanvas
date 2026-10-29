@@ -99,6 +99,7 @@ class _IncomingShareOverlayState extends State<IncomingShareOverlay>
           ),
         );
       case ShareType.text:
+      case ShareType.notice:
         await navigator.push(
           MaterialPageRoute(
             builder: (_) =>
@@ -298,6 +299,7 @@ class _Card extends StatelessWidget {
           ShareType.video => Icons.movie,
           ShareType.link => Icons.link,
           ShareType.text => Icons.notes,
+          ShareType.notice => Icons.notifications_active,
         };
 
   String get _label =>
@@ -309,6 +311,7 @@ class _Card extends StatelessWidget {
     ShareType.video => tr('share.videoShared', 'Video shared'),
     ShareType.link => tr('share.linkShared', 'Link shared'),
     ShareType.text => tr('share.noteShared', 'Note shared'),
+    ShareType.notice => item.sender,
   };
 
   @override
@@ -359,7 +362,7 @@ class _Card extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'From ${item.sender}${pendingCount > 1 ? ' · +${pendingCount - 1} more' : ''}',
+                      '${item.title ?? 'From ${item.sender}'}${pendingCount > 1 ? ' · +${pendingCount - 1} more' : ''}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(

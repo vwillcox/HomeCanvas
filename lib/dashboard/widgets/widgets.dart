@@ -48,6 +48,7 @@ import 'updates_widget.dart';
 import 'tv_widget.dart';
 import 'unifi_widgets.dart';
 import 'site_feed_widgets.dart';
+import 'social_widgets.dart';
 import 'weather_widget.dart';
 import 'youtube_widget.dart';
 
@@ -66,6 +67,8 @@ void registerBuiltInWidgets() {
     sevenFmWidgetType,
     calendarWidgetType,
     newsWidgetType,
+    mastodonWidgetType,
+    blueskyWidgetType,
     stocksWidgetType,
     cryptoWidgetType,
     tvWidgetType,
