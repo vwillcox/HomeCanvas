@@ -55,6 +55,12 @@ class ScreenIdleService {
   /// but is every bit as much a reason to leave the screen on.
   bool Function()? videoPlaying;
 
+  /// Whether the radio is playing — the Radio and StreamingSoundtracks
+  /// tiles, which play on the panel itself rather than through a
+  /// [PlaybackSource]. Listened to with nobody looking, so it is as much use
+  /// as music from a phone.
+  bool Function()? radioPlaying;
+
   ScreenSettings get _settings => _configService.config.screen;
 
   void start() {
@@ -113,12 +119,14 @@ class ScreenIdleService {
     if (showing) noteInteraction();
   }
 
-  bool get _musicPlaying =>
+  /// Whether anything is playing: music, the radio or a video.
+  bool get playing =>
       _sources.any((s) => s.available && s.now.isPlaying) ||
-      (videoPlaying?.call() ?? false);
+      (videoPlaying?.call() ?? false) ||
+      (radioPlaying?.call() ?? false);
 
   Future<void> _tick() async {
-    final playing = _musicPlaying;
+    final playing = this.playing;
     final startedPlaying = playing && !_musicWasPlaying;
     _musicWasPlaying = playing;
 

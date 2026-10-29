@@ -188,6 +188,28 @@ void main() {
     });
   });
 
+  group('a station that stops sending', () {
+    const minutes = Duration(minutes: 5);
+    const seconds = Duration(seconds: 5);
+
+    test('after playing a while, is always tuned in again', () {
+      // StreamingSoundtracks closes its stream every few minutes, mid-song.
+      expect(RadioService.dropsAfter(0, minutes), 1);
+      expect(RadioService.dropsAfter(RadioService.maxDrops, minutes), 1);
+    });
+
+    test('as soon as it starts, is given up on after a few goes', () {
+      final runs = <int?>[];
+      var drops = 0;
+      for (var i = 0; i <= RadioService.maxDrops; i++) {
+        final next = RadioService.dropsAfter(drops, seconds);
+        runs.add(next);
+        drops = next ?? 0;
+      }
+      expect(runs, [1, 2, 3, null]);
+    });
+  });
+
   group('the sleep timer', () {
     test('steps through its lengths and round to off', () {
       final r = RadioService();

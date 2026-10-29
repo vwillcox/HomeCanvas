@@ -268,6 +268,8 @@ void main() async {
     }
     ..start();
   screenIdle.videoPlaying = () => player.playing;
+  // The radio too, which plays on the panel with nobody looking at it.
+  screenIdle.radioPlaying = () => radio.playing;
   // Their sign-in pages, for signing in from a computer instead of the panel.
   dashboard.videoSites = sites;
 

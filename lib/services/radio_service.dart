@@ -66,6 +66,32 @@ class RadioService extends ChangeNotifier {
   /// then given up on.
   static const startWait = Duration(seconds: 12);
 
+  /// When the station on now was last asked for, to tell a stream that ran
+  /// for a while and then dropped from one that drops as soon as it starts.
+  DateTime? _openedAt;
+
+  /// How many times in a row the station has dropped the stream soon after
+  /// starting it — see [dropsAfter].
+  int _drops = 0;
+
+  /// How many quick drops in a row are tuned in again before giving up.
+  static const maxDrops = 3;
+
+  /// How long a stream has to have played for its drop to start a fresh
+  /// count, rather than being one more of a run.
+  static const steadyFor = Duration(minutes: 1);
+
+  /// The count of drops in a row after one more, or null to give up.
+  ///
+  /// StreamingSoundtracks closes its stream every few minutes, mid-song, so
+  /// a drop after the station has played [steadyFor] or longer is always
+  /// tuned in again. Only one that keeps dropping as soon as it starts — a
+  /// station that is down — is given up on, after [maxDrops].
+  static int? dropsAfter(int drops, Duration played) {
+    final run = played >= steadyFor ? 1 : drops + 1;
+    return run > maxDrops ? null : run;
+  }
+
   RadioStation? _station;
   bool _loading = false;
   String? _error;
@@ -160,6 +186,7 @@ class RadioService extends ChangeNotifier {
     _sleepAt = after == null ? null : DateTime.now().add(after);
     if (after != null) {
       _sleep = Timer(after, () {
+        debugPrint('Radio: the sleep timer is up');
         _sleepAt = null;
         _sleepStep = 0;
         unawaited(stop());
@@ -218,6 +245,7 @@ class RadioService extends ChangeNotifier {
     _requestedBy = null;
     _error = null;
     _loading = true;
+    _drops = 0;
     notifyListeners();
     _watchStart(station);
     try {
@@ -231,8 +259,40 @@ class RadioService extends ChangeNotifier {
 
   Future<void> _open(RadioStation station) async {
     final player = _ensurePlayer();
+    _openedAt = DateTime.now();
     await player.setVolume(_volume);
     await player.open(Media(station.url));
+  }
+
+  /// [station] stopped sending: tuned in again, unless it keeps doing so.
+  void _dropped(RadioStation station) {
+    final opened = _openedAt;
+    final played = opened == null
+        ? Duration.zero
+        : DateTime.now().difference(opened);
+    final drops = dropsAfter(_drops, played);
+    debugPrint(
+      'Radio: ${station.url} stopped sending after ${played.inSeconds}s'
+      '${drops == null ? ', giving up' : ', tuning in again'}',
+    );
+    if (drops == null) {
+      _drops = 0;
+      _error = tr('widget.radio.ended', 'The station stopped sending.');
+      notifyListeners();
+      return;
+    }
+    _drops = drops;
+    // As a fresh start, watched the same way, but with nothing to pause:
+    // the radio was what was playing.
+    _loading = true;
+    notifyListeners();
+    _watchStart(station);
+    unawaited(
+      _open(station).catchError((Object e) {
+        debugPrint('Radio: could not play ${station.url}: $e');
+        _failed();
+      }),
+    );
   }
 
   /// The first station after a restart sometimes never starts: mpv is
@@ -267,6 +327,7 @@ class RadioService extends ChangeNotifier {
   }
 
   Future<void> stop() async {
+    if (playing) debugPrint('Radio: stopping ${_station?.url}');
     _loading = false;
     _startWatch?.cancel();
     _title = null;
@@ -345,10 +406,8 @@ class RadioService extends ChangeNotifier {
       ..add(
         player.stream.completed.listen((done) {
           // A live stream only ends when the station drops it.
-          if (done && _station != null) {
-            _error = tr('widget.radio.ended', 'The station stopped sending.');
-            notifyListeners();
-          }
+          final station = _station;
+          if (done && station != null) _dropped(station);
         }),
       );
     return player;

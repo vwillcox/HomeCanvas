@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:home_canvas/config/app_config.dart';
+import 'package:home_canvas/services/config_service.dart';
 import 'package:home_canvas/services/screen_idle_service.dart';
 
 /// The service's decision to switch off is the part worth testing; the HTTP
@@ -83,6 +84,19 @@ void main() {
         ),
         isFalse,
       );
+    });
+
+    test('the radio counts as playing, as a video does', () {
+      // StreamingSoundtracks was switched off mid-song: the radio plays on
+      // the panel itself, not through either PlaybackSource.
+      final idle = ScreenIdleService(ConfigService(), const []);
+      addTearDown(idle.dispose);
+      expect(idle.playing, isFalse);
+      idle.radioPlaying = () => true;
+      expect(idle.playing, isTrue);
+      idle.radioPlaying = () => false;
+      idle.videoPlaying = () => true;
+      expect(idle.playing, isTrue);
     });
 
     test('the setting off means never, dashboard or not', () {
