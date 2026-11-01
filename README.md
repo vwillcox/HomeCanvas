@@ -73,6 +73,19 @@ controls sized for a thumb — like, shuffle, repeat and add-to-playlist include
 Shrink it and it tucks into the mini player on the home screen, or into the Now
 playing tile on the dashboard.
 
+| Sing along | On a console |
+|---|---|
+| ![The player with the song's words beside the cover, the line being sung lit](docs/screenshots/now-playing-lyrics.jpg) | ![The same in LCARS: each line's time on a block down the side](docs/screenshots/now-playing-lyrics-lcars.jpg) |
+
+And it sings along. The song's words sit beside the cover, the line being
+sung lit and held at the same height as the song goes on — big enough to
+read from across the room. Through an intro or a solo the break fills as it
+passes, so the next line never catches you out. Touch a line and the song
+goes there (with Spotify); drag to read ahead. In LCARS each line's time is
+on a block down the side, a colour to a verse, lit as it is sung. The words
+come from [LRCLIB](https://lrclib.net), free and open; an instrumental says
+so, and the Lyrics button on the player turns them off.
+
 ### The dashboard
 
 ![The dashboard: clock, weather, TV remote, now playing and the news](docs/screenshots/dashboard.jpg)
@@ -295,7 +308,10 @@ extras: Spotify, the weather, Home Assistant, sharing from your phone.
 HomeCanvas talks to your own Immich server, and to a public service only when
 you add a widget that needs one — Open-Meteo for the weather, National Grid ESO
 for grid carbon, Realtime Trains for departures — sending no more than that
-widget needs: a place, a postcode district, a station. No analytics, no
+widget needs: a place, a postcode district, a station. While music plays, the
+song's artist, title, album and length go to LRCLIB for its words (turn
+Lyrics off and they don't), and for music over Bluetooth, which carries no
+cover, its artist and title go to iTunes for one. No analytics, no
 accounts of ours. Your credentials live in `~/.config/homecanvas/config.json` on
 the device and are never committed. Shares from the companion app are
 end-to-end encrypted, so even a reverse proxy in the path cannot read them.

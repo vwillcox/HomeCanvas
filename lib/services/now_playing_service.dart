@@ -130,7 +130,10 @@ class NowPlayingService extends ChangeNotifier implements PlaybackSource {
   NowPlaying get now => _now;
 
   @override
-  bool get available => _player != null;
+  bool get available => _player != null || _testing;
+
+  /// Set by HOMECANVAS_TEST_TRACK: a phone that isn't there, playing a song.
+  bool _testing = false;
 
   String? _artUrl;
   @override
@@ -140,6 +143,8 @@ class NowPlayingService extends ChangeNotifier implements PlaybackSource {
   final _dio = httpClient();
 
   Future<void> start() async {
+    final test = Platform.environment['HOMECANVAS_TEST_TRACK'] ?? '';
+    if (test.isNotEmpty) return _pretend(test);
     try {
       _client = DBusClient.system();
       await _findPlayer();
@@ -152,6 +157,43 @@ class NowPlayingService extends ChangeNotifier implements PlaybackSource {
     } catch (e) {
       debugPrint('NowPlayingService.start error: $e');
     }
+  }
+
+  /// HOMECANVAS_TEST_TRACK=`artist|title|album|seconds|from`: plays that
+  /// song from `from` seconds in, on no phone at all — the full player, its
+  /// cover and its lyrics, on a machine with no Bluetooth to speak of.
+  /// Several songs, split by `;`, play one after another, round and round.
+  void _pretend(String spec) {
+    final songs = spec.split(';').where((s) => s.trim().isNotEmpty).toList();
+    var playing = 0;
+    void play(int i) {
+      final p = songs[i].split('|');
+      String at(int i) => i < p.length ? p[i].trim() : '';
+      _now = NowPlaying(
+        artist: at(0),
+        title: at(1),
+        album: at(2),
+        duration: Duration(seconds: int.tryParse(at(3)) ?? 240),
+        position: Duration(seconds: int.tryParse(at(4)) ?? 0),
+        status: 'playing',
+        deviceName: 'Phone',
+      );
+      _artForKey = _now.trackKey;
+      unawaited(_lookupArtwork(_now.artist, _now.title));
+      notifyListeners();
+    }
+
+    _testing = true;
+    play(playing);
+    _positionTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      final next = _now.position + const Duration(seconds: 1);
+      if (next >= _now.duration) {
+        playing = (playing + 1) % songs.length;
+        return play(playing);
+      }
+      _now = _now.copyWith(position: next);
+      notifyListeners();
+    });
   }
 
   /// One subscription covers everything under org.bluez: the phone appearing

@@ -173,6 +173,12 @@ const List<Credit> kServices = [
     url: 'https://performance-partners.apple.com/search-api',
   ),
   Credit(
+    name: 'LRCLIB',
+    purpose: 'Song lyrics, timed to the line, for the full player',
+    licence: 'Free, no key · open lyrics database',
+    url: 'https://lrclib.net',
+  ),
+  Credit(
     name: 'postcodes.io',
     purpose: 'UK postcode to coordinates lookup',
     licence: 'MIT · data under OGL v3',

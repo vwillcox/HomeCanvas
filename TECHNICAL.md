@@ -395,6 +395,55 @@ visualiser ends up screaming at the first note of the next one. Its range was
 measured off this panel rather than guessed: five seconds of ordinary music put
 the median band about 17 dB below the peaks, which is why `rangeDb` is 34.
 
+### Lyrics
+
+With **Lyrics** on (the button in the full player's header, or Settings →
+Music), the player looks up the song's words on [LRCLIB](https://lrclib.net)
+and, when it has some, gives them the middle of the screen: the cover and
+the song move to a column on the left, the words take the rest.
+
+**Finding them** (`lib/services/lyrics.dart`). First `GET /api/get` with the
+artist, title, album and length in whole seconds — LRCLIB's exact match.
+Failing that, `GET /api/search` by the title as a lyrics site files it (no
+"- Remastered 2011", no "(feat. …)") and the first of several artists, and
+the best of what comes back: same artist, same name (`sameName`, shared with
+the artwork lookup), no more than four seconds longer or shorter — a live
+take or a radio edit has its words at other times — and timed words before
+plain ones before an instrumental. The answer is kept for the last forty
+songs, a "none" included, so going back to a song or opening the player
+again asks nothing. A network that was down is not kept as a "none".
+
+**Parsing.** LRC lines can carry several times (a chorus sung twice), an
+`[offset:]`, and tags that are not words. A line with no words is a break;
+runs of them are one, none is kept at the end, and one is put in front when
+the singing doesn't start for four seconds, so the intro has something to
+show. Plain words have no times: they scroll with the song, as far down the
+words as the song is through.
+
+**Following the song** (`lib/widgets/lyrics_view.dart`). Both sources report
+the position about once a second; between reports the view counts on from
+the last one, and checks ten times a second which line is due — 250 ms
+early, enough to have read it as it is sung. It rebuilds only when the line
+changes or a break fills a step. A report landing a moment behind the count
+doesn't light the previous line again; only a real move back, a seek, does.
+The line being sung is brought to 36% of the way down with
+`Scrollable.ensureVisible`; drag the words and they stay where they were
+put until four seconds after letting go. With Spotify a line is a button
+that seeks there; AVRCP can't seek, so a touch there closes the player like
+anywhere else.
+
+**Looks.** Off a console, the words are large and bold, the line being sung
+full strength and the rest dimmed and a touch smaller, fading out at the top
+and bottom of the view; a break is three dots that light as it passes. On a
+console nothing glides: the words step up a line at a time, each line's time
+is on a block down the side (lit for the line being sung, unlit once sung, a
+colour to a verse), and a break is a row of segments counting across.
+
+While the next song's words are looked for, the player keeps the layout it
+had, so a run of songs with words doesn't flick to the plain player and back
+between each. An instrumental shows the plain player with "Instrumental"
+under the album.
+
 ### Spotify
 
 The Web API control uses OAuth Authorization Code with PKCE, so no client secret
@@ -938,6 +987,7 @@ session token rather than an API key.
 | UniFi Network | the Network widgets | The console's integration API with an `X-API-KEY`. |
 | Home Assistant | Home Assistant, Updates, the indoor sensor | REST API with a long-lived token. |
 | iTunes Search API | Bluetooth artwork | By artist and track, which matches far more reliably than album. |
+| [LRCLIB](https://lrclib.net) | Lyrics in the full player | `/api/get` by artist, title, album and length, then `/api/search`. No key. |
 
 **Disk health** is derived from Glances' SMART attributes: *failing* if any
 normalised value is at or below its threshold or the drive reports a failure;
@@ -990,6 +1040,7 @@ screenshots or testing a screen in isolation. Inert unless set.
 | `HOMECANVAS_TEST_DASHBOARD=<page>` | the dashboard, opened at that page |
 | `HOMECANVAS_TEST_POPUP=forecast` or `inputs` | with the above, opens the full forecast or the TV inputs over the dashboard |
 | `HOMECANVAS_TEST_PLAYER=small` or `full` | the home screen with the player shrunk to the mini player, or the full player opened as soon as music is playing |
+| `HOMECANVAS_TEST_TRACK=artist\|title\|album\|seconds\|from` | a phone that isn't there playing that song, from `from` seconds in — with `HOMECANVAS_TEST_PLAYER=full`, the full player and its lyrics on any machine. Several songs, split by `;`, play in turn |
 | `HOMECANVAS_TEST_THEME=<id>` | the whole kiosk in that theme, without saving it |
 | `HOMECANVAS_TEST_WEATHER=expanded` | with the slideshow, the weather panel opened |
 
@@ -1017,6 +1068,7 @@ lib/
     immich_service.dart        # Immich REST client + response caching
     dashboard_service.dart     # the editor's web server
     now_playing_service.dart   # BlueZ AVRCP over D-Bus + artwork lookup
+    lyrics.dart                # LRCLIB lookup, LRC parsing
     spotify_service.dart       # Web API control, OAuth PKCE
     share_inbox_service.dart   # the HTTP listener for shares
     sealed_share.dart          # X25519 + ChaCha20-Poly1305, key rotation
@@ -1106,6 +1158,7 @@ designers on the About screen.
 | [Immich](https://immich.app) · [src](https://github.com/immich-app/immich) | Your own photo server (the whole point) | AGPL-3.0 |
 | [Open-Meteo](https://open-meteo.com) | Weather forecast — no API key required | Free for non-commercial use, [CC BY 4.0](https://open-meteo.com/en/license) |
 | [iTunes Search API](https://performance-partners.apple.com/search-api) | Album artwork lookup | Free, no key · Apple terms |
+| [LRCLIB](https://lrclib.net) · [src](https://github.com/tranxuanthang/lrclib) | Song lyrics, timed to the line | Free, no key |
 | [Spotify Web API](https://developer.spotify.com/documentation/web-api) | Playback control, liked songs and playlists | Requires your own free Developer app + Premium |
 | [postcodes.io](https://postcodes.io) · [src](https://github.com/ideal-postcodes/postcodes.io) | UK postcode → coordinates | MIT, data under [OGL](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/) |
 | [IP Webcam](https://play.google.com/store/apps/details?id=com.pas.webcam) | The phone-as-camera stream and its control API | Free / paid app, third-party |

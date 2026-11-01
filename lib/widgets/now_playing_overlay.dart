@@ -14,8 +14,10 @@ import 'burn_in_drift.dart';
 import '../config/app_config.dart';
 import '../services/config_service.dart';
 import '../services/now_playing_service.dart';
+import '../services/lyrics.dart';
 import '../services/playback_source.dart';
 import '../services/spotify_service.dart';
+import 'lyrics_view.dart';
 import 'spotify_panels.dart';
 import '../l10n/l10n.dart';
 import '../time_format.dart';
@@ -573,19 +575,90 @@ class _CollapsedContent extends StatelessWidget {
   }
 }
 
-class _DetailContent extends StatelessWidget {
+/// The full player: the header, the song, and the transport.
+///
+/// With lyrics on and the song's words found, the cover and the song move to
+/// a column on the left and the words take the rest of the middle, the line
+/// being sung lit (see [LyricsView]). Without — off, still being looked for,
+/// an instrumental, or no words to be had — it is the player as it always
+/// was, the cover beside the song.
+class _DetailContent extends StatefulWidget {
   final PlaybackSource service;
   const _DetailContent({required this.service});
 
   @override
+  State<_DetailContent> createState() => _DetailContentState();
+}
+
+class _DetailContentState extends State<_DetailContent> {
+  /// The song the words are for, and the words: null while they are looked
+  /// for, and when there are none.
+  String _for = '';
+  Lyrics? _lyrics;
+  bool _looking = false;
+
+  /// Whether the words were showing for the last song. Kept while the next
+  /// one's are looked for, so a run of songs with words doesn't flick to the
+  /// plain player and back between each.
+  bool _hadWords = false;
+
+  void _lookUp(NowPlaying n) {
+    final key = LyricsFinder.keyOf(n.artist, n.title);
+    if (key == _for) return;
+    _for = key;
+    // Known already — the player opened again on the same song: straight
+    // in, with no moment of the plain player first.
+    final had = LyricsFinder.instance.cached(n.artist, n.title);
+    _lyrics = had.lyrics;
+    _looking = !had.known;
+    if (had.known) {
+      _hadWords = _lyrics?.hasWords ?? false;
+      return;
+    }
+    LyricsFinder.instance
+        .find(
+          artist: n.artist,
+          title: n.title,
+          album: n.album,
+          duration: n.duration,
+        )
+        .then((l) {
+          if (!mounted || _for != key) return;
+          setState(() {
+            _lyrics = l;
+            _looking = false;
+          });
+        });
+  }
+
+  void _toggleLyrics() {
+    final config = context.read<ConfigService>();
+    config.config.nowPlaying.lyrics = !config.config.nowPlaying.lyrics;
+    config.save();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final service = widget.service;
     final n = service.now;
     final lcars = context.look.isLcars;
-    final visualiser = context
-        .watch<ConfigService>()
-        .config
-        .nowPlaying
-        .visualiser;
+    final settings = context.watch<ConfigService>().config.nowPlaying;
+    final visualiser = settings.visualiser;
+    final wanted = settings.lyrics;
+    if (wanted) _lookUp(n);
+    final words = wanted && (_lyrics?.hasWords ?? false);
+    final withWords = wanted && (_looking ? _hadWords : words);
+    if (!_looking) _hadWords = withWords;
+    final instrumental = wanted && (_lyrics?.instrumental ?? false);
+
+    final lyricsButton = _HeaderButton(
+      icon: Icons.lyrics,
+      ends: LcarsEnds.both,
+      lit: withWords,
+      tooltip: tr('player.lyrics', 'Lyrics'),
+      onTap: _toggleLyrics,
+    );
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(40, 30, 40, 30),
       child: Column(
@@ -618,6 +691,8 @@ class _DetailContent extends StatelessWidget {
                 ),
               ],
               if (lcars) const SizedBox(width: 12),
+              lyricsButton,
+              SizedBox(width: lcars ? 12 : 10),
               // Spotify-only: the AVRCP source has no notion of other
               // devices, a queue, or a library to start something from.
               // Sits up here rather than in the transport bar so the device
@@ -629,9 +704,7 @@ class _DetailContent extends StatelessWidget {
                   tooltip: tr('player.playOn', 'Play on…'),
                   onTap: () => showDialog(
                     context: context,
-                    builder: (_) => SpotifyDevicesDialog(
-                      service: service as SpotifyService,
-                    ),
+                    builder: (_) => SpotifyDevicesDialog(service: service),
                   ),
                 ),
                 SizedBox(width: lcars ? lcarsLine : 10),
@@ -641,8 +714,7 @@ class _DetailContent extends StatelessWidget {
                   tooltip: tr('player.upNext', 'Up next'),
                   onTap: () => showDialog(
                     context: context,
-                    builder: (_) =>
-                        SpotifyQueueDialog(service: service as SpotifyService),
+                    builder: (_) => SpotifyQueueDialog(service: service),
                   ),
                 ),
                 SizedBox(width: lcars ? lcarsLine : 10),
@@ -652,8 +724,7 @@ class _DetailContent extends StatelessWidget {
                   tooltip: tr('player.playSomething', 'Play something'),
                   onTap: () => showDialog(
                     context: context,
-                    builder: (_) =>
-                        SpotifyBrowseDialog(service: service as SpotifyService),
+                    builder: (_) => SpotifyBrowseDialog(service: service),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -685,86 +756,22 @@ class _DetailContent extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                _Artwork(
-                  url: service.artUrl,
-                  size: 330,
-                  radius: lcars ? 0 : 20,
-                ),
-                const SizedBox(width: 36),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        lcars ? lcarsCaps(n.title) : n.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: lcars
-                              ? context.look.accent
-                              : context.look.textPrimary,
-                          fontSize: 44,
-                          fontWeight: FontWeight.w600,
-                          height: 1.15,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        n.artist,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: context.look.textSecondary,
-                          fontSize: 28,
-                        ),
-                      ),
-                      if (n.album.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          n.album,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: context.look.textSecondary,
-                            fontSize: 22,
-                          ),
-                        ),
-                      ],
-                      // Nothing to scrub while Spotify's DJ is talking —
-                      // there is no track, so no length — and "00:00 /
-                      // 00:00" under the DJ's name reads as a fault.
-                      if (n.duration > Duration.zero) ...[
-                        const SizedBox(height: 26),
-                        _ProgressBar(service: service),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              playTime(n.position),
-                              style: TextStyle(
-                                color: context.look.textSecondary,
-                                fontSize: 18,
-                              ),
-                            ),
-                            Text(
-                              playTime(n.duration),
-                              style: TextStyle(
-                                color: context.look.textSecondary,
-                                fontSize: 18,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
+            child: _Middle(
+              // A console changes in a step; the others cross-fade.
+              duration: lcars
+                  ? Duration.zero
+                  : const Duration(milliseconds: 450),
+              child: withWords
+                  ? _WithWords(
+                      key: const ValueKey('words'),
+                      service: service,
+                      lyrics: words ? _lyrics : null,
+                    )
+                  : _Song(
+                      key: const ValueKey('song'),
+                      service: service,
+                      instrumental: instrumental,
+                    ),
             ),
           ),
           // Full width, under the scrubber and above the transport. Only
@@ -797,6 +804,236 @@ class _DetailContent extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+/// The middle of the player, changing between the song alone and the song
+/// with its words.
+class _Middle extends StatelessWidget {
+  const _Middle({required this.duration, required this.child});
+
+  final Duration duration;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => AnimatedSwitcher(
+    duration: duration,
+    switchInCurve: Curves.easeOut,
+    switchOutCurve: Curves.easeIn,
+    layoutBuilder: (current, previous) =>
+        Stack(fit: StackFit.expand, children: [...previous, ?current]),
+    child: child,
+  );
+}
+
+/// The song as the player has always shown it: the cover, and beside it the
+/// title, the artist, the album and how far through it is.
+class _Song extends StatelessWidget {
+  const _Song({super.key, required this.service, this.instrumental = false});
+
+  final PlaybackSource service;
+
+  /// Lyrics are on, and this song has none to show: said under the album,
+  /// so it doesn't look as if the words were simply not found.
+  final bool instrumental;
+
+  @override
+  Widget build(BuildContext context) {
+    final lcars = context.look.isLcars;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        _Artwork(url: service.artUrl, size: 330, radius: lcars ? 0 : 20),
+        const SizedBox(width: 36),
+        Expanded(
+          child: _SongText(
+            service: service,
+            titleSize: 44,
+            instrumental: instrumental,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// The song with its words: the cover over the title in a column on the
+/// left, the words filling the rest. The column shrinks to fit a smaller
+/// screen rather than running off it.
+class _WithWords extends StatelessWidget {
+  const _WithWords({super.key, required this.service, required this.lyrics});
+
+  final PlaybackSource service;
+
+  /// Null while the next song's words are looked for.
+  final Lyrics? lyrics;
+
+  @override
+  Widget build(BuildContext context) {
+    final lcars = context.look.isLcars;
+    return LayoutBuilder(
+      builder: (context, c) {
+        final art = (c.maxHeight - 270).clamp(140.0, 320.0);
+        final column = (c.maxWidth * 0.3).clamp(300.0, 470.0);
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              width: column,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: SizedBox(
+                  width: column,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _Artwork(
+                        url: service.artUrl,
+                        size: art,
+                        radius: lcars ? 0 : 18,
+                      ),
+                      const SizedBox(height: 24),
+                      _SongText(service: service, titleSize: 36),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(width: lcars ? 40 : 56),
+            Expanded(
+              child: lyrics == null
+                  ? const SizedBox.shrink()
+                  : LyricsView(lyrics: lyrics!, service: service),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// The title, the artist, the album, and the progress bar with its times.
+class _SongText extends StatelessWidget {
+  const _SongText({
+    required this.service,
+    required this.titleSize,
+    this.instrumental = false,
+  });
+
+  final PlaybackSource service;
+  final double titleSize;
+  final bool instrumental;
+
+  @override
+  Widget build(BuildContext context) {
+    final n = service.now;
+    final lcars = context.look.isLcars;
+    final small = titleSize < 40;
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          lcars ? lcarsCaps(n.title) : n.title,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: lcars ? context.look.accent : context.look.textPrimary,
+            fontSize: titleSize,
+            fontWeight: FontWeight.w600,
+            height: 1.15,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          n.artist,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: context.look.textSecondary,
+            fontSize: small ? 24 : 28,
+          ),
+        ),
+        if (n.album.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(
+            n.album,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: context.look.textSecondary,
+              fontSize: small ? 19 : 22,
+            ),
+          ),
+        ],
+        if (instrumental) ...[const SizedBox(height: 14), _InstrumentalNote()],
+        // Nothing to scrub while Spotify's DJ is talking — there is no
+        // track, so no length — and "00:00 / 00:00" under the DJ's name
+        // reads as a fault.
+        if (n.duration > Duration.zero) ...[
+          SizedBox(height: small ? 20 : 26),
+          _ProgressBar(service: service),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                playTime(n.position),
+                style: TextStyle(
+                  color: context.look.textSecondary,
+                  fontSize: 18,
+                ),
+              ),
+              Text(
+                playTime(n.duration),
+                style: TextStyle(
+                  color: context.look.textSecondary,
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// "Instrumental", where lyrics are on and the song has no words.
+class _InstrumentalNote extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final look = context.look;
+    final words = tr('player.instrumental', 'Instrumental');
+    if (look.isLcars) {
+      return Container(
+        padding: const EdgeInsets.fromLTRB(20, 5, 20, 5),
+        decoration: ShapeDecoration(
+          color: look.block(3),
+          shape: const StadiumBorder(),
+        ),
+        child: Text(
+          lcarsCaps(words),
+          style: const TextStyle(
+            color: lcarsInk,
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.5,
+          ),
+        ),
+      );
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.music_note, color: look.accent, size: 22),
+        const SizedBox(width: 6),
+        Text(words, style: TextStyle(color: look.accent, fontSize: 20)),
+      ],
     );
   }
 }
@@ -1145,6 +1382,9 @@ class _HeaderButton extends StatelessWidget {
   final String tooltip;
   final VoidCallback onTap;
 
+  /// Switched on: near-white on a console, the accent elsewhere.
+  final bool lit;
+
   /// Which of its ends are rounded, on a console, where the header's
   /// buttons are one strip.
   final LcarsEnds ends;
@@ -1153,6 +1393,7 @@ class _HeaderButton extends StatelessWidget {
     required this.tooltip,
     required this.onTap,
     this.ends = LcarsEnds.both,
+    this.lit = false,
   });
 
   @override
@@ -1161,7 +1402,7 @@ class _HeaderButton extends StatelessWidget {
       return Tooltip(
         message: tooltip,
         child: LcarsBlock(
-          colour: context.look.block(icon.codePoint),
+          colour: lit ? lcarsLit : context.look.block(icon.codePoint),
           onTap: onTap,
           ends: ends,
           width: 84,
@@ -1173,7 +1414,9 @@ class _HeaderButton extends StatelessWidget {
     return Tooltip(
       message: tooltip,
       child: Material(
-        color: context.look.wash(0.10),
+        color: lit
+            ? context.look.accent.withValues(alpha: 0.24)
+            : context.look.wash(0.10),
         shape: const CircleBorder(),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -1181,7 +1424,11 @@ class _HeaderButton extends StatelessWidget {
           child: SizedBox(
             width: 56,
             height: 56,
-            child: Icon(icon, color: context.look.textSecondary, size: 26),
+            child: Icon(
+              icon,
+              color: lit ? context.look.accent : context.look.textSecondary,
+              size: 26,
+            ),
           ),
         ),
       ),

@@ -998,6 +998,23 @@ class _NowPlayingSettingsTile extends StatelessWidget {
             ),
           ),
         if (s.enabled)
+          SwitchListTile(
+            secondary: const Icon(Icons.lyrics),
+            title: Text(tr('settings.lyrics', 'Lyrics')),
+            subtitle: Text(
+              tr(
+                'settings.lyricsHint',
+                'The words beside the full player, the line being sung lit. Looked up on LRCLIB, which is sent the song\'s artist, title, album and length.',
+              ),
+            ),
+            isThreeLine: true,
+            value: s.lyrics,
+            onChanged: (v) {
+              s.lyrics = v;
+              config.save();
+            },
+          ),
+        if (s.enabled)
           ListTile(
             leading: const Icon(Icons.picture_in_picture_alt),
             title: Text(tr('settings.position', 'Position')),

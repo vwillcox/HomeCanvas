@@ -208,11 +208,20 @@ class NowPlayingSettings {
   /// through the Pi rather than through some other speaker.
   VisualiserStyle visualiser;
 
+  /// The song's words beside the full player, the line being sung lit.
+  ///
+  /// Looked up on LRCLIB by the song's artist, title, album and length —
+  /// nothing else is sent — so off means the song's name goes nowhere for
+  /// them. Switched with the Lyrics button on the player as well as in
+  /// Settings.
+  bool lyrics;
+
   NowPlayingSettings({
     this.enabled = true,
     this.corner = OverlayCorner.bottomLeft,
     this.playAudioHere = true,
     this.visualiser = VisualiserStyle.bars,
+    this.lyrics = true,
   });
 
   factory NowPlayingSettings.fromJson(Map<String, dynamic> j) {
@@ -221,6 +230,7 @@ class NowPlayingSettings {
       corner: _cornerFromString(j['corner'] as String?),
       playAudioHere: j['playAudioHere'] as bool? ?? true,
       visualiser: _visualiserFromString(j['visualiser'] as String?),
+      lyrics: j['lyrics'] as bool? ?? true,
     );
   }
 
@@ -229,6 +239,7 @@ class NowPlayingSettings {
     'corner': cornerToString(corner),
     'playAudioHere': playAudioHere,
     'visualiser': visualiserToString(visualiser),
+    'lyrics': lyrics,
   };
 }
 
