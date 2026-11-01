@@ -61,6 +61,7 @@
   "dashboard.pause": "Cuir ar sos",
   "dashboard.play": "Seinn",
   "dashboard.previous": "Siar",
+  "dashboard.putBack": "Cuir ar ais é",
   "dashboard.unknownWidget": "Giuirléid anaithnid “{type}”",
   "dashboard.updated": "Nuashonraithe {time}",
   "font.Antonio.description": "Níos cúinge fós, agus is fearr i gceannlitreacha. Aghaidh chonsól spáslong.",

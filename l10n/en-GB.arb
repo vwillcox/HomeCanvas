@@ -60,6 +60,7 @@
   "dashboard.pause": "Pause",
   "dashboard.play": "Play",
   "dashboard.previous": "Previous",
+  "dashboard.putBack": "Put it back",
   "dashboard.unknownWidget": "Unknown widget \"{type}\"",
   "dashboard.updated": "Updated {time}",
   "font.Antonio.description": "Narrower still, and best in capitals. The face of a starship’s console.",

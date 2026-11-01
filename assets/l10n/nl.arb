@@ -61,6 +61,7 @@
   "dashboard.pause": "Pauzeren",
   "dashboard.play": "Afspelen",
   "dashboard.previous": "Vorige",
+  "dashboard.putBack": "Terugzetten",
   "dashboard.unknownWidget": "Onbekende widget \"{type}\"",
   "dashboard.updated": "Bijgewerkt {time}",
   "font.Antonio.description": "Nog smaller, en op z’n best in hoofdletters. Het gezicht van de console van een ruimteschip.",

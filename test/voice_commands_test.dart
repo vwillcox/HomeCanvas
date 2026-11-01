@@ -386,6 +386,32 @@ void main() {
     expect(_panel().resolve('stop the music'), isA<VoiceMusic>());
   });
 
+  group('a tile brought close', () {
+    (int, String)? lifted(String heard) => switch (_panel().resolve(heard)) {
+      VoiceLiftTile(:final page, :final tile) => (page, tile),
+      _ => null,
+    };
+
+    test('by its name, however it is asked for', () {
+      expect(lifted('bring the news closer'), (0, 'news-0'));
+      expect(lifted('hey canvas zoom in on the stocks'), (4, 'stocks-4'));
+      expect(lifted('make the weather bigger'), (0, 'weather-0'));
+      expect(lifted('show me the fuel prices up close'), (5, 'fuel-5'));
+      expect(lifted('enlarge the servers'), (2, 'servers-2'));
+      expect(lifted('network clients larger please'), (3, 'unifi_clients-3'));
+    });
+
+    test('only for something on the dashboard', () {
+      // Nothing by that name: not a tile, so not brought close.
+      expect(lifted('make it bigger'), isNull);
+      expect(lifted('zoom in on the garden'), isNull);
+      // "Close" on its own is still "back", and the page is still the page.
+      expect(_panel().resolve('close'), isA<VoiceGo>());
+      expect(_panel().resolve('close it'), isA<VoiceGo>());
+      expect(_page('show the stocks'), 4);
+    });
+  });
+
   test('"turn", misheard at the start, is put right for Home Assistant', () {
     expect(
       VoiceCommands.forAssist('Hey Canvas, term lounge one off.'),

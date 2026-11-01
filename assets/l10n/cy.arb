@@ -61,6 +61,7 @@
   "dashboard.pause": "Saib",
   "dashboard.play": "Chwarae",
   "dashboard.previous": "Blaenorol",
+  "dashboard.putBack": "Rhoi’n ôl",
   "dashboard.unknownWidget": "Teclyn anhysbys \"{type}\"",
   "dashboard.updated": "Diweddarwyd {time}",
   "font.Antonio.description": "Culach eto, ac ar ei orau mewn priflythrennau. Wyneb consol llong ofod.",

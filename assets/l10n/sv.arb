@@ -61,6 +61,7 @@
   "dashboard.pause": "Pausa",
   "dashboard.play": "Spela",
   "dashboard.previous": "Föregående",
+  "dashboard.putBack": "Lägg tillbaka",
   "dashboard.unknownWidget": "Okänd widget \"{type}\"",
   "dashboard.updated": "Uppdaterad {time}",
   "font.Antonio.description": "Ännu smalare, och bäst i versaler. Ansiktet på ett rymdskepps konsol.",

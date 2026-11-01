@@ -82,6 +82,14 @@ beside the page dots. Play and pause are in the top bar on every page whenever
 something is playing. Pages can have hours of their own: a morning page from
 six till nine, a night page after ten.
 
+![The weather tile brought close: it fills the screen over the blurred dashboard](docs/screenshots/dashboard-closer.jpg)
+
+Hold any tile to bring it close. It lifts out of the grid and fills the
+screen, larger and with room for more — a dozen headlines rather than five —
+so it reads from across the room. Without getting up: *"hey canvas, bring
+the news closer"*. Back, or a tap on the dashboard around it, puts it back in
+its place; left alone, it goes back by itself.
+
 | Home lab | Network |
 |---|---|
 | ![Servers, services, notes, sun and moon, certificates, updates and a memory](docs/screenshots/dashboard-homelab.jpg) | ![UniFi network health, clients, devices, throughput and speed tests](docs/screenshots/dashboard-network.jpg) |

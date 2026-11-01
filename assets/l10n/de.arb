@@ -61,6 +61,7 @@
   "dashboard.pause": "Pause",
   "dashboard.play": "Abspielen",
   "dashboard.previous": "Zurück",
+  "dashboard.putBack": "Zurücklegen",
   "dashboard.unknownWidget": "Unbekanntes Widget „{type}“",
   "dashboard.updated": "Aktualisiert {time}",
   "font.Antonio.description": "Noch schmaler, und am besten in Großbuchstaben. Das Gesicht einer Raumschiffkonsole.",

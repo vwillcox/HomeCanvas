@@ -760,6 +760,14 @@ String? runVoiceCommand(
       if (_toDashboard(config) == null) return null;
       DashboardScreen.requestedPage.value = page;
       return 'page ${page + 1}';
+    case VoiceLiftTile(:final page, :final tile):
+      if (!settings.enabled) return null;
+      // Its page first, then the tile, once the page is up. The pages are
+      // held only while it is: it is brought close for a look, not kept.
+      if (_toDashboard(config) == null) return null;
+      DashboardScreen.requestedPage.value = page;
+      DashboardScreen.requestedLift.value = tile;
+      return 'closer';
     case VoiceTurnPage(:final by):
       // Onto the dashboard first, if it is not showing: there is no page
       // to turn from anywhere else.

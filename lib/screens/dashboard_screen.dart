@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import '../dashboard/dashboard_model.dart';
 import '../dashboard/photo_backdrop.dart';
 import '../dashboard/schedule.dart';
+import '../dashboard/tile_spotlight.dart';
 import '../dashboard/dashboard_theme.dart';
 import '../dashboard/widgets/tv_inputs_sheet.dart';
 import '../dashboard/widgets/weather_forecast_sheet.dart';
@@ -56,6 +57,11 @@ class DashboardScreen extends StatefulWidget {
   /// The automatic page turn held or let go from outside, as the page dots
   /// do it. Taken up by an open dashboard.
   static final ValueNotifier<bool?> requestedPause = ValueNotifier(null);
+
+  /// A tile to bring close (see [TileSpotlight]), by its widget's id or
+  /// type, asked for from outside — by a test, or the control API. Taken up
+  /// by the first such tile on the page showing, and by nothing otherwise.
+  static final ValueNotifier<String?> requestedLift = ValueNotifier(null);
 
   /// The dashboard's route, by name, so whatever is on top of it can be
   /// cleared away to show it — see [route].
@@ -116,6 +122,15 @@ class _DashboardScreenState extends State<DashboardScreen>
   /// was tapped.
   final NowPlayingOverlayController _player = NowPlayingOverlayController();
 
+  /// The tile brought close, if one is — see [TileSpotlight]. Its place on
+  /// the grid is left empty meanwhile, and the page does not turn.
+  _Lifted? _lifted;
+  final _spotlight = GlobalKey<TileSpotlightState>();
+
+  /// The stack everything is drawn in, which the spotlight covers: a tile's
+  /// place on screen is turned into a place in this.
+  final _body = GlobalKey();
+
   /// The page is not turned out from under the full player: it would take
   /// the tile the player shrinks back into with it.
   void _playerOpened() {
@@ -134,8 +149,11 @@ class _DashboardScreenState extends State<DashboardScreen>
     DashboardScreen.requestedPage.addListener(_pageRequested);
     DashboardScreen.requestedTurn.addListener(_turnRequested);
     DashboardScreen.requestedPause.addListener(_pauseRequested);
+    DashboardScreen.requestedLift.addListener(_liftRequested);
     // Opened for a page: gone to once the page view is laid out.
     if (DashboardScreen.requestedPage.value != null) _pageRequested();
+    // And for a tile, once that page is.
+    if (DashboardScreen.requestedLift.value != null) _liftRequested();
     _player.isOpen.addListener(_playerOpened);
     // Scheduled pages and tiles come and go by the clock — only looked at
     // while the dashboard can be seen.
@@ -156,8 +174,16 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   /// Dev aid: HOMECANVAS_TEST_POPUP=forecast|inputs opens that pop-up once
   /// the dashboard is up. Both open only on a tap otherwise, and the panel is
-  /// not something to send synthetic taps to.
+  /// not something to send synthetic taps to. HOMECANVAS_TEST_LIFT=<widget
+  /// id or type> brings that tile close, as a hold on it would, a few
+  /// seconds later — once its widget has something to show.
   void _debugPopup() {
+    final lift = Platform.environment['HOMECANVAS_TEST_LIFT'];
+    if (lift != null && lift.isNotEmpty) {
+      Timer(const Duration(seconds: 4), () {
+        if (mounted) DashboardScreen.requestedLift.value = lift;
+      });
+    }
     final which = Platform.environment['HOMECANVAS_TEST_POPUP'];
     if (which == null || which.isEmpty) return;
     final theme = context.read<DashboardService>().themes.byId(
@@ -188,6 +214,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       );
       final target = visible.indexOf(want);
       if (target < 0) return;
+      _dropLifted();
       _pages.jumpToPage(target);
       setState(() => _page = target);
       // A full page's time from now, if the pages are turning.
@@ -200,6 +227,24 @@ class _DashboardScreenState extends State<DashboardScreen>
     if (by == null || !mounted || !_pages.hasClients) return;
     DashboardScreen.requestedTurn.value = null;
     _goTo(_page + by, _pageCount);
+  }
+
+  /// Brings [DashboardScreen.requestedLift]'s tile close, if it is on the
+  /// page showing; otherwise lets the asking go. After the frame, and for a
+  /// few frames more if need be: a page gone to in the same breath — "the
+  /// news closer" from another page — has its tiles built a frame later.
+  void _liftRequested([int tries = 4]) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final want = DashboardScreen.requestedLift.value;
+      if (want == null || !mounted) return;
+      final tile = _page < _visible.length
+          ? _LiftableState.find(want, _visible[_page])
+          : null;
+      if (tile == null && tries > 1) return _liftRequested(tries - 1);
+      DashboardScreen.requestedLift.value = null;
+      tile?.lift();
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
   }
 
   void _pauseRequested() {
@@ -215,6 +260,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     DashboardScreen.requestedPage.removeListener(_pageRequested);
     DashboardScreen.requestedTurn.removeListener(_turnRequested);
     DashboardScreen.requestedPause.removeListener(_pauseRequested);
+    DashboardScreen.requestedLift.removeListener(_liftRequested);
     // Releasing it here rather than on the way in to the next screen means
     // the timer restarts from now, not from whenever the dashboard opened.
     _screenIdle?.dashboardShowing = false;
@@ -246,6 +292,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           ..value = 0;
       } else if (!_paused &&
           !_player.isOpen.value &&
+          _lifted == null &&
           (changed || !_turn.isAnimating)) {
         _turn.forward(from: changed ? 0 : _turn.value);
       }
@@ -280,8 +327,12 @@ class _DashboardScreenState extends State<DashboardScreen>
   /// under the finger.
   void _restartTurn() {
     if (!_turning) return;
-    if (_paused || _player.isOpen.value) {
-      _turn.value = 0;
+    if (_paused || _player.isOpen.value || _lifted != null) {
+      // Stopped too, should it have been running: a tile is lifted while
+      // its page's time runs.
+      _turn
+        ..stop()
+        ..value = 0;
     } else {
       _turn.forward(from: 0);
     }
@@ -294,13 +345,41 @@ class _DashboardScreenState extends State<DashboardScreen>
     unawaited(config.save());
     if (_paused) {
       _turn.stop();
-    } else if (_turning && !_player.isOpen.value) {
+    } else if (_turning && !_player.isOpen.value && _lifted == null) {
       _turn.forward();
     }
   }
 
+  /// Brings [config]'s tile close, out of [global] — where it is on screen.
+  void _lift(DashboardWidgetConfig config, Rect global, Size pitch) {
+    final body = _body.currentContext?.findRenderObject() as RenderBox?;
+    if (_lifted != null || body == null || !body.hasSize) return;
+    final from = Rect.fromPoints(
+      body.globalToLocal(global.topLeft),
+      body.globalToLocal(global.bottomRight),
+    );
+    setState(() => _lifted = (config: config, from: from, pitch: pitch));
+    // Held for as long as it is up, and a full page's time once it is back.
+    _restartTurn();
+  }
+
+  /// Back in its place, at the end of the way back.
+  void _landed() {
+    if (!mounted) return;
+    setState(() => _lifted = null);
+    _restartTurn();
+  }
+
+  /// Gone at once, without the way back: the page is about to change under
+  /// it, and it would shrink into a place that is no longer there.
+  void _dropLifted() {
+    if (_lifted == null) return;
+    setState(() => _lifted = null);
+  }
+
   void _goTo(int index, int pageCount) {
     if (pageCount <= 1) return;
+    _dropLifted();
     final next = index % pageCount;
     _pages.animateToPage(
       next,
@@ -372,8 +451,13 @@ class _DashboardScreenState extends State<DashboardScreen>
                   setState(() => _page = i);
                   _restartTurn();
                 },
-                itemBuilder: (context, i) =>
-                    _Grid(settings: settings, theme: theme, page: visible[i]),
+                itemBuilder: (context, i) => _Grid(
+                  settings: settings,
+                  theme: theme,
+                  page: visible[i],
+                  lifted: _lifted?.config.id,
+                  onLift: _lift,
+                ),
               ),
             ),
           ),
@@ -406,7 +490,15 @@ class _DashboardScreenState extends State<DashboardScreen>
     // The tiles find the player through this: a Now playing tile opens it.
     return NowPlayingOpener(
       controller: _player,
-      child: _scaffold(settings, theme, grid, pageCount, dotsTurn, onPause),
+      // Back — the button, or by voice — puts a tile brought close back
+      // before it leaves the dashboard.
+      child: PopScope(
+        canPop: _lifted == null,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) unawaited(_spotlight.currentState?.close());
+        },
+        child: _scaffold(settings, theme, grid, pageCount, dotsTurn, onPause),
+      ),
     );
   }
 
@@ -422,6 +514,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       body: Container(
         decoration: theme.backgroundDecoration,
         child: Stack(
+          key: _body,
           fit: StackFit.expand,
           children: [
             if (theme.glowEndDecoration != null)
@@ -457,6 +550,18 @@ class _DashboardScreenState extends State<DashboardScreen>
                       ],
                     ),
             ),
+            // Over the top bar as well as the grid, but under the player,
+            // which a Now playing tile brought close can still open.
+            if (_lifted case final lifted?)
+              TileSpotlight(
+                key: _spotlight,
+                config: lifted.config,
+                from: lifted.from,
+                pitch: lifted.pitch,
+                theme: theme,
+                settings: settings,
+                onClosed: _landed,
+              ),
             // Over everything, top bar included, as it is on the home
             // screen. Draws nothing until something opens it.
             NowPlayingOverlay(fullScreen: true, controller: _player),
@@ -557,12 +662,28 @@ class _BackButton extends StatelessWidget {
   }
 }
 
+/// A tile brought close: which, where it was on screen, and the grid's
+/// cell and gap, to count the room it is given in cells.
+typedef _Lifted = ({DashboardWidgetConfig config, Rect from, Size pitch});
+
 class _Grid extends StatelessWidget {
-  const _Grid({required this.settings, required this.theme, this.page = 0});
+  const _Grid({
+    required this.settings,
+    required this.theme,
+    this.page = 0,
+    this.lifted,
+    this.onLift,
+  });
 
   final DashboardSettings settings;
   final DashboardTheme theme;
   final int page;
+
+  /// The id of the tile brought close, whose place is left empty.
+  final String? lifted;
+
+  /// A tile held: bring it close.
+  final void Function(DashboardWidgetConfig, Rect, Size)? onLift;
 
   @override
   Widget build(BuildContext context) {
@@ -578,6 +699,7 @@ class _Grid extends StatelessWidget {
             DashboardGrid.columns;
         final cellHeight =
             (c.maxHeight - gap * (DashboardGrid.rows + 1)) / DashboardGrid.rows;
+        final pitch = Size(cellWidth + gap, cellHeight + gap);
 
         return Stack(
           children: [
@@ -588,15 +710,102 @@ class _Grid extends StatelessWidget {
                   top: gap + w.y * (cellHeight + gap),
                   width: w.width * cellWidth + (w.width - 1) * gap,
                   height: w.height * cellHeight + (w.height - 1) * gap,
-                  child: DashboardTile(
+                  child: _Liftable(
                     config: w,
-                    theme: theme,
-                    settings: settings,
+                    lifted: w.id == lifted,
+                    onLift: onLift == null
+                        ? null
+                        : (rect) => onLift!(w, rect, pitch),
+                    child: DashboardTile(
+                      config: w,
+                      theme: theme,
+                      settings: settings,
+                    ),
                   ),
                 ),
           ],
         );
       },
+    );
+  }
+}
+
+/// A tile on the grid that can be held to bring it close, and the empty
+/// place it leaves while it is.
+///
+/// A hold, because a tap is the widget's own: the TV remote's keys, a news
+/// story, the weather's forecast. Holding is free on every tile but the
+/// timers', whose own hold — clearing a timer — still comes first, being the
+/// nearer to the finger.
+class _Liftable extends StatefulWidget {
+  const _Liftable({
+    required this.config,
+    required this.lifted,
+    required this.onLift,
+    required this.child,
+  });
+
+  final DashboardWidgetConfig config;
+  final bool lifted;
+
+  /// With where the tile is on screen.
+  final void Function(Rect)? onLift;
+  final Widget child;
+
+  @override
+  State<_Liftable> createState() => _LiftableState();
+}
+
+class _LiftableState extends State<_Liftable> {
+  /// Every tile built, for [DashboardScreen.requestedLift] to be found in.
+  static final Set<_LiftableState> _built = {};
+
+  /// The first tile built that answers to [want], by id or type, on
+  /// [page] of a dashboard that can be seen — not one under another screen.
+  static _LiftableState? find(String want, int page) {
+    for (final tile in _built) {
+      final c = tile.widget.config;
+      if (c.page != page || tile.widget.lifted) continue;
+      if (c.id != want && c.type != want) continue;
+      if (TickerMode.valuesOf(tile.context).enabled) return tile;
+    }
+    return null;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _built.add(this);
+  }
+
+  @override
+  void dispose() {
+    _built.remove(this);
+    super.dispose();
+  }
+
+  void lift() {
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return;
+    widget.onLift?.call(
+      MatrixUtils.transformRect(
+        box.getTransformTo(null),
+        Offset.zero & box.size,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Nothing at all while it is lifted, rather than the same widget hidden:
+    // a camera or a video would otherwise run twice, once out of sight.
+    if (widget.lifted) return const SizedBox.expand();
+    return GestureDetector(
+      // The whole tile answers, its empty corners included. A tap still
+      // goes to the widget, or to the page behind when the widget ignores it.
+      behavior: HitTestBehavior.opaque,
+      onLongPress: widget.onLift == null ? null : lift,
+      child: widget.child,
     );
   }
 }

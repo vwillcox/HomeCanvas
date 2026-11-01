@@ -231,10 +231,15 @@ when you edit the dashboard the commands follow.
 | "hold", "stay here", "pause pages", "stop turning" | Stops the pages turning on their own |
 | "resume", "continue", "carry on", "start turning" | Lets them turn again |
 | "dashboard" | Opens the dashboard |
+| "bring the news closer", "zoom in on the calendar", "make the weather bigger", "the stocks up close" | Turns to that widget's page and brings its tile close: it fills the screen, larger, to read from across the room |
 
 A page you ask for by name or number is **held** there until you say
 *"resume"* or tap the page dots. Otherwise the panel would turn away from it
 before you'd read it.
+
+A tile brought close goes back with *"back"*, or by itself after two minutes,
+and the pages turn again once it has. Holding a tile on the screen does the
+same.
 
 Part of a widget's name is enough (*"fuel"* finds *Fuel prices*). Plurals
 work either way, and a word that's one letter out still matches if it's five

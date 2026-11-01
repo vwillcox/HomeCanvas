@@ -61,6 +61,7 @@
   "dashboard.pause": "Pausa",
   "dashboard.play": "Reproduzir",
   "dashboard.previous": "Anterior",
+  "dashboard.putBack": "Pôr de volta",
   "dashboard.unknownWidget": "Widget desconhecido “{type}”",
   "dashboard.updated": "Atualizado às {time}",
   "font.Antonio.description": "Ainda mais estreita, e melhor em maiúsculas. A cara da consola de uma nave espacial.",

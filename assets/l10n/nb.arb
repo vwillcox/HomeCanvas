@@ -61,6 +61,7 @@
   "dashboard.pause": "Pause",
   "dashboard.play": "Spill av",
   "dashboard.previous": "Forrige",
+  "dashboard.putBack": "Legg den tilbake",
   "dashboard.unknownWidget": "Ukjent widget «{type}»",
   "dashboard.updated": "Oppdatert {time}",
   "font.Antonio.description": "Enda smalere, og best i store bokstaver. Ansiktet til et romskips konsoll.",

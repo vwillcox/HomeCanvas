@@ -61,6 +61,7 @@
   "dashboard.pause": "Pause",
   "dashboard.play": "Afspil",
   "dashboard.previous": "Forrige",
+  "dashboard.putBack": "Læg den tilbage",
   "dashboard.unknownWidget": "Ukendt widget \"{type}\"",
   "dashboard.updated": "Opdateret {time}",
   "font.Antonio.description": "Endnu smallere, og bedst med store bogstaver. Ansigtet på et rumskibs konsol.",

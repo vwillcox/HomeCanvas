@@ -15,6 +15,14 @@ class VoiceShowPage extends VoiceAction {
   final int page;
 }
 
+/// Bring a tile close — see `TileSpotlight` — after turning to its [page]:
+/// [tile] is the widget's id.
+class VoiceLiftTile extends VoiceAction {
+  const VoiceLiftTile(this.page, this.tile);
+  final int page;
+  final String tile;
+}
+
 /// The next dashboard page, or the one before: [by] is 1 or -1.
 class VoiceTurnPage extends VoiceAction {
   const VoiceTurnPage(this.by);
@@ -171,6 +179,16 @@ class VoiceCommands {
   };
 
   static const _konami = 'up up down down left right left right';
+
+  /// Words that ask for a tile brought close rather than its page: "the
+  /// news closer", "zoom in on the calendar", "make the weather bigger".
+  static const _closer = {
+    'closer', 'bigger', 'larger', 'enlarge', 'zoom', 'magnify', 'expand', //
+  };
+
+  /// What comes with them and means nothing more: "zoom in", "make it
+  /// bigger", "up close".
+  static const _closerFiller = {'in', 'into', 'make', 'up', 'close', 'it'};
 
   /// Words that ask without saying what for.
   static const _asking = {
@@ -440,8 +458,33 @@ class VoiceCommands {
     }
 
     if (!pages) return null;
+    // "Bring the news closer", "the calendar up close": the tile, not only
+    // its page. Said of nothing on the dashboard, it is left to be a page
+    // or to go to Home Assistant, as it was before.
+    final upClose = _closer.any(asked.contains) || _saidUpClose(asked);
+    if (upClose) {
+      final tile = _tileFor([
+        for (final w in asked)
+          if (!_closer.contains(w) &&
+              !_closerFiller.contains(w) &&
+              w != 'page' &&
+              w != 'pages')
+            w,
+      ]);
+      if (tile != null) return VoiceLiftTile(tile.page, tile.id);
+    }
     final page = _pageFor(asked.where((w) => w != 'page' && w != 'pages'));
     return page == null ? null : VoiceShowPage(page);
+  }
+
+  /// "Up close" or "close up", together, in [asked]: "close" on its own is
+  /// "back".
+  static bool _saidUpClose(List<String> asked) {
+    for (var i = 0; i + 1 < asked.length; i++) {
+      final pair = {asked[i], asked[i + 1]};
+      if (pair.contains('up') && pair.contains('close')) return true;
+    }
+    return false;
   }
 
   /// "Page three", "the third page", "page number 3".
@@ -469,16 +512,44 @@ class VoiceCommands {
     }
     for (final w in widgets) {
       if (!showing.contains(w.page)) continue;
-      final spoken = [
-        ?_nameOf(w.type),
-        w.type.replaceAll('_', ' '),
-        ...?aliases[w.type],
-      ];
-      for (final phrase in spoken) {
-        final name = _meaning(phrase);
-        if (name.isNotEmpty) yield (w.page, name);
+      for (final name in _namesOf(w)) {
+        yield (w.page, name);
       }
     }
+  }
+
+  /// What [w] answers to: its name, its type, and its other names.
+  Iterable<List<String>> _namesOf(DashboardWidgetConfig w) sync* {
+    for (final phrase in [
+      ?_nameOf(w.type),
+      w.type.replaceAll('_', ' '),
+      ...?aliases[w.type],
+    ]) {
+      final name = _meaning(phrase);
+      if (name.isNotEmpty) yield name;
+    }
+  }
+
+  /// The widget on a page showing now that answers best to [asked]; the
+  /// earliest, by page and then by place in the list, between equals.
+  DashboardWidgetConfig? _tileFor(Iterable<String> asked) {
+    final want = asked.map(_stem).toList();
+    if (want.isEmpty) return null;
+    final showing = visiblePages(pageCount, pages, _now).toSet();
+    DashboardWidgetConfig? best;
+    var bestScore = 0;
+    for (final w in widgets) {
+      if (!showing.contains(w.page)) continue;
+      for (final name in _namesOf(w)) {
+        final score = _score(want, name.map(_stem).toList());
+        if (score > bestScore ||
+            (score == bestScore && score > 0 && w.page < best!.page)) {
+          best = w;
+          bestScore = score;
+        }
+      }
+    }
+    return best;
   }
 
   /// The stations of the dashboard's Radio tiles, in order.

@@ -61,6 +61,7 @@
   "dashboard.pause": "Pause",
   "dashboard.play": "Lecture",
   "dashboard.previous": "Précédent",
+  "dashboard.putBack": "Remettre en place",
   "dashboard.unknownWidget": "Widget inconnu « {type} »",
   "dashboard.updated": "Mis à jour à {time}",
   "font.Antonio.description": "Plus étroite encore, et à son meilleur en capitales. Le visage d'une console de vaisseau spatial.",

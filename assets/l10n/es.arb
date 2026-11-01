@@ -61,6 +61,7 @@
   "dashboard.pause": "Pausa",
   "dashboard.play": "Reproducir",
   "dashboard.previous": "Anterior",
+  "dashboard.putBack": "Devolver a su sitio",
   "dashboard.unknownWidget": "Widget desconocido «{type}»",
   "dashboard.updated": "Actualizado {time}",
   "font.Antonio.description": "Aún más estrecha, y mejor en mayúsculas. La cara de la consola de una nave estelar.",

@@ -61,6 +61,7 @@
   "dashboard.pause": "Wstrzymaj",
   "dashboard.play": "Odtwórz",
   "dashboard.previous": "Poprzedni",
+  "dashboard.putBack": "Odłóż z powrotem",
   "dashboard.unknownWidget": "Nieznany widżet „{type}”",
   "dashboard.updated": "Zaktualizowano {time}",
   "font.Antonio.description": "Jeszcze węższy i najlepszy w wielkich literach. Twarz konsoli statku kosmicznego.",
