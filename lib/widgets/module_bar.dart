@@ -33,9 +33,14 @@ class ModuleBar extends StatefulWidget {
     this.onRefresh,
     this.colour,
     this.accent,
+    this.onAgain,
   });
 
   final KioskModule current;
+
+  /// What touching the lit button — the screen you are on — does: the
+  /// dashboard's shows every page at once. Nothing, unless given.
+  final VoidCallback? onAgain;
 
   /// Shown as a Refresh button when given. The photos have something to
   /// reload; the dashboard's widgets refresh themselves.
@@ -104,7 +109,7 @@ class _ModuleBarState extends State<ModuleBar>
   }
 
   void _toDashboard() {
-    if (widget.current == KioskModule.dashboard) return;
+    if (widget.current == KioskModule.dashboard) return widget.onAgain?.call();
     Navigator.of(context).push(DashboardScreen.route());
   }
 

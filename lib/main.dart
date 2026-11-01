@@ -775,6 +775,11 @@ String? runVoiceCommand(
       if (_toDashboard(config) == null) return null;
       if (turn) DashboardScreen.requestedTurn.value = by;
       return by > 0 ? 'next page' : 'previous page';
+    case VoiceOverview():
+      if (!settings.enabled) return null;
+      if (_toDashboard(config) == null) return null;
+      DashboardScreen.requestedOverview.value = true;
+      return 'all pages';
     case VoicePausePages(:final paused):
       if (DashboardScreen.isOpen) {
         DashboardScreen.requestedPause.value = paused;

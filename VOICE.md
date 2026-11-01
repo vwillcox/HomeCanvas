@@ -231,6 +231,7 @@ when you edit the dashboard the commands follow.
 | "hold", "stay here", "pause pages", "stop turning" | Stops the pages turning on their own |
 | "resume", "continue", "carry on", "start turning" | Lets them turn again |
 | "dashboard" | Opens the dashboard |
+| "all pages", "show me every page", "overview", "zoom out" | Every page at once, each a picture of how it last looked, to touch the one you want; "back" puts it away |
 | "bring the news closer", "zoom in on the calendar", "make the weather bigger", "the stocks up close" | Turns to that widget's page and brings its tile close: it fills the screen, larger, to read from across the room |
 
 A page you ask for by name or number is **held** there until you say

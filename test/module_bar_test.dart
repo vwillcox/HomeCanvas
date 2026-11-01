@@ -60,6 +60,19 @@ void main() {
     await done(tester);
   });
 
+  testWidgets('Dashboard, touched on the dashboard, does what it is given', (
+    tester,
+  ) async {
+    var again = 0;
+    await pumpBar(
+      tester,
+      ModuleBar(current: KioskModule.dashboard, onAgain: () => again++),
+    );
+    await tester.tap(find.byTooltip('Dashboard'));
+    expect(again, 1);
+    await done(tester);
+  });
+
   testWidgets('Refresh only where there is something to refresh', (
     tester,
   ) async {

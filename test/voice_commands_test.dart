@@ -301,6 +301,20 @@ void main() {
       }
     });
 
+    test('every page at once', () {
+      for (final said in [
+        'show me all the pages',
+        'all pages',
+        'show every page',
+        'page overview',
+        'overview',
+        'zoom out',
+        'hey canvas show all my pages',
+      ]) {
+        heard<VoiceOverview>(said);
+      }
+    });
+
     test('the camera, shown and put away', () {
       expect(heard<VoiceCamera>('show the camera').open, isTrue);
       expect(heard<VoiceCamera>('hide the camera').open, isFalse);

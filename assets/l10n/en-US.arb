@@ -5,6 +5,7 @@
   "about.homecanvasIsReleasedUnderThe": "HomeCanvas is released under the MIT License. It talks only to your own Immich server and to Open-Meteo for the weather — there is no analytics and no third-party tracking.",
   "about.licence": "License",
   "about.versionLibrariesLicencesAndCredits": "Version, libraries, licenses and credits",
+  "dashboard.seenAt": "As of {time}",
   "settings.versionOpenSourceLibrariesLicences": "Version, open-source libraries, licenses and credits",
   "video.notSignedInDidNot": "Not signed in — {name} did not recognize an account.",
   "widget.bins.addYourBinsInThe": "Add your bins in the widget settings: a name, a color, the date of one collection and how often they go.",

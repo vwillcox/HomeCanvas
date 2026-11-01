@@ -143,6 +143,42 @@ surprise; pausing is stopping the animation, and a paused dot breathes so a
 held page reads as held rather than stuck. Any touch on a page restarts its
 time, and the page stays put while the full music player is open.
 
+### Every page at once
+
+`PageOverview` (`lib/dashboard/page_overview.dart`) puts every page showing
+now on screen as a card, to choose one from. Each page in the `PageView` sits in
+a `RepaintBoundary` of its own, and the page showing is pictured from it with
+`toImage`, at 0.3 of its size: two and a half seconds after it arrives, once
+whatever it fetched on the way is in, and every three minutes while it stays.
+The page being left is pictured afresh, at 0.6, as the overview opens, so what
+shrinks into its card is the page exactly as it was. Thirteen pages come to
+about 10 MB. Nothing is pictured while a page is half turned, has a tile lifted
+off it, or can't be seen. A picture of a page laid out since — `pageLayout`
+hashes its tiles, their places and the theme — isn't shown; the card draws
+`PageMap` instead, the page's tiles at their places on the grid, named. A
+picture over ten minutes old says when it was taken, so a clock in it isn't
+read as the time. An unnamed page is called after its two biggest tiles
+("News feed · On this day +2"), which says which page it is where "Page 4"
+doesn't.
+
+`arrangeCards` tries every number of columns and keeps whichever makes the
+cards biggest, each the page's own shape so nothing of it is cut off; a short
+last row is centred. Off a console, the page being looked at shrinks from the
+whole grid into its card while the others arrive round it, nearest first. A
+card touched grows back out over its page — which the `PageView` has already
+jumped to underneath — and gives way to it at the very end, so anything that
+changed meanwhile isn't a jump. On LCARS nothing glides: the cards come up one
+at a time, each a panel's elbow in a colour of its own with the page's name and
+number on the bar, and the one chosen is lit, then shown.
+
+The pages don't turn while it is up. It opens from the top bar's Dashboard
+button, touched while on the dashboard (`ModuleBar.onAgain`) — a button of its
+own crowded the greeting out of a bar with thirteen pages in it — or, with the
+top bar off, from an All pages button beside the floating dots. Two fingers
+drawn together on the dashboard open it too, seen by a `Listener` that takes
+nothing from the tiles. Back, a touch between the cards, two fingers spread, or
+the same button again put it away; a page dot chooses that page's card.
+
 ### The photo background
 
 `PhotoBackdrop` sits behind the grid: a pool of Immich photos (the whole
@@ -1039,6 +1075,7 @@ screenshots or testing a screen in isolation. Inert unless set.
 | `HOMECANVAS_TEST_NOWPLAYING=1` | the now-playing panel on a blank background |
 | `HOMECANVAS_TEST_DASHBOARD=<page>` | the dashboard, opened at that page |
 | `HOMECANVAS_TEST_POPUP=forecast` or `inputs` | with the above, opens the full forecast or the TV inputs over the dashboard |
+| `HOMECANVAS_TEST_OVERVIEW=1` or `tour` | with the dashboard, every page at once a few seconds in; `tour` first visits each page for long enough to picture it |
 | `HOMECANVAS_TEST_PLAYER=small` or `full` | the home screen with the player shrunk to the mini player, or the full player opened as soon as music is playing |
 | `HOMECANVAS_TEST_TRACK=artist\|title\|album\|seconds\|from` | a phone that isn't there playing that song, from `from` seconds in — with `HOMECANVAS_TEST_PLAYER=full`, the full player and its lyrics on any machine. Several songs, split by `;`, play in turn |
 | `HOMECANVAS_TEST_THEME=<id>` | the whole kiosk in that theme, without saving it |
@@ -1060,6 +1097,7 @@ lib/
     widget_registry.dart       # DashboardWidgetType, options, groups
     dashboard_model.dart       # the saved dashboard: widgets, pages, look
     schedule.dart              # hours for pages and widgets
+    page_overview.dart         # every page at once, to choose from
     tile_renderer.dart         # draws a widget off-screen for the editor
     photo_backdrop.dart        # photos behind the dashboard
     widgets/                   # one file per widget, plus fit helpers

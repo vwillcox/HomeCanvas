@@ -35,6 +35,12 @@ class VoicePausePages extends VoiceAction {
   final bool paused;
 }
 
+/// Every dashboard page at once, to choose one from — see `PageOverview`.
+/// Put away again with "back", as anything opened is.
+class VoiceOverview extends VoiceAction {
+  const VoiceOverview();
+}
+
 /// Show the camera, or put it away.
 class VoiceCamera extends VoiceAction {
   const VoiceCamera(this.open);
@@ -231,6 +237,13 @@ class VoiceCommands {
     'back one': VoiceTurnPage(-1),
     'back one page': VoiceTurnPage(-1),
     'backwards': VoiceTurnPage(-1),
+    // Every page at once. "Show me all the pages" is "all pages" by the
+    // time the asking and the filler are gone.
+    'all pages': VoiceOverview(),
+    'every page': VoiceOverview(),
+    'overview': VoiceOverview(),
+    'page overview': VoiceOverview(),
+    'zoom out': VoiceOverview(),
     'back': VoiceGo(VoicePlace.back),
     'close': VoiceGo(VoicePlace.back),
     'close that': VoiceGo(VoicePlace.back),

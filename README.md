@@ -103,6 +103,17 @@ so it reads from across the room. Without getting up: *"hey canvas, bring
 the news closer"*. Back, or a tap on the dashboard around it, puts it back in
 its place; left alone, it goes back by itself.
 
+| All pages | All pages, LCARS |
+|---|---|
+| ![Every page of the dashboard at once, each a picture of how it last looked, with its name underneath](docs/screenshots/dashboard-all-pages.jpg) | ![The same on the LCARS console: each page in a panel of its own colour, its name and number on the bar](docs/screenshots/dashboard-all-pages-lcars.jpg) |
+
+Pinch the dashboard, or touch Dashboard in the top bar — already lit, since
+you're on it — and it steps back to show every page at once: the page you were
+on shrinks into its place among the others, each a picture of how it looked
+when it last came round, named — or, for a page you never named, called after
+what's on it. Touch one and it grows back out to fill the screen. From the
+sofa: *"hey canvas, show me all the pages"*.
+
 | Home lab | Network |
 |---|---|
 | ![Servers, services, notes, sun and moon, certificates, updates and a memory](docs/screenshots/dashboard-homelab.jpg) | ![UniFi network health, clients, devices, throughput and speed tests](docs/screenshots/dashboard-network.jpg) |
