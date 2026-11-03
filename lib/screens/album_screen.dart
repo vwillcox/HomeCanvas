@@ -13,6 +13,7 @@ import '../services/media_source.dart';
 import '../widgets/glass.dart';
 import '../widgets/remote_image.dart';
 import 'gallery_screen.dart';
+import 'photo_search_screen.dart';
 import 'slideshow_screen.dart';
 import '../time_format.dart';
 import '../l10n/dates.dart';
@@ -106,6 +107,7 @@ class _AlbumScreenState extends State<AlbumScreen> {
           assets: _assets!,
           initialIndex: index,
           source: _immich,
+          onMoreLike: (a) => openMoreLike(context, a),
         ),
       ),
     );

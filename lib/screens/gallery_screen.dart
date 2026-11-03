@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../models/immich_models.dart';
 import '../services/media_cache.dart';
 import '../services/media_source.dart';
@@ -18,12 +19,17 @@ class GalleryScreen extends StatefulWidget {
   /// Optional hook run before a video opens (Locked Folder re-elevation).
   final Future<void> Function()? onBeforeVideo;
 
+  /// Photos that look like the one showing, from its More like this. None
+  /// for the Locked Folder, whose photos are never searched.
+  final void Function(Asset)? onMoreLike;
+
   const GalleryScreen({
     super.key,
     required this.assets,
     required this.initialIndex,
     required this.source,
     this.onBeforeVideo,
+    this.onMoreLike,
   });
 
   @override
@@ -139,6 +145,12 @@ class _GalleryScreenState extends State<GalleryScreen> {
                       children: [
                         const BigBackButton(),
                         const Spacer(),
+                        if (widget.onMoreLike case final more?) ...[
+                          _MoreLikeThis(
+                            onTap: () => more(widget.assets[_index]),
+                          ),
+                          const SizedBox(width: 12),
+                        ],
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 14,
@@ -163,6 +175,44 @@ class _GalleryScreenState extends State<GalleryScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// More like this: photos that look like the one showing, found by
+/// Immich's image model — a step at a time through the library.
+class _MoreLikeThis extends StatelessWidget {
+  const _MoreLikeThis({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.black45,
+      shape: const StadiumBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 9, 20, 9),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.auto_awesome_rounded,
+                color: Colors.white,
+                size: 22,
+              ),
+              const SizedBox(width: 10),
+              Text(
+                tr('find.moreLikeThis', 'More like this'),
+                style: const TextStyle(color: Colors.white, fontSize: 18),
+              ),
+            ],
+          ),
         ),
       ),
     );

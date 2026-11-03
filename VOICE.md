@@ -282,6 +282,29 @@ Asked of whatever is playing: Spotify, or a phone's music over Bluetooth.
 *"Pause"* and *"stop"* on their own always mean the music. To stop the pages
 turning, say *"hold"*.
 
+### Photos
+
+Anything said with *photos*, *pictures* or *slideshow* in it is looked for
+in the whole Immich library. Who is in them, where and when they were taken
+narrow it down; what is in them is found by Immich's own image search, which
+looks at the photos themselves, so nothing has to be tagged or put in an
+album first.
+
+| Say | Finds |
+|---|---|
+| "show me photos of the beach", "pictures of the dog in the snow", "sunset photos" | What is in them, closest first |
+| "photos of Ellie", "Ellie and Sam's photos" | Everyone named, as Immich has named them: a first name is enough |
+| "photos from Llandudno", "pictures from Wales" | Taken in a town, a nation or a country |
+| "photos from 2019", "twenty nineteen", "last summer", "March 2024", "the nineties", "five years ago" | Taken then |
+| "photos of Ellie at the beach in Wales in summer 2019" | All of it at once |
+| "play a slideshow of Ellie", "a slideshow of the beach" | The same, straight into a slideshow |
+
+They open over whatever was showing, so *"back"* returns to it. *"Photos"*
+on its own is still the albums. A season or a month on its own — *"summer"*,
+*"June"* — is what it looks like, or someone of that name; with a year, or
+after *"in"*, it is a date. People and places are matched against what
+Immich knows, looked up at most once an hour.
+
 ### Places
 
 | Say | Opens |

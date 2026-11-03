@@ -206,6 +206,14 @@ and a close button the kiosk draws itself.
 a full-screen viewer with pinch-zoom, double-tap zoom and swipe; video via
 libmpv with speed, scrub, zoom and volume; portrait and landscape uncropped.
 
+**Find photos** — ask for any photo in words, by touch or out loud: *"hey
+canvas, show me photos of Ellie at the beach in 2019"*. Who, where and when
+narrow it down — the people Immich has named, the places it knows, years,
+seasons, decades — and what is in them is found by Immich's own image search,
+which looks at the photos themselves: no tags, no albums made beforehand.
+*"A slideshow of the snow"* goes straight into one. Every photo found has
+**More like this**, so one photo leads you through the library to the next.
+
 **YouTube** — links shared from the phone play on the panel, full screen or
 as a picture-in-picture window you can drag and resize over anything else; a
 dashboard widget lists your subscriptions to pick from, and signing in brings

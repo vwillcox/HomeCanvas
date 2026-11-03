@@ -77,6 +77,16 @@ class VoiceRadio extends VoiceAction {
   final String? station;
 }
 
+/// Photos asked for in words — "show me photos of Ellie at the beach" —
+/// found in the whole library: [asked] is what was said after the asking,
+/// "ellie at the beach", read by `PhotoQuery` once the people and places
+/// Immich knows are to hand. With [slideshow], shown as one.
+class VoiceFindPhotos extends VoiceAction {
+  const VoiceFindPhotos(this.asked, {this.slideshow = false});
+  final String asked;
+  final bool slideshow;
+}
+
 /// Up, up, down, down, left, right, left, right, B, A.
 class VoiceKonami extends VoiceAction {
   const VoiceKonami();
@@ -456,6 +466,11 @@ class VoiceCommands {
         _fixed[asked.where((w) => w != 'page' && w != 'pages').join(' ')];
     if (fixed != null) return fixed;
 
+    // "Photos of the beach", "a slideshow of Ellie": anything said with
+    // photos is looked for in them, before it can be a page.
+    final photos = _photosOf(said);
+    if (photos != null) return photos;
+
     // "Turn the radio on": "on" is filler everywhere else.
     if (asked.length == 1 && asked.single == 'radio' && said.contains('on')) {
       return const VoiceRadio(VoiceRadioAsk.play);
@@ -489,6 +504,59 @@ class VoiceCommands {
     final page = _pageFor(asked.where((w) => w != 'page' && w != 'pages'));
     return page == null ? null : VoiceShowPage(page);
   }
+
+  /// Words that say photos are wanted.
+  static const _photoWords = {
+    'photo', 'photos', 'photograph', 'photographs', 'picture', 'pictures', //
+    'pic', 'pics', 'snaps', 'snapshots', 'slideshow',
+  };
+
+  /// Photos asked for by what is in them, who, where or when: what was
+  /// said around the word "photos", less the asking before it. Null when
+  /// nothing is said but photos — "show the photos" is the albums — or
+  /// when a tile is to be brought closer: "the photo bigger".
+  static VoiceFindPhotos? _photosOf(List<String> said) {
+    // "Slide show", as recognisers often hear it.
+    final words = <String>[];
+    for (final w in said) {
+      if (w == 'show' && words.isNotEmpty && words.last == 'slide') {
+        words.last = 'slideshow';
+      } else {
+        words.add(w);
+      }
+    }
+    final at = words.indexWhere(_photoWords.contains);
+    if (at < 0 || words.any(_closer.contains)) return null;
+    // Before the word, only what follows the asking: "show me beach
+    // photos" is the beach.
+    var from = 0;
+    for (var i = 0; i < at; i++) {
+      if (_asking.contains(words[i]) || words[i] == 'play') from = i + 1;
+    }
+    while (from < at && _filler.contains(words[from])) {
+      from++;
+    }
+    final asked = [...words.sublist(from, at), ...words.sublist(at + 1)];
+    final meant = [
+      for (final w in asked)
+        if (!_filler.contains(w) &&
+            !_asking.contains(w) &&
+            !_photoWords.contains(w) &&
+            !_photoLoose.contains(w))
+          w,
+    ];
+    if (meant.isEmpty) return null;
+    return VoiceFindPhotos(
+      asked.join(' '),
+      slideshow: words.contains('slideshow'),
+    );
+  }
+
+  /// What says nothing about which photos: "all the photos from...".
+  static const _photoLoose = {
+    'all', 'some', 'any', 'from', 'in', 'at', 'taken', 'by', 'start', //
+    'play', 'videos', 'video', 'album', 'albums',
+  };
 
   /// "Up close" or "close up", together, in [asked]: "close" on its own is
   /// "back".

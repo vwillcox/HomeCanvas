@@ -17,6 +17,7 @@ import '../widgets/module_bar.dart';
 import '../widgets/now_playing_overlay.dart';
 import '../widgets/remote_image.dart';
 import 'album_screen.dart';
+import 'photo_search_screen.dart';
 import 'slideshow_screen.dart';
 import '../l10n/l10n.dart';
 
@@ -325,6 +326,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       letterSpacing: -0.3,
                     ),
                   ),
+                  const SizedBox(width: 28),
+                  const _FindPhotos(),
                   const Spacer(),
                   for (final s in AlbumSort.values) ...[
                     const SizedBox(width: 10),
@@ -367,6 +370,68 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Find photos: the whole library searched by who, where, when or what is
+/// in them, beside the albums it would otherwise take opening one by one.
+class _FindPhotos extends StatelessWidget {
+  const _FindPhotos();
+
+  void _open(BuildContext context) => Navigator.of(
+    context,
+  ).push(MaterialPageRoute(builder: (_) => const PhotoSearchScreen()));
+
+  @override
+  Widget build(BuildContext context) {
+    final look = context.look;
+    final label = tr('find.title', 'Find photos');
+    if (look.isLcars) {
+      return LcarsBlock(
+        colour: look.block(2),
+        onTap: () => _open(context),
+        height: 48,
+        padding: const EdgeInsets.symmetric(horizontal: 26),
+        child: Text(lcarsCaps(label), style: const TextStyle(fontSize: 19)),
+      );
+    }
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 520),
+      child: PressScale(
+        scale: 0.97,
+        child: GestureDetector(
+          onTap: () => _open(context),
+          child: Glass(
+            tint: 0.07,
+            padding: const EdgeInsets.fromLTRB(20, 12, 26, 12),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.search_rounded, size: 26, color: look.textSecondary),
+                const SizedBox(width: 12),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: look.textPrimary,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Flexible(
+                  child: Text(
+                    tr('find.example', '“the beach in 2019”'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 18, color: look.textSecondary),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

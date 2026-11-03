@@ -88,6 +88,7 @@ import 'dashboard/widgets/tv_remote_sheet.dart';
 import 'screens/gallery_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/locked_folder_screen.dart';
+import 'screens/photo_search_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/setup_screen.dart';
 import 'screens/slideshow_screen.dart';
@@ -745,6 +746,19 @@ String? runVoiceCommand(
     case VoiceKonami():
       KonamiOverlay.said.value++;
       return '+30 lives';
+    case VoiceFindPhotos(:final asked, :final slideshow):
+      if (!context.read<ImmichService>().config.isConfigured) return null;
+      // Over whatever is showing, so "back" returns to it: the photos
+      // found, and a slideshow of them when one was asked for.
+      unawaited(
+        navigator.push(
+          MaterialPageRoute(
+            builder: (_) =>
+                PhotoSearchScreen(asked: asked, slideshow: slideshow),
+          ),
+        ),
+      );
+      return slideshow ? 'slideshow $asked' : 'photos $asked';
     case VoiceShowPage(:final page):
       if (!settings.enabled) return null;
       // A page asked for by name is wanted for longer than its turn: held

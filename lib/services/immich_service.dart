@@ -7,6 +7,7 @@ import 'api_cache.dart';
 import 'config_service.dart';
 import 'media_cache.dart';
 import 'media_source.dart';
+import 'photo_query.dart';
 import '../map_text.dart';
 import 'http_client.dart';
 import '../time_format.dart';
@@ -301,6 +302,76 @@ class ImmichService with ImmichUrls implements MediaSource {
             birthDate: DateTime.tryParse('${p['birthDate'] ?? ''}'),
           ),
     ];
+  }
+
+  List<Person>? _knownPeople;
+  List<PhotoPlace>? _knownPlaces;
+  DateTime? _knownAt;
+
+  /// The people and places a search can be narrowed to, as Immich knows
+  /// them: fetched once an hour at most, and the last ones kept when the
+  /// server cannot be reached — a search for the beach still works.
+  Future<({List<Person> people, List<PhotoPlace> places})> searchable() async {
+    final at = _knownAt;
+    if (at == null || DateTime.now().difference(at) > _knownFor) {
+      try {
+        final dio = _dio();
+        Future<List<String>> suggested(String type) async {
+          final r = await dio.get(
+            '/api/search/suggestions',
+            queryParameters: {'type': type},
+          );
+          final d = r.data;
+          return [
+            if (d is List)
+              for (final s in d)
+                if (s is String && s.trim().isNotEmpty) s.trim(),
+          ];
+        }
+
+        final (people, cities, states, countries) = await (
+          this.people(),
+          suggested('city'),
+          suggested('state'),
+          suggested('country'),
+        ).wait;
+        _knownPeople = people;
+        _knownPlaces = [
+          for (final c in cities) PhotoPlace(PhotoPlaceKind.city, c),
+          for (final s in states) PhotoPlace(PhotoPlaceKind.state, s),
+          for (final c in countries) PhotoPlace(PhotoPlaceKind.country, c),
+        ];
+        _knownAt = DateTime.now();
+      } catch (_) {
+        // Searched without them; asked again next time.
+      }
+    }
+    return (people: _knownPeople ?? const [], places: _knownPlaces ?? const []);
+  }
+
+  static const _knownFor = Duration(hours: 1);
+
+  /// Page [page] of the photos [q] asks for — closest first when Immich's
+  /// image model chooses them, otherwise newest first — and the next
+  /// page's number, while there is one.
+  Future<({List<Asset> assets, int? next})> findPhotos(
+    PhotoQuery q, {
+    int page = 1,
+    int? size,
+  }) async {
+    final r = await _dio().post(
+      q.byLooks ? '/api/search/smart' : '/api/search/metadata',
+      data: q.body(page: page, size: size ?? (q.byLooks ? 60 : 120)),
+    );
+    final a = (r.data as Map)['assets'] as Map;
+    final next = a['nextPage'];
+    return (
+      assets: [
+        for (final item in (a['items'] as List? ?? const []))
+          if (item is Map<String, dynamic>) Asset.fromJson(item),
+      ],
+      next: next == null ? null : int.tryParse('$next'),
+    );
   }
 
   /// A photo's preview-sized image, as bytes — for the dashboard editor,

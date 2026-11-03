@@ -426,6 +426,56 @@ void main() {
     });
   });
 
+  group('photos asked for', () {
+    VoiceFindPhotos? find(String said) {
+      final action = _panel().resolve(said);
+      return action is VoiceFindPhotos ? action : null;
+    }
+
+    test('by what is in them, who, where or when', () {
+      expect(find('show me photos of the beach')!.asked, 'of the beach');
+      expect(
+        find('Hey Canvas, show me pictures of Ellie at the beach')!.asked,
+        'of ellie at the beach',
+      );
+      expect(find('find photos from 2019')!.asked, 'from 2019');
+      expect(find('show me beach photos')!.asked, 'beach');
+      expect(
+        find('photos of the dog in the snow')!.asked,
+        'of the dog in the snow',
+      );
+    });
+
+    test('as a slideshow, however "slideshow" is heard', () {
+      final a = find('play a slideshow of ellie')!;
+      expect(a.slideshow, isTrue);
+      expect(a.asked, 'of ellie');
+      expect(find('start a slide show of the beach')!.slideshow, isTrue);
+      expect(find('photos of the beach')!.slideshow, isFalse);
+    });
+
+    test('even asked as a question', () {
+      expect(find('do we have any photos of snow'), isNotNull);
+    });
+
+    test('photos alone are still the albums', () {
+      expect(_panel().resolve('show me the photos'), isA<VoiceGo>());
+      expect(_panel().resolve('photo albums'), isA<VoiceGo>());
+      expect(find('show me all the photos'), isNull);
+      expect(find('show the pictures'), isNull);
+    });
+
+    test('a photo brought closer is still the tile', () {
+      expect(find('bring the photo closer'), isNull);
+    });
+
+    test('nothing of photos is taken for them', () {
+      expect(find('show me the news'), isNull);
+      expect(find('show me the stocks'), isNull);
+      expect(_page('show the stocks'), 4);
+    });
+  });
+
   test('"turn", misheard at the start, is put right for Home Assistant', () {
     expect(
       VoiceCommands.forAssist('Hey Canvas, term lounge one off.'),
