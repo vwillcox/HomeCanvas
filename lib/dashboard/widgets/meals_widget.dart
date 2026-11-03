@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../widget_registry.dart';
 import 'fit_canvas.dart';
@@ -8,6 +9,8 @@ import '../../widgets/rebuild_every_minute.dart';
 import '../../widgets/shown_timers.dart';
 import '../../l10n/l10n.dart';
 import '../../map_text.dart';
+import '../../screens/cook_screen.dart';
+import '../../services/kitchen.dart';
 
 const _days = [
   'monday',
@@ -68,8 +71,18 @@ class _MealsWidgetState extends State<MealsWidget>
       );
     }
     final isToday = first.day == now.day;
+    // Tonight's dinner, when it is a recipe cooked here before: touched,
+    // it opens to cook from. Otherwise a touch opens the book of them.
+    // (No kitchen in the editor's preview.)
+    Kitchen? kitchen;
+    try {
+      kitchen = context.watch<Kitchen>();
+    } on ProviderNotFoundException {
+      kitchen = null;
+    }
+    final recipe = a.isEmpty ? null : kitchen?.named(a, all: true)?.recipe;
 
-    return FitCanvas(
+    final tile = FitCanvas(
       designHeight: 100,
       maxScale: 3,
       builder: (context, size) => Column(
@@ -77,7 +90,17 @@ class _MealsWidgetState extends State<MealsWidget>
         children: [
           TileLabel(
             icon: Icons.restaurant_rounded,
-            text: isToday
+            text: recipe != null
+                ? (isToday
+                      ? tr(
+                          'widget.meals.tonightCook',
+                          'Tonight · touch to cook',
+                        )
+                      : tr(
+                          'widget.meals.tomorrowCook',
+                          'Tomorrow · touch to cook',
+                        ))
+                : isToday
                 ? tr('widget.meals.tonight', 'Tonight')
                 : tr('widget.meals.tomorrow2', 'Tomorrow · {first}', {
                     'first': _dayName(first),
@@ -127,6 +150,14 @@ class _MealsWidgetState extends State<MealsWidget>
           ),
         ],
       ),
+    );
+    if (kitchen == null) return tile;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => recipe != null
+          ? openRecipe(context, recipe)
+          : openRecipeBook(context),
+      child: tile,
     );
   }
 }

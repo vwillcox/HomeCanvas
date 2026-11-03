@@ -47,6 +47,7 @@ import 'services/audio_levels_service.dart';
 import 'services/background_pause.dart';
 import 'services/kiosk_browser.dart';
 import 'services/kiosk_control_service.dart';
+import 'services/kitchen.dart';
 import 'services/floatplane_site.dart';
 import 'services/nebula_site.dart';
 import 'services/video_link.dart';
@@ -82,6 +83,7 @@ import 'services/weather_service.dart';
 import 'widgets/module_bar.dart' show openLockedFolder;
 import 'screens/about_screen.dart';
 import 'screens/album_screen.dart';
+import 'screens/cook_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'dashboard/widgets/weather_forecast_sheet.dart';
 import 'dashboard/widgets/tv_remote_sheet.dart';
@@ -388,6 +390,15 @@ void main() async {
   );
   dashboard.timerSounds = timerSounds;
 
+  // Recipes to cook from, a step at a time: kept once cooked, and read out
+  // in the kiosk's voice, at the volume shares are read at.
+  final kitchen = Kitchen(
+    output: PiperSpeechOutput(speech),
+    volume: () => inbox().speechOut,
+    muted: () => inbox().dndMuted,
+  );
+  unawaited(kitchen.load());
+
   // Bin-day reminders, spoken the evening before whether or not the
   // dashboard is showing.
   final bins = BinsService(
@@ -520,6 +531,7 @@ void main() async {
         ChangeNotifierProvider.value(value: shopping),
         ChangeNotifierProvider.value(value: chores),
         ChangeNotifierProvider.value(value: timers),
+        ChangeNotifierProvider.value(value: kitchen),
         ChangeNotifierProvider.value(value: bins),
         // Made when an Air & pollen widget first asks, and not before.
         ChangeNotifierProvider(create: (_) => AirQualityService(config)),
@@ -570,6 +582,13 @@ void main() async {
         final link = VideoLink.parse(url);
         if (link == null) return false;
         unawaited(player.play(link));
+        return true;
+      },
+      cook: (url) {
+        final context = rootNavigatorKey.currentContext;
+        if (context == null || !url.startsWith('http')) return false;
+        unawaited(screenIdle.wake());
+        unawaited(openRecipeAt(context, url));
         return true;
       },
       setDnd: (muted) {
@@ -650,6 +669,14 @@ String? runVoiceCommand(
   final navigator = rootNavigatorKey.currentState;
   final context = rootNavigatorKey.currentContext;
   if (navigator == null || context == null) return null;
+  // A recipe being cooked hears first: "next" is its next step, not the
+  // next page, and "how much flour" is a question for it.
+  final cooking = Kitchen.listening?.call(heard);
+  if (cooking != null) {
+    unawaited(screen.wake());
+    unawaited(KioskBrowser.focusKiosk());
+    return cooking;
+  }
   final settings = config.config.dashboard;
   final commands = VoiceCommands.of(
     settings,
@@ -746,6 +773,27 @@ String? runVoiceCommand(
     case VoiceKonami():
       KonamiOverlay.said.value++;
       return '+30 lives';
+    case VoiceCook(:final name):
+      final saved = name == null ? null : context.read<Kitchen>().named(name);
+      if (saved == null) {
+        // The book, to choose from — saying so when one was asked for by
+        // a name it does not have.
+        unawaited(
+          navigator.push(
+            MaterialPageRoute(builder: (_) => RecipeBookScreen(missing: name)),
+          ),
+        );
+        return 'recipes';
+      }
+      // Asked for out loud, so read out loud: the hands are busy.
+      unawaited(
+        navigator.push(
+          MaterialPageRoute(
+            builder: (_) => CookScreen(recipe: saved.recipe, read: true),
+          ),
+        ),
+      );
+      return 'cook ${saved.recipe.name}';
     case VoiceFindPhotos(:final asked, :final slideshow):
       if (!context.read<ImmichService>().config.isConfigured) return null;
       // Over whatever is showing, so "back" returns to it: the photos

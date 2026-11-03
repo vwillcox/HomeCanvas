@@ -305,6 +305,31 @@ on its own is still the albums. A season or a month on its own — *"summer"*,
 after *"in"*, it is a date. People and places are matched against what
 Immich knows, looked up at most once an hour.
 
+### Cooking
+
+| Say | Opens |
+|---|---|
+| "let's cook the traybake", "cook the chasseur", "the pancake recipe" | That recipe, if it has been cooked here before, read out a step at a time |
+| "recipes", "my recipes", "what can I cook" | Every recipe cooked here |
+
+While a recipe is open it hears first, so *"next"* is its next step rather
+than the next page:
+
+| Say | Does |
+|---|---|
+| "next", "done", "what's next", "go back", "step four", "start again" | Turns to that step and reads it out |
+| "read it again", "pardon", "where was I" | Reads the step again |
+| "how much flour?", "how many eggs do I need?" | Says how much, scaled for however many you are cooking for, and lights it in the list |
+| "what do I need", "ingredients" | Reads every ingredient |
+| "start the timer" | Starts a timer for the step's time, named for what it is: a Simmer timer, a Bake timer |
+| "how long is left" | The timers still running — or, with none, how long the step says |
+| "make it for six", "for eight people", "double it", "halve it" | Scales every amount |
+| "shush", "stop talking" | Stops reading |
+| "stop cooking", "close the recipe", "all done" | Puts the recipe away, where it was left: opened again today, it is back at that step |
+
+Anything else — *"pause the music"*, *"what's the weather"* — goes where it
+always does.
+
 ### Places
 
 | Say | Opens |

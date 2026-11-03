@@ -87,6 +87,14 @@ class VoiceFindPhotos extends VoiceAction {
   final bool slideshow;
 }
 
+/// A recipe to cook from, by what it is called — "let's cook the
+/// chasseur" — among those cooked here before; with no [name], the book of
+/// them all.
+class VoiceCook extends VoiceAction {
+  const VoiceCook([this.name]);
+  final String? name;
+}
+
 /// Up, up, down, down, left, right, left, right, B, A.
 class VoiceKonami extends VoiceAction {
   const VoiceKonami();
@@ -471,6 +479,10 @@ class VoiceCommands {
     final photos = _photosOf(said);
     if (photos != null) return photos;
 
+    // "Let's cook the chasseur", "the pancake recipe", "recipes".
+    final cook = _cookOf(said);
+    if (cook != null) return cook;
+
     // "Turn the radio on": "on" is filler everywhere else.
     if (asked.length == 1 && asked.single == 'radio' && said.contains('on')) {
       return const VoiceRadio(VoiceRadioAsk.play);
@@ -550,6 +562,39 @@ class VoiceCommands {
       asked.join(' '),
       slideshow: words.contains('slideshow'),
     );
+  }
+
+  /// Words that say a recipe is wanted.
+  static const _cookWords = {
+    'cook', 'cooking', 'recipe', 'recipes', 'cookbook', 'cookery', //
+  };
+
+  /// What comes with them and says nothing about which: "let's cook
+  /// something", "what can I cook".
+  static const _cookLoose = {
+    'lets', 'let', 'book', 'something', 'what', 'whats', 'can', 'could', //
+    'shall', 'should', 'we', 'i', 'tonight', 'today', 'again', 'some', 'all',
+    'saved', 'list', 'them', 'up', 'start', 'is', 'are', 'there', 'do', 'have',
+  };
+
+  /// A recipe asked for by name, or the book of them. Not "stop cooking",
+  /// which an open recipe hears for itself.
+  static VoiceCook? _cookOf(List<String> said) {
+    if (!said.any(_cookWords.contains)) return null;
+    if (said.any(
+      const {'stop', 'close', 'exit', 'done', 'finished', 'timer'}.contains,
+    )) {
+      return null;
+    }
+    final name = [
+      for (final w in said)
+        if (!_cookWords.contains(w) &&
+            !_cookLoose.contains(w) &&
+            !_asking.contains(w) &&
+            !_filler.contains(w))
+          w,
+    ];
+    return VoiceCook(name.isEmpty ? null : name.join(' '));
   }
 
   /// What says nothing about which photos: "all the photos from...".

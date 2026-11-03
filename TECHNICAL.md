@@ -816,6 +816,63 @@ reading it out should not mean sending it anywhere.
 Text is handed to piper on its standard input, never as a command-line
 argument, so nothing in a note can become part of a command.
 
+### Recipes
+
+A link shared from the phone is looked at as its card appears
+(`Kitchen.recipeAt`, `lib/services/kitchen.dart`): the page is fetched once,
+with a browser's user agent, and searched for schema.org `Recipe` data in a
+JSON-LD script — on its own, in a list, or in an `@graph` among the page's
+other things (`Recipe.fromHtml`, `lib/services/recipe.dart`). Nearly every
+recipe site publishes one for search engines. When there is one the card
+says *Recipe shared* and the dish, and a touch opens `CookScreen`
+(`lib/screens/cook_screen.dart`) instead of the browser. A site that turns
+the panel's request away opens as a link, as before.
+
+What is read, and how:
+
+- **The method** may be one string with a line to a step, "1. … 2. …" run
+  together, a list of strings, or `HowToStep`s in named `HowToSection`s. A
+  short version given before the full one ("Abbreviated Recipe") is dropped;
+  a step that starts with its own title, "Brown the chicken - Heat…", has it
+  taken off as a heading.
+- **Ingredients** are tidied of what recipe plugins leave in them — "(Note
+  1)", doubled brackets, "(, sliced)" — and read for an amount, a measure
+  and a name (`Ingredient.parse`): "2 1/2 cups", "½ tsp", "2-3", "400g /
+  14oz", "For the drizzle: 175g sugar". Scaled, grams and millilitres round
+  as a cook would (455g, not 454.5), spoons and cups come out in the
+  fractions they come in (1½, ¾), "1 egg" becomes "2 eggs", and amounts in
+  brackets follow unless they are *each*.
+- **Amounts in the method** with a measure — "100g", "2 tbsp" — are scaled
+  and marked; counts ("2 eggs"), lengths ("a 20cm tin") and temperatures
+  are not (`stepPieces`).
+- **Times** in a step — "5-6 minutes", "1½ hours", "half an hour", "1 hour
+  20 minutes" — become touchable chips (`StepTime.find`). A range starts at
+  its shorter end. Each is named for the cooking word before it in its
+  sentence, so the timer is *Simmer* or *Bake*, and it is an ordinary
+  kitchen timer (`TimerService`): it carries on, and rings and speaks, after
+  the recipe is closed.
+- **The ingredients a step uses** are those with a word of their name in it,
+  plural or not; words that only say what kind ("baking", "dry") do not
+  count on their own.
+
+While a `CookScreen` is the top route it sets `Kitchen.listening`, which
+`runVoiceCommand` asks before `VoiceCommands`. `CookCommands.parse`
+(`lib/services/cook_voice.dart`, pure) answers for anything about the
+cooking and null for anything else, which then goes on as usual. Steps and
+answers are spoken through a `PiperSpeechOutput` of the kitchen's own, a
+sentence or two at a time so the first words come quickly, at the speech
+volume and not at all under Do Not Disturb; a new step cuts the last one
+off. The screen is counted as in use every 50 seconds while a recipe is
+open.
+
+Every recipe opened is kept in `~/.config/homecanvas/recipes.json` (mode
+600, the latest first, at most 60) with the step it was left at and for how
+many: opened again within 18 hours, it comes back there. Saved, a recipe
+needs neither the site nor the network. The Meal plan tile opens tonight's
+dinner when a kept recipe has every word of its name, and the recipe book
+otherwise; `POST /cook?url=` on the control endpoint opens any page's
+recipe.
+
 ---
 
 ## The camera
@@ -974,6 +1031,7 @@ small control endpoint instead, **on the loopback address only**:
 | `POST /open/photos`, `/open/dashboard`, `/open/settings`, `/open/locked-folder` | opens that place, as the kiosk's own button would |
 | `POST /camera` | shows or hides the camera |
 | `POST /dnd?muted=true` | sets the notifications switch |
+| `POST /cook?url=https://…` | opens the recipe on that page to cook from — see [Recipes](#recipes) |
 
 on `127.0.0.1:8766`, one up from `screen_control.py`'s 8765. Nothing on the
 network can reach it — a request to the Pi's own LAN address is refused — and

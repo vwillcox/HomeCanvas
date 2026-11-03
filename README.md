@@ -86,6 +86,27 @@ on a block down the side, a colour to a verse, lit as it is sung. The words
 come from [LRCLIB](https://lrclib.net), free and open; an instrumental says
 so, and the Lyrics button on the player turns them off.
 
+### Cooking
+
+| A step at a time | On a console |
+|---|---|
+| ![A recipe open to cook from: the ingredients scaled for 24, the flour lit, and the step in large type with a bake timer counting down inside it](docs/screenshots/cook.jpg) | ![The same in LCARS: a block down the side for each step, the step being cooked lit](docs/screenshots/cook-lcars.jpg) |
+
+Share a recipe from your phone and the panel opens it to cook from — the
+method a step at a time, in type you can read from the hob, and none of the
+life story above it. The ingredients the step uses are lit in the list beside
+it; touch each one as it comes out of the cupboard. Every time in a step is a
+timer to touch: *"bake for 30–35 minutes"* starts a Bake timer that counts
+down right there in the sentence. Cooking for more, or fewer? Change the
+number and every amount follows, the ones in the method too.
+
+And with your hands in the dough: *"hey canvas, next"*, *"go back"*, *"how
+much flour?"*, *"start the timer"*, *"make it for six"*. Everything you cook
+is kept, so *"let's cook the traybake"* finds it again next week — or touch
+tonight's dinner on the Meal plan tile. It reads the recipe the page
+publishes for search engines, which nearly every recipe site and blog does;
+a page without one opens as a link.
+
 ### The dashboard
 
 ![The dashboard: clock, weather, TV remote, now playing and the news](docs/screenshots/dashboard.jpg)
@@ -261,6 +282,11 @@ when you leave.
 **Voice control** — say "hey canvas, show the stocks", "next page" or "pause the
 music"; anything else goes to Home Assistant. Heard and understood on the Pi;
 see [VOICE.md](VOICE.md).
+
+**Cook from it** — a recipe shared from your phone opens a step at a time,
+with its times as timers to touch, its amounts scaled for however many you
+are cooking for, and a voice that answers "how much flour?" with your hands
+full. Kept, to cook again.
 
 **In your language** — British English, American English, French, German,
 Spanish, Italian, Dutch, European Portuguese, Polish, Swedish, Norwegian,
