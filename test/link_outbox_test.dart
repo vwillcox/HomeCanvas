@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -155,15 +156,74 @@ void main() {
       expect(o.devices, isEmpty);
     });
 
-    test('the same device with a new key replaces the old', () async {
+    test('the same device with a new key is offered alongside the old, '
+        'until the old has not asked for a month', () async {
       final o = outbox();
       await ask(o);
       await o.send(o.devices.single, url: 'https://old.example/');
       final fresh = await X25519().newKeyPair();
       final freshPublic = (await fresh.extractPublicKey()).bytes;
+      now = now.add(const Duration(minutes: 1));
       final got = await ask(o, key: freshPublic);
-      expect(o.devices.single.kid, LinkOutbox.keyId(freshPublic));
       expect(got.items, isEmpty);
+      expect(o.devices, hasLength(2));
+      expect(o.devices.first.kid, LinkOutbox.keyId(freshPublic));
+      now = now.add(const Duration(days: 31));
+      await ask(o, key: freshPublic);
+      expect(o.devices.single.kid, LinkOutbox.keyId(freshPublic));
+    });
+
+    test('two unnamed phones on one token keep their own links', () async {
+      final o = outbox();
+      final other = await X25519().newKeyPair();
+      final otherPublic = (await other.extractPublicKey()).bytes;
+      await ask(o, name: 'Phone');
+      await ask(o, key: otherPublic, name: 'Phone');
+      expect(o.devices, hasLength(2));
+      final mine = o.devices.firstWhere(
+        (d) => d.kid == LinkOutbox.keyId(phonePublic),
+      );
+      final theirs = o.devices.firstWhere(
+        (d) => d.kid == LinkOutbox.keyId(otherPublic),
+      );
+      await o.send(mine, url: 'https://mine.example/');
+      await o.send(theirs, url: 'https://theirs.example/');
+
+      // Each asking in turn evicts neither.
+      await ask(o, key: otherPublic, name: 'Phone');
+      final got = await ask(o, name: 'Phone');
+      expect((await open(got.items.single))['url'], 'https://mine.example/');
+      final gotOther = await ask(o, key: otherPublic, name: 'Phone');
+      expect(
+        (await open(gotOther.items.single, other))['url'],
+        'https://theirs.example/',
+      );
+      expect(o.devices, hasLength(2));
+    });
+
+    test('devices asking again change nothing on disk', () async {
+      final dir = await Directory.systemTemp.createTemp('outbox');
+      addTearDown(() => dir.delete(recursive: true));
+      final file = File('${dir.path}/outbox.json');
+      final o = LinkOutbox(
+        senders: () => senders,
+        file: file.path,
+        clock: () => now,
+      );
+      final other = await X25519().newKeyPair();
+      final otherPublic = (await other.extractPublicKey()).bytes;
+      await ask(o, name: 'Phone');
+      await ask(o, key: otherPublic, name: 'Phone');
+      await o.saved;
+      expect(await file.exists(), isTrue);
+
+      await file.delete();
+      for (var i = 0; i < 3; i++) {
+        await ask(o, name: 'Phone');
+        await ask(o, key: otherPublic, name: 'Phone');
+      }
+      await o.saved;
+      expect(await file.exists(), isFalse);
     });
 
     test('a sender has only so many', () async {

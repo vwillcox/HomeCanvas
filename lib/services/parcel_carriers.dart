@@ -178,7 +178,8 @@ class ParcelRef {
 
   /// The parcel [text] is about, or null when it reads as something else.
   ///
-  /// A link to a carrier's tracking page is one, wherever it is in the text;
+  /// A link to a parcel on a carrier's site is one — a link with its number
+  /// in it — wherever it is in the text;
   /// so is a number in a carrier's own unmistakable format — Royal Mail's
   /// `AB123456789GB`, UPS's `1Z…`. A bare run of digits could be anything,
   /// and counts only beside the carrier's name ("DPD 15501234567890"), or
@@ -345,6 +346,10 @@ class ParcelRef {
       );
     }
     if (carrier != null) {
+      // Only a link with a number in it: the rest of a carrier's site — its
+      // news, its prices, its tracking page before a number is put in — is
+      // not a parcel, and could never be tracked as one.
+      if (number == null) return null;
       // The link as shared, which goes straight to the parcel — DPD's
       // carries a code of its own after the number that its search page
       // would otherwise ask for.

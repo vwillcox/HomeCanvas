@@ -203,8 +203,21 @@ class _DayBriefSheetState extends State<DayBriefSheet> {
       if (reader != null && reader.active && reader.title == _title) {
         return _wait();
       }
-      Navigator.of(context).maybePop();
+      _putAway();
     });
+  }
+
+  void _putAway() {
+    if (!mounted) return;
+    // This sheet only: a screen opened over it since — a recipe from a
+    // share — stays where it is, and the sheet goes from underneath it.
+    final route = ModalRoute.of(context);
+    if (route == null) return;
+    if (route.isCurrent) {
+      Navigator.of(context).pop();
+    } else if (route.isActive) {
+      Navigator.of(context).removeRoute(route);
+    }
   }
 
   void _read() {

@@ -237,6 +237,11 @@ class ParcelsService extends ChangeNotifier {
   /// A parcel this old that never came is not looked up any more.
   static const giveUpAfter = Duration(days: 45);
 
+  /// A parcel nothing has ever been heard of in this time — no tracking,
+  /// no day still to come — is cleared away: a link that was never a
+  /// parcel, or one nobody is following.
+  static const forgetUnheardAfter = Duration(days: 14);
+
   List<Parcel> _parcels = [];
   int _seq = 0;
   Timer? _timer;
@@ -608,7 +613,8 @@ class ParcelsService extends ChangeNotifier {
       s == ParcelStage.failed ||
       s == ParcelStage.problem;
 
-  /// Clears delivered parcels away once they have been on show long enough.
+  /// Clears delivered parcels away once they have been on show long enough,
+  /// and those never heard of after [forgetUnheardAfter].
   bool _prune() {
     final before = _parcels.length;
     final keep = settings.keep;
@@ -616,6 +622,12 @@ class ParcelsService extends ChangeNotifier {
     _parcels.removeWhere(
       (p) => p.delivered && now.difference(p.deliveredAt ?? p.added) > keep,
     );
+    _parcels.removeWhere((p) {
+      if (p.stage != ParcelStage.waiting || p.events.isNotEmpty) return false;
+      if (now.difference(p.added) <= forgetUnheardAfter) return false;
+      final until = dueUntil(p);
+      return until == null || until.isBefore(now);
+    });
     if (_parcels.length > maxParcels) {
       // The oldest delivered go first, then the oldest of all.
       final byAge = [..._parcels]

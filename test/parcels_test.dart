@@ -79,11 +79,26 @@ void main() {
       );
     });
 
-    test('a carrier link with no number is still a parcel to look at', () {
-      final p = f('https://www.royalmail.com/track-your-item')!;
-      expect(p.carrier, Carrier.royalMail);
-      expect(p.number, isNull);
-      expect(p.key, p.url);
+    test('a carrier link with no number is not a parcel', () {
+      expect(f('https://www.royalmail.com/track-your-item'), isNull);
+      expect(
+        f('https://www.royalmail.com/news/stamp-prices-change-in-april'),
+        isNull,
+      );
+      expect(f('https://www.royalmail.com/news/track-and-trace-upgrade'), isNull);
+      expect(
+        f('https://www.dhl.com/gb-en/home/press/press-archive/2026/news.html'),
+        isNull,
+      );
+      expect(f('https://www.ups.com/gb/en/shipping/zones-and-rates'), isNull);
+      // Nor in what was sent as a parcel: there is no number to track.
+      expect(
+        ParcelRef.find(
+          'https://www.royalmail.com/track-your-item',
+          explicit: true,
+        ),
+        isNull,
+      );
     });
 
     test('an Amazon delivery, but not an Amazon product', () {

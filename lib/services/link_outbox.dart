@@ -242,18 +242,17 @@ class LinkOutbox extends ChangeNotifier {
       if (stale) unawaited(_save());
       return known;
     }
-    // The same device with a new key — the app reinstalled — replaces the
-    // old entry rather than appearing twice. What waited for the old key
-    // was sealed to it and cannot be opened now.
-    final replaced = [
-      for (final d in _devices.values)
-        if (d.sender == sender && d.name == name) d.kid,
-    ];
+    // A device is its key, never its name: two phones on one token may both
+    // be called "Phone". The same phone with a new key — the app reinstalled
+    // — is a new device; the old entry, no longer asking, stops being
+    // offered after [offerFor] and is forgotten after [forgetAfter], or
+    // sooner from Settings.
     final theirs = _devices.values.where((d) => d.sender == sender).toList()
       ..sort((a, b) => a.seen.compareTo(b.seen));
-    for (final d in theirs.take(max(0, theirs.length - maxPerSender + 1))) {
-      replaced.add(d.kid);
-    }
+    final replaced = [
+      for (final d in theirs.take(max(0, theirs.length - maxPerSender + 1)))
+        d.kid,
+    ];
     for (final old in replaced) {
       _devices.remove(old);
       _waiting.remove(old);

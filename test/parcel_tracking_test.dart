@@ -282,6 +282,36 @@ void main() {
       ]);
     });
 
+    test('a parcel never heard of is cleared away after two weeks', () {
+      s.settingsOverride = const ParcelSettings();
+      s.add(ParcelRef.find('QG123456785GB')!);
+      // Said to be coming later than that: kept until then.
+      s.add(
+        ParcelRef.find('1Z999AA10123456784')!,
+        due: (from: now.add(const Duration(days: 20)), to: null),
+      );
+      now = now.add(
+        ParcelsService.forgetUnheardAfter + const Duration(days: 1),
+      );
+      s.add(ParcelRef.find('H01HYA0012345678')!);
+      expect(
+        s.parcels.map((p) => p.number),
+        unorderedEquals(['1Z999AA10123456784', 'H01HYA0012345678']),
+      );
+    });
+
+    test('a parcel that has been tracked is not', () async {
+      tracker.stage = ParcelStage.transit;
+      final p = s.add(ParcelRef.find('QG123456785GB')!);
+      await pumpEventQueue();
+      expect(p.events, isNotEmpty);
+      now = now.add(
+        ParcelsService.forgetUnheardAfter + const Duration(days: 1),
+      );
+      s.add(ParcelRef.find('H01HYA0012345678')!);
+      expect(s.parcels, hasLength(2));
+    });
+
     test('a refused key stops the round, and says so', () async {
       tracker.error = const TrackingError('nope', keyRefused: true);
       s.add(ParcelRef.find('QG123456785GB')!);
