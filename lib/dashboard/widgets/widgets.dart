@@ -33,6 +33,7 @@ import 'notes_widget.dart';
 import 'servers_widget.dart';
 import 'services_widget.dart';
 import 'seven_fm_widget.dart';
+import 'parcels_widget.dart';
 import 'shopping_widget.dart';
 import 'speedtest_widget.dart';
 import 'sun_moon_widget.dart';
@@ -93,6 +94,7 @@ void registerBuiltInWidgets() {
     servicesWidgetType,
     countdownsWidgetType,
     shoppingWidgetType,
+    parcelsWidgetType,
     carbonWidgetType,
     trainsWidgetType,
     tflLinesWidgetType,

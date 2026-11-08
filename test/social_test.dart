@@ -737,6 +737,11 @@ void main() {
       });
       expect(find.text('Home · @me@mastodon.social'), findsOneWidget);
       expect(find.text('Boosted by Alice'), findsWidgets);
+      // The fourth post: below the first three, at the size they are read.
+      await tester.scrollUntilVisible(
+        find.text('Content warning: Spoilers'),
+        200,
+      );
       expect(find.text('Content warning: Spoilers'), findsOneWidget);
       await tester.pumpWidget(const SizedBox());
     });

@@ -68,6 +68,10 @@ class KioskBrowser {
     return _cached;
   }
 
+  /// Run before any page opens in a window of its own. Set by `SideBrowser`
+  /// while it has a page up.
+  static Future<void> Function()? beforeOpen;
+
   @visibleForTesting
   static void resetForTest({String? browser, bool looked = false}) {
     _cached = browser;
@@ -109,6 +113,9 @@ class KioskBrowser {
       debugPrint('KioskBrowser: not a web address, not opening: $url');
       return null;
     }
+    // A page shown inside a tile stays above the kiosk, and so would be
+    // above this one too: it makes way.
+    await beforeOpen?.call();
     final browser = await resolve();
     if (browser == null) {
       debugPrint('KioskBrowser: no browser installed, cannot open $url');
@@ -134,7 +141,7 @@ class KioskBrowser {
     try {
       if (browser == 'firefox') {
         if (dir != null) {
-          await _writeProfile(
+          await writeProfile(
             dir,
             window: window,
             screen: screen,
@@ -175,7 +182,6 @@ class KioskBrowser {
   }
 
   /// Whether [url] is an http or https address with a host.
-  @visibleForTesting
   static bool isWebAddress(String url) {
     final uri = Uri.tryParse(url.trim());
     return uri != null &&
@@ -230,10 +236,13 @@ class KioskBrowser {
 
   /// Writes the profile's preferences, chrome stylesheet and window geometry.
   ///
+  /// Public for `SideBrowser`, whose page in a tile is the same kind of
+  /// window with a few preferences of its own in [extraPrefs].
+  ///
   /// `user.js` rather than `prefs.js` because Firefox re-applies it on every
   /// start: a preference added in a later version of this app then takes
   /// effect on an existing profile, instead of only on a fresh one.
-  static Future<void> _writeProfile(
+  static Future<void> writeProfile(
     String dir, {
     Size? window,
     Size? screen,
@@ -394,6 +403,16 @@ user_pref("apz.allow_double_tap_zooming", true);
 user_pref("browser.uidensity", 2);
 user_pref("general.smoothScroll", true);
 
+// --- Dark ------------------------------------------------------------------
+// Every site with a dark look of its own is asked for it — the same as a
+// phone or computer set to dark mode — rather than a white page lighting
+// the room from a dark panel. content-override 0 is "dark" whatever the
+// system says; the rest keep Firefox's own pages and toolbars in step.
+user_pref("layout.css.prefers-color-scheme.content-override", 0);
+user_pref("ui.systemUsesDarkTheme", 1);
+user_pref("browser.theme.content-theme", 0);
+user_pref("browser.theme.toolbar-theme", 0);
+
 // --- Tracking protection --------------------------------------------------
 user_pref("browser.contentblocking.category", "strict");
 user_pref("privacy.trackingprotection.enabled", true);
@@ -424,6 +443,10 @@ user_pref("browser.startup.homepage_override.mstone", "ignore");
 user_pref("datareporting.policy.dataSubmissionEnabled", false);
 user_pref("datareporting.policy.firstRunURL", "");
 user_pref("browser.sessionstore.resume_from_crash", false);
+// "Open previous tabs?" — a bar across the top of the page after any start
+// that could have restored the last one. There is nothing to restore here.
+// A counter Firefox stops advancing below zero, which keeps the bar away.
+user_pref("browser.startup.couldRestoreSession.count", -1);
 user_pref("browser.tabs.warnOnClose", false);
 user_pref("extensions.pocket.enabled", false);
 user_pref("browser.translations.automaticallyPopup", false);
@@ -459,6 +482,8 @@ user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
 #TabsToolbar { visibility: collapse !important; }
 #nav-bar { visibility: collapse !important; }
 #sidebar-box, #sidebar-splitter { display: none !important; }
+/* Otherwise a one-pixel line across the top, under the hidden toolbars. */
+#navigator-toolbox { border: 0 !important; }
 /* The findbar is still reachable by keyboard and is worth keeping usable. */
 #browser { border: 0 !important; }
 ''';

@@ -16,6 +16,7 @@ import '../services/config_service.dart';
 import '../services/dashboard_service.dart';
 import '../services/homey_service.dart';
 import '../services/indoor_sensor_service.dart';
+import '../services/link_outbox.dart';
 import '../services/locked_folder_service.dart';
 import '../services/media_cache.dart';
 import '../services/now_playing_service.dart';
@@ -1971,6 +1972,8 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
                   ),
                 ],
               ),
+              if (widget.shareInbox.outbox case final outbox?)
+                _OutboxDevices(outbox: outbox),
             ],
           ),
         ),
@@ -1985,6 +1988,95 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
           child: Text(tr('settings.save', 'Save')),
         ),
       ],
+    );
+  }
+}
+
+/// The phones and computers that collect links sent from the panel, each
+/// with its key id to compare with the one the app or receiver shows.
+class _OutboxDevices extends StatelessWidget {
+  const _OutboxDevices({required this.outbox});
+
+  final LinkOutbox outbox;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: outbox,
+      builder: (context, _) {
+        final devices = outbox.devices;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 18),
+            Text(
+              tr('settings.receivingLinks', 'Receiving links'),
+              style: TextStyle(
+                color: context.look.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              tr(
+                'settings.receivingLinksHelp',
+                'Phones and computers a link can be sent to with “Send to…”. '
+                    'One appears here once it has asked for links with a '
+                    'sender’s token.',
+              ),
+              style: TextStyle(color: context.look.textSecondary, fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            if (devices.isEmpty)
+              Text(
+                tr('settings.noDevicesYet', 'None yet'),
+                style: TextStyle(color: context.look.textSecondary),
+              ),
+            for (final d in devices)
+              Row(
+                children: [
+                  Icon(
+                    d.kind == 'computer'
+                        ? Icons.computer_rounded
+                        : Icons.phone_android_rounded,
+                    size: 20,
+                    color: context.look.textSecondary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 3,
+                    child: Text(
+                      '${d.name} · ${d.sender}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: context.look.textPrimary),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      d.kid,
+                      style: TextStyle(
+                        color: context.look.textSecondary,
+                        fontFamily: 'monospace',
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.delete,
+                      size: 20,
+                      color: Color(0xFFFF8A8A),
+                    ),
+                    tooltip: tr('settings.forget', 'Forget'),
+                    onPressed: () => outbox.forget(d.kid),
+                  ),
+                ],
+              ),
+          ],
+        );
+      },
     );
   }
 }

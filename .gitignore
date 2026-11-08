@@ -62,3 +62,11 @@ assets/certs/*.key
 # scripts/widget-build.sh. The registry is kept, empty.
 lib/dashboard/widgets/custom/*.dart
 !lib/dashboard/widgets/custom/custom_registry.dart
+
+# Launch-video renders (large mp4s and a Chrome profile)
+brag-output*/
+
+# Separate git repo (not a submodule)
+ttblog/
+
+__pycache__/

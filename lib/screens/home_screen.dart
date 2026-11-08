@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../look.dart';
 import 'package:provider/provider.dart';
 
+import '../dashboard/widgets/day_brief_sheet.dart';
 import '../models/immich_models.dart';
 import '../services/immich_service.dart';
 import '../services/config_service.dart';
@@ -203,6 +204,7 @@ class _HomeScreenState extends State<HomeScreen> {
         detail: albums.isEmpty
             ? null
             : '${albumCount(albums.length)} · ${itemCount(photos)}',
+        onTap: () => showDayBrief(context),
       ),
       trailing: ModuleBar(
         current: KioskModule.photos,

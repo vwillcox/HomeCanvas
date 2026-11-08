@@ -226,6 +226,24 @@ void main() {
       expect(heard<VoiceGo>('show the forecast').place, VoicePlace.forecast);
     });
 
+    test('the day, however it is asked for', () {
+      for (final said in [
+        "what's my day",
+        'Hey Canvas, what is my day looking like?',
+        "how's my day looking",
+        "what's on today",
+        'what is happening today',
+        "what's the plan for today",
+        'brief me',
+        'give me the morning briefing',
+        'hey canvas good morning',
+        'show me my day',
+        'today',
+      ]) {
+        expect(heard<VoiceGo>(said).place, VoicePlace.today, reason: said);
+      }
+    });
+
     test('the TV remote is the remote itself, not the page its tile is on', () {
       for (final said in [
         'open the remote',

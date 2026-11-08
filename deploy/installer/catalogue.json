@@ -375,6 +375,14 @@
       "height": 8
     },
     {
+      "type": "parcels",
+      "name": "Parcels",
+      "description": "Parcels on their way: share a tracking link or number to the panel from the phone app — a Royal Mail, DPD, Evri or Yodel email, a courier’s page — and it goes on this list. With a tracking service set below, each is looked up every half an hour and pops up when it is out for delivery or has come. Tap one for its story and its carrier’s page.",
+      "category": "Around the house",
+      "width": 4,
+      "height": 4
+    },
+    {
       "type": "planes",
       "name": "Planes overhead",
       "description": "The aircraft in the sky around home: who they are, where they’re flying from and to, how high, and which way to look. From adsb.lol, the open network of volunteer ADS-B receivers, and adsbdb — no key needed.",

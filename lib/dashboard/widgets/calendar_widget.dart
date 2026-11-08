@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../services/feed_service.dart';
+import '../dashboard_model.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import '../../time_format.dart';
@@ -32,34 +33,43 @@ class DashboardCalendarWidget extends StatelessWidget {
 
   final DashboardWidgetContext w;
 
-  static Color _colour(Object? v, Color fallback) {
-    if (v is! String || v.isEmpty) return fallback;
+  static Color? _colour(Object? v) {
+    if (v is! String || v.isEmpty) return null;
     var s = v.trim().replaceFirst('#', '');
     if (s.length == 6) s = 'ff$s';
     final n = int.tryParse(s, radix: 16);
-    return n == null ? fallback : Color(n);
+    return n == null ? null : Color(n);
   }
 
-  /// The configured feeds.
+  /// The feeds a calendar tile [w] reads, each with its colour if it was
+  /// given one.
   ///
   /// Falls back to the single `url` this widget originally took, so a
   /// dashboard built before it accepted several keeps working untouched.
-  List<_Source> _sources(Color fallback) {
-    final rows = w.rows('sources');
+  static List<({String url, Color? colour, String name})> feedsOf(
+    DashboardWidgetConfig w,
+  ) {
+    final rows = (w.options['sources'] as List?)?.whereType<Map>() ?? [];
     if (rows.isNotEmpty) {
       return [
         for (final r in rows)
           if ('${r['url'] ?? ''}'.isNotEmpty)
-            _Source(
-              '${r['url']}',
-              _colour(r['colour'], fallback),
-              '${r['name'] ?? ''}',
+            (
+              url: '${r['url']}',
+              colour: _colour(r['colour']),
+              name: '${r['name'] ?? ''}',
             ),
       ];
     }
-    final legacy = w.option('url', '');
-    return legacy.isEmpty ? const [] : [_Source(legacy, fallback, '')];
+    final legacy = '${w.options['url'] ?? ''}';
+    return legacy.isEmpty ? const [] : [(url: legacy, colour: null, name: '')];
   }
+
+  /// The configured feeds.
+  List<_Source> _sources(Color fallback) => [
+    for (final f in feedsOf(w.config))
+      _Source(f.url, f.colour ?? fallback, f.name),
+  ];
 
   @override
   Widget build(BuildContext context) {

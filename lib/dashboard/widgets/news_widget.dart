@@ -9,14 +9,15 @@ import '../../services/article_reader.dart';
 import '../../services/elevenlabs_tts.dart';
 import '../../services/kiosk_browser.dart' show ReaderStyle;
 import '../../services/feed_service.dart';
+import '../../services/news_mix.dart';
 import '../../services/video_link.dart';
 import '../../services/video_player_service.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
 import '../../l10n/l10n.dart';
 import '../../widgets/lcars.dart';
+import '../../widgets/send_to_device.dart';
 import 'tile_bits.dart';
-import '../../map_text.dart';
 
 /// Headlines from an RSS or Atom feed.
 class DashboardNewsWidget extends StatelessWidget {
@@ -39,8 +40,8 @@ class DashboardNewsWidget extends StatelessWidget {
     final t = w.theme;
     // Absent in the editor's off-screen previews, which read nothing out.
     final reader = context.watch<ArticleReader?>();
-    final urls = feedUrls(w);
-    if (urls.isEmpty) {
+    final sources = sourcesIn(w.config.options);
+    if (sources.isEmpty) {
       return Center(
         child: Text(
           tr(
@@ -56,79 +57,121 @@ class DashboardNewsWidget extends StatelessWidget {
     final feeds = context.watch<FeedService>();
     final maxAge = Duration(minutes: refreshMinutes(w));
     // Filtered before mixing and counting, so a tile of seven stays a tile of
-    // seven headlines rather than three headlines and four gaps.
+    // seven headlines rather than three headlines and four gaps — and a
+    // county paper narrowed to one town is just that town's news.
     final hidePromos = w.option('hidePromotions', true);
     final lists = [
-      for (final u in urls)
+      for (final s in sources)
         [
-          for (final item in feeds.feed(u, maxAge: maxAge))
-            if (!hidePromos || !isPromotional(item)) item,
+          for (final item in feeds.feed(s.url, maxAge: maxAge))
+            if ((!hidePromos || !isPromotional(item)) && s.keeps(item)) item,
         ],
     ];
-    final names = {
-      for (final r in w.rows('sources')) r.text('url'): r.text('name'),
-    };
+    final names = {for (final s in sources) s.url: s.name};
 
-    // One feed to a tab, each keeping the publisher's own order. The tab
-    // says where a headline is from, so the headlines needn't.
-    if (w.option('layout', 'blended') == 'tabs' && urls.length > 1) {
-      String site(int i) => lists[i].firstOrNull?.link ?? urls[i];
+    // Which feed each headline came from, for its icon and for "also in".
+    // Items are the cached instances themselves, so identity is enough to
+    // find them again.
+    final from = Map<FeedItem, String>.identity();
+    for (var i = 0; i < sources.length; i++) {
+      for (final item in lists[i]) {
+        from.putIfAbsent(item, () => sources[i].url);
+      }
+    }
+
+    // The headlines of the feeds at [these] as one list. Everything they
+    // carry: the tile shows what fits and scrolls for the rest. One feed
+    // keeps the order its publisher chose; several are blended, and a story
+    // more than one of them is telling is told once.
+    List<NewsStory> storiesOf(List<int> these) {
+      if (these.length == 1) {
+        return [for (final item in lists[these.single]) NewsStory(item)];
+      }
+      final mixed = FeedService.mix([
+        for (final i in these) lists[i],
+      ], max: these.fold(0, (n, i) => n + lists[i].length));
+      return sameStories(mixed, sourceOf: (item) => from[item]);
+    }
+
+    String? errorOf(List<int> these) => these
+        .map((i) => feeds.errorFor(sources[i].url))
+        .whereType<String>()
+        .firstOrNull;
+
+    // A tab for each topic, its feeds blended, and for each feed filed
+    // under none. A feed's own tab says where its headlines are from, so
+    // they needn't; a topic's mixes several, so they do.
+    final tabs = newsTabs(sources);
+    if (w.option('layout', 'blended') == 'tabs' && tabs.length > 1) {
+      final at = Map<NewsSource, int>.identity();
+      for (var i = 0; i < sources.length; i++) {
+        at[sources[i]] = i;
+      }
+      List<int> these(int tab) => [for (final s in tabs[tab].sources) at[s]!];
       return _FeedTabs(
-        count: urls.length,
+        count: tabs.length,
         page: (i) => _headlines(
           context,
           feeds,
           reader,
-          key: ValueKey(urls[i]),
-          items: lists[i],
-          error: feeds.errorFor(urls[i]),
-          refresh: [urls[i]],
+          key: ValueKey('${tabs[i].name}·${these(i).first}'),
+          stories: storiesOf(these(i)),
+          error: errorOf(these(i)),
+          refresh: [for (final j in these(i)) sources[j].url],
+          from: from,
+          names: names,
+          showSource: these(i).length > 1 && w.option('showSource', true),
         ),
-        tab: (i, selected) => _tab(
-          icon: feeds.siteIcon(site(i)),
-          name: names[urls[i]] ?? '',
-          link: site(i),
-          selected: selected,
-        ),
+        tab: (i, selected) {
+          final tab = tabs[i];
+          // A topic is several sites, so it is named rather than pictured.
+          if (tab.isTopic) {
+            return _tab(
+              icon: null,
+              name: tab.name,
+              link: tab.topic,
+              selected: selected,
+              topic: true,
+            );
+          }
+          final j = at[tab.sources.first]!;
+          final site = lists[j].firstOrNull?.link ?? sources[j].url;
+          return _tab(
+            icon: feeds.siteIcon(site),
+            name: tab.name,
+            link: site,
+            selected: selected,
+          );
+        },
       );
     }
 
-    // Which feed each headline came from, for its icon. Items are the cached
-    // instances themselves, so identity is enough to find them again.
-    final sourceOf = Map<FeedItem, String>.identity();
-    for (var i = 0; i < urls.length; i++) {
-      for (final item in lists[i]) {
-        sourceOf.putIfAbsent(item, () => urls[i]);
-      }
-    }
-
-    // Everything the feeds carry: the tile shows what fits and scrolls for
-    // the rest. One feed needs no blending, and going through the mixer would
-    // only reorder it away from the order the publisher chose.
+    final all = [for (var i = 0; i < sources.length; i++) i];
     return _headlines(
       context,
       feeds,
       reader,
-      items: lists.length == 1
-          ? lists.first
-          : FeedService.mix(lists, max: lists.fold(0, (n, l) => n + l.length)),
-      error: urls.map(feeds.errorFor).whereType<String>().firstOrNull,
-      refresh: urls,
-      sourceOf: w.option('showSource', true) ? sourceOf : null,
+      stories: storiesOf(all),
+      error: errorOf(all),
+      refresh: [for (final s in sources) s.url],
+      from: from,
       names: names,
+      showSource: w.option('showSource', true),
     );
   }
 
-  /// A tab along the bottom: the feed's icon and name.
+  /// A tab along the bottom: the feed's icon and name — or, for a [topic],
+  /// just its name.
   Widget _tab({
     required String? icon,
     required String name,
     required String link,
     required bool selected,
+    bool topic = false,
   }) {
     final t = w.theme;
     final host = (Uri.tryParse(link)?.host ?? '').replaceFirst('www.', '');
-    final label = w.option('tabLabel', 'both');
+    final label = topic ? 'name' : w.option('tabLabel', 'both');
     if (t.isLcars) {
       // A console's tab is a block, in the feed's own colour, a black line
       // from the next, and near-white for the one showing.
@@ -211,21 +254,24 @@ class DashboardNewsWidget extends StatelessWidget {
     );
   }
 
-  /// [items] as a scrolling list that, pulled down from the top, fetches
-  /// [refresh] again. With [sourceOf], each headline carries its feed's icon.
+  /// [stories] as a scrolling list that, pulled down from the top, fetches
+  /// [refresh] again. [from] is the feed each headline came from; with
+  /// [showSource], each carries that feed's icon.
   Widget _headlines(
     BuildContext context,
     FeedService feeds,
     ArticleReader? reader, {
     Key? key,
-    required List<FeedItem> items,
+    required List<NewsStory> stories,
     required String? error,
     required List<String> refresh,
-    Map<FeedItem, String>? sourceOf,
+    required Map<FeedItem, String> from,
     Map<String, String> names = const {},
+    bool showSource = false,
   }) {
     final t = w.theme;
-    if (items.isEmpty) {
+    final sourceOf = showSource ? from : null;
+    if (stories.isEmpty) {
       return Center(
         key: key,
         child: Text(
@@ -237,7 +283,7 @@ class DashboardNewsWidget extends StatelessWidget {
 
     final showSummary = w.option('showSummary', false);
     final showTime = w.option('showTime', true);
-    final shown = items;
+    final shown = stories;
 
     // Always scrollable, so the pull works even when every headline fits.
     return RefreshIndicator(
@@ -253,7 +299,13 @@ class DashboardNewsWidget extends StatelessWidget {
           color: t.textSecondary.withValues(alpha: 0.15),
         ),
         itemBuilder: (context, i) {
-          final item = shown[i];
+          final story = shown[i];
+          final item = story.item;
+          // Who else is telling it: "also BBC News, The Guardian".
+          final also = [
+            for (final a in story.also)
+              (name: _nameOf(from[a], a, names), item: a),
+          ];
           final tappable =
               w.option('openOnTap', true) &&
               (item.link != null || item.summary != null);
@@ -265,7 +317,7 @@ class DashboardNewsWidget extends StatelessWidget {
               reader.link == item.link;
           return GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: tappable ? () => _open(context, item) : null,
+            onTap: tappable ? () => _open(context, item, also: also) : null,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -324,11 +376,20 @@ class DashboardNewsWidget extends StatelessWidget {
                       ),
                     ),
                   ),
-                if (showTime && item.published != null)
+                if ((showTime && item.published != null) || also.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 2),
                     child: Text(
-                      ago(item.published!),
+                      [
+                        if (showTime && item.published != null)
+                          ago(item.published!),
+                        if (also.isNotEmpty)
+                          tr('widget.news.alsoIn', 'also {names}', {
+                            'names': [for (final a in also) a.name].join(', '),
+                          }),
+                      ].join(' · '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: t.textSecondary.withValues(alpha: 0.8),
                         fontSize: 12,
@@ -348,12 +409,21 @@ class DashboardNewsWidget extends StatelessWidget {
   /// Most feeds carry a paragraph of summary, which on a wall panel is often
   /// all anyone wants — so that comes first and costs nothing, with the full
   /// article a deliberate second tap rather than the only option.
-  void _open(BuildContext context, FeedItem item) {
+  ///
+  /// [also] is the same story from other feeds, each a tap from its own
+  /// telling of it.
+  void _open(
+    BuildContext context,
+    FeedItem item, {
+    List<({String name, FeedItem item})> also = const [],
+  }) {
     final reader = context.read<ArticleReader?>();
     final summary = item.summary ?? '';
     // Straight to the page only when there is nothing else to offer — no
-    // summary to show, and no voice to read it out.
-    if (summary.isEmpty && (reader == null || !w.option('readAloud', true))) {
+    // summary to show, no voice to read it out, and no one else telling it.
+    if (summary.isEmpty &&
+        also.isEmpty &&
+        (reader == null || !w.option('readAloud', true))) {
       if (item.link != null) _openPage(context, item);
       return;
     }
@@ -364,14 +434,65 @@ class DashboardNewsWidget extends StatelessWidget {
         content: SizedBox(
           width: 720,
           child: SingleChildScrollView(
-            child: Text(
-              summary.isEmpty
-                  ? tr(
-                      'widget.news.theFeedGivesNoSummary',
-                      'The feed gives no summary of this one.',
-                    )
-                  : summary,
-              style: const TextStyle(fontSize: 18, height: 1.4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  summary.isEmpty
+                      ? tr(
+                          'widget.news.theFeedGivesNoSummary',
+                          'The feed gives no summary of this one.',
+                        )
+                      : summary,
+                  style: const TextStyle(fontSize: 18, height: 1.4),
+                ),
+                if (also.isNotEmpty) ...[
+                  const SizedBox(height: 22),
+                  Text(
+                    tr('widget.news.alsoReportedBy', 'Also reported by'),
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Each outlet's own headline, a touch from its page.
+                  for (final a in also)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: OutlinedButton(
+                        onPressed: a.item.link == null
+                            ? null
+                            : () {
+                                Navigator.of(ctx).pop();
+                                _openPage(context, a.item);
+                              },
+                        style: OutlinedButton.styleFrom(
+                          alignment: Alignment.centerLeft,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 18,
+                            vertical: 14,
+                          ),
+                        ),
+                        child: Text.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(
+                                text: '${a.name}  ',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              TextSpan(text: a.item.title),
+                            ],
+                          ),
+                          style: const TextStyle(fontSize: 16, height: 1.3),
+                        ),
+                      ),
+                    ),
+                ],
+              ],
             ),
           ),
         ),
@@ -405,6 +526,8 @@ class DashboardNewsWidget extends StatelessWidget {
                 ),
               ),
             ),
+          if (item.link != null)
+            SendToDeviceButton(url: item.link!, title: item.title),
           if (item.link != null)
             FilledButton.icon(
               onPressed: () {
@@ -502,15 +625,28 @@ class DashboardNewsWidget extends StatelessWidget {
   /// Every configured feed, falling back to the single `url` this widget
   /// originally took so a dashboard built before it accepted several keeps
   /// working untouched.
-  static List<String> feedUrls(DashboardWidgetContext w) {
-    final rows = w.rows('sources');
-    final urls = [
-      for (final r in rows)
-        if (r.text('url').isNotEmpty) '${r['url']}'.trim(),
-    ];
-    if (urls.isNotEmpty) return urls;
-    final legacy = w.option('url', '').trim();
-    return legacy.isEmpty ? const [] : [legacy];
+  static List<String> feedUrls(DashboardWidgetContext w) => [
+    for (final s in sourcesIn(w.config.options)) s.url,
+  ];
+
+  /// The feeds [options] list, with their topics and places.
+  static List<NewsSource> sourcesIn(Map<String, dynamic> options) {
+    final sources = [
+      for (final r in (options['sources'] as List?) ?? const [])
+        if (r is Map) NewsSource.fromRow(r),
+    ].where((s) => s.url.isNotEmpty).toList();
+    if (sources.isNotEmpty) return sources;
+    final legacy = '${options['url'] ?? ''}'.trim();
+    return legacy.isEmpty ? const [] : [NewsSource(url: legacy)];
+  }
+
+  /// What to call the feed at [url] that [item] came from: the name it was
+  /// given, or else its site — "theguardian.com".
+  static String _nameOf(String? url, FeedItem item, Map<String, String> names) {
+    final given = names[url] ?? '';
+    if (given.isNotEmpty) return given;
+    final host = Uri.tryParse(item.link ?? url ?? '')?.host ?? '';
+    return host.replaceFirst(RegExp(r'^(www|feeds)\.'), '');
   }
 
   static int refreshMinutes(DashboardWidgetContext w) =>
@@ -637,6 +773,15 @@ class _SourceIcon extends StatelessWidget {
   }
 }
 
+/// Colchester and the places round it, for narrowing Essex-wide feeds to
+/// the town's own news.
+const colchesterPlaces =
+    'Colchester, Wivenhoe, Tiptree, Mersea, Stanway, Lexden, Dedham, '
+    'Rowhedge, Marks Tey, Copford, West Bergholt, Boxted, Great Horkesley, '
+    'Highwoods, Greenstead, Prettygate, Myland, Berechurch, Old Heath, '
+    'Shrub End, Fingringhoe, Abberton, Layer de la Haye, Eight Ash Green, '
+    'Ardleigh, Elmstead, Jumbo water tower, University of Essex';
+
 final newsWidgetType = DashboardWidgetType(
   type: 'news',
   category: WidgetCategory.reference,
@@ -656,7 +801,9 @@ final newsWidgetType = DashboardWidgetType(
       help:
           'RSS or Atom. With more than one, headlines are blended: each is '
           'ranked on how recent it is and on how much that feed has already '
-          'contributed, so a busy wire service can’t bury a quieter source.',
+          'contributed, so a busy wire service can’t bury a quieter source. '
+          'A story several feeds are telling is shown once, with who else '
+          'has it. The ready-made sets add feeds for a topic in one go.',
       fields: [
         WidgetOption(key: 'name', label: 'Name', defaultValue: ''),
         WidgetOption(
@@ -665,7 +812,155 @@ final newsWidgetType = DashboardWidgetType(
           defaultValue: '',
           help: 'For example https://feeds.bbci.co.uk/news/rss.xml',
         ),
+        WidgetOption(
+          key: 'topic',
+          label: 'Topic',
+          defaultValue: '',
+          help:
+              'Optional. With tabs, feeds that share a topic share a tab — '
+              '“Tech”, “UK”, “Colchester” — blended into one list.',
+        ),
+        WidgetOption(
+          key: 'only',
+          label: 'Only headlines mentioning',
+          defaultValue: '',
+          help:
+              'Optional. Words or places, separated by commas — '
+              '“Colchester, Wivenhoe, Tiptree” — to narrow a county paper '
+              'to one town. Looked for in the headline, its summary and its '
+              'address.',
+        ),
       ],
+      presets: {
+        'tech': OptionPreset(
+          'Tech — The Register, Ars Technica, BBC Technology, The Verge, '
+          'Engadget',
+          [
+            {
+              'name': 'The Register',
+              'url': 'https://www.theregister.com/headlines.atom',
+              'topic': 'Tech',
+            },
+            {
+              'name': 'Ars Technica',
+              'url': 'https://feeds.arstechnica.com/arstechnica/index',
+              'topic': 'Tech',
+            },
+            {
+              'name': 'BBC Technology',
+              'url': 'https://feeds.bbci.co.uk/news/technology/rss.xml',
+              'topic': 'Tech',
+            },
+            {
+              'name': 'The Verge',
+              'url': 'https://www.theverge.com/rss/index.xml',
+              'topic': 'Tech',
+            },
+            {
+              'name': 'Engadget',
+              'url': 'https://www.engadget.com/rss.xml',
+              'topic': 'Tech',
+            },
+          ],
+        ),
+        'ai': OptionPreset(
+          'AI — MIT Technology Review, The Verge, Ars Technica, The '
+          'Guardian, The Decoder, Simon Willison',
+          [
+            {
+              'name': 'MIT Technology Review',
+              'url':
+                  'https://www.technologyreview.com/topic/'
+                  'artificial-intelligence/feed',
+              'topic': 'AI',
+            },
+            {
+              'name': 'The Verge AI',
+              'url':
+                  'https://www.theverge.com/rss/'
+                  'ai-artificial-intelligence/index.xml',
+              'topic': 'AI',
+            },
+            {
+              'name': 'Ars Technica AI',
+              'url': 'https://arstechnica.com/ai/feed/',
+              'topic': 'AI',
+            },
+            {
+              'name': 'The Guardian AI',
+              'url':
+                  'https://www.theguardian.com/technology/'
+                  'artificialintelligenceai/rss',
+              'topic': 'AI',
+            },
+            {
+              'name': 'The Decoder',
+              'url': 'https://the-decoder.com/feed/',
+              'topic': 'AI',
+            },
+            {
+              'name': 'Simon Willison',
+              'url': 'https://simonwillison.net/atom/everything/',
+              'topic': 'AI',
+            },
+          ],
+        ),
+        'uk': OptionPreset(
+          'UK — BBC News, The Guardian, Sky News, The Independent',
+          [
+            {
+              'name': 'BBC News UK',
+              'url': 'https://feeds.bbci.co.uk/news/uk/rss.xml',
+              'topic': 'UK',
+            },
+            {
+              'name': 'The Guardian UK',
+              'url': 'https://www.theguardian.com/uk-news/rss',
+              'topic': 'UK',
+            },
+            {
+              'name': 'Sky News UK',
+              'url': 'https://feeds.skynews.com/feeds/rss/uk.xml',
+              'topic': 'UK',
+            },
+            {
+              'name': 'The Independent UK',
+              'url': 'https://www.independent.co.uk/news/uk/rss',
+              'topic': 'UK',
+            },
+          ],
+        ),
+        'colchester': OptionPreset(
+          'Colchester — the Daily Gazette, Essex Live, BBC Essex, Gazette '
+          'sport',
+          [
+            {
+              'name': 'Daily Gazette',
+              'url': 'https://www.gazette-news.co.uk/news/rss/',
+              'topic': 'Colchester',
+              'only': colchesterPlaces,
+            },
+            {
+              'name': 'Essex Live',
+              'url':
+                  'https://www.essexlive.news/all-about/colchester?service=rss',
+              'topic': 'Colchester',
+            },
+            {
+              'name': 'BBC Essex',
+              'url': 'https://feeds.bbci.co.uk/news/england/essex/rss.xml',
+              'topic': 'Colchester',
+              'only': colchesterPlaces,
+            },
+            {
+              'name': 'Gazette sport',
+              'url': 'https://www.gazette-news.co.uk/sport/rss/',
+              'topic': 'Colchester',
+              'only': colchesterPlaces,
+            },
+          ],
+        ),
+      },
     ),
     WidgetOption(
       key: 'layout',
@@ -674,9 +969,11 @@ final newsWidgetType = DashboardWidgetType(
       defaultValue: 'blended',
       choices: {
         'blended': 'One list, all the feeds blended together',
-        'tabs': 'A tab for each feed, along the bottom',
+        'tabs': 'A tab for each topic or feed, along the bottom',
       },
-      help: 'Tabs need more than one feed; with just one, it is a plain list.',
+      help:
+          'Tabs need more than one feed; with just one, it is a plain list. '
+          'Feeds given the same topic share a tab.',
     ),
     WidgetOption(
       key: 'tabLabel',
@@ -891,30 +1188,41 @@ final newsWidgetType = DashboardWidgetType(
   ],
   live: (config, data) {
     if (data.feeds == null) return const [];
-    final urls = <String>[
-      for (final r in (config.options['sources'] as List?) ?? const [])
-        if (r is Map && r.text('url').isNotEmpty) '${r['url']}'.trim(),
-    ];
-    if (urls.isEmpty && config.options.text('url').isNotEmpty) {
-      urls.add('${config.options['url']}'.trim());
-    }
-    if (urls.isEmpty) return const [];
+    final sources = DashboardNewsWidget.sourcesIn(config.options);
+    if (sources.isEmpty) return const [];
 
     // Enough to fill the tile; the panel scrolls for the rest.
     const shown = 10;
     final hidePromos = config.options['hidePromotions'] != false;
+    // The first tab's feeds when there are tabs, or all of them.
+    final tabs = newsTabs(sources);
+    final these = config.options['layout'] == 'tabs' && tabs.length > 1
+        ? tabs.first.sources
+        : sources;
+    final from = Map<FeedItem, String>.identity();
     final lists = [
-      for (final u in urls)
+      for (final s in these)
         [
-          for (final item in data.feeds!.feed(u))
-            if (!hidePromos || !isPromotional(item)) item,
+          for (final item in data.feeds!.feed(s.url))
+            if ((!hidePromos || !isPromotional(item)) && s.keeps(item)) item,
         ],
     ];
+    for (var i = 0; i < these.length; i++) {
+      for (final item in lists[i]) {
+        from.putIfAbsent(item, () => these[i].url);
+      }
+    }
     // Blended exactly as the panel blends them, so the preview is not a
     // different selection of headlines from the one on the wall.
     final items = lists.length == 1
         ? lists.first.take(shown).toList()
-        : FeedService.mix(lists, max: shown);
+        : [
+            for (final s in sameStories(
+              FeedService.mix(lists, max: shown * 2),
+              sourceOf: (item) => from[item],
+            ).take(shown))
+              s.item,
+          ];
     if (items.isEmpty) return const [];
     return [
       for (final item in items) ...[

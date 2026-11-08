@@ -14,6 +14,7 @@ import '../dashboard/photo_backdrop.dart';
 import '../dashboard/schedule.dart';
 import '../dashboard/tile_spotlight.dart';
 import '../dashboard/dashboard_theme.dart';
+import '../dashboard/widgets/day_brief_sheet.dart';
 import '../dashboard/widgets/tv_inputs_sheet.dart';
 import '../dashboard/widgets/weather_forecast_sheet.dart';
 import '../dashboard/widget_registry.dart';
@@ -853,6 +854,7 @@ class _TopBar extends StatelessWidget {
         titleWidget: GreetingTitle(
           colour: theme.textPrimary,
           secondary: theme.textSecondary,
+          onTap: () => showDayBrief(context),
         ),
         padding: const EdgeInsets.fromLTRB(28, 14, 20, 4),
         // The home screen's own bar, rather than a back button: Photos takes

@@ -7,6 +7,7 @@ import '../../l10n/l10n.dart';
 import '../../screens/link_viewer_screen.dart';
 import '../../services/social.dart';
 import '../../widgets/pause_when_hidden.dart';
+import '../../widgets/send_to_device.dart';
 import '../../widgets/shown_timers.dart';
 import '../dashboard_theme.dart';
 import '../widget_registry.dart';
@@ -244,7 +245,7 @@ class _SocialTileState extends State<SocialTile>
         physics: const AlwaysScrollableScrollPhysics(),
         itemCount: count,
         separatorBuilder: (_, _) => Divider(
-          height: 18,
+          height: 24,
           thickness: 1,
           color: t.textSecondary.withValues(alpha: 0.15),
         ),
@@ -308,7 +309,7 @@ class _PostRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = w.theme;
-    final muted = TextStyle(color: t.textSecondary, fontSize: 12, height: 1.2);
+    final muted = TextStyle(color: t.textSecondary, fontSize: 17, height: 1.2);
     final pictures = _pictures(w, post);
     final boostedBy = post.boostedBy;
     return GestureDetector(
@@ -317,8 +318,8 @@ class _PostRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SocialAvatar(person: post.author, theme: t, size: 36),
-          const SizedBox(width: 10),
+          SocialAvatar(person: post.author, theme: t, size: 48),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -329,7 +330,7 @@ class _PostRow extends StatelessWidget {
                     padding: const EdgeInsets.only(bottom: 2),
                     child: Row(
                       children: [
-                        Icon(Icons.repeat, size: 13, color: t.textSecondary),
+                        Icon(Icons.repeat, size: 18, color: t.textSecondary),
                         const SizedBox(width: 4),
                         Flexible(
                           child: Text(
@@ -354,35 +355,38 @@ class _PostRow extends StatelessWidget {
                   ),
                 Row(
                   children: [
-                    Flexible(
-                      child: Text(
-                        post.author.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: t.textPrimary,
-                          fontSize: 14,
-                          height: 1.2,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
+                    // One line, so the handle takes what the name leaves and
+                    // the time stays at the end.
                     Expanded(
-                      child: Text(
-                        '@${post.author.handle}',
+                      child: Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: post.author.name,
+                              style: TextStyle(
+                                color: t.textPrimary,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            TextSpan(
+                              text: '  @${post.author.handle}',
+                              style: muted,
+                            ),
+                          ],
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: muted,
+                        style: const TextStyle(height: 1.2),
                       ),
                     ),
                     if (post.at != null) ...[
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 8),
                       Text(releasedAgo(post.at!, now), style: muted),
                     ],
                   ],
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 4),
                 if (post.warning != null)
                   Text(
                     tr('widget.social.warning', 'Content warning: {what}', {
@@ -392,7 +396,7 @@ class _PostRow extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: t.accent,
-                      fontSize: 14,
+                      fontSize: 20,
                       height: 1.3,
                       fontStyle: FontStyle.italic,
                     ),
@@ -404,13 +408,13 @@ class _PostRow extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: t.textPrimary,
-                      fontSize: 15,
+                      fontSize: 21,
                       height: 1.3,
                     ),
                   ),
                 if (pictures.isNotEmpty)
                   Padding(
-                    padding: const EdgeInsets.only(top: 6),
+                    padding: const EdgeInsets.only(top: 8),
                     child: _PictureStrip(images: pictures, theme: t),
                   )
                 else if (post.sensitive &&
@@ -434,7 +438,7 @@ class _PostRow extends StatelessWidget {
                     padding: const EdgeInsets.only(top: 4),
                     child: Row(
                       children: [
-                        Icon(Icons.link, size: 14, color: t.textSecondary),
+                        Icon(Icons.link, size: 19, color: t.textSecondary),
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
@@ -449,7 +453,7 @@ class _PostRow extends StatelessWidget {
                   ),
                 if (w.option('showCounts', true))
                   Padding(
-                    padding: const EdgeInsets.only(top: 5),
+                    padding: const EdgeInsets.only(top: 7),
                     child: Row(
                       children: [
                         _count(Icons.chat_bubble_outline_rounded, post.replies),
@@ -469,17 +473,17 @@ class _PostRow extends StatelessWidget {
   Widget _count(IconData icon, int n) {
     final t = w.theme;
     return Padding(
-      padding: const EdgeInsets.only(right: 16),
+      padding: const EdgeInsets.only(right: 22),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: t.textSecondary),
-          const SizedBox(width: 4),
+          Icon(icon, size: 19, color: t.textSecondary),
+          const SizedBox(width: 5),
           Text(
             '$n',
             style: TextStyle(
               color: t.textSecondary,
-              fontSize: 12,
+              fontSize: 17,
               fontFeatures: const [FontFeature.tabularFigures()],
             ),
           ),
@@ -527,8 +531,8 @@ class _NoticeRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SocialAvatar(person: notice.who, theme: t, size: 30),
-          const SizedBox(width: 10),
+          SocialAvatar(person: notice.who, theme: t, size: 40),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -539,9 +543,9 @@ class _NoticeRow extends StatelessWidget {
                   children: [
                     Padding(
                       padding: const EdgeInsets.only(top: 1),
-                      child: Icon(_icon, size: 15, color: t.accent),
+                      child: Icon(_icon, size: 21, color: t.accent),
                     ),
-                    const SizedBox(width: 5),
+                    const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         noticeLine(notice, network),
@@ -549,24 +553,24 @@ class _NoticeRow extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: t.textPrimary,
-                          fontSize: 14,
+                          fontSize: 20,
                           height: 1.25,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
                     if (notice.at != null) ...[
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 8),
                       Text(
                         releasedAgo(notice.at!, now),
-                        style: TextStyle(color: t.textSecondary, fontSize: 12),
+                        style: TextStyle(color: t.textSecondary, fontSize: 17),
                       ),
                     ],
                   ],
                 ),
                 if (post != null && post.text.isNotEmpty)
                   Padding(
-                    padding: const EdgeInsets.only(top: 3),
+                    padding: const EdgeInsets.only(top: 4),
                     child: Text(
                       post.text,
                       // What someone said to you in full, as far as the
@@ -575,7 +579,7 @@ class _NoticeRow extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: notice.direct ? t.textPrimary : t.textSecondary,
-                        fontSize: 14,
+                        fontSize: 20,
                         height: 1.3,
                       ),
                     ),
@@ -767,6 +771,16 @@ void showSocialPost(
       ),
       actionsPadding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       actions: [
+        if (url != null)
+          SendToDeviceButton(
+            url: url,
+            title: post.text.isEmpty
+                ? post.author.name
+                : '${post.author.name}: ${post.text}',
+            from: w.config.type == 'bluesky'
+                ? SocialNetwork.bluesky.title
+                : SocialNetwork.mastodon.title,
+          ),
         if (url != null)
           FilledButton.icon(
             onPressed: () {

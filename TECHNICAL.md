@@ -27,9 +27,9 @@ borderless under the **labwc** Wayland compositor on Raspberry Pi OS. State is
 held in `ChangeNotifier` services handed down with `provider`; each screen and
 widget watches the ones it needs. Configuration is one JSON file,
 `~/.config/homecanvas/config.json`, read and written by `ConfigService`;
-things the household adds — notes, the shopping list, chores done — are kept in
-small files beside it (`notes.json`, `shopping.json`, `chores.json`), written
-atomically through a temporary file.
+things the household adds — notes, the shopping list, chores done, parcels on
+their way — are kept in small files beside it (`notes.json`, `shopping.json`,
+`chores.json`, `parcels.json`), written atomically through a temporary file.
 
 Around the app, a few small pieces on the Pi:
 
@@ -691,6 +691,45 @@ Checked against the live feeds before it shipped: all 25 WIRED coupon posts
 hidden, and nothing from the BBC or The Verge. **Hide promo codes, coupons and
 sponsored posts** in the widget's settings turns it off.
 
+### Topics, a town's own news, and a story told once
+
+Each feed on the News tile can be given a **Topic**. With the tile set to tabs,
+feeds that share one share a tab, blended into one list as the tile already
+blends feeds, so "Tech", "AI", "UK" and "Colchester" can each be six papers
+deep. A feed with no topic keeps a tab of its own, so a tile set up before
+topics existed is unchanged. Topics are matched without regard to case
+(`lib/services/news_mix.dart`, `newsTabs`).
+
+**Only headlines mentioning** narrows a feed to some words or places. It exists
+because a town's paper is mostly not about the town: of the Daily Gazette's 50
+items one afternoon, 15 were about Colchester and the rest were the group's
+county wire (the M25, Harlow, Stansted). The words are looked for as whole
+words in the headline, its summary and its address, since a local story is
+often "Man jailed after break-in" with the village only in the page's name
+(`…/26685825.tiptree-man-…`). `colchesterPlaces` lists the town and the
+places round it.
+
+**The same story from several feeds is told once**, under the best-ranked
+telling, with "also The Guardian UK, BBC News UK" on its time line. Touching it
+lists the other outlets' headlines, each a touch from its page (`sameStories`).
+Headlines are compared on their words without the little ones, each weighted
+by how rare it is among the headlines being blended: "Essex" in a county's
+news or "AI" in AI news says nothing about which story it is, while "abattoir"
+says a lot. Two headlines are one story when they share at least three words
+making up half the weight of the shorter. Only across feeds: one outlet is
+never "also" itself, and a paper's two pieces on one crash stay two.
+
+The threshold was set against the live feeds on 3 November 2026. At 0.5, 21
+feeds in four topics merged 16 stories, every one a real match ("Virgin Media O2 to
+cut thousands of jobs" from Sky, the Guardian and the Independent). At 0.4 it
+also merged an Apple-in-China story with a different iOS release, and "new UK
+law changes" with an immigration piece.
+
+The editor offers **ready-made sets** beside "Add a feed", one for each topic,
+from feeds checked that day. `WidgetOption.presets` is generic: any list
+option can declare sets of rows, and the editor adds a set less any row it
+already has.
+
 ### The full forecast
 
 Tap the weather widget for the whole picture, over the dashboard:
@@ -712,6 +751,39 @@ forecast** in the widget's settings turns it off.
 
 The hourly data is one extra field on the request the widget already makes —
 `forecast_hours=25`, so "the next day" still reaches the same hour tomorrow.
+
+### Your day
+
+Touch the greeting at the top of the dashboard or the photos, or say "what's
+my day" (also "what's on today", "good morning", "brief me"), for the day on
+one screen (`showDayBrief`, `lib/dashboard/widgets/day_brief_sheet.dart`):
+
+- **The weather** — now, high and low, when rain is likely for the rest of
+  the day (from the first hour at 50% or more to the first below), sunset,
+  and the next eight hours.
+- **Today** — every timed thing in order with a line at *now*: what is over
+  dimmed, the next thing lit. All-day things come first.
+- **Tomorrow** — the same, with its forecast on the panel's bar.
+
+Nothing new is fetched for it. `gatherDayBrief` reads what the panel already
+holds: the calendar tiles' feeds (`DashboardCalendarWidget.feedsOf`, through
+`FeedService`'s cache), reminders, parcels with a day (and any out for
+delivery), running timers, each bins tile's next collection ("Bins out
+tonight" the day before), and the weather. `DayBrief.gather`
+(`lib/dashboard/day_brief.dart`) puts it in order and is pure, so a day can be
+tested at any moment.
+
+**Read it to me** says it in a few sentences — the greeting, the weather,
+what is still to come today, and tomorrow's first four — through the news
+reader's voice (`ArticleReader.say`): the music is paused while it reads and
+carries on after, and the reading bar shows it with pause and stop. Asked
+for by voice, it opens and reads at once. It closes after three minutes, or
+when the reading ends if that is later.
+
+On a console the sheet is there at once and its rows light in steps; on the
+other looks it fades in over a blurred panel. With the dashboard's top bar
+crowded — music playing and a dozen pages — a console's greeting says only
+"Morning" (`LcarsTextBar.short`) rather than "Good …".
 
 ### Switching TV inputs
 
@@ -792,6 +864,120 @@ the endpoints.
 
 Set `requireEncryption` in `config.json` to reject anything unsealed with a 412,
 once every phone is on a version that encrypts.
+
+### Links the other way
+
+**Send to…** on a post, a news story or an open page sends its link to a phone
+or a computer. The panel can't reach either, so they ask it: `GET /outbox` on
+the same port, with a sender's bearer token, held open for up to 50 seconds
+and answered the moment a link is sent. The companion app does this from a
+foreground service once "Receive links from the panel" is on; on a computer,
+`companion_pc/homecanvas-links` does it and opens each link in the browser.
+
+Each device makes its own X25519 key and sends the public half with every
+request (`X-Device-Key`, with `X-Device-Name` and `X-Device-Kind` for the
+picker). A link is sealed to that key as it is queued — a fresh key pair per
+link, HKDF-SHA256 with `homecanvas/link/v1` in the info, ChaCha20-Poly1305 —
+so the panel only ever stores and sends it in a form the one device can open,
+and nothing in between can read it. The label keeps a link from ever being
+taken for a share, or a share for a link. A device's key id is shown on it and
+in Settings → Share Inbox, to compare.
+
+`?after=` is the newest link id the device has handled: the panel drops what
+it has and sends what it hasn't, so a reply lost on the way is sent again.
+What waits goes after a week (`~/.config/homecanvas/outbox.json`); a device
+not heard from in a month is no longer offered, nor one whose sender has been
+removed. The format is in `lib/services/link_outbox.dart`.
+
+### Parcels
+
+A share whose JSON body is `{"type": "parcel", "content": "<link or number>",
+"label": "<what it is>"}` goes on the Parcels tile; so does any `link` or
+`text` share that turns out to be a tracking link or number, rather than
+popping up as a link or going on the Notes board. `ParcelRef.find` in
+`lib/services/parcel_carriers.dart` decides: a link to Royal Mail, Parcelforce,
+DPD, Evri, Yodel, DHL, UPS, FedEx, InPost or an Amazon delivery page; a number
+in a carrier's own shape (`AB123456789GB`, `1Z…`, Evri's `H…`, `TBA…`); or a
+run of digits beside a carrier's name in a few words about a delivery. A
+`parcel` share that holds no number at all is refused with a 400.
+
+Without a tracking service a parcel is its name, its carrier and that
+carrier's own page, opened on the panel. With one set on the tile —
+[17TRACK](https://api.17track.net) or [Ship24](https://docs.ship24.com), each
+with the household's own key — `ParcelsService` looks every undelivered parcel
+up half-hourly: 17TRACK's number registered once (its quota), Ship24's tracker
+made once (its plan's count), then read for nothing. Neither carrier's site is
+scraped; their tracking pages are for people. A refused key stops the round
+and is not tried again for six hours unless it changes or someone presses
+Check now. A parcel seen to go out for delivery, come, wait to be collected, be
+missed or go wrong puts up a card (the share card, with its chime, Do Not
+Disturb permitting) that opens the parcel. Delivered parcels go after the
+tile's "keep" setting; one never delivered stops being looked up after 45 days.
+
+**When it is coming.** A parcel's day and window (`Parcel.expected`, and
+`expectedTo` for the end) come from three places, the service's first:
+
+- *What was shared.* `findDeliveryWindow` (`lib/services/parcel_when.dart`)
+  reads the words a parcel was shared with — the email or text the link came
+  in. Only lines about the delivery count (an email also has the day it was
+  ordered and sent), unless the whole share is a line or two. It reads a date
+  ("Wednesday 4th November", `03/11/2026`, ISO), a word for the day ("today",
+  "tomorrow", "Thursday"), and a window: "between 10:15 and 11:15", "9am-1pm",
+  "1-3pm", or an end alone ("by 10pm"). Dates are day first; one more than a
+  week gone is next year's.
+- *Somebody saying.* When? (on the frame's foot and on the sheet) is a day of
+  the coming week and a part of it — morning 8–12, afternoon 12–17, evening
+  17–21 — or the carrier's slot to the quarter hour, an hour, two or four
+  long. Not known clears it.
+- *The service.* A day from 17TRACK or Ship24 replaces one said
+  (`Parcel.dueSaid`); the service saying nothing leaves it be.
+
+When a parcel's window opens — or at 08:00 on a day with no time to it — the
+panel says so once, on the share card: "Trainers: Due now, until 11:15". The
+service's clock ticks every minute for this; parcels are still looked up
+half-hourly. A window
+already open as it is said, or gone by unseen, is not announced; nor is a
+parcel already here. What was last announced is kept in `toldDue`, so a
+restart does not say it again. On a page-sized tile the list's column ends in
+*the week ahead*: a row a day for seven days (today lit, an overdue parcel
+kept on it), then Later and No day yet, each parcel a touch away.
+
+A Parcels tile given a page to itself (at least 1000 wide, 460 high and
+wider than tall) lays out as a list beside a frame. Touching a parcel shows
+its carrier's page *in* the frame, with Back, Reload and Close page along its
+top and the parcel's own buttons along its foot. Flutter has no web view on
+Linux, and Firefox cannot be built into another program, so that page is a
+real Firefox window (`SideBrowser`, `lib/services/side_browser.dart`) with no
+toolbars of its own, laid exactly over the hole the frame leaves for it:
+
+- **Placing it.** Wayland gives a program no say in where its windows go, so
+  `SideBrowser` writes a labwc window rule for app_id `homecanvas-side` —
+  `MoveTo` and `ResizeTo` for the hole, and `ToggleAlwaysOnTop` — into
+  `~/.config/labwc/rc.xml` between `<!-- homecanvas-side -->` markers, and
+  sends labwc a SIGHUP. It is rewritten only when the hole moves; the file as
+  it was first is kept as `rc.xml.before-homecanvas-side`. Without a user
+  `rc.xml` it is created only if labwc runs with `-m` (merging the system's),
+  as Raspberry Pi OS starts it.
+- **Steering it.** Firefox is started with `--remote-debugging-port 0` and the
+  tile's buttons reach it through WebDriver BiDi (`BidiClient`): `navigate`
+  for another parcel in the same window, `traverseHistory` for Back,
+  `reload`.
+- **Keeping up with the tile.** Every 300 ms while it is up, the tile checks
+  its hole is on screen, at its own size and not covered — by asking the
+  kiosk's own hit testing at the middle and near the corners, which catches a
+  dialog, the page overview or a share card alike. If not, the window is
+  minimised (`wlrctl toplevel minimize`), and focused back when it is. If the
+  hole moves, the rule is rewritten and Firefox restarted there.
+- **Closing it.** Only by being closed: Close page, or leaving the tile —
+  another dashboard page, another screen — or anything else opening a browser
+  window. It has no timeout of its own: touches on the page never reach the
+  kiosk, so a timer would close it in the middle of being read.
+
+Every Firefox window the kiosk opens asks sites for their dark look
+(`layout.css.prefers-color-scheme.content-override` = 0), so a site that
+follows the system's setting shows dark; one with only a switch of its own,
+as DPD's, stays as it is. Without labwc or Firefox the frame shows the
+parcel's story, and its page opens in a window of its own as before.
 
 ### Reading notes aloud
 

@@ -2,9 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-
 import '../look.dart';
-
 import 'package:provider/provider.dart';
 
 import 'burn_in_drift.dart';
@@ -16,7 +14,9 @@ import '../screens/video_player_screen.dart';
 import '../services/kiosk_browser.dart';
 import '../services/kitchen.dart';
 import '../services/recipe.dart';
+import '../dashboard/widgets/parcels_widget.dart' show showParcel;
 import '../services/local_file_media_source.dart';
+import '../services/parcels_service.dart';
 import '../services/share_inbox_service.dart';
 import '../services/video_link.dart';
 import '../services/video_player_service.dart';
@@ -80,6 +80,7 @@ class _IncomingShareOverlayState extends State<IncomingShareOverlay>
     // Opening something else while a video fills the screen: the video moves
     // aside into picture-in-picture rather than hiding what was opened.
     final player = context.read<VideoPlayerService>();
+    final parcels = context.read<ParcelsService>();
     if (player.view == VideoView.full) player.showPip();
     switch (item.type) {
       case ShareType.image:
@@ -103,6 +104,9 @@ class _IncomingShareOverlayState extends State<IncomingShareOverlay>
             ),
           ),
         );
+      case ShareType.notice when item.parcel != null:
+        final parcel = parcels.find(item.parcel!);
+        if (parcel != null) await showParcel(navigator.context, parcel.id);
       case ShareType.text:
       case ShareType.notice:
         await navigator.push(
@@ -111,6 +115,15 @@ class _IncomingShareOverlayState extends State<IncomingShareOverlay>
                 SharedTextScreen(text: item.content!, sender: item.sender),
           ),
         );
+      case ShareType.parcel:
+        // Its place on the Parcels list, where it went as it arrived.
+        final ref = item.parcel;
+        final parcel = ref == null ? null : parcels.find(ref);
+        if (parcel != null) {
+          await showParcel(navigator.context, parcel.id);
+        } else {
+          await _openLink(ref?.url ?? item.content!);
+        }
       case ShareType.link:
         // A YouTube, Floatplane or Nebula link plays here, full screen,
         // rather than in a browser window that closes itself two minutes in.
@@ -334,7 +347,10 @@ class _Card extends StatelessWidget {
           ShareType.video => Icons.movie,
           ShareType.link => Icons.link,
           ShareType.text => Icons.notes,
+          ShareType.notice when item.parcel != null =>
+            Icons.local_shipping_outlined,
           ShareType.notice => Icons.notifications_active,
+          ShareType.parcel => Icons.local_shipping_outlined,
         };
 
   String get _label => _video != null
@@ -350,9 +366,15 @@ class _Card extends StatelessWidget {
     ShareType.link => tr('share.linkShared', 'Link shared'),
     ShareType.text => tr('share.noteShared', 'Note shared'),
     ShareType.notice => item.sender,
+    ShareType.parcel =>
+      item.parcel == null || item.parcel!.carrier == Carrier.unknown
+          ? tr('share.parcelToTrack', 'Parcel to track')
+          : tr('share.carrierParcelToTrack', '{carrier} parcel to track', {
+              'carrier': item.parcel!.carrier.name,
+            }),
   };
 
-  /// The line under it: who it is from, and for a recipe what it is.
+  /// The line under it: who it is from, and for a parcel what it is.
   String get _detail {
     if (recipe != null) {
       return tr('share.recipeFrom', '{what} · from {name}', {
@@ -360,7 +382,12 @@ class _Card extends StatelessWidget {
         'name': item.sender,
       });
     }
-    return item.title ?? 'From ${item.sender}';
+    final from = item.title ?? 'From ${item.sender}';
+    if (item.type != ShareType.parcel || item.title == null) return from;
+    return tr('share.parcelFrom', '{what} · from {name}', {
+      'what': item.title!,
+      'name': item.sender,
+    });
   }
 
   @override

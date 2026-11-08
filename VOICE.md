@@ -336,6 +336,7 @@ always does.
 |---|---|
 | "open the remote", "TV remote" | The dashboard's TV remote, full screen, with the inputs |
 | "forecast", "weather forecast" | The full-screen weather: today, the next 7 days and the next 24 hours |
+| "what's my day", "what's on today", "good morning", "brief me" | **Your day**: the weather, today's calendar, reminders, parcels, timers and bins, and tomorrow — and reads it out, pausing the music while it does |
 | "photos", "albums", "home" | The photo albums |
 | "camera" / "hide the camera" | Shows or hides the camera overlay, if one is set up |
 | "back", "close", "close that", "exit" | Closes whatever is open, like the back button |

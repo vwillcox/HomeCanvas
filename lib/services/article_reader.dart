@@ -254,6 +254,39 @@ class ArticleReader extends ChangeNotifier {
     await _readFrom(run);
   }
 
+  /// Reads [paragraphs] the panel put together itself — the day's brief —
+  /// as an article is read: the music paused, the reading bar up under
+  /// [title], in the main voice.
+  Future<void> say({
+    required String title,
+    required List<String> paragraphs,
+  }) async {
+    final taking = _started;
+    final run = ++_run;
+    if (taking) await output.stop();
+    _title = plainText(title);
+    _author = null;
+    _voice = null;
+    _cloud = null;
+    _link = null;
+    _summaryOnly = false;
+    _speed = 1;
+    _index = 0;
+    _chunks = speakableChunks(
+      paragraphs.map(speakable).where((p) => p.isNotEmpty).toList(),
+    );
+    if (_chunks.isEmpty) {
+      if (taking) await _finish();
+      return;
+    }
+    if (!taking) {
+      _started = true;
+      onStart?.call();
+    }
+    _set(ReaderStatus.reading);
+    await _readFrom(run);
+  }
+
   Future<void> _readFrom(int run) async {
     final voice = _voice;
     final speed = _speed;

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:async';
 import 'dart:math';
 
@@ -1628,75 +1629,123 @@ class _TransporterPainter extends CustomPainter {
 /// The head of a screen: an end cap, the [title] in the accent, then a bar
 /// that runs on to the right carrying the [note] in black.
 class LcarsTextBar extends StatelessWidget {
-  const LcarsTextBar({super.key, required this.title, this.note});
+  const LcarsTextBar({super.key, required this.title, this.note, this.short});
 
   final String title;
   final String? note;
 
+  /// A shorter title — "Morning" for "Good morning" — for a row too
+  /// crowded for [title] beside even a stub of the bar.
+  final String? short;
+
   static const _bar = 36.0;
+
+  static const _style = TextStyle(
+    fontSize: 46,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 1.5,
+    height: 1.1,
+  );
 
   @override
   Widget build(BuildContext context) {
     final look = context.look;
+    final style = _style.copyWith(color: look.accent);
     return LayoutBuilder(
-      builder: (context, c) => Row(
-        children: [
-          Container(
-            width: 44,
-            height: _bar,
-            decoration: BoxDecoration(
-              color: look.block(0),
-              borderRadius: const BorderRadius.horizontal(
-                left: Radius.circular(_bar / 2),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          // The title takes what it needs, up to most of the row; the bar
-          // has the rest.
-          ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: c.hasBoundedWidth ? c.maxWidth * 0.62 : 900,
-            ),
-            child: Text(
-              lcarsCaps(title),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 46,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.5,
-                height: 1.1,
-                color: look.accent,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Container(
+      builder: (context, c) {
+        var shown = lcarsCaps(title);
+        // The title takes what it needs, up to most of the row; the bar
+        // has the rest.
+        var room = c.hasBoundedWidth ? c.maxWidth * 0.62 : 900.0;
+        var shortened = false;
+        // Only a stub of bar left: colour, with no words squeezed into it.
+        var stub = false;
+        if (c.hasBoundedWidth && short != null) {
+          // The cap, the gaps either side, and a stub of bar.
+          final most = math.max(0.0, c.maxWidth - 44 - 24 - 40);
+          final full = _width(context, shown, style);
+          if (full > room) {
+            room = most;
+            stub = true;
+            if (full > most) {
+              shown = lcarsCaps(short!);
+              shortened = true;
+            }
+          }
+        }
+        final text = Text(
+          shown,
+          maxLines: 1,
+          overflow: shortened ? TextOverflow.visible : TextOverflow.ellipsis,
+          softWrap: false,
+          style: style,
+        );
+        return Row(
+          children: [
+            Container(
+              width: 44,
               height: _bar,
-              color: look.block(2),
-              alignment: Alignment.bottomRight,
-              padding: const EdgeInsets.only(left: 10, right: 10, bottom: 3),
-              child: note == null || note!.isEmpty
-                  ? null
-                  : Text(
-                      lcarsCaps(note!),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: lcarsInk,
-                        fontSize: 19,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1,
-                        height: 1.1,
-                      ),
-                    ),
+              decoration: BoxDecoration(
+                color: look.block(0),
+                borderRadius: const BorderRadius.horizontal(
+                  left: Radius.circular(_bar / 2),
+                ),
+              ),
             ),
-          ),
-        ],
-      ),
+            const SizedBox(width: 12),
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: room),
+              // Short and still too wide: smaller, rather than cut.
+              child: shortened
+                  ? FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: text,
+                    )
+                  : text,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Container(
+                height: _bar,
+                color: look.block(2),
+                alignment: Alignment.bottomRight,
+                padding: const EdgeInsets.only(left: 10, right: 10, bottom: 3),
+                child: stub || note == null || note!.isEmpty
+                    ? null
+                    : Text(
+                        lcarsCaps(note!),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: lcarsInk,
+                          fontSize: 19,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1,
+                          height: 1.1,
+                        ),
+                      ),
+              ),
+            ),
+          ],
+        );
+      },
     );
+  }
+
+  static double _width(BuildContext context, String s, TextStyle style) {
+    final painter = TextPainter(
+      text: TextSpan(
+        text: s,
+        style: DefaultTextStyle.of(context).style.merge(style),
+      ),
+      textDirection: TextDirection.ltr,
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    )..layout();
+    final w = painter.width;
+    painter.dispose();
+    return w;
   }
 }
 

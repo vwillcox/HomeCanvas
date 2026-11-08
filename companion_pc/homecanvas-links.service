@@ -1,0 +1,22 @@
+# Opens links sent from the HomeCanvas panel. Install with:
+#
+#   install -Dm755 companion_pc/homecanvas-links ~/.local/bin/homecanvas-links
+#   install -Dm644 companion_pc/homecanvas-links.service \
+#       ~/.config/systemd/user/homecanvas-links.service
+#   homecanvas-links setup http://192.168.1.57:8081 TOKEN
+#   systemctl --user enable --now homecanvas-links
+#
+# Tied to the graphical session, since what it does is open a browser there.
+
+[Unit]
+Description=Open links sent from the HomeCanvas panel
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+ExecStart=%h/.local/bin/homecanvas-links
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=graphical-session.target

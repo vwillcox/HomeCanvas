@@ -257,9 +257,9 @@ queue.
 | Time & day | Clock, Calendar, Timers, Sun & moon, Countdowns (with bank holidays) |
 | Weather & air | Weather with a full forecast, Air & pollen, Rain soon |
 | Photos, music & TV | Now playing, TV remote, Photo, On this day, Immich library, Birthdays |
-| Around the house | Bin day, Notes, Shopping list, Grid carbon, Lights (Govee), Home Assistant, Meal plan, Chores & rewards |
+| Around the house | Bin day, Notes, Shopping list, Parcels (Royal Mail, DPD, Evri and more, shared from your phone; the delivery slot read from the email it came in, a heads-up as the slot opens, and the week ahead at a glance; on a page of its own, each carrier's tracking page right there in the tile), Grid carbon, Lights (Govee), Home Assistant, Meal plan, Chores & rewards |
 | Getting out | Train departures |
-| News & reference | News feeds (with adverts filtered out), Mastodon, Bluesky, On this day in history, Omarchy hotkeys |
+| News & reference | News feeds (a tab per topic, a town's own news, a story told once, adverts filtered out), Mastodon, Bluesky, On this day in history, Omarchy hotkeys |
 | Network | UniFi health, Who's home, UniFi devices, Network clients, WAN throughput, ISP speed test, Speed test, LAN speed test |
 | Home lab | Servers (with SMART disk health), Services, Certificates, Updates |
 
@@ -271,13 +271,22 @@ of your own photos behind the tiles.
 videos, links and notes to the kiosk from any app's share sheet, from anywhere,
 **end-to-end encrypted** with a fresh key per message. Notes can be read aloud
 by a voice that runs on the Pi. New Mastodon and Bluesky notifications can pop
-up on the panel the same way, from the accounts their tiles sign in to.
+up on the panel the same way, from the accounts their tiles sign in to. And the
+other way: **Send to…** on a post, a news story or an open page puts it on your
+phone as a notification, or opens it in your computer's browser
+([companion_pc](companion_pc/README.md)) — sealed to that device's own key.
 
 **A phone as a camera** — an old Android phone running IP Webcam becomes a
 camera in a corner window; pinch to drive the phone's own zoom.
 
 **Private content** — opens Immich's Locked Folder with your PIN, and re-locks
 when you leave.
+
+**Your day** — touch the greeting, or say "hey canvas, what's my day?", for
+the whole day on one screen: the weather and the next few hours, everything
+on today in order with now marked (calendar, reminders, parcels due, timers,
+the bins), and tomorrow. It reads it out, too, pausing the music while it
+does.
 
 **Voice control** — say "hey canvas, show the stocks", "next page" or "pause the
 music"; anything else goes to Home Assistant. Heard and understood on the Pi;

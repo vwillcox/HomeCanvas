@@ -24,6 +24,28 @@ From any other app, use its normal Share button and pick **Kiosk Share**.
 That's it — it shows up on the kiosk within a couple of seconds, with a
 chime (unless Do Not Disturb is on there).
 
+## Tracking a parcel
+
+Share a carrier's tracking link the same way — from a Royal Mail, DPD, Evri or
+Yodel email, or the courier's app — and the panel puts it on its Parcels tile
+rather than opening it. For a tracking number on its own, or to say what is
+coming ("Trainers"), use **Track a parcel** on the app's main screen.
+
+## Receiving links from the panel
+
+Turn on **Receive links from the panel** on the app's main screen. After that,
+**Send to…** on a post, a story or a page on the panel puts it here as a
+notification; touch it and the page opens in your browser. Give the phone a
+name in Settings so you can tell it from others in the panel's list.
+
+It works with the app closed: a quiet notification says it's waiting, which
+you can hide by turning off its "Collecting links" category in Android's
+settings for the app. Android asks to leave it out of battery optimisation,
+which it needs to keep listening once the phone has been still a while.
+
+Links are sealed on the panel to a key only this phone holds. The main screen
+shows its id, and the panel lists the same one in Settings → Share Inbox.
+
 ## Development
 
 ```bash

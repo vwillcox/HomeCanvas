@@ -214,6 +214,14 @@ class FeedService extends ChangeNotifier {
     return cached?.items ?? const [];
   }
 
+  /// Headlines for [url] as though just fetched — a test's, with no network.
+  @visibleForTesting
+  void seed(String url, List<FeedItem> items) {
+    _feeds[url] = _Cached(items, DateTime.now(), null);
+    _refreshed[url] = DateTime.now();
+    notifyListeners();
+  }
+
   List<CalendarEvent> calendar(String url) {
     if (url.isEmpty) return const [];
     final cached = _calendars[url];

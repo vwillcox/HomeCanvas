@@ -40,6 +40,7 @@ import 'services/railcam_service.dart';
 import 'services/rain_service.dart';
 import 'services/notes_service.dart';
 import 'services/shopping_service.dart';
+import 'services/parcels_service.dart';
 import 'services/timer_service.dart';
 import 'services/timer_sounds.dart';
 import 'dashboard/widgets/widgets.dart';
@@ -62,6 +63,7 @@ import 'services/dashboard_service.dart';
 import 'services/feed_service.dart';
 import 'services/immich_service.dart';
 import 'services/indoor_sensor_service.dart';
+import 'services/link_outbox.dart';
 import 'services/locked_folder_service.dart';
 import 'services/media_cache.dart';
 import 'services/now_playing_service.dart';
@@ -85,8 +87,11 @@ import 'screens/about_screen.dart';
 import 'screens/album_screen.dart';
 import 'screens/cook_screen.dart';
 import 'screens/dashboard_screen.dart';
+import 'dashboard/widgets/day_brief_sheet.dart';
 import 'dashboard/widgets/weather_forecast_sheet.dart';
 import 'dashboard/widgets/tv_remote_sheet.dart';
+import 'dashboard/widgets/parcels_widget.dart'
+    show parcelDueNow, parcelName, parcelStage;
 import 'screens/gallery_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/locked_folder_screen.dart';
@@ -163,7 +168,16 @@ void main() async {
   // the inbox, so speech being unavailable is not the inbox's problem.
   final speech = TtsService();
 
-  final shareInbox = ShareInboxService(config)..speech = speech;
+  // Links sent from the panel to a phone or computer, which collect them
+  // from the inbox's port.
+  final outbox = LinkOutbox(
+    senders: () => config.config.shareInbox.senderTokens.map((t) => t.name),
+  );
+  unawaited(outbox.load());
+
+  final shareInbox = ShareInboxService(config)
+    ..speech = speech
+    ..outbox = outbox;
   unawaited(shareInbox.start());
 
   // Reads a news article aloud, pausing whatever is playing while it does
@@ -349,7 +363,53 @@ void main() async {
     }
     ..start();
 
+  // Parcels on their way: tracking links and numbers shared from a phone,
+  // looked up with the service the Parcels tile is set to, and a card when
+  // one is out for delivery or has come.
+  final parcels = ParcelsService(config);
+  parcels.onNews = (p) {
+    if (!parcels.settings.tell) return;
+    final stage = parcelStage(p, tracking: true);
+    final latest = p.latest;
+    shareInbox.notice(
+      from: tr('widget.parcels.parcels', 'Parcels'),
+      title: '${parcelName(p)}: $stage',
+      text: [
+        '${parcelName(p)} — $stage',
+        ?latest?.text,
+        ?latest?.location,
+      ].join('\n'),
+      parcel: ParcelRef(carrier: p.carrier, number: p.number, url: p.url),
+    );
+  };
+  parcels.onDue = (p) {
+    if (!parcels.settings.tell) return;
+    final due = parcelDueNow(p);
+    shareInbox.notice(
+      from: tr('widget.parcels.parcels', 'Parcels'),
+      title: '${parcelName(p)}: $due',
+      text: '${parcelName(p)} — $due\n${p.carrier.name}',
+      parcel: ParcelRef(carrier: p.carrier, number: p.number, url: p.url),
+    );
+  };
+  await parcels.load();
+  parcels.start();
+
   shareInbox.onShared = (item) {
+    final parcel = item.parcel;
+    if (item.type == ShareType.parcel && parcel != null) {
+      parcels.add(
+        parcel,
+        label: item.title,
+        from: item.sender,
+        // A carrier's email or text says when, as often as not — in its
+        // words, or in a subject shared along with the link.
+        due:
+            findDeliveryWindow(item.content ?? '', DateTime.now()) ??
+            findDeliveryWindow(item.title ?? '', DateTime.now()),
+      );
+      return;
+    }
     final text = (item.content ?? '').trim();
     if (item.type != ShareType.text || text.isEmpty) return;
     final reminder = parseReminder(text, DateTime.now());
@@ -504,6 +564,7 @@ void main() async {
         Provider(create: (_) => SevenFmService()),
         ChangeNotifierProvider.value(value: indoor),
         ChangeNotifierProvider.value(value: shareInbox),
+        ChangeNotifierProvider.value(value: outbox),
         ChangeNotifierProvider.value(value: ytDlp),
         ChangeNotifierProvider.value(value: player),
         ChangeNotifierProvider.value(value: youtube),
@@ -529,6 +590,7 @@ void main() async {
         ChangeNotifierProvider.value(value: notes),
         ChangeNotifierProvider<RemindersService?>.value(value: reminders),
         ChangeNotifierProvider.value(value: shopping),
+        ChangeNotifierProvider.value(value: parcels),
         ChangeNotifierProvider.value(value: chores),
         ChangeNotifierProvider.value(value: timers),
         ChangeNotifierProvider.value(value: kitchen),
@@ -871,6 +933,10 @@ String? runVoiceCommand(
           );
           unawaited(showWeatherForecast(context, theme));
           return 'forecast';
+        case VoicePlace.today:
+          // The day at a glance, and read out: it was asked for out loud.
+          unawaited(showDayBrief(context, read: true));
+          return 'your day';
         case VoicePlace.remote:
           // The dashboard's TV remote widget, as large as the panel —
           // not the remote app, which is a different remote.

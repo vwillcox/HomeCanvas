@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../services/kiosk_browser.dart';
 import '../widgets/incoming_share_overlay.dart' show kBrowserCloseGutter;
+import '../widgets/send_to_device.dart';
 import '../l10n/l10n.dart';
 
 /// Opens a web page in a browser window on top of the kiosk, with a close
@@ -113,6 +114,14 @@ class _LinkViewerScreenState extends State<LinkViewerScreen> {
     _timer = Timer(widget.timeout, _close);
   }
 
+  /// Closes the page but not this screen.
+  Future<void> _putAway() async {
+    _timer?.cancel();
+    _browser?.kill();
+    _browser = null;
+    await KioskBrowser.focusKiosk();
+  }
+
   Future<void> _close() async {
     if (_closing) return;
     _closing = true;
@@ -146,6 +155,15 @@ class _LinkViewerScreenState extends State<LinkViewerScreen> {
                     ),
                   ),
                   const SizedBox(width: 16),
+                  // The picker opens on the kiosk, which the page covers, so
+                  // the page is put away for it: sent on, it is done with.
+                  SendToDeviceButton(
+                    url: widget.url,
+                    title: widget.title,
+                    before: _putAway,
+                    after: _close,
+                  ),
+                  const SizedBox(width: 12),
                   FilledButton.icon(
                     onPressed: _close,
                     icon: const Icon(Icons.close, size: 30),

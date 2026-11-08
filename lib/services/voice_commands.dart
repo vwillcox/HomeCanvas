@@ -101,7 +101,9 @@ class VoiceKonami extends VoiceAction {
 }
 
 /// The commands that need nothing said after them.
-enum VoicePlace { back, photos, dashboard, remote, forecast }
+/// Somewhere to go, or something to put up over where you are. [today] is
+/// the day at a glance, read out — see `showDayBrief`.
+enum VoicePlace { back, photos, dashboard, remote, forecast, today }
 
 class VoiceGo extends VoiceAction {
   const VoiceGo(this.place);
@@ -182,6 +184,7 @@ class VoiceCommands {
     'railcam': ['rail cam', 'railway camera'],
     'traffic_cams': ['traffic cams'],
     'bins': ['bins', 'rubbish', 'recycling'],
+    'parcels': ['parcel', 'packages', 'deliveries', 'delivery', 'post'],
     'sun_moon': ['sunrise', 'sunset'],
     'air_quality': ['air quality'],
     'meals': ['meals', 'dinner', 'menu'],
@@ -281,6 +284,34 @@ class VoiceCommands {
     'television remote': VoiceGo(VoicePlace.remote),
     'forecast': VoiceGo(VoicePlace.forecast),
     'weather forecast': VoiceGo(VoicePlace.forecast),
+    // The day at a glance, read out. As heard less the asking and the
+    // filler: "what's my day" is "whats day", "what's on today" "whats
+    // today".
+    'day': VoiceGo(VoicePlace.today),
+    'today': VoiceGo(VoicePlace.today),
+    'whats day': VoiceGo(VoicePlace.today),
+    'whats today': VoiceGo(VoicePlace.today),
+    'what is today': VoiceGo(VoicePlace.today),
+    'whats happening today': VoiceGo(VoicePlace.today),
+    'what is happening today': VoiceGo(VoicePlace.today),
+    'whats plan': VoiceGo(VoicePlace.today),
+    'whats plan today': VoiceGo(VoicePlace.today),
+    'hows day looking': VoiceGo(VoicePlace.today),
+    'how is day looking': VoiceGo(VoicePlace.today),
+    'hows day': VoiceGo(VoicePlace.today),
+    'whats day looking': VoiceGo(VoicePlace.today),
+    'what is day looking': VoiceGo(VoicePlace.today),
+    'what is day': VoiceGo(VoicePlace.today),
+    'whats day look': VoiceGo(VoicePlace.today),
+    'plan today': VoiceGo(VoicePlace.today),
+    'day ahead': VoiceGo(VoicePlace.today),
+    'briefing': VoiceGo(VoicePlace.today),
+    'brief': VoiceGo(VoicePlace.today),
+    'daily briefing': VoiceGo(VoicePlace.today),
+    'morning briefing': VoiceGo(VoicePlace.today),
+    'rundown': VoiceGo(VoicePlace.today),
+    'run down': VoiceGo(VoicePlace.today),
+    'good morning': VoiceGo(VoicePlace.today),
     // The music. "Play", "pause", "stop" and "skip" on their own are the
     // music's; the pages are held and let go with "hold" and "resume".
     // The radio, by name; a station by its own name is "play" and the name,

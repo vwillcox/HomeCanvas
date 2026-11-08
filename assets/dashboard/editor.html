@@ -1985,6 +1985,40 @@ function listField(w, o) {
     render();
   };
   host.appendChild(add);
+
+  // Ready-made sets — a pack of feeds for a topic — added in one go, less
+  // any row the list has already: the same address, or the same everything.
+  const presets = Object.entries(o.presets || {});
+  if (presets.length) {
+    const pick = document.createElement("select");
+    pick.style.cssText = "margin-top:10px;display:block";
+    const first = document.createElement("option");
+    first.value = "";
+    first.textContent = t("web.editor.addASet", "＋ Add a ready-made set…");
+    pick.appendChild(first);
+    for (const [key, p] of presets) {
+      const opt = document.createElement("option");
+      opt.value = key;
+      opt.textContent = p.label;
+      pick.appendChild(opt);
+    }
+    pick.onchange = () => {
+      const p = (o.presets || {})[pick.value];
+      if (!p) return;
+      const same = (a, b) => a.url != null && b.url != null
+        ? String(a.url).trim() === String(b.url).trim()
+        : JSON.stringify(a) === JSON.stringify(b);
+      let added = 0;
+      for (const row of p.rows || []) {
+        if (rows.some(r => same(r, row))) continue;
+        rows.push(JSON.parse(JSON.stringify(row)));
+        added++;
+      }
+      if (added) markDirty();
+      render();
+    };
+    host.appendChild(pick);
+  }
   return host;
 }
 

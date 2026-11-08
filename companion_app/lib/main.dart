@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:http/http.dart' as http;
 
 import 'sealed_sender.dart';
@@ -10,8 +11,15 @@ import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'compose_screen.dart';
+import 'link_receiver.dart';
+import 'parcel_screen.dart';
 
-void main() => runApp(const KioskShareApp());
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  FlutterForegroundTask.initCommunicationPort();
+  LinkReceiver.init();
+  runApp(const KioskShareApp());
+}
 
 class KioskShareApp extends StatelessWidget {
   const KioskShareApp({super.key});
@@ -37,10 +45,18 @@ class KioskShareApp extends StatelessWidget {
 class KioskSettings {
   static const _addressKey = 'kioskAddress';
   static const _tokenKey = 'kioskToken';
+  static const _nameKey = 'deviceName';
 
   final String address;
   final String token;
-  const KioskSettings({required this.address, required this.token});
+
+  /// What the panel calls this phone when offering to send it a link.
+  final String name;
+  const KioskSettings({
+    required this.address,
+    required this.token,
+    this.name = '',
+  });
 
   bool get isConfigured => address.isNotEmpty && token.isNotEmpty;
 
@@ -49,10 +65,11 @@ class KioskSettings {
     return KioskSettings(
       address: prefs.getString(_addressKey) ?? '',
       token: prefs.getString(_tokenKey) ?? '',
+      name: prefs.getString(_nameKey) ?? '',
     );
   }
 
-  static Future<void> save(String address, String token) async {
+  static Future<void> save(String address, String token, String name) async {
     final prefs = await SharedPreferences.getInstance();
     // Trailing slashes make for a doubled-up //share further down.
     await prefs.setString(
@@ -60,6 +77,7 @@ class KioskSettings {
       address.trim().replaceAll(RegExp(r'/+$'), ''),
     );
     await prefs.setString(_tokenKey, token.trim());
+    await prefs.setString(_nameKey, name.trim());
   }
 }
 
@@ -103,6 +121,11 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _kioskKey;
   String? _keyError;
 
+  /// Whether links sent from the panel are collected, and this phone's key
+  /// id for the panel's list.
+  bool _receiving = false;
+  String? _deviceKey;
+
   @override
   void initState() {
     super.initState();
@@ -117,6 +140,32 @@ class _HomeScreenState extends State<HomeScreen> {
         _loaded = true;
       });
       unawaited(_checkEncryption());
+    }
+
+    // A link notification touched: its page, in the browser.
+    await LinkReceiver.initNotifications(
+      onTap: (r) => LinkReceiver.openPayload(r.payload),
+    );
+    final launch = await LinkReceiver.notifications
+        .getNotificationAppLaunchDetails();
+    if (launch?.didNotificationLaunchApp ?? false) {
+      unawaited(
+        LinkReceiver.openPayload(launch!.notificationResponse?.payload),
+      );
+    }
+    if (await LinkReceiver.wanted) {
+      final key = await LinkReceiver.keyId(await LinkReceiver.deviceKey());
+      if (mounted) {
+        setState(() {
+          _receiving = true;
+          _deviceKey = key;
+        });
+      }
+      // Stopped by the system, or by an update: started again.
+      if (settings.isConfigured &&
+          !await FlutterForegroundTask.isRunningService) {
+        await LinkReceiver.restart();
+      }
     }
 
     // Shares that arrive while the app is already running.
@@ -212,6 +261,64 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _resend(SharedMediaFile f) => _sendOne(f);
+
+  /// A tracking link or number for the panel's Parcels tile, with what the
+  /// parcel is.
+  Future<void> _trackParcel() async {
+    final parcel = await Navigator.of(context).push<ParcelToSend>(
+      MaterialPageRoute(builder: (_) => const ParcelScreen()),
+    );
+    if (parcel == null || parcel.content.isEmpty) return;
+    if (!_settings.isConfigured) {
+      setState(
+        () => _log.insert(
+          0,
+          ShareLogEntry(
+            label: 'Parcel',
+            ok: false,
+            error: 'Set up the kiosk address and token first',
+          ),
+        ),
+      );
+      return;
+    }
+    final sender = SealedSender(
+      address: _settings.address,
+      token: _settings.token,
+    );
+    final label = parcel.label.isEmpty ? 'Parcel' : 'Parcel: ${parcel.label}';
+    try {
+      final resp = await sender.send(
+        utf8.encode(
+          jsonEncode({
+            'type': 'parcel',
+            'content': parcel.content,
+            if (parcel.label.isNotEmpty) 'label': parcel.label,
+          }),
+        ),
+        'application/json',
+      );
+      final ok = resp.statusCode == 200;
+      if (!mounted) return;
+      setState(
+        () => _log.insert(
+          0,
+          ShareLogEntry(
+            label: label,
+            ok: ok,
+            error: ok ? null : 'HTTP ${resp.statusCode}: ${resp.body}',
+            sealedTo: sender.lastSealedTo,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(
+        () =>
+            _log.insert(0, ShareLogEntry(label: label, ok: false, error: '$e')),
+      );
+    }
+  }
 
   /// Asks the kiosk for its public key and remembers the fingerprint.
   ///
@@ -337,7 +444,50 @@ class _HomeScreenState extends State<HomeScreen> {
       // A new address or token means a different kiosk, or none: recheck
       // rather than leaving the old fingerprint sitting there looking valid.
       unawaited(_checkEncryption());
+      if (_receiving) unawaited(LinkReceiver.restart());
     }
+  }
+
+  Future<void> _setReceiving(bool on) async {
+    if (!on) {
+      await LinkReceiver.stop();
+      if (mounted) setState(() => _receiving = false);
+      return;
+    }
+    final started = await LinkReceiver.start();
+    final key = await LinkReceiver.keyId(await LinkReceiver.deviceKey());
+    if (!mounted) return;
+    setState(() {
+      _receiving = started;
+      _deviceKey = key;
+    });
+    if (!started) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Links arrive as notifications, so this needs them allowed.',
+          ),
+        ),
+      );
+    }
+  }
+
+  Widget _receivingSwitch(BuildContext context) {
+    final small = Theme.of(context).textTheme.bodySmall;
+    return SwitchListTile(
+      contentPadding: EdgeInsets.zero,
+      title: const Text('Receive links from the panel'),
+      subtitle: Text(
+        _receiving && _deviceKey != null
+            ? 'Use “Send to…” on a post or a story there. The panel lists '
+                  'this phone with key $_deviceKey.'
+            : 'Use “Send to…” on a post or a story there, and it comes '
+                  'here as a notification.',
+        style: small,
+      ),
+      value: _receiving,
+      onChanged: _setReceiving,
+    );
   }
 
   Future<void> _compose() async {
@@ -396,6 +546,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           if (_settings.isConfigured) ...[
                             const Divider(height: 22),
                             _encryptionStatus(context),
+                            const Divider(height: 22),
+                            _receivingSwitch(context),
                           ],
                         ],
                       ),
@@ -408,10 +560,23 @@ class _HomeScreenState extends State<HomeScreen> {
                     alignment: Alignment.centerLeft,
                     child: Text(
                       'Use the share button in any app (Photos, Chrome, '
-                      'a video) and pick Kiosk Share to send it here.',
+                      'a video) and pick Kiosk Share to send it here. A '
+                      'tracking link goes on the panel’s Parcels tile.',
                     ),
                   ),
                 ),
+                if (_settings.isConfigured)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: OutlinedButton.icon(
+                        onPressed: _trackParcel,
+                        icon: const Icon(Icons.local_shipping_outlined),
+                        label: const Text('Track a parcel'),
+                      ),
+                    ),
+                  ),
                 const SizedBox(height: 12),
                 Expanded(
                   child: _log.isEmpty
@@ -481,21 +646,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late final TextEditingController _token = TextEditingController(
     text: widget.current.token,
   );
+  late final TextEditingController _name = TextEditingController(
+    text: widget.current.name,
+  );
 
   @override
   void dispose() {
     _address.dispose();
     _token.dispose();
+    _name.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
-    await KioskSettings.save(_address.text, _token.text);
+    await KioskSettings.save(_address.text, _token.text, _name.text);
     if (mounted) {
       Navigator.of(context).pop(
         KioskSettings(
           address: _address.text.trim().replaceAll(RegExp(r'/+$'), ''),
           token: _token.text.trim(),
+          name: _name.text.trim(),
         ),
       );
     }
@@ -529,6 +699,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
               controller: _token,
               decoration: const InputDecoration(
                 labelText: 'Your token',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _name,
+              decoration: const InputDecoration(
+                labelText: 'This phone’s name',
+                hintText: 'Phone',
+                helperText: 'What the panel calls it when sending a link',
                 border: OutlineInputBorder(),
               ),
             ),

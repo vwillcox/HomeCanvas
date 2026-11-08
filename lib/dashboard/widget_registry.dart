@@ -64,6 +64,11 @@ class WidgetOption {
   /// For [OptionKind.list]: what to call a row on the button that adds one.
   final String addLabel;
 
+  /// For [OptionKind.list]: ready-made sets of rows, by key, that the editor
+  /// offers to add in one go — a pack of feeds for a topic, say. Rows the
+  /// list already has are not added twice.
+  final Map<String, OptionPreset> presets;
+
   const WidgetOption({
     required this.key,
     this.choicesFrom,
@@ -74,6 +79,7 @@ class WidgetOption {
     this.help,
     this.fields = const [],
     this.addLabel = 'Add',
+    this.presets = const {},
   });
 
   /// For the editor, with the text in the panel's language where its pack
@@ -97,6 +103,14 @@ class WidgetOption {
           f.toJson(at: at == null ? null : '$at.field.${f.key}'),
       ],
       'addLabel': t('addLabel', addLabel),
+      if (presets.isNotEmpty)
+        'presets': {
+          for (final e in presets.entries)
+            e.key: {
+              'label': t('preset.${e.key}', e.value.label),
+              'rows': e.value.rows,
+            },
+        },
     };
   }
 
@@ -106,6 +120,9 @@ class WidgetOption {
     yield ('$at.label', label);
     if (help != null) yield ('$at.help', help!);
     if (kind == OptionKind.list) yield ('$at.addLabel', addLabel);
+    for (final e in presets.entries) {
+      yield ('$at.preset.${e.key}', e.value.label);
+    }
     for (final e in choices.entries) {
       yield ('$at.choice.${e.key}', e.value);
     }
@@ -113,6 +130,15 @@ class WidgetOption {
       yield* f.texts('$at.field.${f.key}');
     }
   }
+}
+
+/// A ready-made set of rows for an [OptionKind.list] option: what to call
+/// it, and the rows it adds.
+class OptionPreset {
+  const OptionPreset(this.label, this.rows);
+
+  final String label;
+  final List<Map<String, String>> rows;
 }
 
 /// Everything a widget's builder is handed.
