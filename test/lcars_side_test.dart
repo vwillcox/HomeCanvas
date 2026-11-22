@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:home_canvas/dashboard/dashboard_theme.dart';
 import 'package:home_canvas/widgets/lcars.dart';
 
-final lcars = kBuiltInThemes.firstWhere((t) => t.id == 'lcars');
+import 'theme_fixtures.dart';
+
+final lcars = testThemes.firstWhere((t) => t.id == 'lcars');
 
 void main() {
   /// A panel of [size] whose widget asks for a side bar of three blocks,

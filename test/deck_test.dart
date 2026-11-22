@@ -36,7 +36,13 @@ Map<String, Object?> deckJson() => {
               'runs': 'pc',
               'state': 0,
               'looks': [
-                {'img': 'abc.png', 'color': '#ff000080', 'title': 'Save', 'size': 14, 'style': 'Bold Italic'},
+                {
+                  'img': 'abc.png',
+                  'color': '#ff000080',
+                  'title': 'Save',
+                  'size': 14,
+                  'style': 'Bold Italic',
+                },
               ],
             },
             {
@@ -230,17 +236,25 @@ void main() {
 
     tearDown(() => server.close(force: true));
 
-    Future<(WebSocket, List<Object?>)> connect(String token, {Map<String, String> extra = const {}}) async {
+    Future<(WebSocket, List<Object?>)> connect(
+      String token, {
+      Map<String, String> extra = const {},
+    }) async {
       final ws = await WebSocket.connect(
         'ws://127.0.0.1:${server.port}/deck',
-        headers: {'authorization': 'Bearer $token', 'x-deck-name': 'Desk%20PC', ...extra},
+        headers: {
+          'authorization': 'Bearer $token',
+          'x-deck-name': 'Desk%20PC',
+          ...extra,
+        },
       );
       final heard = <Object?>[];
       ws.listen((m) => heard.add(m is String ? jsonDecode(m) : m));
       return (ws, heard);
     }
 
-    Iterable<Map> said(List<Object?> heard, String t) => heard.whereType<Map>().where((m) => m['t'] == t);
+    Iterable<Map> said(List<Object?> heard, String t) =>
+        heard.whereType<Map>().where((m) => m['t'] == t);
 
     test('sends its deck and images, and hears the keys it runs', () async {
       final (ws, heard) = await connect('desk-token');
@@ -249,8 +263,13 @@ void main() {
       expect(link.owner, 'Desk');
 
       ws.add(jsonEncode(deckJson()));
-      await until(() => link.snapshot != null && said(heard, 'need').isNotEmpty);
-      expect((said(heard, 'need').single['ids'] as List).toSet(), {'abc.png', 'steam.png'});
+      await until(
+        () => link.snapshot != null && said(heard, 'need').isNotEmpty,
+      );
+      expect((said(heard, 'need').single['ids'] as List).toSet(), {
+        'abc.png',
+        'steam.png',
+      });
 
       final name = utf8.encode('abc.png');
       ws.add([name.length, ...name, 1, 2, 3]);
@@ -282,23 +301,29 @@ void main() {
       expect(File('${dir.path}/deck.json').existsSync(), isTrue);
     });
 
-    test('is turned away without a token, through a proxy, or from another sender', () async {
-      await expectLater(connect('wrong'), throwsA(isA<WebSocketException>()));
-      await expectLater(
-        connect('desk-token', extra: {'x-forwarded-for': '203.0.113.9'}),
-        throwsA(isA<WebSocketException>()),
-      );
-      expect(link.owner, isNull);
+    test(
+      'is turned away without a token, through a proxy, or from another sender',
+      () async {
+        await expectLater(connect('wrong'), throwsA(isA<WebSocketException>()));
+        await expectLater(
+          connect('desk-token', extra: {'x-forwarded-for': '203.0.113.9'}),
+          throwsA(isA<WebSocketException>()),
+        );
+        expect(link.owner, isNull);
 
-      final (desk, _) = await connect('desk-token');
-      await until(() => link.connected);
-      await expectLater(connect('phone-token'), throwsA(isA<WebSocketException>()));
-      await desk.close();
+        final (desk, _) = await connect('desk-token');
+        await until(() => link.connected);
+        await expectLater(
+          connect('phone-token'),
+          throwsA(isA<WebSocketException>()),
+        );
+        await desk.close();
 
-      await link.forgetOwner();
-      final (phone, _) = await connect('phone-token');
-      await until(() => link.owner == 'Phone');
-      await phone.close();
-    });
+        await link.forgetOwner();
+        final (phone, _) = await connect('phone-token');
+        await until(() => link.owner == 'Phone');
+        await phone.close();
+      },
+    );
   });
 }

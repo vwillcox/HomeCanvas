@@ -97,6 +97,9 @@ void main() {
       final folder = '$dir/$id';
       final manifest =
           jsonDecode(File('$folder/addon.json').readAsStringSync()) as Map;
+      // A theme's picture is the panel dressed in it, taken on a panel: not
+      // something drawn from a preview.
+      if (manifest['kind'] == 'theme') continue;
       final types = <DashboardWidgetType>[];
       if (manifest['kind'] == 'json') {
         final file = Directory(folder).listSync().whereType<File>().firstWhere(

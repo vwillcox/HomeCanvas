@@ -193,6 +193,9 @@ class WidgetCategory {
   static const custom = 'Custom';
   static const other = 'Other';
 
+  /// Not a widget's: what the Add-ons page files themes under.
+  static const themes = 'Themes';
+
   /// [category]'s name in the panel's language. The British name is also
   /// its id — saved in nothing, but the editor groups by it.
   static String localName(String category) =>

@@ -509,11 +509,12 @@ void main() async {
   // And as Dart, built into the app by the panel itself.
   final codeWidgets = CodeWidgets();
   dashboard.codeWidgets = codeWidgets;
-  // And from the catalogue, where every widget is, and whatever libraries
-  // of other people's this panel has been given beside it.
+  // And from the catalogue, where every widget and theme is, and whatever
+  // third-party libraries this panel has been given beside it.
   dashboard.addons = Addons(
     custom: customWidgets,
     code: codeWidgets,
+    onThemes: dashboard.reloadThemes,
     repo: dashboard.settings.addonsRepo,
     libraries: () => dashboard.settings.addonLibraries,
     allowsCode: () => dashboard.settings.codeWidgets,

@@ -221,7 +221,7 @@ class DashboardSettings {
   /// [offerAlbumsTile]. Once only: a tile taken off again stays off.
   bool albumsOffered;
 
-  /// Other people's libraries of add-ons the Add-ons page lists beside the
+  /// Third-party libraries of add-ons the Add-ons page lists beside the
   /// catalogue, each `owner/name` on GitHub. Added from that page. Nobody
   /// has checked what is in them: an add-on in Dart from one is installed
   /// only while [codeWidgets] is on.
@@ -235,7 +235,7 @@ class DashboardSettings {
   List<String> editorPanels;
 
   DashboardSettings({
-    this.themeId = 'midnight',
+    this.themeId = 'glass',
     this.editorPort = 8090,
     this.webPort = 80,
     this.hueRelay = '',
@@ -273,7 +273,7 @@ class DashboardSettings {
   factory DashboardSettings.fromJson(
     Map<String, dynamic> j,
   ) => DashboardSettings(
-    themeId: j['themeId'] as String? ?? 'midnight',
+    themeId: j['themeId'] as String? ?? 'glass',
     editorPort: (j['editorPort'] as num?)?.toInt() ?? 8090,
     webPort: (j['webPort'] as num?)?.toInt() ?? 80,
     hueRelay: j['hueRelay'] as String? ?? '',

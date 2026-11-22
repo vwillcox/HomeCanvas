@@ -102,7 +102,7 @@ Map<String, String> sourceStrings() {
       add(key, english, 'font ${f.family}');
     }
   }
-  for (final c in WidgetCategory.order) {
+  for (final c in [...WidgetCategory.order, WidgetCategory.themes]) {
     add('category.${c.toLowerCase()}', c, 'WidgetCategory');
   }
 

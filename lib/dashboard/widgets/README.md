@@ -42,7 +42,7 @@ Which repository is read is `addonsRepo` under `dashboard` in config.json
 is the panel's own setting — what comes from it is run — and the editor
 cannot change it.
 
-Beside the catalogue a panel can read **other people's libraries**:
+Beside the catalogue a panel can read **third-party libraries**:
 repositories laid out the same way, named on the Add-ons page and kept as
 `addonLibraries` under `dashboard`. Their files are held to their own
 index's sums and nothing more — nobody has reviewed them — so the page

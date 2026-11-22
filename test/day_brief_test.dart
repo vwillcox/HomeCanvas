@@ -22,6 +22,8 @@ import 'package:home_canvas/services/weather_service.dart';
 import 'package:home_canvas/theme.dart';
 import 'package:home_canvas/widgets/lcars.dart';
 
+import 'theme_fixtures.dart';
+
 // Tuesday 3 November 2026, a quarter to eleven.
 final _now = DateTime(2026, 11, 3, 10, 46);
 DateTime _at(int day, int h, [int m = 0]) => DateTime(2026, 11, day, h, m);
@@ -274,7 +276,7 @@ void main() {
 
     final themes = [
       for (final id in ['glass', 'lcars', 'paper'])
-        kBuiltInThemes.firstWhere((t) => t.id == id),
+        testThemes.firstWhere((t) => t.id == id),
     ];
 
     Future<_Output> draw(
@@ -388,7 +390,7 @@ void main() {
   });
 
   group('the greeting on a crowded console bar', () {
-    final lcars = kBuiltInThemes.firstWhere((t) => t.id == 'lcars');
+    final lcars = testThemes.firstWhere((t) => t.id == 'lcars');
 
     Future<void> bar(WidgetTester tester, double width) async {
       await tester.pumpWidget(

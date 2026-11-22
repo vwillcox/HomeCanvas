@@ -6,9 +6,11 @@ import 'package:home_canvas/dashboard/dashboard_theme.dart';
 import 'package:home_canvas/theme.dart';
 import 'package:home_canvas/widgets/glass.dart';
 
+import 'theme_fixtures.dart';
+
 void main() {
   group('the Glass dashboard theme', () {
-    final glass = kBuiltInThemes.firstWhere((t) => t.id == 'glass');
+    final glass = testThemes.firstWhere((t) => t.id == 'glass');
 
     test('uses the kiosk\'s own accent, so the two cannot drift apart', () {
       expect(glass.accent, buildTheme().colorScheme.primary);
@@ -29,7 +31,7 @@ void main() {
     });
 
     test('a theme without a glow keeps its plain background', () {
-      final midnight = kBuiltInThemes.firstWhere((t) => t.id == 'midnight');
+      final midnight = testThemes.firstWhere((t) => t.id == 'midnight');
       expect(midnight.glow, isNull);
       expect(midnight.toJson().containsKey('glow'), isFalse);
       expect(midnight.backgroundDecoration.gradient, isA<LinearGradient>());
@@ -37,10 +39,10 @@ void main() {
   });
 
   group('the Aurora dashboard theme', () {
-    final aurora = kBuiltInThemes.firstWhere((t) => t.id == 'aurora');
+    final aurora = testThemes.firstWhere((t) => t.id == 'aurora');
 
     test('is glass: see-through tiles, tight gaps, the first glow', () {
-      final glass = kBuiltInThemes.firstWhere((t) => t.id == 'glass');
+      final glass = testThemes.firstWhere((t) => t.id == 'glass');
       expect(aurora.surface.a, lessThan(0.15));
       expect(aurora.gap, glass.gap);
       expect(aurora.backgroundDecoration.gradient, isA<RadialGradient>());
@@ -68,7 +70,7 @@ void main() {
     });
 
     test('a theme without them is unchanged: one glow, flat tiles', () {
-      final glass = kBuiltInThemes.firstWhere((t) => t.id == 'glass');
+      final glass = testThemes.firstWhere((t) => t.id == 'glass');
       expect(glass.glowEndDecoration, isNull);
       expect(glass.tileDecoration.gradient, isNull);
       expect(glass.tileDecoration.color, glass.surface);

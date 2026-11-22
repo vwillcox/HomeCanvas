@@ -108,7 +108,7 @@
   .about .other { margin: 0; font-size: 13px; color: var(--caution); }
   .about .other a { color: inherit; }
 
-  /* Other people's libraries: what this panel reads beside the catalogue. */
+  /* Third-party libraries: what this panel reads beside the catalogue. */
   #libraries summary { cursor: pointer; font-weight: 650; font-size: 17px; min-height: 30px; }
   #libraries p { margin: 10px 0 0; color: var(--muted); font-size: 14.5px; max-width: 78ch; }
   #libraries .risk { color: var(--caution); }
@@ -138,7 +138,7 @@
   <header>
     <a class="home" href="/" data-t="web.common.backToDashboard">← Dashboard</a>
     <h1 data-t="web.addons.title">Add-ons</h1>
-    <p class="sub"><span data-t="web.addons.sub">Widgets for the dashboard, from the HomeCanvas catalogue. Download one and it is added to the panel.</span>
+    <p class="sub"><span data-t="web.addons.sub">Widgets and themes for the dashboard, from the HomeCanvas catalogue. Download one and it is added to the panel.</span>
       <a id="repo" href="https://github.com/vwillcox/HomeCanvas-Widgets" target="_blank" rel="noopener" data-t="web.addons.contribute">Make one of your own and send it in</a></p>
   </header>
 
@@ -162,7 +162,7 @@
   <section id="list"></section>
 
   <details class="card" id="libraries">
-    <summary data-t="web.addons.libraries">Other people's libraries</summary>
+    <summary data-t="web.addons.libraries">Third-party libraries</summary>
     <p data-t="web.addons.librariesWhat">Anyone can keep a library of add-ons of their own, laid out as the catalogue is. Name one here and what is in it is listed above, beside the catalogue's.</p>
     <p class="risk" data-t="web.addons.librariesRisk">Nobody at HomeCanvas has tested or read what is in another library. An add-on written in Dart is code: once installed it runs on the panel as the panel does, and can read whatever the panel can — its settings and keys among them. What a library says its add-ons use is its own word. Add only a library whose owner you trust; what you install from one is at your own risk.</p>
     <p id="codeOff" hidden data-t="web.addons.codeOff">Add-ons written in Dart from another library are installed only while "Widgets written in Dart" is switched on in Settings → Dashboard, on the panel itself. Those described in JSON need no switch.</p>
@@ -183,10 +183,10 @@
 
 <script src="/i18n.js"></script>
 <script>
-/* The catalogue of add-ons — every widget there is — as the panel read it
+/* The catalogue of add-ons — every widget and theme there is — as the panel read it
    from the catalogue's repository, what of it is installed here, and
-   whatever is in the libraries of other people's this panel has been
-   given: listed with the rest, and marked as nobody's but their owner's.
+   whatever is in the third-party libraries this panel has been given:
+   listed with the rest, and marked as nobody's but their owner's.
 
    One described in JSON is on the panel the moment it is downloaded. One
    written in Dart is built into the panel, which takes a few minutes and
@@ -343,7 +343,10 @@ async function install(ids) {
     ids.forEach(id => state.picked.delete(id));
     if (state.data.build && state.data.build.state === "building") { showBuild(state.data.build, true); watch(); return; }
     state.busy = false;
-    say("good", t("web.addons.added", "{name} is on the panel. Find it in the editor, under \"Add a widget\".", { name: names(ids.join(",")) }));
+    const themes = ids.every(id => (state.data.addons.find(a => a.id === id) || {}).kind === "theme");
+    say("good", themes
+      ? t("web.addons.addedTheme", "{name} is on the panel. Dress it in it under Theme, in the editor or in Settings on the panel.", { name: names(ids.join(",")) })
+      : t("web.addons.added", "{name} is on the panel. Find it in the editor, under \"Add a widget\".", { name: names(ids.join(",")) }));
   } catch (e) {
     state.busy = false;
     say("bad", t("web.addons.couldNot", "The panel did not answer."));
@@ -353,7 +356,12 @@ async function install(ids) {
 
 async function remove(a) {
   if (state.busy) return;
-  if (!confirm(t("web.addons.confirmRemove", "Remove {name} from the panel? Tiles of it keep their settings, for if it comes back.", { name: a.name }))) return;
+  const asked = a.kind === "theme"
+    ? (a.inUse
+      ? t("web.addons.confirmRemoveThemeInUse", "Remove {name} from the panel? It is dressed in it now, so it goes back to Glass.", { name: a.name })
+      : t("web.addons.confirmRemoveTheme", "Remove {name} from the panel?", { name: a.name }))
+    : t("web.addons.confirmRemove", "Remove {name} from the panel? Tiles of it keep their settings, for if it comes back.", { name: a.name });
+  if (!confirm(asked)) return;
   state.busy = true;
   draw();
   try {
@@ -415,7 +423,8 @@ function card(a) {
   about.appendChild(el("p", "facts", [
     t("web.addons.version", "Version {version}", { version: a.version || "—" }),
     count > 1 ? t("web.addons.tiles", "{n} widgets", { n: count }) : null,
-    builds ? t("web.addons.isBuilt", "built into the panel") : t("web.addons.isInstant", "on the panel at once"),
+    a.kind === "theme" ? t("web.addons.isTheme", "a theme, on the panel at once")
+      : builds ? t("web.addons.isBuilt", "built into the panel") : t("web.addons.isInstant", "on the panel at once"),
   ].filter(Boolean).join(" · ")));
   if ((a.permissions || []).length) {
     about.appendChild(el("p", "facts", t("web.addons.uses", "Uses: {what}", { what: a.permissions.join(", ") })));
@@ -439,7 +448,9 @@ function card(a) {
   // when neither applies, so the buttons below sit level across a row.
   const acts = el("div", "acts");
   const line = el("div", "line");
-  if (a.installed) line.appendChild(el("span", "have", "✓ " + t("web.addons.installed", "Installed")));
+  if (a.installed) line.appendChild(el("span", "have", "✓ " + (a.inUse
+    ? t("web.addons.inUse", "Installed, and in use")
+    : t("web.addons.installed", "Installed"))));
   // Several built in together cost one restart, not one each.
   if (want && builds) {
     const pick = el("label", "pick");
@@ -517,7 +528,7 @@ function draw() {
   if (!state.busy && $("status").hidden) {
     if (d.error) say("bad", d.error);
     else if (wanted.length) {
-      say("", t("web.addons.wanted", "{n, plural, one{Your dashboard has tiles waiting for # add-on} other{Your dashboard has tiles waiting for # add-ons}}: {names}.", { n: wanted.length, names: wanted.map(a => a.name).join(", ") }));
+      say("", t("web.addons.wanted", "{n, plural, one{Your dashboard is waiting for # add-on} other{Your dashboard is waiting for # add-ons}}: {names}.", { n: wanted.length, names: wanted.map(a => a.name).join(", ") }));
     }
   }
   if (!state.busy && wanted.length && $("status").className.trim() === "card") {

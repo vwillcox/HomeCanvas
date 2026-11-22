@@ -48,8 +48,7 @@ void main() {
           home: Builder(
             builder: (context) => Center(
               child: TextButton(
-                onPressed: () =>
-                    Navigator.of(context).push(
+                onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) => const DashboardScreen(),
                   ),

@@ -646,19 +646,6 @@
       "glow": "#29a6c8ff"
     },
     {
-      "id": "aurora",
-      "name": "Aurora",
-      "background": [
-        "#07080e"
-      ],
-      "surface": "#14dde3ff",
-      "border": "#22e6eaff",
-      "textPrimary": "#fff6f7ff",
-      "textSecondary": "#9ef6f7ff",
-      "accent": "#ff8ff0dc",
-      "glow": "#338e7bff"
-    },
-    {
       "id": "abyss",
       "name": "Abyss",
       "background": [
@@ -672,43 +659,17 @@
       "glow": "#2e1e90ff"
     },
     {
-      "id": "obsidian",
-      "name": "Obsidian",
+      "id": "aurora",
+      "name": "Aurora",
       "background": [
-        "#050506",
-        "#111216"
+        "#07080e"
       ],
-      "surface": "#f0191a1f",
-      "border": "#2effffff",
-      "textPrimary": "#fff4f1ea",
-      "textSecondary": "#99f4f1ea",
-      "accent": "#ffe9c46a"
-    },
-    {
-      "id": "synthwave",
-      "name": "Synthwave",
-      "background": [
-        "#12002a"
-      ],
-      "surface": "#b3190733",
-      "border": "#66ff6ad5",
-      "textPrimary": "#fffdf0ff",
-      "textSecondary": "#b3f3d9ff",
-      "accent": "#ffff6ad5",
-      "glow": "#40ff2e97"
-    },
-    {
-      "id": "midnight",
-      "name": "Midnight",
-      "background": [
-        "#0b0f1a",
-        "#141c2e"
-      ],
-      "surface": "#14ffffff",
-      "border": "#1fffffff",
-      "textPrimary": "#fff2f5fa",
-      "textSecondary": "#99f2f5fa",
-      "accent": "#ff7dd3fc"
+      "surface": "#14dde3ff",
+      "border": "#22e6eaff",
+      "textPrimary": "#fff6f7ff",
+      "textSecondary": "#9ef6f7ff",
+      "accent": "#ff8ff0dc",
+      "glow": "#338e7bff"
     },
     {
       "id": "ember",
@@ -724,6 +685,18 @@
       "accent": "#ffff8a4c"
     },
     {
+      "id": "espresso",
+      "name": "Espresso",
+      "background": [
+        "#1c1410"
+      ],
+      "surface": "#ff2a1f19",
+      "border": "#00000000",
+      "textPrimary": "#fff3e6d8",
+      "textSecondary": "#99f3e6d8",
+      "accent": "#ffd9a066"
+    },
+    {
       "id": "forest",
       "name": "Forest",
       "background": [
@@ -737,41 +710,17 @@
       "accent": "#ff6ee7b7"
     },
     {
-      "id": "espresso",
-      "name": "Espresso",
+      "id": "frost",
+      "name": "Frost",
       "background": [
-        "#1c1410"
+        "#d5e1f2"
       ],
-      "surface": "#ff2a1f19",
-      "border": "#00000000",
-      "textPrimary": "#fff3e6d8",
-      "textSecondary": "#99f3e6d8",
-      "accent": "#ffd9a066"
-    },
-    {
-      "id": "terminal",
-      "name": "Terminal",
-      "background": [
-        "#030805"
-      ],
-      "surface": "#0a39ff88",
-      "border": "#4d39ff88",
-      "textPrimary": "#ffc8ffd9",
-      "textSecondary": "#99c8ffd9",
-      "accent": "#ff39ff88",
-      "glow": "#1439ff88"
-    },
-    {
-      "id": "terminal-night",
-      "name": "Terminal Night",
-      "background": [
-        "#000000"
-      ],
-      "surface": "#0529d66f",
-      "border": "#2629d66f",
-      "textPrimary": "#ff7fd69a",
-      "textSecondary": "#8c7fd69a",
-      "accent": "#ff29c765"
+      "surface": "#8cffffff",
+      "border": "#ccffffff",
+      "textPrimary": "#ff1b2433",
+      "textSecondary": "#991b2433",
+      "accent": "#ff2f6feb",
+      "glow": "#99ffffff"
     },
     {
       "id": "lcars",
@@ -796,6 +745,19 @@
       ]
     },
     {
+      "id": "midnight",
+      "name": "Midnight",
+      "background": [
+        "#0b0f1a",
+        "#141c2e"
+      ],
+      "surface": "#14ffffff",
+      "border": "#1fffffff",
+      "textPrimary": "#fff2f5fa",
+      "textSecondary": "#99f2f5fa",
+      "accent": "#ff7dd3fc"
+    },
+    {
       "id": "nightstand",
       "name": "Nightstand",
       "background": [
@@ -808,17 +770,17 @@
       "accent": "#ffffb300"
     },
     {
-      "id": "frost",
-      "name": "Frost",
+      "id": "obsidian",
+      "name": "Obsidian",
       "background": [
-        "#d5e1f2"
+        "#050506",
+        "#111216"
       ],
-      "surface": "#8cffffff",
-      "border": "#ccffffff",
-      "textPrimary": "#ff1b2433",
-      "textSecondary": "#991b2433",
-      "accent": "#ff2f6feb",
-      "glow": "#99ffffff"
+      "surface": "#f0191a1f",
+      "border": "#2effffff",
+      "textPrimary": "#fff4f1ea",
+      "textSecondary": "#99f4f1ea",
+      "accent": "#ffe9c46a"
     },
     {
       "id": "paper",
@@ -857,6 +819,44 @@
       "textPrimary": "#ff111111",
       "textSecondary": "#8c111111",
       "accent": "#ffe30613"
+    },
+    {
+      "id": "synthwave",
+      "name": "Synthwave",
+      "background": [
+        "#12002a"
+      ],
+      "surface": "#b3190733",
+      "border": "#66ff6ad5",
+      "textPrimary": "#fffdf0ff",
+      "textSecondary": "#b3f3d9ff",
+      "accent": "#ffff6ad5",
+      "glow": "#40ff2e97"
+    },
+    {
+      "id": "terminal",
+      "name": "Terminal",
+      "background": [
+        "#030805"
+      ],
+      "surface": "#0a39ff88",
+      "border": "#4d39ff88",
+      "textPrimary": "#ffc8ffd9",
+      "textSecondary": "#99c8ffd9",
+      "accent": "#ff39ff88",
+      "glow": "#1439ff88"
+    },
+    {
+      "id": "terminal-night",
+      "name": "Terminal Night",
+      "background": [
+        "#000000"
+      ],
+      "surface": "#0529d66f",
+      "border": "#2629d66f",
+      "textPrimary": "#ff7fd69a",
+      "textSecondary": "#8c7fd69a",
+      "accent": "#ff29c765"
     }
   ]
 }

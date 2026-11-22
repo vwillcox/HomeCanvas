@@ -81,6 +81,27 @@ PY
     mkdir -p "$ROOT/test/addons"
     cp -r "$ADDONS/../tests/." "$ROOT/test/addons/"
   fi
+  # Themes are not built in — a panel reads them from its themes folder —
+  # but their tests read them: test/addons/themes/<theme id>.json.
+  if [ "${HOMECANVAS_ADDON_TESTS:-}" = 1 ]; then
+    ADDONS="$ADDONS" OUT="$ROOT/test/addons/themes" python3 - <<'PY'
+import json, os, re, shutil
+root, out = os.environ["ADDONS"], os.environ["OUT"]
+name = re.compile(r"^[a-z][a-z0-9-]{1,39}$")
+for id in sorted(os.listdir(root)) if os.path.isdir(root) else []:
+    try:
+        with open(os.path.join(root, id, "addon.json")) as f:
+            m = json.load(f)
+    except (OSError, ValueError):
+        continue
+    themes = m.get("themes") or []
+    src = os.path.join(root, id, "theme.json")
+    if m.get("kind") == "theme" and len(themes) == 1 and name.match(str(themes[0])) \
+            and os.path.isfile(src):
+        os.makedirs(out, exist_ok=True)
+        shutil.copyfile(src, os.path.join(out, f"{themes[0]}.json"))
+PY
+  fi
   i=0
   for f in "$SRC"/*.dart; do
     [ -f "$f" ] || continue

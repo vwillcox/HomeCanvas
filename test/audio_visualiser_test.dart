@@ -5,10 +5,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 import 'package:home_canvas/config/app_config.dart';
-import 'package:home_canvas/dashboard/dashboard_theme.dart';
 import 'package:home_canvas/look.dart';
 import 'package:home_canvas/services/audio_levels_service.dart';
 import 'package:home_canvas/widgets/audio_visualiser.dart';
+
+import 'theme_fixtures.dart';
 
 /// A service that opens cleanly and then says nothing, so the widget renders
 /// as it would on the panel without a capture process anywhere near it.
@@ -84,7 +85,7 @@ void main() {
     testWidgets('a console draws it in its own blocks, either style', (
       tester,
     ) async {
-      final lcars = kBuiltInThemes.firstWhere((t) => t.isLcars);
+      final lcars = testThemes.firstWhere((t) => t.isLcars);
       String painter() => tester
           .widget<CustomPaint>(
             find.descendant(

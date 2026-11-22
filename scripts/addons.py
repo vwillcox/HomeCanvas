@@ -17,7 +17,7 @@ Which repository is read can be changed on the panel only: the environment's
 HOMECANVAS_ADDONS_REPO, or "addonsRepo" under "dashboard" in config.json.
 Either is `owner/name` on GitHub, or a folder — a checkout of the catalogue.
 
-Beside the catalogue a panel may read other people's libraries, listed as
+Beside the catalogue a panel may read third-party libraries, listed as
 "addonLibraries" under "dashboard": repositories laid out the same way,
 which nobody but their owners has checked. The catalogue comes first; a
 library is asked only for what the catalogue does not have.
@@ -25,7 +25,8 @@ library is asked only for what the catalogue does not have.
 `ensure` is run before a build by install.sh and sync.sh. A panel whose
 dashboard was laid out when its widgets were built in keeps them: whatever
 its dashboard uses and does not have is fetched. A panel with no dashboard
-yet is given the starter set. An add-on taken off on the Add-ons page is
+yet is given the starter set. The theme it is dressed in is fetched too, if
+it is not Glass — the app's own — or one made by hand. An add-on taken off on the Add-ons page is
 never fetched back by it, though a tile of its type may still be on the
 dashboard: it is noted in addons-removed.json beside the add-ons, until it is
 downloaded again.
@@ -53,6 +54,10 @@ ADDONS = os.environ.get("HOMECANVAS_ADDONS") or os.path.join(
 )
 
 ID = re.compile(r"^[a-z][a-z0-9_]{1,39}$")
+THEME_ID = re.compile(r"^[a-z][a-z0-9-]{1,39}$")
+# The theme the app ships; every other is an add-on.
+BUILT_IN_THEMES = {"glass"}
+THEMES = os.path.join(os.path.dirname(os.path.abspath(ADDONS)), "themes")
 REPO = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*/[A-Za-z0-9_][A-Za-z0-9_.-]*$")
 COMMIT = re.compile(r"^[0-9a-f]{40}$")
 # A file of an add-on: Dart beside its addon.json, or the one JSON widget.
@@ -164,8 +169,14 @@ def check_index(j):
     for a in j["addons"]:
         if not isinstance(a, dict) or not ID.match(str(a.get("id", ""))):
             continue
-        if a.get("kind") not in ("dart", "json"):
+        if a.get("kind") not in ("dart", "json", "theme"):
             continue
+        if a.get("kind") == "theme":
+            themes = a.get("themes")
+            if not (isinstance(themes, list) and len(themes) == 1
+                    and THEME_ID.match(str(themes[0]))
+                    and themes[0] not in BUILT_IN_THEMES):
+                continue
         files = a.get("files")
         if not isinstance(files, list) or not files:
             continue
@@ -224,11 +235,13 @@ def fetch(src, cat, ids, dest):
 
 
 def place_described(ids):
-    """Puts add-ons described in JSON where the app reads such widgets from.
+    """Puts add-ons described in JSON where the app reads such widgets from,
+    and themes where it reads themes from.
 
     One written in Dart is built in from its folder. One described in JSON
     is read by the running app, from the folder its uploads are kept in,
-    under the name its own "type" gives it.
+    under the name its own "type" gives it. A theme is its theme.json, in
+    the themes folder under the theme's own name.
     """
     widgets = os.path.join(os.path.dirname(ADDONS), "widgets")
     for id in ids:
@@ -236,6 +249,15 @@ def place_described(ids):
         try:
             with open(os.path.join(folder, "addon.json")) as f:
                 m = json.load(f)
+            if m.get("kind") == "theme":
+                named = (m.get("themes") or [""])[0]
+                with open(os.path.join(folder, "theme.json"), "rb") as f:
+                    data = f.read()
+                if THEME_ID.match(str(named)) and json.loads(data).get("id") == named:
+                    os.makedirs(THEMES, exist_ok=True)
+                    with open(os.path.join(THEMES, f"{named}.json"), "wb") as out:
+                        out.write(data)
+                continue
             if m.get("kind") != "json":
                 continue
             with open(os.path.join(folder, m["files"][0]), "rb") as f:
@@ -287,9 +309,19 @@ def note_removed(add=(), drop=()):
 ALBUMS = "immich_albums"
 
 
-def wanted(cat, dashboard, have, connected=False, gone=frozenset()):
+def theme_files():
+    """The ids of the themes in the themes folder: downloaded, or made by hand."""
+    if not os.path.isdir(THEMES):
+        return set()
+    return {f[:-5] for f in os.listdir(THEMES) if f.endswith(".json")}
+
+
+def wanted(cat, dashboard, have, connected=False, gone=frozenset(), themes=frozenset()):
     """The add-ons to fetch: what [dashboard] uses and [have] does not bring,
     and nothing that was taken off by hand ([gone]).
+
+    The theme [dashboard] is dressed in is wanted when it is not the app's
+    own, nor already in the themes folder ([themes]).
 
     A panel [connected] to Immich that has not yet been given its albums tile
     — the app adds it on its first start with them built in — is given the
@@ -311,12 +343,17 @@ def wanted(cat, dashboard, have, connected=False, gone=frozenset()):
     if connected and not offered:
         missing.add(ALBUMS)
     missing -= brought
+    theme = dashboard.get("themeId") if isinstance(dashboard, dict) else None
+    dressed = set()
+    if isinstance(theme, str) and theme not in BUILT_IN_THEMES and theme not in themes:
+        dressed.add(theme)
     return [
         a["id"]
         for a in cat["addons"]
         if a["id"] not in have
         and a["id"] not in gone
-        and missing.intersection(a["types"])
+        and (missing.intersection(a["types"])
+             or dressed.intersection(a.get("themes") or []))
     ]
 
 
@@ -364,12 +401,16 @@ def main():
                         if not have and not config().get("dashboard"):
                             continue
                         brought = {t for m in have.values() for t in m.get("types") or []}
+                        dressed = {t for m in have.values() for t in m.get("themes") or []}
                         cat["addons"] = [
-                            a for a in cat["addons"] if not brought.intersection(a["types"])
+                            a for a in cat["addons"]
+                            if not brought.intersection(a["types"])
+                            and not dressed.intersection(a.get("themes") or [])
                         ]
                     c = config()
                     connected = bool(c.get("immichUrl")) and bool(c.get("apiKey"))
-                    ids = wanted(cat, c.get("dashboard"), have, connected, removed())
+                    ids = wanted(cat, c.get("dashboard"), have, connected, removed(),
+                                 theme_files())
                     if ids:
                         fetch(src, cat, ids, ADDONS)
                         place_described(ids)

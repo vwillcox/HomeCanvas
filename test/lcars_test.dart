@@ -9,7 +9,9 @@ import 'package:home_canvas/theme.dart';
 import 'package:home_canvas/widgets/glass.dart';
 import 'package:home_canvas/widgets/lcars.dart';
 
-final lcars = kBuiltInThemes.firstWhere((t) => t.id == 'lcars');
+import 'theme_fixtures.dart';
+
+final lcars = testThemes.firstWhere((t) => t.id == 'lcars');
 
 /// [home] on the kiosk as LCARS dresses it.
 Widget console(Widget home) => KioskLook(
@@ -25,7 +27,7 @@ void main() {
     test('is a console, with colours for its blocks', () {
       expect(lcars.isLcars, isTrue);
       expect(lcars.palette, isNotEmpty);
-      expect(kBuiltInThemes.where((t) => t.isLcars), [lcars]);
+      expect(testThemes.where((t) => t.isLcars), [lcars]);
     });
 
     test('keeps its style and its palette through a theme file', () {

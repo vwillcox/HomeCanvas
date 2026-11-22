@@ -16,6 +16,7 @@ import 'package:home_canvas/services/dashboard_service.dart';
 import 'package:home_canvas/services/screen_idle_service.dart';
 
 import 'needs_addons.dart';
+import 'theme_fixtures.dart';
 
 /// Every page of the dashboard at once: where the cards go, what each is
 /// called, the map drawn for a page with no picture, and the ways in and
@@ -167,7 +168,7 @@ void main() {
         tile('e', 'no_such_widget', 0, x: 2, y: 5, w: 2, h: 1),
       ],
     );
-    for (final theme in kBuiltInThemes) {
+    for (final theme in testThemes) {
       for (final size in const [Size(340, 195), Size(160, 92)]) {
         await tester.pumpWidget(
           MaterialApp(
@@ -228,8 +229,8 @@ void main() {
       return (chosen: chosen, closed: closed, key: key);
     }
 
-    final glass = kBuiltInThemes.firstWhere((t) => !t.isLcars);
-    final lcars = kBuiltInThemes.firstWhere((t) => t.isLcars);
+    final glass = testThemes.firstWhere((t) => !t.isLcars);
+    final lcars = testThemes.firstWhere((t) => t.isLcars);
 
     testWidgets('every page is a card, named, and a card touched is chosen', (
       tester,

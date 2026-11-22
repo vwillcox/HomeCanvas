@@ -11,7 +11,9 @@ import 'needs_addons.dart';
 
 /// The installer offers the widgets and themes from
 /// deploy/installer/catalogue.json, since it runs before there is an app to
-/// ask. This keeps that file the app's own list. When it fails, write the
+/// ask. This keeps that file the list of what there is: the app's Glass and
+/// the catalogue's widgets and themes, linked in (see needs_addons.dart).
+/// The theme chosen is fetched by `scripts/addons.py ensure`. When it fails, write the
 /// file again from the app:
 ///
 ///   UPDATE_INSTALLER_CATALOGUE=1 flutter test test/installer_catalogue_test.dart
@@ -37,6 +39,21 @@ void main() {
             .where((t) => t.category != WidgetCategory.custom)
             .toList()
           ..sort((a, b) => a.type.compareTo(b.type));
+    // Glass, then the catalogue's themes by name.
+    final dir = Directory('test/addons/themes');
+    final themes = [
+      ...kBuiltInThemes,
+      ...[
+        for (final f
+            in dir.existsSync()
+                ? dir.listSync().whereType<File>()
+                : const <File>[])
+          if (f.path.endsWith('.json'))
+            DashboardTheme.fromJson(
+              jsonDecode(f.readAsStringSync()) as Map<String, dynamic>,
+            ),
+      ]..sort((a, b) => a.name.compareTo(b.name)),
+    ];
     final catalogue = {
       'about':
           'Written by test/installer_catalogue_test.dart from the app. '
@@ -54,7 +71,7 @@ void main() {
           },
       ],
       'themes': [
-        for (final t in kBuiltInThemes)
+        for (final t in themes)
           {
             for (final e in t.toJson().entries)
               if (const {

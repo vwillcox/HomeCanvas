@@ -103,9 +103,9 @@ Pick one you do not have — **Tides**, say — and press **Download**.
 - [ ] With Parcels removed, a tracking link shared from the phone still
       arrives, and Your day still lists what is due.
 
-**9. Somebody else's library** (new in alpha 2)
+**9. A third-party library** (new in alpha 2)
 
-At the foot of the Add-ons page, open **Other people's libraries**.
+At the foot of the Add-ons page, open **Third-party libraries**.
 
 - [ ] The warning is plain: untested, and at your own risk.
 - [ ] **Add library** stays greyed out until the box is ticked.
@@ -138,7 +138,18 @@ At the foot of the Add-ons page, open **Other people's libraries**.
 - [ ] "Hey canvas, show the photos" goes to the tile.
 - [ ] Settings → Display has no "Widget dashboard" switch any more.
 
-**11. Everything else still works** — nothing here should have changed it,
+**11. Themes are add-ons** (new in alpha 3)
+
+- [ ] After the update the panel is still in its theme (it was fetched).
+- [ ] Add-ons → **Themes** lists sixteen, with a picture of each; the one
+      in use says **Installed, and in use**.
+- [ ] Download another: it is in the theme pickers at once, no restart.
+- [ ] Remove the one in use: the panel goes back to Glass straight away.
+- [ ] Download it again and choose it: back as it was.
+- [ ] **Third-party libraries** is what the box at the foot of Add-ons is
+      called now.
+
+**12. Everything else still works** — nothing here should have changed it,
 which is the point of checking: the slideshow, music, voice, the share
 inbox, the day's brief, uploading a widget of your own under
 **Custom widgets**.

@@ -85,7 +85,10 @@ void main() {
         f('https://www.royalmail.com/news/stamp-prices-change-in-april'),
         isNull,
       );
-      expect(f('https://www.royalmail.com/news/track-and-trace-upgrade'), isNull);
+      expect(
+        f('https://www.royalmail.com/news/track-and-trace-upgrade'),
+        isNull,
+      );
       expect(
         f('https://www.dhl.com/gb-en/home/press/press-archive/2026/news.html'),
         isNull,

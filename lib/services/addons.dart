@@ -10,6 +10,7 @@ import 'package:path/path.dart' as p;
 import '../app_paths.dart';
 import '../app_version.dart';
 import '../dashboard/custom_widget_spec.dart';
+import '../dashboard/dashboard_theme.dart';
 import '../dashboard/widget_registry.dart';
 import 'code_widgets.dart';
 import 'custom_widgets.dart';
@@ -26,12 +27,13 @@ import 'http_client.dart';
 ///
 /// An add-on written in Dart is built into the app, by the panel, with the
 /// builder [CodeWidgets] starts. One described in JSON is on the panel at
-/// once, through [CustomWidgets].
+/// once, through [CustomWidgets]. A theme is on it at once too: a file in
+/// the themes folder ([themesDir]), which the dashboard reads again.
 ///
 /// Which repository is the catalogue is the panel's own choice —
 /// `addonsRepo` in config.json — and nothing the editor can set.
 ///
-/// Beside it, the page can be given other people's **libraries**: any
+/// Beside it, the page can be given **third-party libraries**: any
 /// repository laid out as the catalogue is, publishing an index the same
 /// way. Their files are checked against their own index's sums and no
 /// more — nobody has reviewed them — so the page says so on each, and one
@@ -45,11 +47,14 @@ class Addons {
     String? repo,
     String? dir,
     this.appVersion = kAppVersion,
+    String? themesDir,
     List<String> Function()? libraries,
     bool Function()? allowsCode,
+    this.onThemes,
     Future<List<int>> Function(String url, int most)? fetch,
   }) : repo = _repo.hasMatch(repo ?? '') ? repo! : defaultRepo,
        dir = dir ?? p.join(AppPaths.config, 'addons'),
+       themesDir = themesDir ?? p.join(AppPaths.config, 'themes'),
        _libraries = libraries ?? (() => const []),
        _allowsCode = allowsCode ?? (() => false),
        _fetch = fetch ?? _get;
@@ -65,6 +70,13 @@ class Addons {
 
   /// What is installed: a folder each, with the `addon.json` it came with.
   final String dir;
+
+  /// Where themes are read from: a theme add-on's theme.json is put here,
+  /// as `<theme id>.json`, beside any theme made by hand.
+  final String themesDir;
+
+  /// Run once a theme has come or gone, for the dashboard to read them again.
+  final Future<void> Function()? onThemes;
   final Future<List<int>> Function(String url, int most) _fetch;
   final List<String> Function() _libraries;
   final bool Function() _allowsCode;
@@ -110,6 +122,7 @@ class Addons {
     r'^[A-Za-z0-9][A-Za-z0-9_.-]*/[A-Za-z0-9_][A-Za-z0-9_.-]*$',
   );
   static final _id = RegExp(r'^[a-z][a-z0-9_]{1,39}$');
+  static final _themeId = RegExp(r'^[a-z][a-z0-9-]{1,39}$');
   static final _commit = RegExp(r'^[0-9a-f]{40}$');
   static final _sum = RegExp(r'^[0-9a-f]{64}$');
   static final _part = RegExp(r'^[a-z][a-z0-9_]*\.(dart|json)$');
@@ -189,9 +202,19 @@ class Addons {
     final id = a['id'];
     final files = a['files'];
     final types = a['types'];
+    final themes = a['themes'];
+    // A theme brings one theme, and never the app's own.
+    if (a['kind'] == 'theme' &&
+        !(themes is List &&
+            themes.length == 1 &&
+            themes.first is String &&
+            _themeId.hasMatch(themes.first as String) &&
+            !kBuiltInThemes.any((t) => t.id == themes.first))) {
+      return false;
+    }
     return id is String &&
         _id.hasMatch(id) &&
-        (a['kind'] == 'dart' || a['kind'] == 'json') &&
+        const {'dart', 'json', 'theme'}.contains(a['kind']) &&
         types is List &&
         types.every((t) => t is String) &&
         files is List &&
@@ -239,7 +262,7 @@ class Addons {
 
   /// Everything on offer: the catalogue's add-ons, then each library's
   /// that the catalogue — or a library before it — does not already have
-  /// by name or by widget type. Each carries where it is from (`source`,
+  /// by name, by widget type or by theme. Each carries where it is from (`source`,
   /// `commit`) and whether that is the catalogue (`official`).
   Future<_Offer> _offer({bool fresh = false}) async {
     final out = _Offer();
@@ -266,7 +289,10 @@ class Addons {
       final taken = <String>{};
       for (final a in index['addons'] as List) {
         final entry = a as Map<String, dynamic>;
-        final brings = [for (final t in entry['types'] as List) '$t'];
+        final brings = [
+          for (final t in entry['types'] as List) '$t',
+          for (final t in entry['themes'] as List? ?? const []) 'theme:$t',
+        ];
         if (ids.contains(entry['id']) || brings.any(types.contains)) {
           hidden++;
           continue;
@@ -296,9 +322,10 @@ class Addons {
 
   /// The page: every add-on, with whether this panel has it, could have
   /// it, and has a tile waiting for it. [used] is the widget types on the
-  /// dashboard.
+  /// dashboard, and [theme] the theme it is dressed in.
   Future<Map<String, dynamic>> listing(
     Set<String> used, {
+    String? theme,
     bool fresh = false,
   }) async {
     final have = installed();
@@ -331,8 +358,8 @@ class Addons {
           {
             for (final k in const [
               'id', 'name', 'description', 'author', 'authorUrl', //
-              'category', 'glyph', 'version', 'kind', 'types', 'permissions',
-              'minApp', 'source', 'official',
+              'category', 'glyph', 'version', 'kind', 'types', 'themes',
+              'permissions', 'minApp', 'source', 'official',
             ])
               k: a[k],
             'categoryName': WidgetCategory.localName('${a['category']}'),
@@ -349,7 +376,10 @@ class Addons {
             'compatible': !older(appVersion, '${a['minApp'] ?? '0'}'),
             'wanted':
                 have[a['id']] == null &&
-                (a['types'] as List? ?? const []).any(used.contains),
+                ((a['types'] as List? ?? const []).any(used.contains) ||
+                    (a['themes'] as List? ?? const []).contains(theme)),
+            if (a['kind'] == 'theme')
+              'inUse': (a['themes'] as List? ?? const []).contains(theme),
           },
       ],
     };
@@ -366,6 +396,7 @@ class Addons {
     final byId = {for (final a in offer.addons) a['id'] as String: a};
     final dart = <String>[];
     final json = <Map<String, dynamic>>[];
+    final themes = <Map<String, dynamic>>[];
     for (final id in ids) {
       final a = byId[id];
       if (a == null) {
@@ -375,7 +406,10 @@ class Addons {
         return '${a['name']} needs HomeCanvas ${a['minApp']} or newer; '
             'this panel has $appVersion.';
       }
-      if (a['kind'] != 'dart') {
+      if (a['kind'] == 'theme') {
+        // Colours and measures, from anywhere: there is no code in one.
+        themes.add(a);
+      } else if (a['kind'] != 'dart') {
         json.add(a);
       } else if (a['official'] == true) {
         dart.add(id);
@@ -398,7 +432,14 @@ class Addons {
     for (final a in json) {
       final refused = await _installDescribed(a);
       if (refused != null) return refused;
+      _noteRemoved(drop: [a['id'] as String]);
     }
+    for (final a in themes) {
+      final refused = await _installTheme(a);
+      if (refused != null) return refused;
+      _noteRemoved(drop: [a['id'] as String]);
+    }
+    if (themes.isNotEmpty) await onThemes?.call();
     return dart.isEmpty ? null : code.installAddons(dart);
   }
 
@@ -449,6 +490,85 @@ class Addons {
     return null;
   }
 
+  /// A theme: its theme.json fetched, checked against its sum, read as the
+  /// dashboard would read it, and put in the themes folder.
+  Future<String?> _installTheme(Map<String, dynamic> a) async {
+    final id = a['id'] as String;
+    final named = '${(a['themes'] as List).first}';
+    final files = a['files'] as List;
+    final file = files.first as Map;
+    if (files.length != 1 || file['path'] != 'theme.json') {
+      return '${a['name']} is not one theme.json.';
+    }
+    final List<int> bytes;
+    try {
+      bytes = await _fetch(
+        '$_raw/${a['source']}/${a['commit']}/widgets/$id/theme.json',
+        _maxTheme,
+      );
+    } catch (_) {
+      return '${a['name']} could not be fetched.';
+    }
+    if ('${sha256.convert(bytes)}' != file['sha256']) {
+      return '${a['name']} is not the file the catalogue checked. '
+          'It was not installed.';
+    }
+    try {
+      final j = jsonDecode(utf8.decode(bytes));
+      if (j is! Map<String, dynamic> || j['id'] != named) {
+        throw const FormatException();
+      }
+      DashboardTheme.fromJson(j);
+    } catch (_) {
+      return '${a['name']} is not a theme this panel can read.';
+    }
+    await Directory(themesDir).create(recursive: true);
+    final part = File(p.join(themesDir, '.$named.json.part'));
+    await part.writeAsBytes(bytes, flush: true);
+    await part.rename(p.join(themesDir, '$named.json'));
+    final folder = Directory(p.join(dir, id));
+    await folder.create(recursive: true);
+    await File(p.join(folder.path, 'addon.json')).writeAsString(
+      '${const JsonEncoder.withIndent('  ').convert({
+        for (final e in a.entries)
+          if (!const {'files', 'source', 'official'}.contains(e.key)) e.key: e.value,
+        'repo': a['source'],
+        'files': ['theme.json'],
+      })}\n',
+      flush: true,
+    );
+    return null;
+  }
+
+  static const _maxTheme = 64 * 1024;
+
+  /// Add-ons taken off by hand, which an update — `scripts/addons.py
+  /// ensure` — leaves off even when the dashboard still names them. The
+  /// builder notes those in Dart itself; these are the rest.
+  String get _removedFile => p.join(p.dirname(dir), 'addons-removed.json');
+
+  void _noteRemoved({
+    List<String> add = const [],
+    List<String> drop = const [],
+  }) {
+    try {
+      final file = File(_removedFile);
+      final had = <String>{};
+      if (file.existsSync()) {
+        final j = jsonDecode(file.readAsStringSync());
+        if (j is List) had.addAll(j.whereType<String>());
+      }
+      final now = {...had, ...add}..removeAll(drop);
+      if (setEquals(had, now)) return;
+      file.parent.createSync(recursive: true);
+      file.writeAsStringSync(
+        '${const JsonEncoder.withIndent('  ').convert(now.toList()..sort())}\n',
+      );
+    } catch (e) {
+      debugPrint('Add-ons: $_removedFile: $e');
+    }
+  }
+
   /// Takes one out. Null when it is gone — or, for one in Dart, when the
   /// build without it has started; otherwise why not.
   Future<String?> remove(String id) async {
@@ -460,6 +580,23 @@ class Addons {
             'rebuild without it.';
       }
       return code.removeAddon(id);
+    }
+    if (had['kind'] == 'theme') {
+      for (final t in had['themes'] as List? ?? const []) {
+        final named = '$t';
+        if (!_themeId.hasMatch(named)) continue;
+        try {
+          await File(p.join(themesDir, '$named.json')).delete();
+        } catch (_) {}
+      }
+      try {
+        await Directory(p.join(dir, id)).delete(recursive: true);
+      } catch (e) {
+        debugPrint('Add-on $id: $e');
+      }
+      _noteRemoved(add: [id]);
+      await onThemes?.call();
+      return null;
     }
     for (final t in had['types'] as List? ?? const []) {
       final type = '$t';
@@ -474,6 +611,7 @@ class Addons {
     } catch (e) {
       debugPrint('Add-on $id: $e');
     }
+    _noteRemoved(add: [id]);
     return null;
   }
 }

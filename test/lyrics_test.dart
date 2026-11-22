@@ -5,12 +5,13 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:home_canvas/dashboard/dashboard_theme.dart';
 import 'package:home_canvas/look.dart';
 import 'package:home_canvas/services/lyrics.dart';
 import 'package:home_canvas/services/now_playing_service.dart';
 import 'package:home_canvas/services/playback_source.dart';
 import 'package:home_canvas/widgets/lyrics_view.dart';
+
+import 'theme_fixtures.dart';
 
 /// A song's words: reading LRCLIB's timed and plain lyrics, picking the
 /// right one of its search results, and the view lighting the line being
@@ -296,7 +297,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: KioskLook(
-            theme: kBuiltInThemes.firstWhere((t) => t.id == theme),
+            theme: testThemes.firstWhere((t) => t.id == theme),
             child: Scaffold(
               body: LyricsView(lyrics: words, service: source),
             ),
@@ -360,7 +361,7 @@ void main() {
       await show(tester, at: const Duration(seconds: 6), theme: 'lcars');
       expect(find.text('00:05'), findsOneWidget);
       expect(find.text('00:20'), findsOneWidget);
-      final look = kBuiltInThemes.firstWhere((t) => t.id == 'lcars');
+      final look = testThemes.firstWhere((t) => t.id == 'lcars');
       expect(colourOf(tester, 'Second line'), look.accent);
       expect(tester.takeException(), isNull);
     });
@@ -368,7 +369,7 @@ void main() {
     testWidgets('fits a small screen and a big one, in every theme', (
       tester,
     ) async {
-      for (final t in kBuiltInThemes) {
+      for (final t in testThemes) {
         for (final size in const [Size(700, 300), Size(1300, 700)]) {
           await show(
             tester,

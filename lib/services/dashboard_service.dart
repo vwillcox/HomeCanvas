@@ -125,6 +125,18 @@ class DashboardService extends ChangeNotifier {
   String? get editorIpAddress =>
       _ip == null || _ip == _host ? null : 'http://$_ip$_portSuffix';
 
+  /// Reads the themes folder again, once a theme add-on has come or gone.
+  /// A panel whose theme has just been taken off goes back to Glass, rather
+  /// than naming one it no longer has.
+  Future<void> reloadThemes() async {
+    await themes.load();
+    if (!themes.all.any((t) => t.id == settings.themeId)) {
+      settings.themeId = kBuiltInThemes.first.id;
+      await _config.save();
+    }
+    notifyListeners();
+  }
+
   Future<void> start() async {
     await themes.load();
     final ip = await _localAddress();
@@ -1334,9 +1346,11 @@ class DashboardService extends ChangeNotifier {
     final addons = this.addons;
     if (addons == null) return _status(request, HttpStatus.notFound);
     Future<void> listed({bool fresh = false}) async => _json(request, {
-      ...await addons.listing({
-        for (final w in settings.widgets) w.type,
-      }, fresh: fresh),
+      ...await addons.listing(
+        {for (final w in settings.widgets) w.type},
+        theme: settings.themeId,
+        fresh: fresh,
+      ),
       'build': addons.code.status(),
     });
 

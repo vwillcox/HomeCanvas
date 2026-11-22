@@ -7,6 +7,19 @@ dashboard is the kiosk's home screen.
 
 ### Changed in alpha 3
 
+- **Themes are add-ons too.** The app ships Glass, its own look; the other
+  sixteen — LCARS, Aurora, Paper, Terminal and the rest — are in the
+  catalogue, under **Themes** on the Add-ons page. A theme is on the panel
+  the moment it is downloaded, with no rebuild. Updating a panel fetches the
+  theme it is dressed in; removing that theme puts it back on Glass. Anyone
+  can send one in, or keep themes in a third-party library: they are
+  colours and measures, no code, and the catalogue checks each before it is
+  listed.
+- **"Other people's libraries" are now "third-party libraries"**, on the
+  Add-ons page and in the docs.
+- **An add-on taken off stays off.** Removing one left any tile of it on the
+  dashboard, so the next update fetched it back. Removals are remembered now,
+  until it is downloaded again.
 - **The dashboard is the first screen.** The kiosk used to open on the
   album browser, with the dashboard a button away (and off until switched
   on). Now it opens on the dashboard, whose top bar is the kiosk's own: the
@@ -45,7 +58,7 @@ dashboard is the kiosk's home screen.
   Only what passes is listed, and a panel installs only files that match
   the sums the catalogue published.
 
-- **Other people's libraries.** Anyone can keep a library of add-ons in a
+- **Third-party libraries.** Anyone can keep a library of add-ons in a
   repository of their own, and the Add-ons page can be given it by name:
   its add-ons are listed with the catalogue's, each marked as untested and
   where it is from. Nobody at HomeCanvas has read them, the page says so

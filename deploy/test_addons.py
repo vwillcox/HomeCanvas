@@ -122,6 +122,36 @@ class Fetching(unittest.TestCase):
             addons.REPO = was
         self.assertEqual(sorted(os.listdir(dest)), ["clock", "tide"])
 
+    def test_the_theme_in_use_is_kept(self):
+        cat = {"addons": [
+            {"id": "theme_lcars", "kind": "theme", "types": [], "themes": ["lcars"]},
+            {"id": "clock", "types": ["clock"]},
+        ]}
+        have = {"clock": {"types": ["clock"]}}
+        dash = {"themeId": "lcars", "widgets": [{"type": "clock"}]}
+        self.assertEqual(addons.wanted(cat, dash, have), ["theme_lcars"])
+        # Not Glass, which the app has; not one already in the themes
+        # folder, made by hand or fetched before; not one taken off.
+        self.assertEqual(addons.wanted(cat, {**dash, "themeId": "glass"}, have), [])
+        self.assertEqual(addons.wanted(cat, dash, have, themes={"lcars"}), [])
+        self.assertEqual(addons.wanted(cat, dash, have, gone={"theme_lcars"}), [])
+
+    def test_a_theme_is_put_where_the_app_reads_themes(self):
+        with tempfile.TemporaryDirectory() as d:
+            was = (addons.ADDONS, addons.THEMES)
+            addons.ADDONS, addons.THEMES = os.path.join(d, "addons"), os.path.join(d, "themes")
+            try:
+                folder = os.path.join(addons.ADDONS, "theme_lcars")
+                os.makedirs(folder)
+                with open(os.path.join(folder, "addon.json"), "w") as f:
+                    json.dump({"kind": "theme", "themes": ["lcars"], "types": []}, f)
+                with open(os.path.join(folder, "theme.json"), "w") as f:
+                    json.dump({"id": "lcars", "name": "LCARS"}, f)
+                addons.place_described(["theme_lcars"])
+                self.assertEqual(addons.theme_files(), {"lcars"})
+            finally:
+                addons.ADDONS, addons.THEMES = was
+
     def test_what_was_taken_off_by_hand_is_not_fetched_back(self):
         cat = {"addons": [{"id": "history", "types": ["history"]},
                           {"id": "clock", "types": ["clock"]}]}

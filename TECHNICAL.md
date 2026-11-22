@@ -58,7 +58,7 @@ last good build back if the new one does not check, build or start. The
 whole path, and how to work on add-ons with the app, is in
 [`lib/dashboard/widgets/README.md`](lib/dashboard/widgets/README.md).
 
-Beside the catalogue a panel can read **other people's libraries**:
+Beside the catalogue a panel can read **third-party libraries**:
 repositories laid out the same way, named on the Add-ons page and kept as
 `addonLibraries` under `dashboard`. Their files are held to their own
 index's sums and nothing more — nobody has reviewed them — so the page
