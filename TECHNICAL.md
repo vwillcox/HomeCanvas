@@ -46,6 +46,19 @@ Around the app, a few small pieces on the Pi:
 
 ## The dashboard
 
+### Widgets are add-ons
+
+All but two widgets — the calendar and parcels, which the app itself reads
+— live in [HomeCanvas-Widgets](https://github.com/vwillcox/HomeCanvas-Widgets)
+and are downloaded to a panel from the editor's Add-ons page. The
+catalogue's checks publish an index of what passed, with a SHA-256 for
+every file; `lib/services/addons.dart` lists it, `scripts/addons.py`
+fetches from it and refuses what does not match, and
+`scripts/widget-build.sh` builds what was fetched into the app, putting the
+last good build back if the new one does not check, build or start. The
+whole path, and how to work on add-ons with the app, is in
+[`lib/dashboard/widgets/README.md`](lib/dashboard/widgets/README.md).
+
 ### Widgets are described, not wired in
 
 A widget is a Flutter widget plus a `DashboardWidgetType`: its name, glyph,
@@ -1214,7 +1227,7 @@ small control endpoint instead, **on the loopback address only**:
 | Request | Does |
 |---|---|
 | `GET /state` | which buttons would work: dashboard on, Locked Folder available, camera set up, notifications muted |
-| `POST /open/photos`, `/open/dashboard`, `/open/settings`, `/open/locked-folder` | opens that place, as the kiosk's own button would |
+| `POST /open/photos`, `/open/dashboard`, `/open/settings`, `/open/locked-folder`, `/open/deck` | opens that place, as the kiosk's own button would |
 | `POST /camera` | shows or hides the camera |
 | `POST /dnd?muted=true` | sets the notifications switch |
 | `POST /cook?url=https://…` | opens the recipe on that page to cook from — see [Recipes](#recipes) |
@@ -1266,6 +1279,7 @@ session token rather than an API key.
 | [Glances](https://github.com/nicolargo/glances) | Servers | The v4 web API (`/api/4/…`), with v3 as a fallback; the `smart` plugin for disk health. |
 | UniFi Network | the Network widgets | The console's integration API with an `X-API-KEY`. |
 | Home Assistant | Home Assistant, Updates, the indoor sensor | REST API with a long-lived token. |
+| Art Matrix | Voice, routines | On the LAN, no auth: `POST /display?on=1` or `on=0`, and `POST /display?brightness=N&on=1` (1–100, kept by the display), each answered with `{"on": …, "brightness": …}`. The name (`arty.local`, by mDNS) is looked up each time, IPv4 only, and used only if every address is on the home network; the request goes to the address found. 3 s to connect, 5 s for the answer. |
 | iTunes Search API | Bluetooth artwork | By artist and track, which matches far more reliably than album. |
 | [LRCLIB](https://lrclib.net) | Lyrics in the full player | `/api/get` by artist, title, album and length, then `/api/search`. No key. |
 
@@ -1355,6 +1369,7 @@ lib/
     share_inbox_service.dart   # the HTTP listener for shares
     sealed_share.dart          # X25519 + ChaCha20-Poly1305, key rotation
     tv_service.dart            # Hisense VIDAA over MQTT
+    art_matrix_service.dart    # the Art Matrix LED display, over HTTP
     …                          # and one service per outside source:
                                # weather, trains, carbon, Govee, UniFi,
                                # Glances, Home Assistant, notes, chores…

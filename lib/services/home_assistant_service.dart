@@ -357,6 +357,104 @@ class HomeAssistantService extends ChangeNotifier {
     }
   }
 
+  /// Calls [domain].[service] with [data] as it is — targets, a brightness,
+  /// a colour — and says whether Home Assistant took it.
+  Future<bool> service(
+    String domain,
+    String service,
+    Map<String, Object?> data,
+  ) async {
+    if (!configured) return false;
+    try {
+      await _dio.post(
+        '$_base/api/services/$domain/$service',
+        data: data,
+        options: _auth,
+      );
+      _fetched = null;
+      unawaited(refresh());
+      return true;
+    } catch (e) {
+      debugPrint('Home Assistant: $domain.$service: $e');
+      return false;
+    }
+  }
+
+  /// The lights that are on, but for [keep] — entity ids, and whole areas as
+  /// "area:" and the area's id. Hidden ones are left out: they are parts of
+  /// another light (a lamp's segments), or not lights to anyone (a network
+  /// switch's LED). Null when it could not be asked.
+  Future<List<String>?> lightsOnBesides(List<String> keep) async {
+    if (!configured) return null;
+    try {
+      final r = await _dio.post(
+        '$_base/api/template',
+        data: {
+          'template': _lightsOnBesides,
+          'variables': {'keep': keep},
+        },
+        options: _auth,
+      );
+      final list = r.data is String ? jsonDecode(r.data as String) : r.data;
+      return [for (final e in (list as List? ?? const [])) '$e'];
+    } catch (e) {
+      debugPrint('Home Assistant: lights on: $e');
+      return null;
+    }
+  }
+
+  static const _lightsOnBesides =
+      '{% set ns = namespace(ids=[]) %}'
+      '{% for t in keep %}'
+      '{% if t.startswith("area:") %}'
+      '{% set ns.ids = ns.ids + area_entities(t[5:]) %}'
+      '{% else %}{% set ns.ids = ns.ids + [t] %}{% endif %}'
+      '{% endfor %}'
+      '{{ states.light | selectattr("state", "eq", "on") '
+      '| map(attribute="entity_id") | reject("is_hidden_entity") '
+      '| reject("in", ns.ids) | list | to_json }}';
+
+  /// Everything in [domains] that is not hidden, by name, with its room —
+  /// for choosing in Settings. Empty when it could not be asked.
+  Future<List<HaChoice>> entityChoices(Set<String> domains) async {
+    if (!configured) return const [];
+    try {
+      final r = await _dio.post(
+        '$_base/api/template',
+        data: {
+          'template': _choicesTemplate,
+          'variables': {'domains': domains.toList()},
+        },
+        options: _auth,
+      );
+      final list = r.data is String ? jsonDecode(r.data as String) : r.data;
+      return [
+        for (final c in (list as List? ?? const []))
+          if (c is List && c.length >= 3)
+            HaChoice(
+              id: '${c[0]}',
+              name: '${c[1]}',
+              area: c[2] == null ? '' : '${c[2]}',
+            ),
+      ]..sort((a, b) {
+        final byArea = a.area.compareTo(b.area);
+        return byArea != 0 ? byArea : a.name.compareTo(b.name);
+      });
+    } catch (e) {
+      debugPrint('Home Assistant: choices: $e');
+      return const [];
+    }
+  }
+
+  static const _choicesTemplate =
+      '{% set ns = namespace(out=[]) %}'
+      '{% for s in states if s.domain in domains '
+      'and not is_hidden_entity(s.entity_id) %}'
+      '{% set ns.out = ns.out + [[s.entity_id, s.name, '
+      'area_name(s.entity_id)]] %}'
+      '{% endfor %}'
+      '{{ ns.out | to_json }}';
+
   /// Asks Home Assistant's Assist to do or answer [text] — "turn off the
   /// lamp", "what's the indoor temperature" — and gives back what it said.
   ///
@@ -367,7 +465,14 @@ class HomeAssistantService extends ChangeNotifier {
   ///
   /// Assist runs in Home Assistant on the same Pi, so nothing said leaves
   /// it unless Home Assistant has been set up to send it somewhere.
-  Future<String?> converse(String text, {String language = 'en'}) async {
+  Future<String?> converse(String text, {String language = 'en'}) async =>
+      (await ask(text, language: language))?.speech;
+
+  /// [converse], saying besides whether Assist did what was asked — see
+  /// [AssistReply.done]. "Not aware of any device called you one" is an
+  /// answer, but not a doing: a hearing of the same words that names the
+  /// light properly is worth asking before that is shown.
+  Future<AssistReply?> ask(String text, {String language = 'en'}) async {
     if (!configured || text.trim().isEmpty) return null;
     try {
       final r = await _dio.post(
@@ -378,20 +483,36 @@ class HomeAssistantService extends ChangeNotifier {
       final reply = (r.data as Map?)?['response'];
       if (reply is! Map) return null;
       final data = reply['data'];
-      if (reply['response_type'] == 'error' &&
-          data is Map &&
-          data['code'] == 'no_intent_match') {
+      final failed = reply['response_type'] == 'error';
+      if (failed && data is Map && data['code'] == 'no_intent_match') {
         return null;
       }
       // Something may have been switched: the next refresh reads it.
       _fetched = null;
       final speech = '${reply['speech']?['plain']?['speech'] ?? ''}'.trim();
-      return speech.isEmpty ? tr('voice.done', 'Done') : speech;
+      return AssistReply(
+        speech.isEmpty ? tr('voice.done', 'Done') : speech,
+        done: !failed,
+      );
     } catch (e) {
       debugPrint('Home Assistant: Assist: $e');
       return null;
     }
   }
+
+  /// The kinds of thing that are switched by name, out loud.
+  static const _switchedByName = {
+    'light', 'switch', 'fan', 'cover', 'media_player', 'climate', 'lock', //
+    'scene', 'script', 'input_boolean', 'vacuum', 'humidifier',
+  };
+
+  /// What the devices that can be switched are called: for putting right
+  /// a name misheard — see `SpokenNames`. As of the last [refresh]; the
+  /// areas, the other names said, are [areas].
+  List<String> get spokenNames => [
+    for (final e in _states.values)
+      if (_switchedByName.contains(e.domain)) e.name,
+  ];
 
   /// For the editor's entity picker: id → "Friendly name (id)", grouped by
   /// kind, the plumbing left out.
@@ -426,4 +547,20 @@ class HomeAssistantService extends ChangeNotifier {
     _fetched = DateTime.now();
     notifyListeners();
   }
+}
+
+/// What Assist said to a request, and whether it did it: [done] is false
+/// for an answer that says why not — no such device, nothing exposed.
+/// Something in Home Assistant to choose: its id, name and room.
+class HaChoice {
+  const HaChoice({required this.id, required this.name, this.area = ''});
+  final String id;
+  final String name;
+  final String area;
+}
+
+class AssistReply {
+  const AssistReply(this.speech, {required this.done});
+  final String speech;
+  final bool done;
 }

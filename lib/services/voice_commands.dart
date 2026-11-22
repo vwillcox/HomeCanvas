@@ -2,6 +2,7 @@ import '../dashboard/dashboard_model.dart';
 import '../dashboard/schedule.dart';
 import '../dashboard/widget_registry.dart';
 import 'radio_stations.dart';
+import 'routines.dart';
 import 'wake_word.dart';
 
 /// What the panel was asked to do, out loud.
@@ -95,6 +96,49 @@ class VoiceCook extends VoiceAction {
   final String? name;
 }
 
+/// What in the house can be switched by name, with no room said.
+enum HomeThing {
+  /// The television in Settings → TV.
+  tv,
+
+  /// Every light Home Assistant's Assist can see.
+  lights,
+
+  /// A computer that collects links from the panel — see `ComputerPower`.
+  computer,
+
+  /// The Art Matrix LED display in Settings → Art Matrix: "the Art Matrix",
+  /// or "Arty".
+  artMatrix,
+}
+
+/// Switch [things] on, or off: "turn the TV off", "lights on", "turn off
+/// the TV and the lights". Only ever the whole of them: a room or a name
+/// said with them — "the bedroom lights" — is left to Home Assistant.
+class VoiceSwitch extends VoiceAction {
+  const VoiceSwitch(this.things, {required this.on, this.computer});
+  final Set<HomeThing> things;
+  final bool on;
+
+  /// The computer by its name, when one was said: "the omarchy PC".
+  final String? computer;
+}
+
+/// The Art Matrix's display to [level] percent, 1 to 100, which puts it on
+/// as well: "Art Matrix brightness 40", "set the Art Matrix to forty
+/// percent".
+class VoiceArtMatrixBrightness extends VoiceAction {
+  const VoiceArtMatrixBrightness(this.level);
+  final int level;
+}
+
+/// One of the routines in the config, by what sets it off: "I'm going to
+/// bed".
+class VoiceRoutine extends VoiceAction {
+  const VoiceRoutine(this.routine);
+  final HomeRoutine routine;
+}
+
 /// Up, up, down, down, left, right, left, right, B, A.
 class VoiceKonami extends VoiceAction {
   const VoiceKonami();
@@ -130,6 +174,8 @@ class VoiceCommands {
     String? Function(String type)? nameOf,
     DateTime? now,
     WakeWord? wake,
+    this.routines = const [],
+    this.computers = const [],
   }) : wake = wake ?? WakeWord(),
        _nameOf = nameOf ?? ((type) => WidgetRegistry.find(type)?.name),
        _now = now ?? DateTime.now();
@@ -138,17 +184,27 @@ class VoiceCommands {
     DashboardSettings settings, {
     DateTime? now,
     WakeWord? wake,
+    List<HomeRoutine> routines = const [],
+    List<String> computers = const [],
   }) => VoiceCommands(
     pageCount: settings.pageCount,
     pages: settings.pages,
     widgets: settings.widgets,
     now: now,
     wake: wake,
+    routines: routines,
+    computers: computers,
   );
 
   final int pageCount;
   final List<DashboardPage> pages;
   final List<DashboardWidgetConfig> widgets;
+
+  /// What "I'm going to bed" and the like set off — see [HomeRoutine].
+  final List<HomeRoutine> routines;
+
+  /// What the computers that can be switched are called: "omarchy".
+  final List<String> computers;
 
   /// The words that wake the panel, to be passed over in what was said.
   final WakeWord wake;
@@ -441,10 +497,218 @@ class VoiceCommands {
     // The directions are enough: "B, A" is two letters, and a recogniser
     // makes "be a", "bee hay" or nothing of them.
     if (said.join(' ').contains(_konami)) return const VoiceKonami();
-    final pages = !_forElsewhere(words(afterWake(heard, wake: wake)));
+    final request = words(afterWake(heard, wake: wake));
+    final home = _homeOf(request);
+    if (home != null) return home;
+    final pages = !_forElsewhere(request);
     for (var from = 0; from < said.length; from++) {
       final action = _resolve(said.sublist(from), pages: pages);
       if (action != null) return action;
+    }
+    return null;
+  }
+
+  /// A routine, or the TV or the lights switched, in [request]: what was
+  /// said after the wake words.
+  ///
+  /// On the request as a whole, never on what is left of it with words
+  /// given up from the front, as [resolve] does for pages: "bedroom TV off",
+  /// said after a pause, would end as "TV off" and switch the other
+  /// television. The listener passes nothing on without the wake words
+  /// made out, so there is no misheard "hey canvas" to give up here.
+  VoiceAction? _homeOf(List<String> request) {
+    var said = request;
+    while (said.isNotEmpty && wake.isWakeWord(said.first)) {
+      said = said.sublist(1);
+    }
+    if (said.isEmpty) return null;
+    for (final routine in routines) {
+      if (routine.answersTo(said, words)) return VoiceRoutine(routine);
+    }
+    final level = _artMatrixLevelOf(said);
+    if (level != null) return level;
+    return _switchOf(said, computers: computers);
+  }
+
+  static const _tvWords = {'tv', 'television', 'telly', 'tele', 'telley'};
+  static const _lightWords = {'light', 'lights'};
+  static const _computerWords = {'pc', 'computer', 'desktop'};
+
+  /// The Art Matrix by name: "art matrix", made one word by
+  /// [_artMatrixJoined], and "Arty", its name on the network, as a
+  /// recogniser may spell it. "Art" or "matrix" on its own is neither.
+  static const _artMatrixWords = {'artmatrix', 'arty', 'artie', 'artys'};
+
+  /// What may come with them in a switching, besides the asking and the
+  /// filler: "power off the TV", "shut all the lights off in the house".
+  static const _switchLoose = {
+    'all', 'every', 'both', 'power', 'shut', 'in', 'house', 'everywhere', //
+    'downstairs', 'upstairs', 'whole', 'home', 'them', 'it',
+  };
+
+  /// "Turn the TV off", "lights on", "switch off the telly and the lights":
+  /// the TV, the lights or both, on or off. Null for anything else said
+  /// with them — a room, a name, a number — which is Home Assistant's to
+  /// make sense of: "turn off the lounge lights", "the TV volume up".
+  static VoiceSwitch? _switchOf(
+    List<String> said, {
+    List<String> computers = const [],
+  }) {
+    // "P C", as a recogniser may spell it out.
+    said = [
+      for (var i = 0; i < said.length; i++)
+        if (said[i] == 'p' && i + 1 < said.length && said[i + 1] == 'c')
+          'pc'
+        else if (!(said[i] == 'c' && i > 0 && said[i - 1] == 'p'))
+          said[i],
+    ];
+    said = _artMatrixJoined(said);
+    // A computer's own name, word by word: "the omarchy PC".
+    final named = {
+      for (final c in computers) words(c).join(' '): words(c).toSet(),
+    };
+    String? computer;
+    var saidComputer = false;
+    final on = said.contains('on');
+    // "Lights out", "kill the lights".
+    final off = said.any(const {'off', 'out', 'kill'}.contains);
+    if (on == off) return null;
+    final things = <HomeThing>{};
+    for (final w in said) {
+      if (_tvWords.contains(w)) {
+        things.add(HomeThing.tv);
+      } else if (_lightWords.contains(w)) {
+        things.add(HomeThing.lights);
+      } else if (_computerWords.contains(w)) {
+        things.add(HomeThing.computer);
+        saidComputer = true;
+      } else if (_artMatrixWords.contains(w)) {
+        things.add(HomeThing.artMatrix);
+      } else if (named.entries.where((e) => e.value.contains(w)).firstOrNull
+          case final MapEntry<String, Set<String>> e) {
+        things.add(HomeThing.computer);
+        computer = e.key;
+      } else if (!const {'on', 'off', 'out', 'kill'}.contains(w) &&
+          !_asking.contains(w) &&
+          !_filler.contains(w) &&
+          !_switchLoose.contains(w)) {
+        return null;
+      }
+    }
+    // A computer's name with the lights or the TV, and no "PC": a name like
+    // any other — "the office lights" — for Home Assistant.
+    if (computer != null && !saidComputer && things.length > 1) return null;
+    return things.isEmpty
+        ? null
+        : VoiceSwitch(things, on: on, computer: computer);
+  }
+
+  /// [said] with "art matrix" — "art matrix's" too — as the one word
+  /// "artmatrix".
+  static List<String> _artMatrixJoined(List<String> said) {
+    bool matrix(String w) => w == 'matrix' || w == 'matrixs';
+    return [
+      for (var i = 0; i < said.length; i++)
+        if (said[i] == 'art' && i + 1 < said.length && matrix(said[i + 1]))
+          'artmatrix'
+        else if (!(matrix(said[i]) && i > 0 && said[i - 1] == 'art'))
+          said[i],
+    ];
+  }
+
+  /// Words that say a level is wanted, not some other number.
+  static const _levelSaid = {
+    'brightness', 'bright', 'level', 'percent', 'cent', 'set', 'dim', //
+    'brighten',
+  };
+
+  /// What may come with the Art Matrix and a level, besides the asking and
+  /// the filler: "set the Art Matrix brightness to 40 per cent", "Arty up
+  /// to eighty".
+  static const _levelLoose = {
+    ..._levelSaid, 'per', 'change', 'make', 'at', 'up', 'down', //
+  };
+
+  /// "Art Matrix brightness 40", "set the Art Matrix to forty percent": the
+  /// Art Matrix and one level, 1 to 100, with nothing else said — another
+  /// thing, "off", a room. Null otherwise, for [_switchOf] or Home Assistant.
+  /// A number said only after "to" or "at" needs nothing more to be a level:
+  /// "turn the Art Matrix to 40".
+  static VoiceArtMatrixBrightness? _artMatrixLevelOf(List<String> said) {
+    said = _artMatrixJoined(said);
+    if (!said.any(_artMatrixWords.contains)) return null;
+    int? level;
+    var at = -1;
+    for (var i = 0; i < said.length; i++) {
+      if (!_isLevelWord(said[i])) continue;
+      // Two numbers: no telling which is meant.
+      if (level != null) return null;
+      var end = i;
+      while (end + 1 < said.length && _isLevelWord(said[end + 1])) {
+        end++;
+      }
+      level = _spokenLevel(said.sublist(i, end + 1));
+      if (level == null) return null;
+      at = i;
+      i = end;
+    }
+    if (level == null) return null;
+    final asked =
+        said.any(_levelSaid.contains) ||
+        (at > 0 && (said[at - 1] == 'to' || said[at - 1] == 'at'));
+    if (!asked) return null;
+    for (final w in said) {
+      if (!_artMatrixWords.contains(w) &&
+          !_isLevelWord(w) &&
+          !_levelLoose.contains(w) &&
+          !_asking.contains(w) &&
+          !_filler.contains(w)) {
+        return null;
+      }
+    }
+    return VoiceArtMatrixBrightness(level.clamp(1, 100));
+  }
+
+  /// Numbers as said, for a level — as `PhotoQuery` has them for a year.
+  static const _levelOnes = {
+    'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5, 'six': 6, //
+    'seven': 7, 'eight': 8, 'nine': 9,
+  };
+
+  static const _levelTeens = {
+    'ten': 10, 'eleven': 11, 'twelve': 12, 'thirteen': 13, 'fourteen': 14, //
+    'fifteen': 15, 'sixteen': 16, 'seventeen': 17, 'eighteen': 18,
+    'nineteen': 19,
+  };
+
+  static const _levelTens = {
+    'twenty': 20, 'thirty': 30, 'forty': 40, 'fifty': 50, 'sixty': 60, //
+    'seventy': 70, 'eighty': 80, 'ninety': 90,
+  };
+
+  static bool _isLevelWord(String w) =>
+      int.tryParse(w) != null ||
+      _levelOnes.containsKey(w) ||
+      _levelTeens.containsKey(w) ||
+      _levelTens.containsKey(w) ||
+      w == 'hundred';
+
+  /// The number [said] is — "40", "forty", "forty five", "one hundred" —
+  /// or null for words that make no one number: "two forty".
+  static int? _spokenLevel(List<String> said) {
+    if (said.length == 1) {
+      final w = said.single;
+      return int.tryParse(w) ??
+          _levelOnes[w] ??
+          _levelTeens[w] ??
+          _levelTens[w] ??
+          (w == 'hundred' ? 100 : null);
+    }
+    if (said.length == 2) {
+      final tens = _levelTens[said[0]];
+      final ones = _levelOnes[said[1]];
+      if (tens != null && ones != null) return tens + ones;
+      if (said[0] == 'one' && said[1] == 'hundred') return 100;
     }
     return null;
   }
@@ -727,6 +991,7 @@ class VoiceCommands {
   List<String> get phrases => {
     for (final (_, name) in _answersTo()) name.join(' '),
     ..._fixed.keys,
+    for (final r in routines) ...r.phrases.map((p) => words(p).join(' ')),
   }.toList();
 
   /// The page that answers best to [asked]; the earliest, between equals.

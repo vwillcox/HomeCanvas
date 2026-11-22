@@ -180,6 +180,22 @@ class CodeWidgets {
     return _start('remove', name);
   }
 
+  /// Fetches these add-ons from the catalogue and builds them in — the
+  /// builder does the fetching, each file checked against the catalogue's
+  /// sum for it, so that what was fetched is put back if the build fails.
+  Future<String?> installAddons(List<String> ids) async {
+    if (ids.isEmpty || !ids.every(_name.hasMatch)) {
+      return 'That is no name for an add-on.';
+    }
+    return _start('addons', ids.join(','));
+  }
+
+  /// Takes an add-on out, and builds without it.
+  Future<String?> removeAddon(String id) async {
+    if (!_name.hasMatch(id)) return 'That is no name for an add-on.';
+    return _start('addon-remove', id);
+  }
+
   Future<String?> _start(String action, String name) async {
     final root = this.root;
     if (root == null) {

@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0c10">
+<title data-t="web.addons.title">Add-ons</title>
+<style>
+  /* The kiosk's glass look, as on the notes and custom widgets pages. */
+  :root {
+    --bg: #0b0c10; --glass: rgba(255,255,255,.055); --line: rgba(255,255,255,.10);
+    --text: #fff; --muted: rgba(255,255,255,.62); --faint: rgba(255,255,255,.38);
+    --accent: #a6c8ff; --danger: #ff8a8a; --good: #9be7b0;
+    --ui: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; color: var(--text); font: 16px/1.45 var(--ui);
+    background: radial-gradient(900px 600px at 8% -12%, rgba(166,200,255,.16), transparent 70%), var(--bg);
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 1180px; margin: 0 auto; padding: 28px 16px 120px; display: grid; gap: 16px; }
+  h1 { margin: 0; font-size: 30px; letter-spacing: -.02em; }
+  .sub { margin: 2px 0 0; color: var(--muted); font-size: 16px; max-width: 70ch; }
+  a { color: var(--accent); }
+  .card { padding: 16px; border-radius: 22px; background: var(--glass); border: 1px solid var(--line); }
+  button {
+    font: inherit; font-weight: 650; border: none; border-radius: 999px; padding: 0 20px;
+    background: #fff; color: #0b0c10; cursor: pointer; min-height: 42px;
+  }
+  button:disabled { opacity: .45; cursor: default; }
+  button.quiet { background: transparent; color: var(--text); border: 1px solid var(--line); font-weight: 500; }
+  button.danger { background: transparent; color: var(--danger); border: 1px solid rgba(255,138,138,.4); font-weight: 500; }
+  button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .home {
+    display: inline-flex; align-items: center; gap: 6px; margin-bottom: 14px;
+    padding: 6px 14px; border-radius: 999px; font-size: 14px; text-decoration: none;
+    color: var(--muted); background: var(--glass); border: 1px solid var(--line);
+  }
+  .home:hover, .home:focus-visible { color: #fff; background: rgba(255,255,255,.09); }
+
+  /* What the panel is doing, or what went wrong. */
+  #status { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  #status[hidden] { display: none; }
+  #status .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); flex: none; }
+  #status.busy .dot { animation: pulse 1.2s ease-in-out infinite; }
+  #status.bad .dot { background: var(--danger); }
+  #status.good .dot { background: var(--good); }
+  @keyframes pulse { 50% { opacity: .25; } }
+  @media (prefers-reduced-motion: reduce) { #status.busy .dot { animation: none; } }
+  #errors { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; line-height: 1.45; margin: 0;
+            padding: 10px; border-radius: 8px; border: 1px solid rgba(255,90,90,.5); max-height: 320px; overflow: auto; }
+
+  .tools { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  #search {
+    flex: 1 1 240px; min-height: 44px; padding: 0 16px; border-radius: 999px; font: inherit;
+    color: var(--text); background: var(--glass); border: 1px solid var(--line);
+  }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip {
+    min-height: 34px; padding: 0 14px; font-size: 14px; font-weight: 500;
+    background: var(--glass); color: var(--muted); border: 1px solid var(--line);
+  }
+  .chip[aria-pressed="true"] { background: #fff; color: #0b0c10; border-color: #fff; }
+
+  #list { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+  .addon { display: flex; flex-direction: column; overflow: hidden; padding: 0; }
+  .addon.picked { border-color: var(--accent); }
+  .shot { position: relative; aspect-ratio: 16 / 10; background: rgba(0,0,0,.35); display: grid; place-items: center; }
+  .shot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+  .shot .glyph { font-size: 54px; }
+  .about .cat { margin: 0; color: var(--accent); font-size: 12.5px; letter-spacing: .04em; text-transform: uppercase; }
+  .about .pick { display: inline-flex; align-items: center; gap: 6px; min-height: 42px; color: var(--muted); font-size: 14px; cursor: pointer; }
+  .about .pick input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+  .about { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .about h2 { margin: 0; font-size: 18px; }
+  .about .by { margin: 0; color: var(--muted); font-size: 14px; }
+  .about .what { margin: 0; color: var(--muted); font-size: 14.5px; flex: 1; }
+  .about .facts { margin: 0; color: var(--faint); font-size: 13px; }
+  .about .warn { margin: 0; color: var(--danger); font-size: 13px; }
+  .about .row { display: flex; gap: 8px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
+  .about .have { color: var(--good); font-size: 14px; margin-right: auto; }
+  .empty { color: var(--muted); grid-column: 1 / -1; }
+
+  /* Several at once: one rebuild for all of them. */
+  #basket {
+    position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    background: rgba(11,12,16,.92); border-top: 1px solid var(--line); backdrop-filter: blur(12px);
+    display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap;
+  }
+  #basket[hidden] { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <a class="home" href="/" data-t="web.common.backToDashboard">← Dashboard</a>
+    <h1 data-t="web.addons.title">Add-ons</h1>
+    <p class="sub"><span data-t="web.addons.sub">Widgets for the dashboard, from the HomeCanvas catalogue. Download one and it is added to the panel.</span>
+      <a id="repo" href="https://github.com/vwillcox/HomeCanvas-Widgets" target="_blank" rel="noopener" data-t="web.addons.contribute">Make one of your own and send it in</a></p>
+  </header>
+
+  <section class="card" id="status" hidden role="status" aria-live="polite">
+    <span class="dot" aria-hidden="true"></span>
+    <span id="statusText"></span>
+    <button id="wantedInstall" hidden></button>
+  </section>
+  <pre id="errors" hidden></pre>
+
+  <div class="tools">
+    <input id="search" type="search" placeholder="Search add-ons" data-t-placeholder="web.addons.search" data-t-aria="web.addons.search" aria-label="Search add-ons">
+    <button class="quiet" id="refresh" data-t="web.addons.refresh">Look again</button>
+  </div>
+  <div class="chips" id="chips"></div>
+
+  <section id="list"></section>
+</main>
+
+<div id="basket" hidden>
+  <span id="basketText"></span>
+  <button id="basketInstall" data-t="web.addons.downloadPicked">Download these</button>
+  <button class="quiet" id="basketClear" data-t="web.addons.clearPicked">Clear</button>
+</div>
+
+<script src="/i18n.js"></script>
+<script>
+/* The catalogue of add-ons — every widget but the two the panel comes with
+   — as the panel read it from the catalogue's repository, and what of it
+   is installed here.
+
+   One described in JSON is on the panel the moment it is downloaded. One
+   written in Dart is built into the panel, which takes a few minutes and
+   ends in a restart: that is watched, through the restart, until it has
+   worked or failed. Several picked at once are built in together. */
+const state = { data: null, filter: "", category: "", picked: new Set(), busy: false, watch: null };
+const $ = (id) => document.getElementById(id);
+
+async function getJson(path) {
+  const r = await fetch(path);
+  if (!r.ok) throw new Error(path + " -> " + r.status);
+  return r.json();
+}
+
+function say(kind, text) {
+  const el = $("status");
+  el.hidden = !text;
+  el.className = "card " + kind;
+  $("statusText").textContent = text || "";
+}
+
+function names(ids) {
+  const by = new Map((state.data ? state.data.addons : []).map(a => [a.id, a.name || a.id]));
+  return String(ids || "").split(",").filter(Boolean).map(id => by.get(id) || id).join(", ");
+}
+
+/* Shows how a build stands. True while it is still going. */
+function showBuild(b, fresh) {
+  const ours = b.action === "addons" || b.action === "addon-remove";
+  $("errors").hidden = true;
+  if (b.state === "building") {
+    const name = ours ? names(b.name) : b.name;
+    const steps = {
+      checking: t("web.addons.checking", "Fetching and checking {name}…", { name }),
+      building: t("web.addons.building", "Building {name} into the panel — this takes a few minutes…", { name }),
+      restarting: t("web.addons.restarting", "Restarting the panel with {name}…", { name }),
+    };
+    say("busy", steps[b.step] || steps.building);
+    return true;
+  }
+  if (!ours || !fresh) return false;
+  const name = names(b.name);
+  if (b.state === "failed") {
+    say("bad", b.action === "addon-remove"
+      ? t("web.addons.removeFailed", "{name} could not be removed. The panel is as it was.", { name })
+      : t("web.addons.failed", "{name} was not added. The panel is as it was.", { name }));
+    $("errors").textContent = b.error || "";
+    $("errors").hidden = !b.error;
+  } else if (b.state === "ok") {
+    say("good", b.action === "addon-remove"
+      ? t("web.addons.removed", "Removed {name}, and the panel rebuilt without it.", { name })
+      : t("web.addons.built", "{name} is built in and running. Find it in the editor, under \"Add a widget\".", { name }));
+  }
+  return false;
+}
+
+/* Asked every few seconds. The panel not answering is the restart. */
+function watch() {
+  clearInterval(state.watch);
+  state.busy = true;
+  draw();
+  state.watch = setInterval(async () => {
+    let build;
+    try { build = (await getJson("/api/widgets/build")).build; }
+    catch (e) { say("busy", t("web.addons.waiting", "The panel is restarting…")); return; }
+    if (showBuild(build, true)) return;
+    clearInterval(state.watch);
+    state.watch = null;
+    state.busy = false;
+    const said = $("statusText").textContent, kind = $("status").className;
+    await load(false, true);
+    if (said) { $("status").hidden = false; $("status").className = kind; $("statusText").textContent = said; }
+  }, 3000);
+}
+
+async function install(ids) {
+  if (!ids.length || state.busy) return;
+  state.busy = true;
+  draw();
+  say("busy", t("web.addons.asking", "Asking the panel for {name}…", { name: names(ids.join(",")) }));
+  try {
+    const res = await fetch("/api/addons/install", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids }),
+    });
+    if (!res.ok) { state.busy = false; say("bad", (await res.text()) || res.statusText); draw(); return; }
+    state.data = await res.json();
+    ids.forEach(id => state.picked.delete(id));
+    if (state.data.build && state.data.build.state === "building") { showBuild(state.data.build, true); watch(); return; }
+    state.busy = false;
+    say("good", t("web.addons.added", "{name} is on the panel. Find it in the editor, under \"Add a widget\".", { name: names(ids.join(",")) }));
+  } catch (e) {
+    state.busy = false;
+    say("bad", t("web.addons.couldNot", "The panel did not answer."));
+  }
+  draw();
+}
+
+async function remove(a) {
+  if (state.busy) return;
+  if (!confirm(t("web.addons.confirmRemove", "Remove {name} from the panel? Tiles of it keep their settings, for if it comes back.", { name: a.name }))) return;
+  state.busy = true;
+  draw();
+  try {
+    const res = await fetch("/api/addons?id=" + encodeURIComponent(a.id), { method: "DELETE" });
+    if (!res.ok) { state.busy = false; say("bad", (await res.text()) || res.statusText); draw(); return; }
+    state.data = await res.json();
+    if (state.data.build && state.data.build.state === "building") { showBuild(state.data.build, true); watch(); return; }
+    state.busy = false;
+    say("good", t("web.addons.removedNow", "Removed {name}.", { name: a.name }));
+  } catch (e) {
+    state.busy = false;
+    say("bad", t("web.addons.couldNot", "The panel did not answer."));
+  }
+  draw();
+}
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+
+function card(a) {
+  const d = state.data;
+  const box = el("article", "card addon" + (state.picked.has(a.id) ? " picked" : ""));
+  const shot = el("div", "shot");
+  const glyph = el("span", "glyph", a.glyph || "🧩");
+  glyph.setAttribute("aria-hidden", "true");
+  if (a.screenshot) {
+    const img = el("img");
+    img.loading = "lazy";
+    img.alt = t("web.addons.shotOf", "What {name} looks like", { name: a.name });
+    img.onerror = () => img.replaceWith(glyph);
+    img.src = a.screenshot;
+    shot.appendChild(img);
+  } else shot.appendChild(glyph);
+
+  const builds = a.kind === "dart";
+  const can = a.listed && a.compatible && (!builds || d.canBuild);
+  const want = can && (!a.installed || a.update);
+
+  const about = el("div", "about");
+  if (a.category) about.appendChild(el("p", "cat", a.categoryName || a.category));
+  about.appendChild(el("h2", "", a.name || a.id));
+  const by = el("p", "by", t("web.addons.by", "by") + " ");
+  if (a.authorUrl && /^https:\/\//.test(a.authorUrl)) {
+    const link = el("a", "", a.author || "—");
+    link.href = a.authorUrl; link.target = "_blank"; link.rel = "noopener";
+    by.appendChild(link);
+  } else by.appendChild(document.createTextNode(a.author || "—"));
+  about.appendChild(by);
+  about.appendChild(el("p", "what", a.description || ""));
+  const count = (a.types || []).length;
+  about.appendChild(el("p", "facts", [
+    t("web.addons.version", "Version {version}", { version: a.version || "—" }),
+    count > 1 ? t("web.addons.tiles", "{n} widgets", { n: count }) : null,
+    builds ? t("web.addons.isBuilt", "built into the panel") : t("web.addons.isInstant", "on the panel at once"),
+  ].filter(Boolean).join(" · ")));
+  if ((a.permissions || []).length) {
+    about.appendChild(el("p", "facts", t("web.addons.uses", "Uses: {what}", { what: a.permissions.join(", ") })));
+  }
+  if (!a.listed) about.appendChild(el("p", "warn", t("web.addons.unlisted", "No longer in the catalogue.")));
+  else if (!a.compatible) about.appendChild(el("p", "warn", t("web.addons.tooNew", "Needs HomeCanvas {version} or newer.", { version: a.minApp })));
+  else if (builds && !d.canBuild) about.appendChild(el("p", "warn", t("web.addons.cannotBuild", "This panel was not built where it runs, so it cannot build widgets in.")));
+
+  const row = el("div", "row");
+  if (a.installed) row.appendChild(el("span", "have", "✓ " + t("web.addons.installed", "Installed")));
+  if (want) {
+    const get = el("button", "", a.update
+      ? t("web.addons.update", "Update")
+      : "⬇ " + t("web.addons.download", "Download"));
+    get.disabled = state.busy;
+    get.onclick = () => install([a.id]);
+    row.appendChild(get);
+    // Several built in together cost one restart, not one each.
+    if (builds) {
+      const pick = el("label", "pick");
+      const tick = el("input");
+      tick.type = "checkbox";
+      tick.checked = state.picked.has(a.id);
+      tick.disabled = state.busy;
+      tick.onchange = () => { tick.checked ? state.picked.add(a.id) : state.picked.delete(a.id); draw(); };
+      pick.append(tick, el("span", "", t("web.addons.pick", "Pick with others")));
+      row.appendChild(pick);
+    }
+  }
+  if (a.installed) {
+    const out = el("button", "danger", t("web.addons.remove", "Remove"));
+    out.disabled = state.busy || (builds && !d.canBuild);
+    out.onclick = () => remove(a);
+    row.appendChild(out);
+  }
+  about.appendChild(row);
+  box.append(shot, about);
+  return box;
+}
+
+function draw() {
+  const d = state.data;
+  if (!d) return;
+  $("repo").href = d.url;
+
+  // The palette's groups, for narrowing the list to one.
+  const cats = new Map();
+  for (const a of d.addons) if (a.category) cats.set(a.category, a.categoryName || a.category);
+  const chips = $("chips");
+  chips.innerHTML = "";
+  const chip = (id, label) => {
+    const b = el("button", "chip", label);
+    b.setAttribute("aria-pressed", String(state.category === id));
+    b.onclick = () => { state.category = id; draw(); };
+    chips.appendChild(b);
+  };
+  chip("", t("web.addons.all", "All"));
+  chip("#installed", t("web.addons.installed", "Installed"));
+  [...cats].sort((x, y) => x[1].localeCompare(y[1])).forEach(([id, label]) => chip(id, label));
+
+  const q = state.filter.trim().toLowerCase();
+  const shown = d.addons.filter(a =>
+    (state.category === "" || (state.category === "#installed" ? !!a.installed : a.category === state.category)) &&
+    (!q || [a.name, a.description, a.author, a.categoryName, a.id].join(" ").toLowerCase().includes(q)))
+    .sort((x, y) => (y.wanted - x.wanted) || String(x.name).localeCompare(String(y.name)));
+  const list = $("list");
+  list.innerHTML = "";
+  if (!shown.length) {
+    list.appendChild(el("p", "empty", d.error && !d.addons.length
+      ? d.error
+      : t("web.addons.none", "Nothing matches.")));
+  }
+  shown.forEach(a => list.appendChild(card(a)));
+
+  // Tiles on the dashboard whose widget is not installed: one button.
+  const wanted = d.addons.filter(a => a.wanted && a.listed && a.compatible && (a.kind !== "dart" || d.canBuild));
+  const all = $("wantedInstall");
+  all.hidden = true;
+  if (!state.busy && $("status").hidden) {
+    if (d.error) say("bad", d.error);
+    else if (wanted.length) {
+      say("", t("web.addons.wanted", "{n, plural, one{Your dashboard has tiles waiting for # add-on} other{Your dashboard has tiles waiting for # add-ons}}: {names}.", { n: wanted.length, names: wanted.map(a => a.name).join(", ") }));
+    }
+  }
+  if (!state.busy && wanted.length && $("status").className.trim() === "card") {
+    all.hidden = false;
+    all.textContent = t("web.addons.wantedInstall", "Download them");
+    all.onclick = () => install(wanted.map(a => a.id));
+  }
+
+  const picked = [...state.picked].filter(id => d.addons.some(a => a.id === id));
+  $("basket").hidden = !picked.length || state.busy;
+  $("basketText").textContent = t("web.addons.picked", "{n, plural, one{# add-on picked} other{# add-ons picked}} — built in together, with one restart.", { n: picked.length });
+  $("basketInstall").onclick = () => install(picked);
+  $("basketClear").onclick = () => { state.picked.clear(); draw(); };
+}
+
+async function load(fresh, quiet) {
+  try {
+    state.data = await getJson("/api/addons" + (fresh ? "?fresh=1" : ""));
+  } catch (e) {
+    say("bad", t("web.addons.couldNot", "The panel did not answer."));
+    return;
+  }
+  if (!quiet) { $("status").hidden = true; $("errors").hidden = true; }
+  // A build begun before this page was opened is still to be watched.
+  if (state.data.build && showBuild(state.data.build, false)) { watch(); return; }
+  draw();
+}
+
+$("search").oninput = (e) => { state.filter = e.target.value; draw(); };
+$("refresh").onclick = () => load(true);
+// Words first, so the page is drawn in the panel's language.
+loadWords().then(() => load(false));
+</script>
+</body>
+</html>

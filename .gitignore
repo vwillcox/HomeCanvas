@@ -70,3 +70,8 @@ brag-output*/
 ttblog/
 
 __pycache__/
+
+# Add-ons from the catalogue (vwillcox/HomeCanvas-Widgets), copied in by
+# scripts/widget-build.sh for the build, and their tests when asked for.
+lib/dashboard/widgets/custom/addons/
+test/addons/

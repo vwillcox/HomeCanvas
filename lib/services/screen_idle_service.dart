@@ -101,6 +101,14 @@ class ScreenIdleService {
     _offByUs = false;
   }
 
+  /// Someone asked for the panel dark — a bedtime routine. Not counted as
+  /// this service's own switch-off, so music starting does not undo it:
+  /// that is for a screen that went dark by itself. A touch brings it back.
+  Future<void> sleep() async {
+    await _setScreen(on: false);
+    _offByUs = false;
+  }
+
   /// Set by [SlideshowScreen] while it's on screen — a running slideshow is
   /// the whole point of the display, so it never counts as idle.
   set slideshowRunning(bool running) {

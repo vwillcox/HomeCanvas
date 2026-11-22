@@ -36,6 +36,7 @@ class HueRelay {
     'volume',
     'homey',
     'widgets',
+    'addons',
     'sounds',
     'list',
     'notes',

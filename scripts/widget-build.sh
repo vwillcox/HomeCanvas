@@ -1,10 +1,17 @@
 #!/usr/bin/env bash
 # Builds widgets uploaded as Dart from the editor into the app, on the panel.
 #
-#   widget-build.sh generate         write the registry from what is installed
-#   widget-build.sh install <name>   take <name>.dart from incoming/, rebuild
-#   widget-build.sh remove <name>    take it out, rebuild
-#   widget-build.sh rebuild          rebuild with what is installed
+#   widget-build.sh generate             write the registry from what is installed
+#   widget-build.sh install <name>       take <name>.dart from incoming/, rebuild
+#   widget-build.sh remove <name>        take it out, rebuild
+#   widget-build.sh addons <id,id,…>     fetch these add-ons from the catalogue, rebuild
+#   widget-build.sh addon-remove <id>    take an add-on out, rebuild
+#   widget-build.sh rebuild              rebuild with what is installed
+#
+# Add-ons are the widgets in the catalogue (scripts/addons.py says which
+# repository that is): a folder each under ~/.config/homecanvas/addons, with
+# an addon.json saying what it is. HOMECANVAS_ADDONS points that somewhere
+# else — at a checkout of the catalogue's widgets/ folder, to work on them.
 #
 # The kiosk starts this in a unit of its own (systemd-run), so that the
 # restart at the end does not take the builder down with the kiosk.
@@ -19,6 +26,7 @@ set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SRC="${HOMECANVAS_WIDGETS:-$HOME/.config/homecanvas/widgets-src}"
+ADDONS="${HOMECANVAS_ADDONS:-$HOME/.config/homecanvas/addons}"
 STATE="${HOMECANVAS_WIDGET_STATE:-$HOME/.local/share/homecanvas/widget-build}"
 CONFIG="$HOME/.config/homecanvas/config.json"
 DEST="$ROOT/lib/dashboard/widgets/custom"
@@ -31,11 +39,49 @@ STARTED="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 mkdir -p "$SRC" "$STATE" "$DEST"
 
 # Copies what is installed into the source tree and writes the file that
-# registers it. Each widget is asked for inside a try, so one whose
+# registers it: add-ons from the catalogue, a folder each, and widgets
+# uploaded as single files. Each is asked for inside a try, so one whose
 # description throws costs that widget, not the panel.
 generate() {
   find "$DEST" -maxdepth 1 -name '*.dart' -delete
-  local i=0 imports="" entries=""
+  rm -rf "$DEST/addons" "$ROOT/test/addons"
+  local i=0 imports="" entries="" addons=""
+  # Add-ons written in Dart: "id<TAB>entry" for each, as its addon.json
+  # says. One described in JSON is not built in; the app reads it as it is.
+  while IFS=$'\t' read -r id entry; do
+    [ -n "$id" ] || continue
+    mkdir -p "$DEST/addons/$id"
+    cp "$ADDONS/$id"/*.dart "$ADDONS/$id/addon.json" "$DEST/addons/$id/"
+    imports+="import 'addons/$id/$entry' as a$i;"$'\n'
+    addons+="    '$id': () => a$i.widgetTypes,"$'\n'
+    i=$((i + 1))
+    # Their tests, for whoever is working on them: see the README.
+    if [ "${HOMECANVAS_ADDON_TESTS:-}" = 1 ] && [ -d "$ADDONS/$id/test" ]; then
+      mkdir -p "$ROOT/test/addons/$id"
+      cp -r "$ADDONS/$id/test/." "$ROOT/test/addons/$id/"
+    fi
+  done < <(ADDONS="$ADDONS" python3 - <<'PY'
+import json, os, re
+root = os.environ["ADDONS"]
+name = re.compile(r"^[a-z][a-z0-9_]{1,39}$")
+part = re.compile(r"^[a-z][a-z0-9_]*\.dart$")
+for id in sorted(os.listdir(root)) if os.path.isdir(root) else []:
+    try:
+        with open(os.path.join(root, id, "addon.json")) as f:
+            m = json.load(f)
+    except (OSError, ValueError):
+        continue
+    entry = m.get("entry", "")
+    if (m.get("kind") == "dart" and name.match(id) and part.match(entry)
+            and os.path.isfile(os.path.join(root, id, entry))):
+        print(f"{id}\t{entry}")
+PY
+  )
+  if [ "${HOMECANVAS_ADDON_TESTS:-}" = 1 ] && [ -d "$ADDONS/../tests" ]; then
+    mkdir -p "$ROOT/test/addons"
+    cp -r "$ADDONS/../tests/." "$ROOT/test/addons/"
+  fi
+  i=0
   for f in "$SRC"/*.dart; do
     [ -f "$f" ] || continue
     local base
@@ -48,28 +94,47 @@ generate() {
     i=$((i + 1))
   done
   cat >"$DEST/custom_registry.dart" <<DART
-// Written by scripts/widget-build.sh from the widgets uploaded in the
-// editor. Do not edit by hand: it is written again at every build.
+// Written by scripts/widget-build.sh from the add-ons installed and the
+// widgets uploaded in the editor. Do not edit by hand: it is written again
+// at every build.
 import 'package:flutter/foundation.dart';
 
 import '../../widget_registry.dart';
 $imports
+/// The add-ons installed from the catalogue and built into this copy of
+/// the app, by name: each the widgets it brings.
+final Map<String, List<DashboardWidgetType> Function()> addonWidgets = {
+$addons};
+
 /// The widgets uploaded as Dart from the editor and built into this copy
 /// of the app, by the file each came from.
 final Map<String, DashboardWidgetType Function()> customCodeWidgets = {
 $entries};
 
-/// Registers them. One that throws, or that names itself after a widget
-/// there already is, is left out and said so in the log.
+/// Registers them: add-ons first, then uploads. One that throws, or that
+/// names itself after a widget there already is, is left out and said so
+/// in the log.
 void registerCustomCodeWidgets() {
+  void add(String from, DashboardWidgetType type) {
+    if (WidgetRegistry.find(type.type) != null) {
+      debugPrint('Widget \$from: "\${type.type}" is taken');
+      return;
+    }
+    WidgetRegistry.register(type);
+  }
+
+  for (final e in addonWidgets.entries) {
+    try {
+      for (final type in e.value()) {
+        add(e.key, type);
+      }
+    } catch (error) {
+      debugPrint('Add-on \${e.key}: \$error');
+    }
+  }
   for (final e in customCodeWidgets.entries) {
     try {
-      final type = e.value();
-      if (WidgetRegistry.find(type.type) != null) {
-        debugPrint('Custom widget \${e.key}: "\${type.type}" is taken');
-        continue;
-      }
-      WidgetRegistry.register(type);
+      add(e.key, e.value());
     } catch (error) {
       debugPrint('Custom widget \${e.key}: \$error');
     }
@@ -127,8 +192,9 @@ fail() { # step message
 
 # As they were before this build began.
 restore_sources() {
-  rm -rf "$SRC"
+  rm -rf "$SRC" "$ADDONS"
   cp -a "$STATE/src.prev" "$SRC"
+  cp -a "$STATE/addons.prev" "$ADDONS"
   generate
 }
 restore_bundle() {
@@ -140,8 +206,10 @@ restore_bundle() {
 [ -x "$FL" ] || fail checking "Flutter is not installed on this panel, so it cannot build widgets."
 [ -n "$BUNDLE" ] || fail checking "This panel has no build of its own to rebuild."
 
-rm -rf "$STATE/src.prev"
+mkdir -p "$ADDONS"
+rm -rf "$STATE/src.prev" "$STATE/addons.prev"
 cp -a "$SRC" "$STATE/src.prev"
+cp -a "$ADDONS" "$STATE/addons.prev"
 
 case "$ACTION" in
   install)
@@ -150,6 +218,25 @@ case "$ACTION" in
     ;;
   remove)
     rm -f "$SRC/$NAME.dart"
+    ;;
+  addons)
+    # Fetched beside and checked against the catalogue's own sums before
+    # any of it is put where the build will find it.
+    rm -rf "$STATE/incoming-addons"
+    # shellcheck disable=SC2086
+    if ! fetched="$(python3 "$ROOT/scripts/addons.py" fetch \
+      --dest "$STATE/incoming-addons" ${NAME//,/ } 2>&1)"; then
+      fail checking "$fetched"
+    fi
+    for d in "$STATE/incoming-addons"/*/; do
+      id="$(basename "$d")"
+      rm -rf "${ADDONS:?}/$id"
+      mv "$d" "$ADDONS/$id"
+    done
+    ;;
+  addon-remove)
+    [[ "$NAME" =~ ^[a-z][a-z0-9_]*$ ]] || fail checking "Unknown add-on."
+    rm -rf "${ADDONS:?}/$NAME"
     ;;
   rebuild) ;;
   *)

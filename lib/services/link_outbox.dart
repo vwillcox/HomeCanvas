@@ -21,6 +21,8 @@ class OutboxDevice {
     required this.kind,
     required this.sender,
     required this.seen,
+    this.address,
+    this.wakeMac,
   });
 
   /// First eight bytes of SHA-256 over [publicKey], as hex — worked out
@@ -42,6 +44,12 @@ class OutboxDevice {
 
   DateTime seen;
 
+  /// Where on the home network it last asked from — never an address
+  /// outside it — and the hardware address it says it wakes on: what a
+  /// computer needs to be switched on from the panel. See `ComputerPower`.
+  String? address;
+  String? wakeMac;
+
   static OutboxDevice? fromJson(Object? j) {
     if (j is! Map<String, dynamic>) return null;
     try {
@@ -54,6 +62,8 @@ class OutboxDevice {
         seen:
             DateTime.tryParse('${j['seen']}') ??
             DateTime.fromMillisecondsSinceEpoch(0),
+        address: j['address'] as String?,
+        wakeMac: j['wakeMac'] as String?,
       );
     } catch (_) {
       return null;
@@ -67,6 +77,8 @@ class OutboxDevice {
     'kind': kind,
     'sender': sender,
     'seen': seen.toIso8601String(),
+    'address': ?address,
+    'wakeMac': ?wakeMac,
   };
 }
 
@@ -164,25 +176,67 @@ class LinkOutbox extends ChangeNotifier {
     String? title,
     String? from,
   }) async {
+    await _queue(device, {'url': url, 'title': ?title, 'from': ?from});
+    debugPrint('Outbox: a link for ${device.name} (${device.kid})');
+  }
+
+  /// Seals [command] to [device] — `{"do": "power", "state": "off"}` — for
+  /// it to carry out as it collects it. Only a computer's receiver knows
+  /// any; a phone, or an older receiver, sees no web page in it and opens
+  /// nothing. Stamped with the time, so one collected late — the computer
+  /// off, and back days after — is known for stale and not done.
+  Future<void> command(
+    OutboxDevice device,
+    Map<String, Object?> command,
+  ) async {
+    await _queue(device, command);
+    debugPrint('Outbox: ${command['do']} for ${device.name} (${device.kid})');
+  }
+
+  Future<void> _queue(OutboxDevice device, Map<String, Object?> body) async {
     final now = _clock();
     final sealed = await sealLink(
       publicKey: device.publicKey,
       kid: device.kid,
       plaintext: utf8.encode(
-        jsonEncode({
-          'url': url,
-          'title': ?title,
-          'from': ?from,
-          'at': now.toUtc().toIso8601String(),
-        }),
+        jsonEncode({...body, 'at': now.toUtc().toIso8601String()}),
       ),
     );
     final list = _waiting.putIfAbsent(device.kid, () => []);
     list.add(OutboxItem(id: _nextId(now), at: now, sealed: sealed));
     if (list.length > maxWaiting) list.removeRange(0, list.length - maxWaiting);
-    debugPrint('Outbox: a link for ${device.name} (${device.kid})');
     _wake(device.kid);
     unawaited(_save());
+  }
+
+  /// The time by the outbox's own clock.
+  DateTime get now => _clock();
+
+  /// Whether [device] is asking now: a request held open, or one made a
+  /// moment ago — a receiver asks again as soon as one ends. Off, asleep or
+  /// not running, it is not.
+  bool isHere(OutboxDevice device) =>
+      (_listeners[device.kid]?.isNotEmpty ?? false) ||
+      _clock().difference(device.seen) < hereFor;
+
+  /// How recently a device must have asked to count as here: a little over
+  /// the time a request is held open.
+  static const hereFor = Duration(seconds: 70);
+
+  /// Waits, up to [within], for [device] to ask after [since]; whether it
+  /// did. For a computer just sent the Wake-on-LAN packet.
+  Future<bool> heardFrom(
+    OutboxDevice device, {
+    required DateTime since,
+    required Duration within,
+    Duration every = const Duration(seconds: 2),
+  }) async {
+    final until = _clock().add(within);
+    while (true) {
+      if (_devices[device.kid]?.seen.isAfter(since) ?? false) return true;
+      if (!_clock().isBefore(until)) return false;
+      await Future<void>.delayed(every);
+    }
   }
 
   /// The links waiting for the device holding [publicKey] that are newer
@@ -191,6 +245,9 @@ class LinkOutbox extends ChangeNotifier {
   /// [after] is the newest id the device has already handled: what it has
   /// is dropped here, so a reply lost on the way is sent again rather than
   /// lost with it.
+  ///
+  /// [address] is where it asked from, kept only when it is on the home
+  /// network; [wakeMac] the hardware address it says it wakes on.
   Future<OutboxPoll> poll({
     required String sender,
     required List<int> publicKey,
@@ -198,8 +255,11 @@ class LinkOutbox extends ChangeNotifier {
     required String kind,
     int after = 0,
     Duration wait = Duration.zero,
+    InternetAddress? address,
+    String? wakeMac,
   }) async {
     final device = _register(sender, publicKey, name, kind);
+    _noteWhere(device, address, wakeMac);
     final list = _waiting[device.kid];
     if (list != null && after > 0) {
       final before = list.length;
@@ -215,6 +275,38 @@ class LinkOutbox extends ChangeNotifier {
       ready = _newer(device.kid, after);
     }
     return OutboxPoll(kid: device.kid, items: ready);
+  }
+
+  void _noteWhere(OutboxDevice device, InternetAddress? at, String? mac) {
+    final home = at != null && isHomeAddress(at) ? at.address : null;
+    final wakes = mac != null && macPattern.hasMatch(mac)
+        ? mac.toLowerCase()
+        : null;
+    var changed = false;
+    if (home != null && home != device.address) {
+      device.address = home;
+      changed = true;
+    }
+    if (wakes != null && wakes != device.wakeMac) {
+      device.wakeMac = wakes;
+      changed = true;
+    }
+    if (changed) unawaited(_save());
+  }
+
+  /// "0c:ef:15:80:d7:47".
+  static final macPattern = RegExp(r'^[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}$');
+
+  /// Whether [a] is on a home network — 10/8, 172.16/12 or 192.168/16 —
+  /// and so somewhere a Wake-on-LAN packet could be sent. The port this
+  /// answers on may also be reachable from outside, through a proxy or the
+  /// router; an address from there is nobody's machine to wake.
+  static bool isHomeAddress(InternetAddress a) {
+    if (a.type != InternetAddressType.IPv4) return false;
+    final b = a.rawAddress;
+    return b[0] == 10 ||
+        (b[0] == 172 && b[1] >= 16 && b[1] < 32) ||
+        (b[0] == 192 && b[1] == 168);
   }
 
   /// Stops offering [kid] and drops what was waiting for it.

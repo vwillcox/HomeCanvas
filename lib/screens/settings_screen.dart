@@ -39,6 +39,7 @@ import '../widgets/lcars.dart';
 import '../widgets/language_tile.dart';
 import '../l10n/l10n.dart';
 import 'about_screen.dart';
+import 'routines_settings.dart';
 import 'setup_screen.dart';
 import '../services/http_client.dart';
 
@@ -198,6 +199,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           GlassSection(
             title: tr('settings.television', 'Television'),
             children: [const _TvSettingsTile()],
+          ),
+          GlassSection(
+            title: tr('settings.artMatrix', 'Art Matrix'),
+            children: [const _ArtMatrixSettingsTile()],
           ),
           GlassSection(
             title: tr('settings.camera', 'Camera'),
@@ -2092,6 +2097,22 @@ class _OutboxDevices extends StatelessWidget {
 /// sliders keep their levels while it is on, so turning it off puts each
 /// back where it was.
 class _SoundSettingsTile extends StatelessWidget {
+  /// "22:00".
+  static String _hour(int h) => '${h.toString().padLeft(2, '0')}:00';
+
+  static Widget _hourPicker(int value, void Function(int) set) =>
+      DropdownButton<int>(
+        value: value.clamp(0, 23),
+        underline: const SizedBox.shrink(),
+        items: [
+          for (var h = 0; h < 24; h++)
+            DropdownMenuItem(value: h, child: Text(_hour(h))),
+        ],
+        onChanged: (h) {
+          if (h != null) set(h);
+        },
+      );
+
   const _SoundSettingsTile();
 
   @override
@@ -2192,6 +2213,60 @@ class _SoundSettingsTile extends StatelessWidget {
           value: s.speechVolume,
           set: (v) => s.speechVolume = v,
         ),
+        SwitchListTile(
+          secondary: const Icon(Icons.bedtime_outlined),
+          title: Text(tr('settings.quieterAtNight', 'Quieter at night')),
+          subtitle: Text(
+            tr(
+              'settings.quieterAtNightAbout',
+              'Speech no louder than the level below from {from} until {until} — replies to “{wake}”, reminders, notes read out. Timers keep their own volume.',
+              {
+                'from': _hour(s.nightFrom),
+                'until': _hour(s.nightUntil),
+                'wake': service.config.screen.wakeWord.phrase,
+              },
+            ),
+          ),
+          isThreeLine: true,
+          value: s.quietNights,
+          onChanged: (on) {
+            s.quietNights = on;
+            service.save();
+          },
+        ),
+        if (s.quietNights) ...[
+          slider(
+            icon: Icons.nights_stay_outlined,
+            title: tr('settings.speechAtNight', 'Speech at night'),
+            help: tr(
+              'settings.speechAtNightAbout',
+              'Never louder than Speech above, whatever this is set to.',
+            ),
+            value: s.nightSpeechVolume,
+            set: (v) => s.nightSpeechVolume = v,
+          ),
+          ListTile(
+            leading: const Icon(Icons.schedule),
+            title: Text(tr('settings.night', 'Night')),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _hourPicker(s.nightFrom, (h) {
+                  s.nightFrom = h;
+                  service.save();
+                }),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  child: Text('–'),
+                ),
+                _hourPicker(s.nightUntil, (h) {
+                  s.nightUntil = h;
+                  service.save();
+                }),
+              ],
+            ),
+          ),
+        ],
         slider(
           icon: Icons.menu_book_outlined,
           title: tr('settings.newsReader', 'News reader'),
@@ -2303,6 +2378,7 @@ class _ScreenSettingsTile extends StatelessWidget {
           ),
         ],
         const _VoiceControlTile(),
+        const RoutinesTile(),
       ],
     );
   }
@@ -2904,6 +2980,109 @@ class _TvSettingsTile extends StatelessWidget {
         ),
       );
     }
+  }
+}
+
+/// The Art Matrix: an LED display on the home network, switched on and off
+/// and dimmed by voice, and in a routine. See `ArtMatrixService`.
+class _ArtMatrixSettingsTile extends StatelessWidget {
+  const _ArtMatrixSettingsTile();
+
+  Future<void> _edit(BuildContext context) async {
+    final service = context.read<ConfigService>();
+    final s = service.config.artMatrix;
+    final host = TextEditingController(text: s.host);
+
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(tr('settings.artMatrix', 'Art Matrix')),
+        content: SizedBox(
+          width: 600,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                tr(
+                  'settings.artMatrixHelp',
+                  'Its name on your home network, arty.local, or its IP address if the panel can’t find it by name. An address anywhere else is refused.',
+                ),
+                style: TextStyle(
+                  color: context.look.textSecondary,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: host,
+                autocorrect: false,
+                style: const TextStyle(fontSize: 18),
+                decoration: InputDecoration(
+                  labelText: tr('settings.address', 'Address'),
+                  hintText: 'arty.local',
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(tr('settings.cancel', 'Cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(tr('settings.save', 'Save')),
+          ),
+        ],
+      ),
+    );
+    if (saved != true) return;
+    s.host = ArtMatrixSettings.hostOf(host.text);
+    await service.save();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final service = context.watch<ConfigService>();
+    final s = service.config.artMatrix;
+    return Column(
+      children: [
+        SwitchListTile(
+          secondary: const Icon(Icons.grid_on),
+          title: Text(tr('settings.artMatrixVoice', 'Art Matrix by voice')),
+          subtitle: Text(
+            tr(
+              'settings.artMatrixAbout',
+              'Switches the Art Matrix LED display on and off, and sets its brightness: “turn the Art Matrix off”, “Art Matrix brightness 40”. Also in routines.',
+            ),
+          ),
+          isThreeLine: true,
+          value: s.enabled,
+          onChanged: (v) {
+            s.enabled = v;
+            service.save();
+          },
+        ),
+        if (s.enabled)
+          ListTile(
+            leading: const Icon(Icons.lan_outlined),
+            title: Text(tr('settings.address', 'Address')),
+            subtitle: Text(
+              s.host.isEmpty
+                  ? tr(
+                      'settings.artMatrixNoAddress',
+                      'Not set — voice requests for it go to Home Assistant',
+                    )
+                  : s.host,
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _edit(context),
+          ),
+      ],
+    );
   }
 }
 

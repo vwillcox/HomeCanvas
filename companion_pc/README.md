@@ -38,5 +38,45 @@ journalctl --user -u homecanvas-links -f     # what it is doing
 `homecanvas-links --once` collects what is waiting and stops, for trying it.
 
 Only web pages are opened: a link that is anything else is refused, whoever
-sealed it. The key, settings and where it got up to are in
+sealed it. The one other thing it acts on is a sealed *switch off* from the
+panel ("hey canvas, turn the PC off"). It shows a notice for 30 seconds
+with **Keep it on**, then runs `systemctl poweroff`. A *switch off* more
+than two minutes old when it arrives, because it waited while the computer
+was off, is dropped.
+
+## Switching it on from the panel
+
+"Turn the PC on" sends a Wake-on-LAN packet to the hardware address the
+receiver reports (`X-Device-Wake`, from the network card the default route
+leaves by). For that:
+
+1. Turn Wake-on-LAN on in the firmware. It's often called *Power On by
+   PCI-E* or *Wake on LAN*, and *ErP* must be off, or the card loses power
+   when the computer is off.
+2. Turn it on for the card, so it stays on across reboots:
+
+   ```sh
+   nmcli connection modify "Wired connection 1" 802-3-ethernet.wake-on-lan magic
+   ```
+
+   It takes effect the next time the connection comes up, for example at the
+   next boot.
+3. Mind the router. A broadcast doesn't cross from one network to another,
+   so if the panel and the computer are on different subnets, the packet
+   arrives only as a direct (unicast) one, which works while the router still
+   has the computer's address cached. If that fails, connect the panel to the
+   computer's network as well (a second cable or its Wi-Fi). Then the
+   packet's broadcast to that network reaches the computer whatever the
+   router does.
+
+Only addresses on a home network are kept (10/8, 172.16/12, 192.168/16): a
+request reaching the panel from outside isn't anyone's computer to wake.
+
+To see whether the packet arrives, run this on the computer while saying
+"turn the PC on" from elsewhere (it only shows anything if the computer is
+up, so it tests the route, not the waking):
+
+```sh
+sudo tcpdump -ni any 'udp and (port 9 or port 7)'
+``` The key, settings and where it got up to are in
 `~/.config/homecanvas-links/`, readable by you alone.

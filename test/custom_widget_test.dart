@@ -15,7 +15,7 @@ import 'package:home_canvas/dashboard/widgets/widgets.dart';
 import 'package:home_canvas/services/code_widgets.dart';
 import 'package:home_canvas/services/custom_widgets.dart';
 
-import 'new_widgets_fit_test.dart' show shapes, tile;
+import 'tile_shapes.dart';
 
 /// The example the editor hands out, as it is on disk.
 final _example = File(

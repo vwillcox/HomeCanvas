@@ -7,6 +7,8 @@ import 'package:home_canvas/dashboard/dashboard_theme.dart';
 import 'package:home_canvas/dashboard/widget_registry.dart';
 import 'package:home_canvas/dashboard/widgets/widgets.dart';
 
+import 'needs_addons.dart';
+
 /// The installer offers the widgets and themes from
 /// deploy/installer/catalogue.json, since it runs before there is an app to
 /// ask. This keeps that file the app's own list. When it fails, write the
@@ -15,6 +17,7 @@ import 'package:home_canvas/dashboard/widgets/widgets.dart';
 ///   UPDATE_INSTALLER_CATALOGUE=1 flutter test test/installer_catalogue_test.dart
 void main() {
   test('the installer\'s catalogue is the app\'s widgets and themes', () {
+    if (skippedWithoutAddons()) return;
     registerBuiltInWidgets();
     final categories = [
       WidgetCategory.timeAndDay,

@@ -16,6 +16,12 @@ from its Settings → Share Inbox:
 
     homecanvas-links setup http://192.168.1.57:8081 TOKEN
 
+The panel can also switch this computer off — "hey canvas, turn the PC
+off" — through the same sealed channel: a notice comes up for half a minute
+with a button to keep it on, then it shuts down. And on: this tells the
+panel the hardware address it wakes on, for a Wake-on-LAN packet, which
+needs Wake-on-LAN switched on in the firmware and for the network card.
+
 then run it, or let homecanvas-links.service run it:
 
     homecanvas-links            collect and open links until stopped
@@ -23,6 +29,7 @@ then run it, or let homecanvas-links.service run it:
 """
 
 import base64
+import calendar
 import hashlib
 import json
 import os
@@ -55,6 +62,13 @@ DIR = HOME / "homecanvas-links"
 CONFIG = DIR / "config.json"
 KEY = DIR / "device_key"
 STATE = DIR / "state.json"
+
+# A "switch off" older than this when it arrives is not done: it waited in
+# the panel's outbox while this computer was off, and the asking is over.
+POWER_FRESH = 120
+
+# How long the notice is up before switching off, with a way to stop it.
+POWER_NOTICE = 30
 
 
 def log(message):
@@ -140,6 +154,72 @@ def show(link):
         pass
 
 
+def wake_mac():
+    """The hardware address of the card the default route leaves by — the
+    one a Wake-on-LAN packet from the panel would reach. None if there is
+    no such card, or it is not a real one."""
+    try:
+        with open("/proc/net/route") as routes:
+            next(routes)
+            for line in routes:
+                fields = line.split()
+                if len(fields) > 1 and fields[1] == "00000000":
+                    mac = Path(f"/sys/class/net/{fields[0]}/address").read_text().strip()
+                    return mac if mac and mac != "00:00:00:00:00:00" else None
+    except (OSError, StopIteration):
+        pass
+    return None
+
+
+def switch_off(command):
+    """Switches this computer off, as the panel asked — after a notice with a
+    button to keep it on. Asked too long ago, it is not done."""
+    try:
+        # The panel's clock, in UTC: "2026-11-17T23:40:12.123456Z".
+        at = calendar.timegm(time.strptime(command.get("at", "")[:19], "%Y-%m-%dT%H:%M:%S"))
+        age = time.time() - at
+    except (ValueError, OverflowError):
+        age = POWER_FRESH + 1
+    if age > POWER_FRESH:
+        log(f"Not switching off: asked {int(age)} seconds ago")
+        return
+    log("The panel asked this computer to switch off")
+    started = time.monotonic()
+    kept = False
+    try:
+        answer = subprocess.run(
+            ["notify-send", "-a", "HomeCanvas", "-u", "critical",
+             "-i", "system-shutdown", "-t", str(POWER_NOTICE * 1000),
+             "-A", "keep=Keep it on", "--wait",
+             f"Switching off in {POWER_NOTICE} seconds",
+             "Asked for on the HomeCanvas panel."],
+            capture_output=True, text=True, timeout=POWER_NOTICE + 5, check=False,
+        )
+        kept = answer.stdout.strip() == "keep"
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    if kept:
+        log("Kept on: the notice's button was pressed")
+        return
+    # Closed early is not "keep it on": the rest of the half minute still.
+    left = POWER_NOTICE - (time.monotonic() - started)
+    if left > 0:
+        time.sleep(left)
+    log("Switching off")
+    subprocess.run(["systemctl", "poweroff"], check=False)
+
+
+def handle(item):
+    """One thing from the panel: a link to open, or a command."""
+    if item.get("do") == "power":
+        if item.get("state") == "off":
+            switch_off(item)
+        else:
+            log(f"Not a power command this knows: {item.get('state')!r}")
+        return
+    show(item)
+
+
 def collect(config, key, after, wait):
     """Asks once. Returns the links' ids and contents, newest last."""
     query = urllib.parse.urlencode({"after": after, "wait": wait})
@@ -152,6 +232,8 @@ def collect(config, key, after, wait):
                 config.get("name") or socket.gethostname()
             ),
             "X-Device-Kind": "computer",
+            # For switching it on from the panel: see wake_mac.
+            **({"X-Device-Wake": mac} if (mac := wake_mac()) else {}),
         },
     )
     with urllib.request.urlopen(request, timeout=wait + 20) as response:
@@ -197,14 +279,22 @@ def run(once=False):
             pause = min(pause * 2, 60)
             continue
 
+        opened = []
         for item in items:
             try:
-                show(json.loads(open_sealed(key, item["sealed"])))
+                opened.append(json.loads(open_sealed(key, item["sealed"])))
             except Exception as e:  # One bad link must not stop the rest.
                 log(f"Could not open a link: {e!r}")
             after = max(after, item["id"])
+        # Written before anything is done with them: a "switch off" must not
+        # be collected again after the computer comes back.
         if items:
             write_private(STATE, json.dumps({"after": after}).encode())
+        for item in opened:
+            try:
+                handle(item)
+            except Exception as e:
+                log(f"Could not act on it: {e!r}")
         if once:
             return
 

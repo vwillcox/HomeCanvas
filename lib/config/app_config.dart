@@ -3,6 +3,7 @@ library;
 
 import '../dashboard/dashboard_model.dart';
 import '../l10n/l10n.dart';
+import '../services/routines.dart';
 import '../services/wake_word.dart';
 import '../services/http_client.dart';
 
@@ -633,10 +634,17 @@ class TvSettings {
   /// and the television will ask for a PIN again.
   String uuid;
 
+  /// The set's own hardware address, for Wake-on-LAN when it is switched
+  /// off beyond standby and answers nothing else. Learnt from the panel's
+  /// neighbour table the first time the set is reached — see
+  /// `TvService.learnMac` — so there is nothing to type in.
+  String mac;
+
   TvSettings({
     this.enabled = false,
     this.host = '192.168.1.156',
     this.uuid = '7a:8d:88:86:27:93',
+    this.mac = '',
   });
 
   bool get isConfigured => enabled && host.isNotEmpty && uuid.isNotEmpty;
@@ -645,13 +653,41 @@ class TvSettings {
     enabled: j['enabled'] as bool? ?? false,
     host: j['host'] as String? ?? '192.168.1.156',
     uuid: j['uuid'] as String? ?? '7a:8d:88:86:27:93',
+    mac: j['mac'] as String? ?? '',
   );
 
   Map<String, dynamic> toJson() => {
     'enabled': enabled,
     'host': host,
     'uuid': uuid,
+    'mac': mac,
   };
+}
+
+/// An Art Matrix LED display on the home network, switched on and off and
+/// dimmed by voice over its own HTTP API — see `ArtMatrixService`.
+class ArtMatrixSettings {
+  bool enabled;
+
+  /// Its address on the home network: `arty.local`, or its IP address. A
+  /// port after a colon if it is not on 80.
+  String host;
+
+  ArtMatrixSettings({this.enabled = false, this.host = ''});
+
+  bool get isConfigured => enabled && host.isNotEmpty;
+
+  /// An address as typed, "http://arty.local/" as much as "arty.local".
+  static String hostOf(String typed) =>
+      trimAddress(typed).replaceAll(RegExp(r'^https?://'), '');
+
+  factory ArtMatrixSettings.fromJson(Map<String, dynamic> j) =>
+      ArtMatrixSettings(
+        enabled: j['enabled'] as bool? ?? false,
+        host: hostOf(j['host'] as String? ?? ''),
+      );
+
+  Map<String, dynamic> toJson() => {'enabled': enabled, 'host': host};
 }
 
 /// Turning the panel off by itself when there's nothing worth showing.
@@ -758,6 +794,24 @@ class ShareInboxSettings {
   /// something you chose to play.
   double speechVolume;
 
+  /// Speech at night: no louder than [nightSpeechVolume] from [nightFrom]
+  /// until [nightUntil], whole hours on the 24-hour clock. A reply to "hey
+  /// canvas" at eleven at night is not one for the whole house.
+  bool quietNights;
+  double nightSpeechVolume;
+  int nightFrom;
+  int nightUntil;
+
+  /// Whether [at] is in the night as [nightFrom] and [nightUntil] have it —
+  /// across midnight when it starts later than it ends, as it usually does.
+  bool isNight(DateTime at) {
+    final h = at.hour;
+    if (nightFrom == nightUntil) return false;
+    return nightFrom > nightUntil
+        ? h >= nightFrom || h < nightUntil
+        : h >= nightFrom && h < nightUntil;
+  }
+
   /// How loud news articles are read out, 0–100.
   double readerVolume;
 
@@ -768,7 +822,18 @@ class ShareInboxSettings {
   /// on. The levels themselves are left alone, so turning it off brings
   /// each back to where it was.
   double get notificationOut => dndMuted ? 0 : notificationVolume;
-  double get speechOut => dndMuted ? 0 : speechVolume;
+  double get speechOut => speechOutAt(DateTime.now());
+
+  /// [speechOut] as it is at [at]: quieter at night — see [quietNights] —
+  /// but never louder than by day.
+  double speechOutAt(DateTime at) {
+    if (dndMuted) return 0;
+    if (quietNights && isNight(at) && nightSpeechVolume < speechVolume) {
+      return nightSpeechVolume;
+    }
+    return speechVolume;
+  }
+
   double get readerOut => dndMuted ? 0 : readerVolume;
   double get timerOut => dndMuted ? 0 : timerVolume;
 
@@ -789,6 +854,10 @@ class ShareInboxSettings {
     this.speakNotes = false,
     this.speakSender = true,
     this.speechVolume = 45,
+    this.quietNights = true,
+    this.nightSpeechVolume = 30,
+    this.nightFrom = 22,
+    this.nightUntil = 6,
     this.readerVolume = 45,
     this.timerVolume = 45,
     this.requireEncryption = false,
@@ -812,6 +881,11 @@ class ShareInboxSettings {
       speakNotes: j['speakNotes'] as bool? ?? false,
       speakSender: j['speakSender'] as bool? ?? true,
       speechVolume: speech,
+      quietNights: j['quietNights'] as bool? ?? true,
+      nightSpeechVolume: ((j['nightSpeechVolume'] as num?)?.toDouble() ?? 30)
+          .clamp(0.0, 100.0),
+      nightFrom: ((j['nightFrom'] as num?)?.toInt() ?? 22).clamp(0, 23),
+      nightUntil: ((j['nightUntil'] as num?)?.toInt() ?? 6).clamp(0, 23),
       readerVolume: own('readerVolume'),
       timerVolume: own('timerVolume'),
       senderTokens:
@@ -830,6 +904,10 @@ class ShareInboxSettings {
     'speakNotes': speakNotes,
     'speakSender': speakSender,
     'speechVolume': speechVolume,
+    'quietNights': quietNights,
+    'nightSpeechVolume': nightSpeechVolume,
+    'nightFrom': nightFrom,
+    'nightUntil': nightUntil,
     'readerVolume': readerVolume,
     'timerVolume': timerVolume,
     'senderTokens': senderTokens.map((t) => t.toJson()).toList(),
@@ -854,6 +932,11 @@ class AppConfig {
   CameraSettings camera;
   DashboardSettings dashboard;
   TvSettings tv;
+  ArtMatrixSettings artMatrix;
+
+  /// What one thing said does several of — "I'm going to bed" — see
+  /// [HomeRoutine].
+  List<HomeRoutine> routines;
   UnifiSettings unifi;
   YouTubeSettings youtube;
   VideoSiteSettings floatplane;
@@ -883,6 +966,8 @@ class AppConfig {
     CameraSettings? camera,
     DashboardSettings? dashboard,
     TvSettings? tv,
+    ArtMatrixSettings? artMatrix,
+    List<HomeRoutine>? routines,
     UnifiSettings? unifi,
     YouTubeSettings? youtube,
     VideoSiteSettings? floatplane,
@@ -902,6 +987,8 @@ class AppConfig {
        camera = camera ?? CameraSettings(),
        dashboard = dashboard ?? DashboardSettings(),
        tv = tv ?? TvSettings(),
+       artMatrix = artMatrix ?? ArtMatrixSettings(),
+       routines = routines ?? HomeRoutine.defaults(),
        unifi = unifi ?? UnifiSettings(),
        youtube = youtube ?? YouTubeSettings(),
        floatplane = floatplane ?? VideoSiteSettings(),
@@ -1014,6 +1101,15 @@ class AppConfig {
       tv: j['tv'] is Map<String, dynamic>
           ? TvSettings.fromJson(j['tv'] as Map<String, dynamic>)
           : TvSettings(),
+      artMatrix: j['artMatrix'] is Map<String, dynamic>
+          ? ArtMatrixSettings.fromJson(j['artMatrix'] as Map<String, dynamic>)
+          : ArtMatrixSettings(),
+      routines: j['routines'] is List
+          ? [
+              for (final r in j['routines'] as List)
+                if (r is Map<String, dynamic>) HomeRoutine.fromJson(r),
+            ]
+          : null,
       unifi: j['unifi'] is Map<String, dynamic>
           ? UnifiSettings.fromJson(j['unifi'] as Map<String, dynamic>)
           : UnifiSettings(),
@@ -1049,6 +1145,8 @@ class AppConfig {
     'camera': camera.toJson(),
     'dashboard': dashboard.toJson(),
     'tv': tv.toJson(),
+    'artMatrix': artMatrix.toJson(),
+    'routines': [for (final r in routines) r.toJson()],
     'unifi': unifi.toJson(),
     'youtube': youtube.toJson(),
     'floatplane': floatplane.toJson(),

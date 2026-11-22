@@ -250,7 +250,12 @@ Spotify on it directly as a Connect device named "Kiosk". With Premium the panel
 controls the account: seek, like, add to a playlist, pick the device, see the
 queue.
 
-**The dashboard** — nearly forty widgets in groups, arranged from a browser:
+**The dashboard** — widgets in groups, arranged from a browser. They are
+**add-ons**: the editor's Add-ons page lists the
+[catalogue](https://github.com/vwillcox/HomeCanvas-Widgets) with a picture
+of each, and Download adds one to the panel. Anyone can
+[send one in](https://github.com/vwillcox/HomeCanvas-Widgets/blob/main/CONTRIBUTING.md).
+What the catalogue starts with:
 
 | Group | Widgets |
 |---|---|

@@ -12,10 +12,14 @@ import '../map_text.dart';
 /// The listener, running: what it says, a line at a time, and the way to
 /// shut it up again.
 class VoiceListener {
-  VoiceListener({required this.lines, required this.stop});
+  VoiceListener({required this.lines, required this.stop, this.send});
 
   /// Lines of JSON — see `deploy/voice_listener.py` for what they say.
   final Stream<String> lines;
+
+  /// Tells it something, as a line of JSON: `{"listen": 7}` takes whatever
+  /// is said in the next seven seconds, without the wake words.
+  final void Function(Map<String, Object?> message)? send;
 
   /// Stops it, and with it the microphone.
   final Future<void> Function() stop;
@@ -49,9 +53,17 @@ enum VoiceStatus {
   /// What followed meant nothing the panel knows.
   missed,
 
+  /// The panel asked something out loud — [VoiceService.question] — and
+  /// waits for the answer, said without the wake words or touched.
+  answering,
+
   /// It cannot listen on this machine: nothing is installed to do it with.
   unavailable,
 }
+
+/// What was asked elsewhere — as [heard], or as put right — and the
+/// [answer] to it.
+typedef VoiceAnswer = ({String heard, String answer});
 
 /// "Hey canvas", and what is said after it.
 ///
@@ -87,9 +99,12 @@ class VoiceService extends ChangeNotifier {
   /// The wake words were heard — before anything is said after them.
   final VoidCallback? onWake;
 
-  /// Asked what [act] made nothing of, elsewhere — Home Assistant — and
-  /// gives back its answer; null when it made nothing of it either.
-  final Future<String?> Function(String heard)? ask;
+  /// Asked what [act] made nothing of, elsewhere — Home Assistant — with
+  /// every hearing of it, best first, and gives back its answer and the
+  /// hearing (or the words) it answered; null when it made nothing of any.
+  /// All of them at once, for it to choose: an answer that is a refusal
+  /// ("no device called you one") is worth less than another hearing's.
+  final Future<VoiceAnswer?> Function(List<String> heard)? ask;
 
   /// How long what was heard stays on show.
   final Duration linger;
@@ -184,6 +199,8 @@ class VoiceService extends ChangeNotifier {
   }
 
   Future<void> _stop(VoiceStatus status) async {
+    final answering = _answering;
+    if (answering != null) _answered(answering, null);
     _generation++;
     _said++;
     _retry?.cancel();
@@ -233,6 +250,12 @@ class VoiceService extends ChangeNotifier {
         _answer = '';
         _set(VoiceStatus.awake);
         onWake?.call();
+      case 'heard' when _answering != null:
+        final heard = [
+          for (final t in [event.text('text'), event.text('other')])
+            if (t.isNotEmpty) t,
+        ];
+        _answered(_answering!, heard.isEmpty ? null : heard);
       case 'heard':
         final said = ++_said;
         _heard = event.text('text');
@@ -259,24 +282,78 @@ class VoiceService extends ChangeNotifier {
     }
   }
 
-  /// Asks [texts] of [ask] in turn, until one is understood.
+  /// Asks [texts] of [ask], which answers the best of them.
   Future<void> _askElsewhere(int said, List<String> texts) async {
     _set(VoiceStatus.asking);
-    String? answer;
-    var heard = texts.first;
-    for (final text in texts) {
-      answer = await ask!(text);
-      // Something newer was said meanwhile, or it was switched off.
-      if (said != _said) return;
-      if (answer != null) {
-        heard = text;
-        break;
-      }
-    }
-    _heard = heard;
+    final reply = await ask!(texts);
+    // Something newer was said meanwhile, or it was switched off.
+    if (said != _said) return;
+    final answer = reply?.answer;
+    _heard = reply?.heard ?? texts.first;
     _answer = answer ?? '';
     debugPrint('Voice: heard "$_heard" — ${answer ?? 'not understood'}');
     _finish(answer != null, longer: answer != null);
+  }
+
+  /// What the panel is asking, while [VoiceStatus.answering].
+  String get question => _question;
+  String _question = '';
+
+  /// The answers to touch, while [VoiceStatus.answering]: "On", "Off".
+  List<String> get choices => _choices;
+  List<String> _choices = const [];
+
+  Completer<List<String>?>? _answering;
+
+  /// Waits for the answer to [question], just asked out loud: whatever is
+  /// said next, without the wake words, while the listener hears nothing
+  /// for [within] — or one of [choices], touched on the screen. Every
+  /// hearing of what was said, or the choice touched; null for nothing.
+  ///
+  /// Called once the question has been said, not while: the listener would
+  /// hear the panel ask it, and take that for the answer.
+  Future<List<String>?> listenForAnswer(
+    String question, {
+    List<String> choices = const [],
+    Duration within = const Duration(seconds: 7),
+  }) async {
+    _answering?.complete(null);
+    final answering = _answering = Completer<List<String>?>();
+    _settle?.cancel();
+    _said++;
+    _question = question;
+    _choices = choices;
+    _heard = '';
+    _answer = '';
+    _set(VoiceStatus.answering);
+    final listener = _listener;
+    listener?.send?.call({'listen': within.inMilliseconds / 1000});
+    // The listener says when it has heard nothing; this is in case it says
+    // nothing at all. With no listener, there is the screen to touch.
+    final gaveUp = Timer(
+      listener?.send == null
+          ? within * 3
+          : within + const Duration(seconds: 15),
+      () => _answered(answering, null),
+    );
+    final heard = await answering.future;
+    gaveUp.cancel();
+    return heard;
+  }
+
+  /// [choice] touched, for the question being asked.
+  void choose(String choice) {
+    final answering = _answering;
+    if (answering != null) _answered(answering, [choice]);
+  }
+
+  void _answered(Completer<List<String>?> answering, List<String>? heard) {
+    if (answering.isCompleted || answering != _answering) return;
+    _answering = null;
+    _heard = heard?.first ?? '';
+    _choices = const [];
+    answering.complete(heard);
+    _finish(heard != null);
   }
 
   /// Shows how it went for a while — an answer longer, to be read — then
@@ -296,6 +373,7 @@ class VoiceService extends ChangeNotifier {
       VoiceStatus.asking,
       VoiceStatus.done,
       VoiceStatus.missed,
+      VoiceStatus.answering,
     };
     if (_status == status && !news.contains(status)) return;
     _status = status;
@@ -353,10 +431,20 @@ class VoiceService extends ChangeNotifier {
     ]);
     // Drained so a chatty library cannot fill its pipe and wedge.
     unawaited(process.stderr.drain<void>().catchError((_) {}));
+    // Written to while it runs; once it has gone, writing fails here, and
+    // its going is what is acted on.
+    unawaited(process.stdin.done.catchError((_) {}));
     return VoiceListener(
       lines: process.stdout
           .transform(utf8.decoder)
           .transform(const LineSplitter()),
+      send: (message) {
+        try {
+          process.stdin.writeln(jsonEncode(message));
+        } catch (e) {
+          debugPrint('Voice: could not tell the listener: $e');
+        }
+      },
       stop: () async {
         process.kill();
         await process.exitCode;

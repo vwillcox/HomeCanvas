@@ -29,10 +29,15 @@ import 'services/fuel_service.dart';
 import 'services/reminders_service.dart';
 import 'services/chores_service.dart';
 import 'services/govee_service.dart';
+import 'services/addons.dart';
 import 'services/code_widgets.dart';
 import 'services/custom_widgets.dart';
 import 'services/glowmarkt_service.dart';
 import 'services/home_assistant_service.dart';
+import 'services/computer_power.dart';
+import 'services/art_matrix_service.dart';
+import 'services/home_control.dart';
+import 'services/spoken_names.dart';
 import 'services/homey_service.dart';
 import 'services/radio_service.dart';
 import 'services/radio_stations.dart';
@@ -68,6 +73,7 @@ import 'services/locked_folder_service.dart';
 import 'services/media_cache.dart';
 import 'services/now_playing_service.dart';
 import 'services/screen_idle_service.dart';
+import 'services/routines.dart';
 import 'services/voice_commands.dart';
 import 'services/voice_service.dart';
 import 'widgets/voice_indicator.dart';
@@ -107,6 +113,8 @@ import 'widgets/on_screen_keyboard.dart';
 import 'widgets/now_playing_overlay.dart';
 import 'widgets/video_overlay.dart';
 import 'app_paths.dart';
+import 'deck/deck_link.dart';
+import 'deck/deck_screen.dart';
 import 'l10n/l10n.dart';
 import 'theme.dart';
 import 'dashboard/dashboard_theme.dart';
@@ -493,7 +501,14 @@ void main() async {
   await customWidgets.load();
   dashboard.customWidgets = customWidgets;
   // And as Dart, built into the app by the panel itself.
-  dashboard.codeWidgets = CodeWidgets();
+  final codeWidgets = CodeWidgets();
+  dashboard.codeWidgets = codeWidgets;
+  // And from the catalogue: every widget but the app's own two.
+  dashboard.addons = Addons(
+    custom: customWidgets,
+    code: codeWidgets,
+    repo: dashboard.settings.addonsRepo,
+  );
 
   final homey = HomeyService(config);
   dashboard.homeyDevices = homey.choices;
@@ -523,24 +538,120 @@ void main() async {
   // What the panel makes nothing of is asked of Home Assistant's Assist —
   // the lights, the heating, "what's the temperature indoors" — and its
   // answer is shown, and said at the speech volume unless Do Not Disturb
-  // is on.
-  Future<String?> askHomeAssistant(String heard) async {
-    final answer = await homeAssistant.converse(
-      VoiceCommands.forAssist(heard, wake: config.config.screen.wakeWord),
+  // is on. Every hearing is tried, and then each with a misheard device
+  // name put right — "turn around you one on" is Lounge 1.
+  Future<VoiceAnswer?> askHomeAssistant(List<String> heard) async {
+    final reply = await askAssist(
+      heard,
+      request: (h) =>
+          VoiceCommands.forAssist(h, wake: config.config.screen.wakeWord),
+      ask: homeAssistant.ask,
+      names: () async {
+        await Future.wait([
+          homeAssistant.refresh(),
+          homeAssistant.refreshAreas(),
+        ]);
+        return SpokenNames(
+          homeAssistant.spokenNames,
+          areas: [for (final a in homeAssistant.areas) a.name],
+        );
+      },
     );
-    if (answer != null && !inbox().dndMuted) {
-      unawaited(speech.speak(answer, volume: inbox().speechOut));
+    if (reply != null && !inbox().dndMuted) {
+      unawaited(speech.speak(reply.answer, volume: inbox().speechOut));
     }
-    return answer;
+    return reply;
   }
+
+  // The television, made here rather than when a TV tile first asks: voice
+  // can switch it with no tile on screen. Making it costs nothing; it
+  // connects only when something wants it to.
+  final tv = TvService(config);
+
+  // The Art Matrix LED display: on, off and its brightness by voice, over
+  // its own HTTP API on the home network.
+  final artMatrix = ArtMatrixService(() => config.config.artMatrix);
+
+  // "Turn the TV off", "lights on", "I'm going to bed". The lights go
+  // through Home Assistant's Assist, which knows which lights there are;
+  // what went wrong is said, what went right is only shown.
+  // A computer collecting links from the panel can be switched by voice
+  // too: off through its own receiver, on by Wake-on-LAN.
+  final computers = ComputerPower(outbox);
+  // Made below: a routine's question is answered through it.
+  late final VoiceService voice;
+  final house = HomeControl(
+    service: homeAssistant.service,
+    lightsOnBesides: homeAssistant.lightsOnBesides,
+    question: (q) async {
+      if (!inbox().dndMuted) {
+        await speech.speak(q.prompt, volume: inbox().speechOut);
+        // The last of the panel's own voice out of the room before it
+        // listens: it is not the answer.
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+      }
+      final on = tr('voice.answerOn', 'On');
+      final off = tr('voice.answerOff', 'Off');
+      final heard = await voice.listenForAnswer(q.prompt, choices: [on, off]);
+      if (heard == null) return null;
+      if (heard.length == 1 && heard.first == on) return true;
+      if (heard.length == 1 && heard.first == off) return false;
+      for (final h in heard) {
+        final answer = RoutineQuestion.answer(VoiceCommands.words(h));
+        if (answer != null) return answer;
+      }
+      return null;
+    },
+    computerReady: () => computers.any,
+    computerNames: () => computers.names,
+    computer: (on, named) => computers.setPower(on, named: named),
+    tvReady: () => config.config.tv.isConfigured,
+    tv: tv.setPower,
+    artMatrixReady: () => config.config.artMatrix.isConfigured,
+    artMatrix: artMatrix.setPower,
+    artMatrixBrightness: artMatrix.setBrightness,
+    assistReady: () => homeAssistant.configured,
+    // Done, or not: a refusal ("no device called…") is not the lights off.
+    assist: (text) async {
+      final reply = await homeAssistant.ask(text);
+      return reply != null && reply.done ? reply.speech : null;
+    },
+    stopPlaying: () async {
+      await radio.stop();
+      if (player.view != VideoView.closed) await player.close();
+      for (final PlaybackSource p in [spotify, nowPlaying]) {
+        if (p.available && p.now.isPlaying) await p.playPause();
+      }
+    },
+    screenOff: screenIdle.sleep,
+    say: (text) {
+      if (!inbox().dndMuted) {
+        unawaited(speech.speak(text, volume: inbox().speechOut));
+      }
+    },
+  );
+
+  // StreamerDeck: a computer's deck of keys, shown full screen from the top
+  // bar. The computer connects in on the inbox's port; the panel moves
+  // between pages itself and runs its own keys (lights, routines, waking
+  // the computer) so those work with the computer off.
+  final deck = DeckLink(
+    home: homeAssistant,
+    routines: () => config.config.routines,
+    runRoutine: house.runRoutine,
+    computer: (on) => computers.setPower(on),
+    keepAwake: screenIdle.noteInteraction,
+  );
+  unawaited(deck.load());
+  shareInbox.onDeck = deck.accept;
 
   // The wake words, and what is said after them: heard by a listener this
   // starts while voice control is switched on, and done here. The screen
   // is lit on the wake words, before anything is asked for.
-  final voice = VoiceService(
+  voice = VoiceService(
     enabled: () => config.config.screen.voiceControl,
     wake: () => config.config.screen.wakeWord,
-    act: (heard) => runVoiceCommand(heard, config, screenIdle),
+    act: (heard) => runVoiceCommand(heard, config, screenIdle, house),
     ask: askHomeAssistant,
     onWake: () {
       unawaited(screenIdle.wake());
@@ -565,6 +676,7 @@ void main() async {
         ChangeNotifierProvider.value(value: indoor),
         ChangeNotifierProvider.value(value: shareInbox),
         ChangeNotifierProvider.value(value: outbox),
+        ChangeNotifierProvider.value(value: deck),
         ChangeNotifierProvider.value(value: ytDlp),
         ChangeNotifierProvider.value(value: player),
         ChangeNotifierProvider.value(value: youtube),
@@ -577,7 +689,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => CameraService(config)),
         ChangeNotifierProvider.value(value: feeds),
         ChangeNotifierProvider.value(value: dashboard),
-        ChangeNotifierProvider(create: (_) => TvService(config)),
+        ChangeNotifierProvider.value(value: tv),
         // Owned above the dashboard so a test keeps running while you
         // page away from the widget, and the result is still there when
         // you come back.
@@ -659,8 +771,8 @@ void main() async {
       },
       screenLit: screen.set,
       voice: (heard) async =>
-          runVoiceCommand(heard, config, screenIdle) ??
-          await askHomeAssistant(heard),
+          runVoiceCommand(heard, config, screenIdle, house) ??
+          (await askHomeAssistant([heard]))?.answer,
     ).start(),
   );
 }
@@ -727,6 +839,7 @@ String? runVoiceCommand(
   String heard,
   ConfigService config,
   ScreenIdleService screen,
+  HomeControl home,
 ) {
   final navigator = rootNavigatorKey.currentState;
   final context = rootNavigatorKey.currentContext;
@@ -743,14 +856,23 @@ String? runVoiceCommand(
   final commands = VoiceCommands.of(
     settings,
     wake: config.config.screen.wakeWord,
+    routines: config.config.routines,
+    computers: home.computerNames(),
   );
   final action = commands.resolve(heard);
   if (action == null) return null;
 
-  // Spoken to, so looked at: lit, and counted as use.
-  unawaited(screen.wake());
-  // The TV remote app, or a browser, may be in front of the kiosk.
-  unawaited(KioskBrowser.focusKiosk());
+  // The house rather than the panel — "turn the TV off", "I'm going to
+  // bed" — changes nothing on screen, so whatever is in front stays there;
+  // and a routine for bed is about to put the screen out.
+  if (action is! VoiceSwitch &&
+      action is! VoiceRoutine &&
+      action is! VoiceArtMatrixBrightness) {
+    // Spoken to, so looked at: lit, and counted as use.
+    unawaited(screen.wake());
+    // The TV remote app, or a browser, may be in front of the kiosk.
+    unawaited(KioskBrowser.focusKiosk());
+  }
 
   final radio = context.read<RadioService>();
   // Steps the radio along the dashboard's stations, or the catalogue's
@@ -764,6 +886,12 @@ String? runVoiceCommand(
   }
 
   switch (action) {
+    case VoiceSwitch(:final things, :final on, :final computer):
+      return home.switchThings(things, on: on, computer: computer);
+    case VoiceArtMatrixBrightness(:final level):
+      return home.setArtMatrixBrightness(level);
+    case VoiceRoutine(:final routine):
+      return home.runRoutine(routine);
     case VoiceRadio(:final ask, :final station):
       switch (ask) {
         case VoiceRadioAsk.play:
@@ -971,6 +1099,8 @@ void runKioskCommand(KioskCommand command, ConfigService config) {
     case KioskCommand.camera:
       final camera = context.read<CameraService>();
       if (camera.isConfigured) camera.toggleOpen();
+    case KioskCommand.deck:
+      if (!context.read<DeckLink>().isOpen) navigator.push(DeckScreen.route());
   }
 }
 

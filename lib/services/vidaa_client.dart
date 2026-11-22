@@ -121,8 +121,26 @@ class TvState {
   String? sourceName;
   int? volume;
   bool muted = false;
+
+  /// Whether the set is on, as it last said — see [powerKnown].
   bool powerOn = true;
+
+  /// Whether the set has said if it is on since this session began. It does
+  /// so to every client as it connects, and again on every change.
+  bool powerKnown = false;
   Map<String, dynamic> raw = {};
+
+  /// Reads [powerOn] from a state broadcast's `statetype`. "fake_sleep_0" is
+  /// standby: the screen dark, the set still on the network and listening —
+  /// which is how a power key can bring it back. "fake_sleep_1" comes as it
+  /// wakes, just before the input it wakes to; anything else is a set in use.
+  /// Read as the Tufty bridge's own VIDAA remote reads it.
+  void notePower(Object? statetype) {
+    final kind = '${statetype ?? ''}'.toLowerCase();
+    if (kind.isEmpty) return;
+    powerOn = !(kind == 'fake_sleep_0' || kind.contains('off'));
+    powerKnown = true;
+  }
 
   /// The inputs the TV reports, in its own order. Empty until the first
   /// sourcelist reply arrives.
@@ -189,6 +207,21 @@ class VidaaClient {
 
   String get clientId => _clientId;
 
+  /// Whether the session is up right now — not whether it was once.
+  bool get isConnected =>
+      _client?.connectionStatus?.state == MqttConnectionState.connected;
+
+  /// Set by a failed [connect] when the television answered and said no to
+  /// the password, as opposed to not answering at all.
+  ///
+  /// The difference decides whether pairing is needed. Tested against the
+  /// set: a token it does not accept is turned away at once, under a second,
+  /// with `notAuthorized`. A connect that times out or hits a socket error
+  /// says nothing about the token — the set was off the network — and
+  /// treating it as a refusal sent a panel with a good refresh token off to
+  /// pair again after a Wi-Fi drop.
+  bool refused = false;
+
   // Command topics
   String _tvTopic(String svc, String action) =>
       '/remoteapp/tv/$svc/$_clientId/actions/$action';
@@ -238,9 +271,14 @@ class VidaaClient {
         .startClean();
     c.connectionMessage = connMsg;
 
+    refused = false;
     try {
       await c.connect().timeout(timeout);
     } catch (e) {
+      final rc = c.connectionStatus?.returnCode;
+      refused =
+          rc == MqttConnectReturnCode.notAuthorized ||
+          rc == MqttConnectReturnCode.badUsernameOrPassword;
       _log('connect error: $e');
       c.disconnect();
       return false;
@@ -317,6 +355,7 @@ class VidaaClient {
     } else if (topic == '/remoteapp/mobile/broadcast/ui_service/state') {
       if (d != null) {
         state.raw = d;
+        state.notePower(d['statetype']);
         state.sourceId = d['sourceid']?.toString();
         state.sourceName = d['sourcename']?.toString();
         _remarkActive();
@@ -432,9 +471,18 @@ class VidaaClient {
     String pin, {
     Duration timeout = const Duration(seconds: 12),
   }) async {
+    // Not int.parse: an empty box or a stray letter threw out of the tap
+    // handler and left the Pair button greyed out for good.
+    final code = int.tryParse(pin);
+    if (code == null) return null;
+    // Nothing to wait twelve seconds for if the code cannot be sent.
+    if (!isConnected) {
+      _log('PIN not sent, not connected');
+      return null;
+    }
     _publish(
       _tvTopic('ui_service', 'authenticationcode'),
-      jsonEncode({'authNum': int.parse(pin)}),
+      jsonEncode({'authNum': code}),
     );
     try {
       await _authAccepted.future.timeout(timeout);

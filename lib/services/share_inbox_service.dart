@@ -92,6 +92,11 @@ class ShareInboxService extends ChangeNotifier {
   /// those holding a sender's token. Null answers nobody.
   LinkOutbox? outbox;
 
+  /// StreamerDeck on a computer, connecting to drive the deck (`GET
+  /// /deck`): handed the request and whose token let it in. Null answers
+  /// nobody.
+  Future<void> Function(HttpRequest request, String sender)? onDeck;
+
   /// How long a device's request for links is held open with nothing to
   /// send: under the minute a reverse proxy usually lets one sit idle.
   static const outboxWait = Duration(seconds: 50);
@@ -199,6 +204,24 @@ class ShareInboxService extends ChangeNotifier {
       return;
     }
 
+    if (request.method == 'GET' && path == '/deck') {
+      final sender = _senderFor(request);
+      final deck = onDeck;
+      if (sender == null || deck == null) {
+        request.response.statusCode = sender == null
+            ? HttpStatus.unauthorized
+            : HttpStatus.notFound;
+        await request.response.close();
+        return;
+      }
+      try {
+        await deck(request, sender);
+      } catch (e) {
+        debugPrint('ShareInbox: deck request error: $e');
+      }
+      return;
+    }
+
     if (request.method == 'GET' && path == '/outbox') {
       try {
         await _handleOutbox(request);
@@ -285,7 +308,8 @@ class ShareInboxService extends ChangeNotifier {
   ///
   /// `X-Device-Key` is its X25519 public key, base64; `X-Device-Name`
   /// (percent-encoded) and `X-Device-Kind` (`phone` or `computer`) say how
-  /// to offer it. `?after=` is the newest id it has handled, `?wait=` how
+  /// to offer it; a computer's `X-Device-Wake` is the hardware address it
+  /// wakes on. `?after=` is the newest id it has handled, `?wait=` how
   /// many seconds it will wait for something, up to [outboxWait].
   Future<void> _handleOutbox(HttpRequest request) async {
     final sender = _senderFor(request);
@@ -330,6 +354,10 @@ class ShareInboxService extends ChangeNotifier {
       name: name,
       kind: kind,
       after: int.tryParse(q['after'] ?? '') ?? 0,
+      // Where it is, and what it wakes on, for switching a computer on —
+      // see ComputerPower.
+      address: request.connectionInfo?.remoteAddress,
+      wakeMac: request.headers.value('x-device-wake'),
       wait: Duration(
         seconds: (int.tryParse(q['wait'] ?? '') ?? 0).clamp(
           0,

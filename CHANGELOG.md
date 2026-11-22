@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.1.0
+
+The widgets have a home of their own, and anyone can add to them.
+
+### Added
+
+- **Add-ons.** The editor has a new page listing every widget in the
+  [HomeCanvas-Widgets](https://github.com/vwillcox/HomeCanvas-Widgets)
+  catalogue: what each does, a picture of it, who wrote it and which group
+  it belongs to. **Download** adds it to the panel. One written in Dart is
+  built into the panel by the panel itself — a few minutes and a restart,
+  and if it does not build or start the panel goes back to how it was; one
+  described in JSON is there at once. Pick several and they are built in
+  together.
+- **Widgets from anyone.** A widget is sent to the catalogue as a pull
+  request. A GitHub Action reads it for what it should not do, a second
+  builds it into HomeCanvas and runs its tests, and a maintainer reads it.
+  Only what passes is listed, and a panel installs only files that match
+  the sums the catalogue published.
+
+### Changed
+
+- **Fifty widgets moved out of the app** into the catalogue, each as an
+  add-on. The calendar and parcels stay, because the day's brief and the
+  share inbox lean on them. A panel being updated keeps every widget its
+  dashboard uses: the update fetches them before it builds. A new panel
+  starts with a small set and the Add-ons page.
+
 ## 1.0.3.2
 
 Videos play with a picture again, and HomeCanvas is built with the latest

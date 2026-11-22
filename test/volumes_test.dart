@@ -29,6 +29,8 @@ void main() {
       speechVolume: 40,
       readerVolume: 50,
       timerVolume: 60,
+      // Not the night's quieter speech: the same answer at any hour.
+      quietNights: false,
     );
     s.dndMuted = true;
     expect(

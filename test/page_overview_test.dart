@@ -15,6 +15,8 @@ import 'package:home_canvas/services/config_service.dart';
 import 'package:home_canvas/services/dashboard_service.dart';
 import 'package:home_canvas/services/screen_idle_service.dart';
 
+import 'needs_addons.dart';
+
 /// Every page of the dashboard at once: where the cards go, what each is
 /// called, the map drawn for a page with no picture, and the ways in and
 /// out of it.
@@ -109,6 +111,7 @@ void main() {
     });
 
     test('otherwise, its two biggest tiles and how many more', () {
+      if (skippedWithoutAddons()) return;
       final s = DashboardSettings(
         widgets: [
           tile('a', 'clock', 0, w: 2, h: 2),
@@ -124,6 +127,7 @@ void main() {
     });
 
     test('two of the same kind are named once', () {
+      if (skippedWithoutAddons()) return;
       final s = DashboardSettings(
         widgets: [tile('a', 'clock', 0), tile('b', 'clock', 0, x: 4)],
       );
@@ -230,6 +234,7 @@ void main() {
     testWidgets('every page is a card, named, and a card touched is chosen', (
       tester,
     ) async {
+      if (skippedWithoutAddons()) return;
       final o = await show(tester, glass);
       expect(find.text('Main'), findsOneWidget);
       expect(find.text('Travel'), findsOneWidget);

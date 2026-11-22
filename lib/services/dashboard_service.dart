@@ -23,6 +23,7 @@ import 'notes_service.dart';
 import 'shopping_service.dart';
 import 'timer_sounds.dart';
 import 'video_site.dart';
+import 'addons.dart';
 import 'code_widgets.dart';
 import 'custom_widgets.dart';
 import 'homey_service.dart';
@@ -463,6 +464,18 @@ class DashboardService extends ChangeNotifier {
       // checked and drawn from, never run — but it does say what address
       // the panel should fetch, so it is taken only from the editor's own
       // page on the local network.
+      // The catalogue of add-ons, and what of it is installed. What is
+      // installed comes only from the catalogue the panel is set to read,
+      // each file checked against the sum the catalogue's own checks gave
+      // it — so, unlike an upload, it needs no switch at the panel; but it
+      // is still asked for only from the editor's own page.
+      if (path == '/api/addons' || path.startsWith('/api/addons/')) {
+        if (!_requireLocal(request)) return;
+        if (request.method != 'GET' && !_fromThisSite(request)) {
+          return await _status(request, HttpStatus.forbidden);
+        }
+        return await _addonsApi(request, path);
+      }
       if (path == '/api/widgets' || path.startsWith('/api/widgets/')) {
         if (!_requireLocal(request)) return;
         if (request.method != 'GET' && !_fromThisSite(request)) {
@@ -563,6 +576,15 @@ class DashboardService extends ChangeNotifier {
         return await _serveAsset(
           request,
           'assets/dashboard/notes.html',
+          ContentType.html,
+        );
+      }
+      // Add-ons: the catalogue of widgets, and installing from it.
+      if (path == '/addons' || path == '/addons/') {
+        if (!_requireLocal(request)) return;
+        return await _serveAsset(
+          request,
+          'assets/dashboard/addons.html',
           ContentType.html,
         );
       }
@@ -1303,6 +1325,46 @@ class DashboardService extends ChangeNotifier {
     }
     request.response.statusCode = HttpStatus.accepted;
     return state();
+  }
+
+  /// The catalogue of add-ons and what of it is installed.
+  Addons? addons;
+
+  Future<void> _addonsApi(HttpRequest request, String path) async {
+    final addons = this.addons;
+    if (addons == null) return _status(request, HttpStatus.notFound);
+    Future<void> listed({bool fresh = false}) async => _json(request, {
+      ...await addons.listing({
+        for (final w in settings.widgets) w.type,
+      }, fresh: fresh),
+      'build': addons.code.status(),
+    });
+
+    if (path == '/api/addons' && request.method == 'GET') {
+      return listed(fresh: request.uri.queryParameters['fresh'] == '1');
+    }
+    final String? refused;
+    if (path == '/api/addons/install' && request.method == 'POST') {
+      final Object? body;
+      try {
+        body = jsonDecode(await _body(request));
+      } on FormatException {
+        return _status(request, HttpStatus.badRequest);
+      }
+      final ids = body is Map ? body['ids'] : null;
+      if (ids is! List || !ids.every((i) => i is String)) {
+        return _status(request, HttpStatus.badRequest);
+      }
+      refused = await addons.install(ids.cast<String>());
+    } else if (path == '/api/addons' && request.method == 'DELETE') {
+      refused = await addons.remove(request.uri.queryParameters['id'] ?? '');
+    } else {
+      return _status(request, HttpStatus.notFound);
+    }
+    if (refused != null) {
+      return _say(request, HttpStatus.badRequest, refused);
+    }
+    return listed();
   }
 
   /// The widgets installed from files, for the editor to add to.

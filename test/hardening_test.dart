@@ -4,6 +4,8 @@ import 'package:home_canvas/dashboard/widgets/widgets.dart';
 import 'package:home_canvas/services/dashboard_service.dart';
 import 'package:home_canvas/services/service_checks.dart';
 
+import 'needs_addons.dart';
+
 void main() {
   setUpAll(registerBuiltInWidgets);
 
@@ -22,6 +24,7 @@ void main() {
 
   group('secret settings never leave the panel', () {
     test('the editor is sent dots for a key, and the rest as it is', () {
+      if (skippedWithoutAddons()) return;
       final saved = railcam('a', {'username': 'me', 'password': 'hunter2'});
       final json = DashboardService.maskSecrets({
         'themeId': 'midnight',
@@ -45,6 +48,7 @@ void main() {
     });
 
     test('dots sent back keep the key saved for that tile', () {
+      if (skippedWithoutAddons()) return;
       final saved = [
         railcam('a', {'password': 'hunter2'}),
       ];
@@ -62,6 +66,7 @@ void main() {
     });
 
     test('another tile cannot borrow a key by sending the dots', () {
+      if (skippedWithoutAddons()) return;
       final back = railcam('b', {'password': mask});
       DashboardService.keepSecrets(back, [
         railcam('a', {'password': 'hunter2'}),

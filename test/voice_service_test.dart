@@ -16,12 +16,17 @@ void main() {
   late VoiceService voice;
   late WakeWord words;
   late String? heardFor;
+  late List<Map<String, Object?>> sent;
 
   Future<VoiceListener> open(WakeWord wake) async {
     opened++;
     heardFor = wake.phrase;
     lines = StreamController<String>();
-    return VoiceListener(lines: lines.stream, stop: () async => stopped++);
+    return VoiceListener(
+      lines: lines.stream,
+      stop: () async => stopped++,
+      send: sent.add,
+    );
   }
 
   setUp(() {
@@ -32,6 +37,7 @@ void main() {
     acted = [];
     words = WakeWord();
     heardFor = null;
+    sent = [];
     voice = VoiceService(
       enabled: () => on,
       wake: () => words,
@@ -145,9 +151,16 @@ void main() {
         enabled: () => true,
         act: (_) => null,
         ask: (heard) async {
-          asked.add(heard);
-          await Future<void>.delayed(const Duration(milliseconds: 100));
-          return heard.contains('lamp') ? 'Turned on the lamp' : null;
+          VoiceAnswer? found;
+          for (final h in heard) {
+            asked.add(h);
+            await Future<void>.delayed(const Duration(milliseconds: 100));
+            if (h.contains('lamp')) {
+              found = (heard: h, answer: 'Turned on the lamp');
+              break;
+            }
+          }
+          return found;
         },
         open: open,
       );
@@ -190,7 +203,7 @@ void main() {
       act: (heard) => heard == 'next page' ? 'next page' : null,
       ask: (heard) async {
         await Future<void>.delayed(const Duration(seconds: 1));
-        return 'Turned on the lamp';
+        return (heard: heard.first, answer: 'Turned on the lamp');
       },
       open: open,
     );
@@ -274,5 +287,124 @@ void main() {
     expect(stopped, 1);
     expect(opened, 2);
     expect(heardFor, 'hey jarvis');
+  });
+
+  group('an answer to something the panel asked', () {
+    Future<void> listening(WidgetTester tester) async {
+      on = true;
+      voice.sync();
+      await tester.pump();
+      lines.add('{"event": "ready"}');
+      await tester.pump();
+    }
+
+    testWidgets('said without the wake words, and not done as a command', (
+      tester,
+    ) async {
+      await listening(tester);
+      List<String>? answer;
+      unawaited(
+        voice
+            .listenForAnswer('Heater on or off?', choices: ['On', 'Off'])
+            .then((a) => answer = a),
+      );
+      await tester.pump();
+      expect(sent, [
+        {'listen': 7.0},
+      ]);
+      expect(voice.status, VoiceStatus.answering);
+      expect(voice.question, 'Heater on or off?');
+      expect(voice.choices, ['On', 'Off']);
+
+      lines.add('{"event": "heard", "text": "on please", "other": "on"}');
+      await tester.pump();
+      expect(answer, ['on please', 'on']);
+      expect(acted, isEmpty);
+      expect(voice.status, VoiceStatus.done);
+      expect(voice.choices, isEmpty);
+
+      // And after it, the wake words are wanted again.
+      lines.add('{"event": "heard", "text": "hey canvas show stocks"}');
+      await tester.pump();
+      expect(acted, ['hey canvas show stocks']);
+      await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('touched on the screen', (tester) async {
+      await listening(tester);
+      List<String>? answer;
+      unawaited(
+        voice
+            .listenForAnswer('Heater on or off?', choices: ['On', 'Off'])
+            .then((a) => answer = a),
+      );
+      await tester.pump();
+      voice.choose('Off');
+      await tester.pump();
+      expect(answer, ['Off']);
+      // A late hearing is a command again, not the answer.
+      lines.add('{"event": "heard", "text": "on"}');
+      await tester.pump();
+      expect(acted, ['on']);
+      await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('nothing said, as the listener tells it', (tester) async {
+      await listening(tester);
+      var answered = false;
+      List<String>? answer = ['not yet'];
+      unawaited(
+        voice.listenForAnswer('Heater on or off?').then((a) {
+          answered = true;
+          answer = a;
+        }),
+      );
+      await tester.pump();
+      lines.add('{"event": "heard", "text": ""}');
+      await tester.pump();
+      expect(answered, isTrue);
+      expect(answer, isNull);
+      expect(voice.status, VoiceStatus.missed);
+      await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('nothing said, and the listener says nothing either', (
+      tester,
+    ) async {
+      await listening(tester);
+      var answered = false;
+      List<String>? answer = ['not yet'];
+      unawaited(
+        voice.listenForAnswer('Heater on or off?').then((a) {
+          answered = true;
+          answer = a;
+        }),
+      );
+      await tester.pump(const Duration(seconds: 20));
+      expect(answered, isFalse);
+      await tester.pump(const Duration(seconds: 3));
+      expect(answered, isTrue);
+      expect(answer, isNull);
+      await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('switched off while it waits', (tester) async {
+      await listening(tester);
+      var answered = false;
+      List<String>? answer = ['not yet'];
+      unawaited(
+        voice.listenForAnswer('Heater on or off?').then((a) {
+          answered = true;
+          answer = a;
+        }),
+      );
+      await tester.pump();
+      on = false;
+      voice.sync();
+      await tester.pump();
+      expect(answered, isTrue);
+      expect(answer, isNull);
+      expect(voice.status, VoiceStatus.off);
+    });
   });
 }
