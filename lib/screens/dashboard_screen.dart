@@ -11,6 +11,7 @@ import 'package:provider/provider.dart';
 import '../dashboard/dashboard_model.dart';
 import '../dashboard/page_overview.dart';
 import '../dashboard/photo_backdrop.dart';
+import '../dashboard/photos_tile.dart';
 import '../dashboard/schedule.dart';
 import '../dashboard/tile_spotlight.dart';
 import '../dashboard/dashboard_theme.dart';
@@ -28,13 +29,15 @@ import '../widgets/glass.dart';
 import '../widgets/lcars.dart';
 import '../widgets/module_bar.dart';
 import '../widgets/now_playing_overlay.dart';
-import 'home_screen.dart' show showablePlayback;
+import 'settings_screen.dart';
 import '../widgets/pause_when_hidden.dart';
 import '../widgets/shown_timers.dart';
 import '../widgets/stepped_timeline.dart';
 import '../l10n/l10n.dart';
 
-/// The dashboard: widgets laid out on a grid, drawn in the chosen theme.
+/// The dashboard: widgets laid out on a grid, drawn in the chosen theme. The
+/// kiosk's first screen — every other opens on top of it — and the top bar
+/// across it is the kiosk's: the greeting, the way to Settings, the music.
 ///
 /// Placement comes entirely from the saved configuration, which is edited in
 /// a browser rather than here — this screen only draws it. Editing on a
@@ -46,6 +49,31 @@ class DashboardScreen extends StatefulWidget {
   /// Which page to open on. Only used by the debug launch hook — the panel
   /// itself always opens on the first page.
   final int initialPage;
+
+  /// The widget type of the photo albums — an add-on — which the top bar's
+  /// Photos button, "show the photos" by voice and the TV remote app's
+  /// Photos all go to.
+  static const String albumsType = albumsWidgetType;
+
+  /// The albums tile, if the dashboard has one showing at some time: the
+  /// first on the earliest page.
+  static DashboardWidgetConfig? photosTile(DashboardSettings settings) {
+    final tiles = settings.widgets.where((w) => w.type == albumsType).toList()
+      ..sort((a, b) => a.page.compareTo(b.page));
+    return tiles.firstOrNull;
+  }
+
+  /// Turns to the albums tile's page and, unless it already fills it,
+  /// brings it close. False when the dashboard has no albums tile.
+  static bool showPhotos(DashboardSettings settings) {
+    final tile = photosTile(settings);
+    if (tile == null) return false;
+    requestedPage.value = tile.page;
+    final fills =
+        tile.width >= DashboardGrid.columns && tile.height >= DashboardGrid.rows;
+    if (!fills) requestedLift.value = tile.id;
+    return true;
+  }
 
   /// A page to show — its number as saved, not its place among the pages
   /// showing now — asked for from outside: a reminder falling due brings
@@ -70,16 +98,6 @@ class DashboardScreen extends StatefulWidget {
   /// voice, true to open it. Taken up by an open dashboard, or the next one
   /// to open.
   static final ValueNotifier<bool?> requestedOverview = ValueNotifier(null);
-
-  /// The dashboard's route, by name, so whatever is on top of it can be
-  /// cleared away to show it — see [route].
-  static const String routeName = 'dashboard';
-
-  /// The way to the dashboard from anywhere in the kiosk.
-  static Route<void> route() => MaterialPageRoute(
-    settings: const RouteSettings(name: routeName),
-    builder: (_) => const DashboardScreen(),
-  );
 
   /// Whether a dashboard is on screen to take a [requestedPage] up.
   static bool get isOpen => _open > 0;
@@ -698,10 +716,14 @@ class _DashboardScreenState extends State<DashboardScreen>
             ),
           ),
         // With the top bar off: the panel has no keyboard and no
-        // window chrome, so without this there is no way off the
-        // dashboard at all.
+        // window chrome, so without this there is no way to Settings
+        // at all.
         if (!settings.topBar) ...[
-          Positioned(left: 12, bottom: 12, child: _BackButton(theme: theme)),
+          Positioned(
+            left: 12,
+            bottom: 12,
+            child: _SettingsButton(theme: theme),
+          ),
           if (pageCount > 1)
             Positioned(
               left: 0,
@@ -857,8 +879,8 @@ class _TopBar extends StatelessWidget {
           onTap: () => showDayBrief(context),
         ),
         padding: const EdgeInsets.fromLTRB(28, 14, 20, 4),
-        // The home screen's own bar, rather than a back button: Photos takes
-        // you home, and everything else is where it is there.
+        // The kiosk's own bar: the dashboard is the first screen, so there
+        // is nothing to go back to — only to go to.
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -882,7 +904,6 @@ class _TopBar extends StatelessWidget {
             // once: the dashboard as a whole. A button of its own would
             // crowd the greeting out of a bar with a dozen pages in it.
             ModuleBar(
-              current: KioskModule.dashboard,
               colour: theme.textPrimary,
               accent: theme.accent,
               onAgain: pageCount > 1 ? onOverview : null,
@@ -894,22 +915,24 @@ class _TopBar extends StatelessWidget {
   }
 }
 
-/// Back to whatever the kiosk was showing before the dashboard.
-class _BackButton extends StatelessWidget {
-  const _BackButton({required this.theme});
+/// Settings, for a dashboard drawn without its top bar.
+class _SettingsButton extends StatelessWidget {
+  const _SettingsButton({required this.theme});
 
   final DashboardTheme theme;
 
   @override
   Widget build(BuildContext context) {
-    // Glass like every other screen's back button, but never fully clear: a
+    // Glass like every other screen's buttons, but never fully clear: a
     // control you cannot see is a control you cannot find.
     return GlassIconButton(
-      icon: Icons.arrow_back_rounded,
-      tooltip: tr('dashboard.back', 'Back'),
+      icon: Icons.settings_outlined,
+      tooltip: tr('modules.settings', 'Settings'),
       size: 72,
       colour: theme.textPrimary,
-      onPressed: () => Navigator.of(context).maybePop(),
+      onPressed: () => Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => const SettingsScreen())),
     );
   }
 }

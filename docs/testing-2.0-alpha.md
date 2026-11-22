@@ -1,6 +1,7 @@
-# Testing HomeCanvas 2.0.0 alpha 2
+# Testing HomeCanvas 2.0.0 alpha 3
 
-This alpha moves every widget out of the app. All fifty-two now live in
+This alpha moves every widget out of the app, and makes the dashboard the
+kiosk's first screen: the photo albums are a widget now too. All fifty-two now live in
 [HomeCanvas-Widgets](https://github.com/vwillcox/HomeCanvas-Widgets) as
 **add-ons**, and the editor has an **Add-ons** page to download them from.
 None is built in any more: the app is what widgets are made from.
@@ -50,7 +51,7 @@ Tick these off, and say which failed.
 
 - [ ] Every tile you had is still there and working — none says
       "Unknown widget".
-- [ ] Settings → About says version 2.0.0-alpha.2.
+- [ ] Settings → About says version 2.0.0-alpha.3.
 
 **2. The Add-ons page**
 
@@ -116,7 +117,28 @@ At the foot of the Add-ons page, open **Other people's libraries**.
       Settings → Dashboard on the panel; **Stop reading** takes the library
       away again.
 
-**10. Everything else still works** — nothing here should have changed it,
+**10. The dashboard is home, and the albums are a tile** (new in alpha 3)
+
+- [ ] The panel starts on the dashboard, not the albums. Its top bar has
+      the greeting, the Dashboard button lit, Photos, the lock (if the
+      Locked Folder is set up), Settings.
+- [ ] If the panel was connected to Immich, the update added a last page
+      named **Photos** with the **Photo albums** tile filling it.
+- [ ] **Photos** in the top bar turns to that page. On a smaller albums
+      tile it also brings the tile close.
+- [ ] In the tile: tap an album — its photos, Slideshow, a photo, a video
+      all work, and back comes back to the dashboard.
+- [ ] The search button opens Find photos.
+- [ ] The tick button, then two albums, then **Slideshow**: one slideshow
+      of both.
+- [ ] The ⤢ button opens all the albums full screen: sorting, Find photos,
+      holding albums to pick them for a slideshow, Refresh, back.
+- [ ] Take the Photos tile off in the editor and update or restart: it is
+      not put back.
+- [ ] "Hey canvas, show the photos" goes to the tile.
+- [ ] Settings → Display has no "Widget dashboard" switch any more.
+
+**11. Everything else still works** — nothing here should have changed it,
 which is the point of checking: the slideshow, music, voice, the share
 inbox, the day's brief, uploading a widget of your own under
 **Custom widgets**.
@@ -144,6 +166,9 @@ and the build log if a build was involved. Do not paste `config.json`; it
 has your keys in it.
 
 ## Known in this alpha
+
+- The music's mini player that sat above the albums is gone with the old
+  photo screen: the dashboard's top bar and the Now playing tile do its job.
 
 - Every add-on written in Dart is a rebuild of the app on the Pi. Picking
   several at once is the way to keep that to one.

@@ -90,8 +90,8 @@ import 'services/unifi_service.dart';
 import 'services/weather_service.dart';
 import 'widgets/module_bar.dart' show openLockedFolder;
 import 'screens/about_screen.dart';
-import 'screens/album_screen.dart';
 import 'screens/cook_screen.dart';
+import 'dashboard/photos_tile.dart';
 import 'screens/dashboard_screen.dart';
 import 'dashboard/widgets/day_brief_sheet.dart';
 import 'dashboard/widgets/weather_forecast_sheet.dart';
@@ -99,11 +99,9 @@ import 'dashboard/widgets/tv_remote_sheet.dart';
 import 'dashboard/widgets/parcels_view.dart'
     show parcelDueNow, parcelName, parcelStage;
 import 'screens/gallery_screen.dart';
-import 'screens/home_screen.dart';
 import 'screens/locked_folder_screen.dart';
 import 'screens/photo_search_screen.dart';
 import 'screens/settings_screen.dart';
-import 'screens/setup_screen.dart';
 import 'screens/slideshow_screen.dart';
 import 'screens/video_player_screen.dart';
 import 'widgets/camera_overlay.dart';
@@ -230,6 +228,14 @@ void main() async {
   // the editor's palette and each widget's settings form are both generated
   // from the registry.
   registerBuiltInWidgets();
+  // The albums were the first screen before 2.0; a panel that had them is
+  // given them as a tile, once.
+  if (offerAlbumsTile(
+    config.config.dashboard,
+    immichConnected: config.isConfigured,
+  )) {
+    await config.save();
+  }
 
   // Feeds for the dashboard's calendar and news widgets, shared by URL so two
   // widgets on the same feed cost one fetch.
@@ -747,7 +753,7 @@ void main() async {
         final context = rootNavigatorKey.currentContext;
         final camera = context?.read<CameraService>();
         return KioskState(
-          dashboard: config.config.dashboard.enabled,
+          dashboard: true,
           lockedFolder: context?.read<LockedFolderService>().canUse ?? false,
           camera: camera?.isConfigured ?? false,
           cameraOpen: camera?.isOpen ?? false,
@@ -786,15 +792,10 @@ void main() async {
 /// to the dashboard.
 void showRemindersPage(ConfigService config) {
   final settings = config.config.dashboard;
-  if (!settings.enabled) return;
   final tile = settings.widgets.where((w) => w.type == 'reminders').firstOrNull;
   if (tile == null) return;
   DashboardScreen.requestedPage.value = tile.page;
-  if (DashboardScreen.isOpen) return;
-  final navigator = rootNavigatorKey.currentState;
-  if (navigator == null) return;
-  navigator.popUntil((route) => route.isFirst);
-  navigator.push(DashboardScreen.route());
+  rootNavigatorKey.currentState?.popUntil((route) => route.isFirst);
 }
 
 /// A very quiet beep: "hey canvas" was heard, and the panel is listening.
@@ -821,17 +822,12 @@ Future<void> _listeningBeep() async {
   }
 }
 
-/// The dashboard itself on screen, whatever was on top of it or in its
-/// place — Settings, a forecast, the albums. Null when it cannot be shown.
+/// The dashboard itself on screen, whatever was on top of it — Settings, a
+/// forecast, an album. It is the first screen, so everything else is on top
+/// of it. Null when there is no navigator yet.
 NavigatorState? _toDashboard(ConfigService config) {
   final navigator = rootNavigatorKey.currentState;
-  if (navigator == null || !config.config.dashboard.enabled) return null;
-  var there = false;
-  navigator.popUntil((route) {
-    there = route.settings.name == DashboardScreen.routeName;
-    return there || route.isFirst;
-  });
-  if (!there) navigator.push(DashboardScreen.route());
+  navigator?.popUntil((route) => route.isFirst);
   return navigator;
 }
 
@@ -1001,7 +997,6 @@ String? runVoiceCommand(
       );
       return slideshow ? 'slideshow $asked' : 'photos $asked';
     case VoiceShowPage(:final page):
-      if (!settings.enabled) return null;
       // A page asked for by name is wanted for longer than its turn: held
       // there until "resume", or a tap on the page dots. An open dashboard
       // is told; one about to open reads it from the settings.
@@ -1016,7 +1011,6 @@ String? runVoiceCommand(
       DashboardScreen.requestedPage.value = page;
       return 'page ${page + 1}';
     case VoiceLiftTile(:final page, :final tile):
-      if (!settings.enabled) return null;
       // Its page first, then the tile, once the page is up. The pages are
       // held only while it is: it is brought close for a look, not kept.
       if (_toDashboard(config) == null) return null;
@@ -1031,7 +1025,6 @@ String? runVoiceCommand(
       if (turn) DashboardScreen.requestedTurn.value = by;
       return by > 0 ? 'next page' : 'previous page';
     case VoiceOverview():
-      if (!settings.enabled) return null;
       if (_toDashboard(config) == null) return null;
       DashboardScreen.requestedOverview.value = true;
       return 'all pages';
@@ -1054,8 +1047,9 @@ String? runVoiceCommand(
           unawaited(navigator.maybePop());
           return 'back';
         case VoicePlace.photos:
-          navigator.popUntil((route) => route.isFirst);
-          return 'photos';
+          // The photos are a tile now: its page, and the tile brought close.
+          if (_toDashboard(config) == null) return null;
+          return DashboardScreen.showPhotos(settings) ? 'photos' : null;
         case VoicePlace.dashboard:
           return _toDashboard(config) == null ? null : 'dashboard';
         case VoicePlace.forecast:
@@ -1089,10 +1083,9 @@ void runKioskCommand(KioskCommand command, ConfigService config) {
   switch (command) {
     case KioskCommand.photos:
       navigator.popUntil((route) => route.isFirst);
+      DashboardScreen.showPhotos(config.config.dashboard);
     case KioskCommand.dashboard:
-      if (!config.config.dashboard.enabled) return;
       navigator.popUntil((route) => route.isFirst);
-      navigator.push(DashboardScreen.route());
     case KioskCommand.settings:
       navigator.push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
     case KioskCommand.lockedFolder:
@@ -1255,7 +1248,12 @@ class _AppScrollBehavior extends MaterialScrollBehavior {
   };
 }
 
-/// Shows setup until a connection is configured, then the album browser.
+/// The first screen: the dashboard. Everything else opens on top of it.
+///
+/// It once was the album browser, with setup in front of it until Immich was
+/// connected. The albums are a widget now — an add-on — so the panel is
+/// useful before, or without, Immich: the connection is set in Settings, or
+/// from the albums tile itself.
 class _RootGate extends StatelessWidget {
   const _RootGate();
 
@@ -1304,16 +1302,6 @@ class _RootGate extends StatelessWidget {
       );
     }
 
-    final testAlbumGrid = Platform.environment['HOMECANVAS_TEST_ALBUMGRID'];
-    if (testAlbumGrid != null && testAlbumGrid.isNotEmpty) {
-      return AlbumScreen(
-        album: Album(
-          id: testAlbumGrid,
-          name: Platform.environment['HOMECANVAS_TEST_ALBUMNAME'] ?? 'Album',
-          assetCount: 0,
-        ),
-      );
-    }
     if ((Platform.environment['HOMECANVAS_TEST_ABOUT'] ?? '').isNotEmpty) {
       return const AboutScreen();
     }
@@ -1321,9 +1309,6 @@ class _RootGate extends StatelessWidget {
       return const SettingsScreen();
     }
     final testDashboard = Platform.environment['HOMECANVAS_TEST_DASHBOARD'];
-    if (testDashboard != null && testDashboard.isNotEmpty) {
-      return DashboardScreen(initialPage: int.tryParse(testDashboard) ?? 0);
-    }
     if ((Platform.environment['HOMECANVAS_TEST_NOWPLAYING'] ?? '').isNotEmpty) {
       return const Scaffold(
         backgroundColor: Color(0xFF101828),
@@ -1340,8 +1325,7 @@ class _RootGate extends StatelessWidget {
       return _DebugLockedVideoLoader(pin: testLockedVideo);
     }
 
-    final configured = context.watch<ConfigService>().isConfigured;
-    return configured ? const HomeScreen() : const SetupScreen();
+    return DashboardScreen(initialPage: int.tryParse(testDashboard ?? '') ?? 0);
   }
 }
 

@@ -211,7 +211,7 @@ topped up before it runs out rather than repeated. Its current photo is what
 
 ### Music on the dashboard
 
-The home screen's full-screen player, `NowPlayingOverlay`, is reused: a
+The full-screen player, `NowPlayingOverlay`, is reused: a
 `NowPlayingOverlayController` handed to the tiles through an `InheritedWidget`
 (`NowPlayingOpener`) lets a Now playing tile or the top bar's controls open it
 from wherever they are — it grows out of whatever was tapped and shrinks back
@@ -551,18 +551,28 @@ of genuinely nothing before folding away.
 
 ### The photo browser
 
-The home screen leads with a greeting, the date and the library in numbers,
-with the controls gathered into one frosted pill at the top right rather than a
-title bar. Albums are cards with the cover edge to edge and the name over a
-shadow at the foot, sortable by **Recent**, **A–Z** or **Most items**. **Empty
-albums are hidden** — a grey tile that opens onto "This album is empty" is not
-worth a place on a wall of photographs — and the counts in the header only
-count what is shown.
+Until 2.0 the kiosk opened on the albums. Since, it opens on the dashboard —
+whose top bar is the kiosk's: the greeting, the music, the Locked Folder,
+Settings — and the albums are an add-on, **Photo albums**
+(`immich_albums`, in the catalogue), so a panel without Immich is simply a
+dashboard. Nothing asks for Immich before the dashboard shows; the
+connection is made in Settings, or from the tile.
 
-When something is playing and the now-playing player is switched on, a **mini
-player** sits above the albums, with its own previous, play/pause and next.
-Tap anywhere else on it and the full player grows out of it; close the full
-player and it shrinks back into it, wherever the page has scrolled to.
+The tile is the browser at the tile's size: covers that open onto their
+album, Find photos, a tick button to pick several albums for one slideshow
+(not a hold, which on the dashboard brings a tile close), and the whole
+browser, full screen, a touch away. The top bar's **Photos** button — shown
+only when there is an albums tile — "show the photos" by voice and the TV
+remote app's Photos turn to its page and bring it close
+(`DashboardScreen.showPhotos`). A panel updated from 1.x that was connected
+to Immich is given the tile once, on a page of its own after the others
+(`lib/dashboard/photos_tile.dart`; `scripts/addons.py ensure` fetches the
+add-on for it).
+
+Albums are cards with the cover edge to edge and the name over a shadow at
+the foot, sortable by **Recent**, **A–Z** or **Most items**. **Empty albums
+are hidden** — a grey tile that opens onto "This album is empty" is not worth
+a place on a wall of photographs — and the counts only count what is shown.
 
 Inside an album there is a large header with the counts and the years it
 covers, a Slideshow button, and a photo wall with thin gaps. Headings follow
@@ -1212,8 +1222,8 @@ cannot drift apart:
   accent from the top left, and the safe area.
 - **`GlassSection`** — a titled group of rows on a glass card, as in Settings.
 
-The home screen, albums, Settings, the Locked Folder, PIN entry, About and
-first-run setup all use them.
+The albums, Settings, the Locked Folder, PIN entry, About and the Immich
+connection all use them.
 
 **The dashboard** matches through its **Glass** theme — the same background,
 glow and accent (the accent is taken from the app's own colour scheme, and a
@@ -1331,7 +1341,6 @@ screenshots or testing a screen in isolation. Inert unless set.
 
 | Variable | Opens |
 |---|---|
-| `HOMECANVAS_TEST_ALBUMGRID=<albumId>` | an album's asset grid (`HOMECANVAS_TEST_ALBUMNAME` sets its title) |
 | `HOMECANVAS_TEST_GALLERY=<albumId>` | the photo viewer (`HOMECANVAS_TEST_GALLERY_INDEX` picks the photo) |
 | `HOMECANVAS_TEST_SLIDESHOW=<albumId>` | the slideshow |
 | `HOMECANVAS_TEST_VIDEO=<assetId>` | the video player |
@@ -1343,7 +1352,7 @@ screenshots or testing a screen in isolation. Inert unless set.
 | `HOMECANVAS_TEST_DASHBOARD=<page>` | the dashboard, opened at that page |
 | `HOMECANVAS_TEST_POPUP=forecast` or `inputs` | with the above, opens the full forecast or the TV inputs over the dashboard |
 | `HOMECANVAS_TEST_OVERVIEW=1` or `tour` | with the dashboard, every page at once a few seconds in; `tour` first visits each page for long enough to picture it |
-| `HOMECANVAS_TEST_PLAYER=small` or `full` | the home screen with the player shrunk to the mini player, or the full player opened as soon as music is playing |
+| `HOMECANVAS_TEST_PLAYER=small` or `full` | the player shrunk, or the full player opened as soon as music is playing |
 | `HOMECANVAS_TEST_TRACK=artist\|title\|album\|seconds\|from` | a phone that isn't there playing that song, from `from` seconds in — with `HOMECANVAS_TEST_PLAYER=full`, the full player and its lyrics on any machine. Several songs, split by `;`, play in turn |
 | `HOMECANVAS_TEST_THEME=<id>` | the whole kiosk in that theme, without saving it |
 | `HOMECANVAS_TEST_WEATHER=expanded` | with the slideshow, the weather panel opened |

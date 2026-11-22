@@ -147,6 +147,13 @@ class CodeWidgets {
           'state': 'failed',
           'error': 'The build was cut off before it finished.',
         };
+      } else {
+        // By the panel's clock, so a browser whose clock differs can
+        // still show how far along it is.
+        last = {
+          ...last,
+          'elapsed': DateTime.now().toUtc().difference(started).inSeconds,
+        };
       }
     }
     return last;

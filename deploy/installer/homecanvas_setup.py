@@ -63,7 +63,6 @@ class Setup:
         self.preset = "starter"
         self.widgets = set()
         self.theme = (self.config.get("dashboard") or {}).get("themeId") or "lcars"
-        self.open_on_start = True
         self.voice = bool((self.config.get("screen") or {}).get("voiceControl"))
         self.wake = ww.WakeWord.from_json((self.config.get("screen") or {}).get("wakeWord"))
         self.modules = []             # ids ticked
@@ -304,15 +303,6 @@ class Setup:
         if pick is BACK:
             return BACK
         self.theme = themes[pick]["id"]
-        start = self.ui.choose(
-            "When it starts",
-            "What should the panel show when it starts?",
-            [("The dashboard", "The widgets, in the theme you just picked."),
-             ("The photo albums", "Your Immich albums; the dashboard is a tap away.")],
-            default=0 if self.open_on_start else 1)
-        if start is BACK:
-            return self.stage_theme()
-        self.open_on_start = start == 0
         return NEXT
 
     @staticmethod
@@ -489,8 +479,7 @@ class Setup:
                 pages, _ = plan.layout(self.cat, self.widgets)
                 verb = "Add" if self.dashboard_how == "add" else "Lay out"
                 lines.append((f"{verb} {len(self.widgets)} widgets on {len(pages)} pages", 0))
-            lines.append((f"Use the {self.cat.theme(self.theme)['name']} theme; start on the "
-                          f"{'dashboard' if self.open_on_start else 'photo albums'}", 0))
+            lines.append((f"Use the {self.cat.theme(self.theme)['name']} theme", 0))
         for m in self.cat.modules:
             if m["id"] in self.modules:
                 lines.append((m["action"].format(**self.answers.get(m["id"], {})), 0))
@@ -565,7 +554,7 @@ class Setup:
             log(f"Immich: {self.immich[0]}")
         if self.mode in ("full", "change"):
             how = self.dashboard_how if plan.existing_widgets(config) else "replace"
-            plan.apply_dashboard(config, self.cat, self.widgets, self.theme, how, self.open_on_start)
+            plan.apply_dashboard(config, self.cat, self.widgets, self.theme, how)
             log(f"Dashboard: {len(self.widgets)} widgets, {self.theme} theme")
         for module_id, answers in self.answers.items():
             if module_id in self.modules:

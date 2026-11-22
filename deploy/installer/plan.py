@@ -185,14 +185,14 @@ def existing_widgets(config):
     return list(((config.get("dashboard") or {}).get("widgets")) or [])
 
 
-def apply_dashboard(config, catalogue, chosen, theme_id, how, open_on_start):
+def apply_dashboard(config, catalogue, chosen, theme_id, how):
     """[config] with the dashboard as chosen. [how] is "replace", "add" (new
     pages after the ones there) or "keep" (only the theme changes)."""
     d = config.setdefault("dashboard", {})
+    # Since 2.0 the dashboard is always the first screen; written for a
+    # panel that is later put back on an older build.
     d["enabled"] = True
     d["themeId"] = theme_id
-    if open_on_start is not None:
-        d["showOnLaunch"] = open_on_start
     if how == "keep" or not chosen:
         return config
     old = existing_widgets(config)

@@ -49,6 +49,16 @@
   #status.good .dot { background: var(--good); }
   @keyframes pulse { 50% { opacity: .25; } }
   @media (prefers-reduced-motion: reduce) { #status.busy .dot { animation: none; } }
+  /* How far a build has got: three steps, and the time the last one took. */
+  #progress { flex: 1 1 100%; display: grid; gap: 6px; }
+  #progress[hidden] { display: none; }
+  #progress .bar { height: 8px; border-radius: 999px; background: rgba(255,255,255,.12); overflow: hidden; }
+  #progress .fill { height: 100%; width: 0; border-radius: 999px; background: var(--accent); transition: width 1s linear; }
+  #progress .steps { display: flex; gap: 6px 18px; flex-wrap: wrap; font-size: 13.5px; color: var(--faint); }
+  #progress .steps .now { color: var(--text); font-weight: 650; }
+  #progress .steps .done { color: var(--good); }
+  #progress .left { margin-left: auto; color: var(--muted); }
+  @media (prefers-reduced-motion: reduce) { #progress .fill { transition: none; } }
   #errors { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; line-height: 1.45; margin: 0;
             padding: 10px; border-radius: 8px; border: 1px solid rgba(255,90,90,.5); max-height: 320px; overflow: auto; }
 
@@ -57,12 +67,15 @@
     flex: 1 1 240px; min-height: 44px; padding: 0 16px; border-radius: 999px; font: inherit;
     color: var(--text); background: var(--glass); border: 1px solid var(--line);
   }
-  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
-  .chip {
-    min-height: 34px; padding: 0 14px; font-size: 14px; font-weight: 500;
-    background: var(--glass); color: var(--muted); border: 1px solid var(--line);
+  #category {
+    flex: 0 1 240px; min-height: 44px; padding: 0 40px 0 16px; border-radius: 999px; font: inherit;
+    color: var(--text); background-color: var(--glass); border: 1px solid var(--line);
+    appearance: none; cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23ffffff' stroke-opacity='.62' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 16px center;
   }
-  .chip[aria-pressed="true"] { background: #fff; color: #0b0c10; border-color: #fff; }
+  #category option { background: #16181d; color: #fff; }
+  #category:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
   #list { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
   .addon { display: flex; flex-direction: column; overflow: hidden; padding: 0; }
@@ -76,11 +89,21 @@
   .about { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
   .about h2 { margin: 0; font-size: 18px; }
   .about .by { margin: 0; color: var(--muted); font-size: 14px; }
-  .about .what { margin: 0; color: var(--muted); font-size: 14.5px; flex: 1; }
+  /* Every card the same: a name on one line, four lines of what it does. */
+  .about h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .about .what {
+    margin: 0; color: var(--muted); font-size: 14.5px; line-height: 1.45; height: calc(4 * 1.45em);
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; line-clamp: 4; overflow: hidden;
+  }
   .about .facts { margin: 0; color: var(--faint); font-size: 13px; }
   .about .warn { margin: 0; color: var(--danger); font-size: 13px; }
-  .about .row { display: flex; gap: 8px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
-  .about .have { color: var(--good); font-size: 14px; margin-right: auto; }
+  /* What can be done with it, at the foot of every card and in one order:
+     whether it is here, the tick for picking it with others, the button. */
+  .about .acts { margin-top: auto; padding-top: 8px; display: grid; gap: 4px; }
+  .about .line { min-height: 42px; display: flex; align-items: center; gap: 14px; }
+  .about .have { color: var(--good); font-size: 14px; }
+  .about .row { display: flex; gap: 8px; align-items: center; min-height: 42px; }
+  .about .row button { flex: 1; }
   .empty { color: var(--muted); grid-column: 1 / -1; }
   .about .other { margin: 0; font-size: 13px; color: var(--caution); }
   .about .other a { color: inherit; }
@@ -123,14 +146,18 @@
     <span class="dot" aria-hidden="true"></span>
     <span id="statusText"></span>
     <button id="wantedInstall" hidden></button>
+    <div id="progress" hidden>
+      <div class="bar" id="progressBar" role="progressbar" aria-valuemin="0" aria-valuemax="100"><div class="fill" id="progressFill"></div></div>
+      <div class="steps"><span id="step1"></span><span id="step2"></span><span id="step3"></span><span class="left" id="progressLeft"></span></div>
+    </div>
   </section>
   <pre id="errors" hidden></pre>
 
   <div class="tools">
     <input id="search" type="search" placeholder="Search add-ons" data-t-placeholder="web.addons.search" data-t-aria="web.addons.search" aria-label="Search add-ons">
+    <select id="category" data-t-aria="web.addons.show" aria-label="Which add-ons to show"></select>
     <button class="quiet" id="refresh" data-t="web.addons.refresh">Look again</button>
   </div>
-  <div class="chips" id="chips"></div>
 
   <section id="list"></section>
 
@@ -187,13 +214,72 @@ function names(ids) {
   return String(ids || "").split(",").filter(Boolean).map(id => id.split("@")[0]).map(id => by.get(id) || id).join(", ");
 }
 
+/* The bar under what the panel says it is doing. The panel says which of
+   three steps it is on, how long it has been at it and how long its last
+   build took; between its answers — and through the restart, when it does
+   not answer — the bar goes on by this page's own clock. It never reaches
+   the end until the panel says the build has. */
+const progress = { timer: null, at: 0, elapsed: 0, expected: 150, step: "checking", removing: false };
+function drawProgress() {
+  const p = progress;
+  const elapsed = p.elapsed + (Date.now() - p.at) / 1000;
+  const order = ["checking", "building", "restarting"];
+  const now = Math.max(0, order.indexOf(p.step));
+  // Never behind the step the panel is on, never finished before it is.
+  const floor = [0, 0.08, 0.9][now];
+  const part = Math.min(0.97, Math.max(floor, elapsed / p.expected));
+  const pct = Math.round(part * 100);
+  $("progressFill").style.width = pct + "%";
+  $("progressBar").setAttribute("aria-valuenow", String(pct));
+  const labels = p.removing
+    ? [t("web.addons.stepRemove", "Remove"), t("web.addons.stepRebuild", "Rebuild"), t("web.addons.stepRestart", "Restart")]
+    : [t("web.addons.stepFetch", "Fetch and check"), t("web.addons.stepBuild", "Build"), t("web.addons.stepRestart", "Restart")];
+  labels.forEach((label, i) => {
+    const s = $("step" + (i + 1));
+    s.textContent = (i < now ? "✓ " : (i + 1) + ". ") + label;
+    s.className = i < now ? "done" : i === now ? "now" : "";
+  });
+  const left = Math.round(p.expected - elapsed);
+  $("progressLeft").textContent = left > 75
+    ? t("web.addons.minutesLeft", "about {n} minutes left", { n: Math.round(left / 60) })
+    : left > 20 ? t("web.addons.minuteLeft", "about a minute left")
+    : left > -20 ? t("web.addons.nearly", "nearly there")
+    : t("web.addons.longer", "taking longer than last time — still going");
+}
+function showProgress(b) {
+  const p = progress;
+  if (b) {
+    p.step = b.step || p.step;
+    p.removing = b.action === "addon-remove" || b.action === "remove";
+    if (typeof b.elapsed === "number") { p.elapsed = b.elapsed; p.at = Date.now(); }
+    else if (!p.at) { p.elapsed = 0; p.at = Date.now(); }
+    if (typeof b.expected === "number" && b.expected > 0) p.expected = b.expected;
+  }
+  $("progress").hidden = false;
+  drawProgress();
+  if (!p.timer) p.timer = setInterval(drawProgress, 1000);
+}
+function hideProgress() {
+  clearInterval(progress.timer);
+  progress.timer = null;
+  progress.at = 0;
+  $("progress").hidden = true;
+}
+
 /* Shows how a build stands. True while it is still going. */
 function showBuild(b, fresh) {
   const ours = b.action === "addons" || b.action === "addon-remove";
   $("errors").hidden = true;
+  if (b.state !== "building") hideProgress();
+  else showProgress(b);
   if (b.state === "building") {
     const name = ours ? names(b.name) : b.name;
-    const steps = {
+    // Taking one out is a rebuild too, and is said as what it is.
+    const steps = b.action === "addon-remove" ? {
+      checking: t("web.addons.removing", "Removing {name} from the panel…", { name }),
+      building: t("web.addons.rebuilding", "Removing {name} and rebuilding the panel without it — this takes a few minutes…", { name }),
+      restarting: t("web.addons.restartingWithout", "Restarting the panel without {name}…", { name }),
+    } : {
       checking: t("web.addons.checking", "Fetching and checking {name}…", { name }),
       building: t("web.addons.building", "Building {name} into the panel — this takes a few minutes…", { name }),
       restarting: t("web.addons.restarting", "Restarting the panel with {name}…", { name }),
@@ -225,7 +311,12 @@ function watch() {
   state.watch = setInterval(async () => {
     let build;
     try { build = (await getJson("/api/widgets/build")).build; }
-    catch (e) { say("busy", t("web.addons.waiting", "The panel is restarting…")); return; }
+    catch (e) {
+      say("busy", t("web.addons.waiting", "The panel is restarting…"));
+      progress.step = "restarting";
+      showProgress(null);
+      return;
+    }
     if (showBuild(build, true)) return;
     clearInterval(state.watch);
     state.watch = null;
@@ -317,7 +408,9 @@ function card(a) {
     by.appendChild(link);
   } else by.appendChild(document.createTextNode(a.author || "—"));
   about.appendChild(by);
-  about.appendChild(el("p", "what", a.description || ""));
+  const what = el("p", "what", a.description || "");
+  what.title = a.description || "";
+  about.appendChild(what);
   const count = (a.types || []).length;
   about.appendChild(el("p", "facts", [
     t("web.addons.version", "Version {version}", { version: a.version || "—" }),
@@ -341,8 +434,24 @@ function card(a) {
   else if (!a.compatible) about.appendChild(el("p", "warn", t("web.addons.tooNew", "Needs HomeCanvas {version} or newer.", { version: a.minApp })));
   else if (builds && !d.canBuild) about.appendChild(el("p", "warn", t("web.addons.cannotBuild", "This panel was not built where it runs, so it cannot build widgets in.")));
 
+  // The foot of the card, the same on every one: a line saying whether it
+  // is installed and holding the tick for picking it with others — empty
+  // when neither applies, so the buttons below sit level across a row.
+  const acts = el("div", "acts");
+  const line = el("div", "line");
+  if (a.installed) line.appendChild(el("span", "have", "✓ " + t("web.addons.installed", "Installed")));
+  // Several built in together cost one restart, not one each.
+  if (want && builds) {
+    const pick = el("label", "pick");
+    const tick = el("input");
+    tick.type = "checkbox";
+    tick.checked = state.picked.has(a.id);
+    tick.disabled = state.busy;
+    tick.onchange = () => { tick.checked ? state.picked.add(a.id) : state.picked.delete(a.id); draw(); };
+    pick.append(tick, el("span", "", t("web.addons.pick", "Pick with others")));
+    line.appendChild(pick);
+  }
   const row = el("div", "row");
-  if (a.installed) row.appendChild(el("span", "have", "✓ " + t("web.addons.installed", "Installed")));
   if (want) {
     const get = el("button", "", a.update
       ? t("web.addons.update", "Update")
@@ -350,17 +459,6 @@ function card(a) {
     get.disabled = state.busy;
     get.onclick = () => install([a.id]);
     row.appendChild(get);
-    // Several built in together cost one restart, not one each.
-    if (builds) {
-      const pick = el("label", "pick");
-      const tick = el("input");
-      tick.type = "checkbox";
-      tick.checked = state.picked.has(a.id);
-      tick.disabled = state.busy;
-      tick.onchange = () => { tick.checked ? state.picked.add(a.id) : state.picked.delete(a.id); draw(); };
-      pick.append(tick, el("span", "", t("web.addons.pick", "Pick with others")));
-      row.appendChild(pick);
-    }
   }
   if (a.installed) {
     const out = el("button", "danger", t("web.addons.remove", "Remove"));
@@ -368,7 +466,8 @@ function card(a) {
     out.onclick = () => remove(a);
     row.appendChild(out);
   }
-  about.appendChild(row);
+  acts.append(line, row);
+  about.appendChild(acts);
   box.append(shot, about);
   return box;
 }
@@ -381,18 +480,20 @@ function draw() {
   // The palette's groups, for narrowing the list to one.
   const cats = new Map();
   for (const a of d.addons) if (a.category) cats.set(a.category, a.categoryName || a.category);
-  const chips = $("chips");
-  chips.innerHTML = "";
-  const chip = (id, label) => {
-    const b = el("button", "chip", label);
-    b.setAttribute("aria-pressed", String(state.category === id));
-    b.onclick = () => { state.category = id; draw(); };
-    chips.appendChild(b);
+  const choose = $("category");
+  choose.innerHTML = "";
+  const option = (id, label) => {
+    const o = el("option", "", label);
+    o.value = id;
+    choose.appendChild(o);
   };
-  chip("", t("web.addons.all", "All"));
-  chip("#installed", t("web.addons.installed", "Installed"));
-  if (d.addons.some(a => !a.official)) chip("#other", t("web.addons.fromOthers", "Untested"));
-  [...cats].sort((x, y) => x[1].localeCompare(y[1])).forEach(([id, label]) => chip(id, label));
+  option("", t("web.addons.allGroups", "All groups"));
+  option("#installed", t("web.addons.installed", "Installed"));
+  if (d.addons.some(a => !a.official)) option("#other", t("web.addons.fromOthers", "Untested"));
+  [...cats].sort((x, y) => x[1].localeCompare(y[1])).forEach(([id, label]) => option(id, label));
+  // A group that has emptied — its last add-on removed — is not left chosen.
+  if (![...choose.options].some(o => o.value === state.category)) state.category = "";
+  choose.value = state.category;
 
   const q = state.filter.trim().toLowerCase();
   const shown = d.addons.filter(a =>
@@ -490,6 +591,7 @@ async function load(fresh, quiet) {
 }
 
 $("search").oninput = (e) => { state.filter = e.target.value; draw(); };
+$("category").onchange = (e) => { state.category = e.target.value; draw(); };
 $("refresh").onclick = () => load(true);
 $("libraryName").oninput = $("libraryAgree").onchange = () => state.data && drawLibraries();
 $("libraryForm").onsubmit = (e) => {

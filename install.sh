@@ -340,7 +340,7 @@ check_system() {
 
 echo
 echo "${B}Welcome to HomeCanvas${N}"
-echo "${DIM}Photos from Immich and a dashboard for your wall.${N}"
+echo "${DIM}A dashboard for your wall — with your Immich photos on it, if you have Immich.${N}"
 echo
 say "This machine:  ${B}$OS_NAME${N}, $(uname -m), desktop: $DESKTOP"
 say "HomeCanvas:    $APP_DIR"
@@ -398,7 +398,7 @@ say "  1. check what's installed          6. give it a name on your network"
 say "  2. install anything missing        7. start it automatically"
 say "  3. install Flutter                 8. set up the touchscreen"
 say "  4. build HomeCanvas                9. put the editor on a simple address"
-say "  5. connect it to your Immich"
+say "  5. connect it to Immich (if you use it)"
 say "${DIM}Nothing is changed without saying what first. It asks for your password"
 say "to install things.${N}"
 echo
@@ -487,9 +487,11 @@ else
   change=y
 fi
 if [ "$change" = y ]; then
-  say "HomeCanvas shows the photos on your Immich server. You'll need its"
-  say "address, and an API key from Immich: ${B}Account Settings → API Keys${N}."
-  say "${DIM}(Leave the address empty to skip — you can do this on the screen later.)${N}"
+  say "The Photo albums widget, and the other photo widgets, show the photos"
+  say "on your Immich server. You'll need its address, and an API key from"
+  say "Immich: ${B}Account Settings → API Keys${N}."
+  say "${DIM}(No Immich? Leave the address empty to skip — the dashboard works"
+  say "without it, and it can be connected later in Settings.)${N}"
   while true; do
     url=$(ask_text "Immich address, e.g. https://photos.example.com" "")
     url="${url%/}"

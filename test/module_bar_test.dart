@@ -2,18 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
+import 'package:home_canvas/dashboard/dashboard_model.dart';
+import 'package:home_canvas/screens/dashboard_screen.dart';
 import 'package:home_canvas/services/camera_service.dart';
 import 'package:home_canvas/services/config_service.dart';
 import 'package:home_canvas/services/locked_folder_service.dart';
 import 'package:home_canvas/widgets/glass.dart';
 import 'package:home_canvas/widgets/module_bar.dart';
 
-Future<void> pumpBar(WidgetTester tester, ModuleBar bar) async {
+Future<void> pumpBar(
+  WidgetTester tester,
+  ModuleBar bar, {
+  List<DashboardWidgetConfig> tiles = const [],
+}) async {
   tester.view.physicalSize = const Size(1920, 1200);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   final config = ConfigService();
-  config.config.dashboard.enabled = true;
+  config.config.dashboard.widgets = [...tiles];
   await tester.pumpWidget(
     MultiProvider(
       providers: [
@@ -44,30 +50,36 @@ PillIconButton button(WidgetTester tester, String tooltip) =>
     );
 
 void main() {
-  testWidgets('on the photos, Photos is lit and Dashboard is not', (
-    tester,
-  ) async {
-    await pumpBar(tester, const ModuleBar(current: KioskModule.photos));
-    expect(button(tester, 'Photos').selected, isTrue);
-    expect(button(tester, 'Dashboard').selected, isFalse);
-    await done(tester);
-  });
-
-  testWidgets('on the dashboard, the other way round', (tester) async {
-    await pumpBar(tester, const ModuleBar(current: KioskModule.dashboard));
-    expect(button(tester, 'Photos').selected, isFalse);
+  testWidgets('Dashboard is lit: the bar is on the dashboard', (tester) async {
+    await pumpBar(tester, const ModuleBar());
     expect(button(tester, 'Dashboard').selected, isTrue);
     await done(tester);
   });
 
-  testWidgets('Dashboard, touched on the dashboard, does what it is given', (
-    tester,
-  ) async {
-    var again = 0;
+  testWidgets('Photos only with an albums tile to go to', (tester) async {
+    await pumpBar(tester, const ModuleBar());
+    expect(find.byTooltip('Photos'), findsNothing);
     await pumpBar(
       tester,
-      ModuleBar(current: KioskModule.dashboard, onAgain: () => again++),
+      const ModuleBar(),
+      tiles: [
+        DashboardWidgetConfig(
+          id: 'a',
+          type: DashboardScreen.albumsType,
+          x: 0,
+          y: 0,
+          width: 6,
+          height: 6,
+        ),
+      ],
     );
+    expect(button(tester, 'Photos').selected, isFalse);
+    await done(tester);
+  });
+
+  testWidgets('Dashboard, touched, does what it is given', (tester) async {
+    var again = 0;
+    await pumpBar(tester, ModuleBar(onAgain: () => again++));
     await tester.tap(find.byTooltip('Dashboard'));
     expect(again, 1);
     await done(tester);
@@ -76,27 +88,22 @@ void main() {
   testWidgets('Refresh only where there is something to refresh', (
     tester,
   ) async {
-    await pumpBar(tester, const ModuleBar(current: KioskModule.dashboard));
+    await pumpBar(tester, const ModuleBar());
     expect(find.byTooltip('Refresh'), findsNothing);
 
     var refreshed = 0;
-    await pumpBar(
-      tester,
-      ModuleBar(current: KioskModule.photos, onRefresh: () => refreshed++),
-    );
+    await pumpBar(tester, ModuleBar(onRefresh: () => refreshed++));
     await tester.tap(find.byTooltip('Refresh'));
     expect(refreshed, 1);
     await done(tester);
   });
 
-  testWidgets('the notifications slider and Settings are on both screens', (
+  testWidgets('the notifications slider and Settings are there', (
     tester,
   ) async {
-    for (final m in KioskModule.values) {
-      await pumpBar(tester, ModuleBar(current: m));
-      expect(find.byType(DndSwitch), findsOneWidget);
-      expect(find.byTooltip('Settings'), findsOneWidget);
-    }
+    await pumpBar(tester, const ModuleBar());
+    expect(find.byType(DndSwitch), findsOneWidget);
+    expect(find.byTooltip('Settings'), findsOneWidget);
     await done(tester);
   });
 
@@ -106,11 +113,7 @@ void main() {
     const ink = Color(0xFF1E1B16);
     await pumpBar(
       tester,
-      const ModuleBar(
-        current: KioskModule.dashboard,
-        colour: ink,
-        accent: Color(0xFFB4531F),
-      ),
+      const ModuleBar(colour: ink, accent: Color(0xFFB4531F)),
     );
     expect(button(tester, 'Settings').colour, ink);
     expect(button(tester, 'Dashboard').selectedColour, const Color(0xFFB4531F));

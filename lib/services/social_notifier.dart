@@ -125,7 +125,6 @@ class SocialNotifier {
   Map<String, ({Object account, bool all})> _watched() {
     final settings = _config.config.dashboard;
     final out = <String, ({Object account, bool all})>{};
-    if (!settings.enabled) return out;
     for (final DashboardWidgetConfig w in settings.widgets) {
       final notify = '${w.options['notify'] ?? 'off'}';
       if (notify != 'mentions' && notify != 'all') continue;

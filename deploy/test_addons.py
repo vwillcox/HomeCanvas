@@ -122,6 +122,19 @@ class Fetching(unittest.TestCase):
             addons.REPO = was
         self.assertEqual(sorted(os.listdir(dest)), ["clock", "tide"])
 
+    def test_a_panel_on_immich_keeps_its_albums(self):
+        cat = {"addons": [{"id": "immich_albums", "types": ["immich_albums"]},
+                          {"id": "clock", "types": ["clock"]}]}
+        dash = {"widgets": [{"type": "clock"}]}
+        have = {"clock": {"types": ["clock"]}}
+        self.assertEqual(addons.wanted(cat, dash, have, connected=True), ["immich_albums"])
+        # Not on Immich, or given its tile already: nothing more.
+        self.assertEqual(addons.wanted(cat, dash, have, connected=False), [])
+        given = {**dash, "albumsOffered": True}
+        self.assertEqual(addons.wanted(cat, given, have, connected=True), [])
+        # A photos-only panel: no dashboard yet, but connected.
+        self.assertEqual(addons.wanted(cat, {"widgets": []}, {"clock": {"types": ["clock"]}}, connected=True), ["immich_albums"])
+
     def test_a_panel_with_no_dashboard_is_given_the_starter_set(self):
         cat = addons.index(self.repo)
         self.assertEqual(addons.wanted(cat, None, {}), ["clock", "weather"])

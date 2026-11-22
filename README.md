@@ -44,10 +44,10 @@ Built with Flutter as a native Linux app, so it stays smooth on a Pi.
 
 ### Photos
 
-| The home screen | An album |
+| The albums | An album |
 |---|---|
-| ![The home screen: a greeting, a mini player and the albums](docs/screenshots/home.jpg) | ![An album's photo wall](docs/screenshots/album.jpg) |
-| A greeting and the library in numbers, a mini player while music plays, and the albums. | A photo wall with headings that follow the photos rather than the calendar. |
+| ![The albums: covers in a grid](docs/screenshots/home.jpg) | ![An album's photo wall](docs/screenshots/album.jpg) |
+| The Photo albums add-on — a tile on the dashboard, or the whole browser full screen. (Pictured before 2.0, when the albums were the first screen.) | A photo wall with headings that follow the photos rather than the calendar. |
 
 | Photo viewer | Slideshow |
 |---|---|
@@ -70,8 +70,8 @@ Ken Burns pan with a cross-fade between slides *(also as
 When music is playing the player takes over the screen, with the album art
 blurred behind, a visualiser of what is actually coming out of the speaker, and
 controls sized for a thumb — like, shuffle, repeat and add-to-playlist included.
-Shrink it and it tucks into the mini player on the home screen, or into the Now
-playing tile on the dashboard.
+Shrink it and it tucks into the dashboard's top bar, or into the Now playing
+tile.
 
 | Sing along | On a console |
 |---|---|

@@ -156,6 +156,24 @@ import json, os, datetime
 e = os.environ
 done = e["STATE_"] != "building"
 tmp = e["OUT"] + ".part"
+# How long the last build that worked took here, for the editor's
+# progress bar: a Pi 5 and a Pi 4 are minutes apart.
+took = os.path.join(os.path.dirname(e["OUT"]), "took")
+now = datetime.datetime.now(datetime.timezone.utc)
+if e["STATE_"] == "ok":
+    try:
+        began = datetime.datetime.strptime(e["STARTED"], "%Y-%m-%dT%H:%M:%SZ")
+        seconds = int((now.replace(tzinfo=None) - began).total_seconds())
+        if 5 <= seconds <= 3600:
+            with open(took, "w") as f:
+                f.write(str(seconds))
+    except (ValueError, OSError):
+        pass
+try:
+    with open(took) as f:
+        expected = int(f.read().strip())
+except (OSError, ValueError):
+    expected = None
 with open(tmp, "w") as f:
     json.dump({
         "state": e["STATE_"],
@@ -164,6 +182,7 @@ with open(tmp, "w") as f:
         "name": e["NAME"],
         "error": e["ERROR"],
         "started": e["STARTED"],
+        "expected": expected,
         "finished": datetime.datetime.now(datetime.timezone.utc)
             .strftime("%Y-%m-%dT%H:%M:%SZ") if done else None,
     }, f)

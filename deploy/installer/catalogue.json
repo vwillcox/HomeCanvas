@@ -295,6 +295,14 @@
       "height": 3
     },
     {
+      "type": "immich_albums",
+      "name": "Photo albums",
+      "description": "The albums on your Immich server: tap one for its photos, a slideshow or a video; search the whole library by who, where or when; pick several albums for one slideshow. Opens the whole album browser too, and the top bar’s Photos button comes here.",
+      "category": "Photos, music & TV",
+      "width": 6,
+      "height": 6
+    },
+    {
       "type": "immich_library",
       "name": "Immich library",
       "description": "Your Immich library in numbers — photos, videos, how much space it takes, how many added lately — with the newest photos along the bottom.",

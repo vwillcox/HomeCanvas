@@ -257,8 +257,17 @@ def installed():
     return out
 
 
-def wanted(cat, dashboard, have):
-    """The add-ons to fetch: what [dashboard] uses and [have] does not bring."""
+# The Photo albums: the kiosk's first screen until 2.0, an add-on since.
+ALBUMS = "immich_albums"
+
+
+def wanted(cat, dashboard, have, connected=False):
+    """The add-ons to fetch: what [dashboard] uses and [have] does not bring.
+
+    A panel [connected] to Immich that has not yet been given its albums tile
+    — the app adds it on its first start with them built in — is given the
+    albums too: before 2.0 it opened on them.
+    """
     widgets = dashboard.get("widgets") if isinstance(dashboard, dict) else None
     used = {
         w.get("type")
@@ -271,6 +280,10 @@ def wanted(cat, dashboard, have):
     if not used and not have:
         return [a["id"] for a in cat["addons"] if a.get("starter") is True]
     missing = {t for t in used if isinstance(t, str)} - brought
+    offered = isinstance(dashboard, dict) and dashboard.get("albumsOffered") is True
+    if connected and not offered:
+        missing.add(ALBUMS)
+    missing -= brought
     return [
         a["id"]
         for a in cat["addons"]
@@ -311,7 +324,9 @@ def main():
                         cat["addons"] = [
                             a for a in cat["addons"] if not brought.intersection(a["types"])
                         ]
-                    ids = wanted(cat, config().get("dashboard"), have)
+                    c = config()
+                    connected = bool(c.get("immichUrl")) and bool(c.get("apiKey"))
+                    ids = wanted(cat, c.get("dashboard"), have, connected)
                     if ids:
                         fetch(src, cat, ids, ADDONS)
                         place_described(ids)

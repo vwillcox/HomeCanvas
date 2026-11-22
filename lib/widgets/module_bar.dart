@@ -19,33 +19,23 @@ import 'shown_timers.dart';
 import '../l10n/l10n.dart';
 
 /// The kiosk's top-level places.
-enum KioskModule { photos, dashboard }
-
-/// The pill of buttons at the top right of the photos and the dashboard: the
-/// way between the kiosk's parts, and the handful of switches worth having
-/// one tap away.
-///
-/// One widget on both screens, so moving between them is the same gesture in
-/// the same place, with the one you are on lit — rather than a back button on
-/// one and a row of icons on the other.
+/// The pill of buttons at the top right of the dashboard: the way to the
+/// kiosk's other parts, and the handful of switches worth having one tap
+/// away. The dashboard is the first screen, so this is the kiosk's own bar.
 class ModuleBar extends StatefulWidget {
   const ModuleBar({
     super.key,
-    required this.current,
     this.onRefresh,
     this.colour,
     this.accent,
     this.onAgain,
   });
 
-  final KioskModule current;
-
-  /// What touching the lit button — the screen you are on — does: the
-  /// dashboard's shows every page at once. Nothing, unless given.
+  /// What touching the lit Dashboard button does: every page at once.
+  /// Nothing, unless given.
   final VoidCallback? onAgain;
 
-  /// Shown as a Refresh button when given. The photos have something to
-  /// reload; the dashboard's widgets refresh themselves.
+  /// Shown as a Refresh button when given.
   final VoidCallback? onRefresh;
 
   /// Icon colour. White on the kiosk's own screens; the dashboard passes its
@@ -104,36 +94,24 @@ class _ModuleBarState extends State<ModuleBar>
     }
   }
 
+  /// The albums tile: its page, and the tile brought close.
   void _toPhotos() {
-    if (widget.current == KioskModule.photos) return;
-    // The photos are the first screen; everything else stacks on top.
     Navigator.of(context).popUntil((route) => route.isFirst);
-  }
-
-  void _toDashboard() {
-    if (widget.current == KioskModule.dashboard) return widget.onAgain?.call();
-    Navigator.of(context).push(DashboardScreen.route());
+    DashboardScreen.showPhotos(context.read<ConfigService>().config.dashboard);
   }
 
   @override
   Widget build(BuildContext context) {
     final accent = widget.accent ?? Theme.of(context).colorScheme.primary;
     final c = widget.colour ?? context.look.textPrimary;
-    final dashboardOn = context.watch<ConfigService>().config.dashboard.enabled;
+    // Only with an albums tile to go to: the photos are an add-on.
+    final photos =
+        DashboardScreen.photosTile(
+          context.watch<ConfigService>().config.dashboard,
+        ) !=
+        null;
     final camera = context.watch<CameraService>();
     final deck = context.watch<DeckLink?>();
-
-    Widget module(KioskModule m, IconData icon, String label, VoidCallback go) {
-      final lit = widget.current == m;
-      return PillIconButton(
-        icon: icon,
-        tooltip: label,
-        colour: lit ? accent : c,
-        selected: lit,
-        selectedColour: accent,
-        onPressed: go,
-      );
-    }
 
     return Glass(
       strip: true,
@@ -141,18 +119,22 @@ class _ModuleBarState extends State<ModuleBar>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          module(
-            KioskModule.photos,
-            Icons.photo_library_outlined,
-            tr('modules.photos', 'Photos'),
-            _toPhotos,
+          // The dashboard, lit: it is where the bar is. Touched, every page
+          // at once.
+          PillIconButton(
+            icon: Icons.dashboard_outlined,
+            tooltip: tr('modules.dashboard', 'Dashboard'),
+            colour: accent,
+            selected: true,
+            selectedColour: accent,
+            onPressed: widget.onAgain,
           ),
-          if (dashboardOn)
-            module(
-              KioskModule.dashboard,
-              Icons.dashboard_outlined,
-              tr('modules.dashboard', 'Dashboard'),
-              _toDashboard,
+          if (photos)
+            PillIconButton(
+              icon: Icons.photo_library_outlined,
+              tooltip: tr('modules.photos', 'Photos'),
+              colour: c,
+              onPressed: _toPhotos,
             ),
           if (_remoteRunning)
             PillIconButton(

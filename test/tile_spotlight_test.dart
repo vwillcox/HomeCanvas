@@ -49,7 +49,11 @@ void main() {
             builder: (context) => Center(
               child: TextButton(
                 onPressed: () =>
-                    Navigator.of(context).push(DashboardScreen.route()),
+                    Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const DashboardScreen(),
+                  ),
+                ),
                 child: const Text('under'),
               ),
             ),

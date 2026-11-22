@@ -2687,90 +2687,69 @@ class _DashboardSettingsTile extends StatelessWidget {
 
     return Column(
       children: [
-        SwitchListTile(
-          secondary: const Icon(Icons.dashboard_outlined),
-          title: Text(tr('settings.widgetDashboard', 'Widget dashboard')),
+        ListTile(
+          leading: const Icon(Icons.open_in_browser),
+          title: Text(
+            tr('settings.arrangeItInABrowser', 'Arrange it in a browser'),
+          ),
+          isThreeLine:
+              dashboard.editorIpAddress != null ||
+              dashboard.webPortNote != null,
+          subtitle: Text(
+            [
+              dashboard.editorAddress,
+              if (dashboard.editorIpAddress != null)
+                'or ${dashboard.editorIpAddress}',
+              ?dashboard.webPortNote,
+            ].join('\n'),
+          ),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => _editPort(context),
+        ),
+        ListTile(
+          leading: const Icon(Icons.palette_outlined),
+          title: Text(tr('settings.theme', 'Theme')),
+          // It dresses every screen now, not just the dashboard.
           subtitle: Text(
             tr(
-              'settings.aScreenOfWidgetsClock',
-              'A screen of widgets — clock, weather, calendar, news, now playing — arranged from a browser. Adds a button to the top bar.',
+              'settings.theWholeKioskSLook',
+              '{name} · the whole kiosk\'s look',
+              {'name': theme.name},
             ),
           ),
-          isThreeLine: true,
-          value: s.enabled,
-          onChanged: (v) async {
-            s.enabled = v;
-            await service.save();
-            await dashboard.refreshFromSettings();
-          },
-        ),
-        if (s.enabled) ...[
-          ListTile(
-            leading: const Icon(Icons.open_in_browser),
-            title: Text(
-              tr('settings.arrangeItInABrowser', 'Arrange it in a browser'),
-            ),
-            isThreeLine:
-                dashboard.editorIpAddress != null ||
-                dashboard.webPortNote != null,
-            subtitle: Text(
-              [
-                dashboard.editorAddress,
-                if (dashboard.editorIpAddress != null)
-                  'or ${dashboard.editorIpAddress}',
-                ?dashboard.webPortNote,
-              ].join('\n'),
-            ),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _editPort(context),
-          ),
-          ListTile(
-            leading: const Icon(Icons.palette_outlined),
-            title: Text(tr('settings.theme', 'Theme')),
-            // It dresses every screen now, not just the dashboard.
-            subtitle: Text(
-              tr(
-                'settings.theWholeKioskSLook',
-                '{name} · the whole kiosk\'s look',
-                {'name': theme.name},
-              ),
-            ),
-            trailing: DropdownButton<String>(
-              value: dashboard.themes.all.any((t) => t.id == s.themeId)
-                  ? s.themeId
-                  : dashboard.themes.all.first.id,
-              underline: const SizedBox.shrink(),
-              items: dashboard.themes.all
-                  .map(
-                    (t) => DropdownMenuItem(value: t.id, child: Text(t.name)),
-                  )
-                  .toList(),
-              onChanged: (v) {
-                if (v == null) return;
-                s.themeId = v;
-                service.save();
-              },
-            ),
-          ),
-          // Only here, on the panel: what is uploaded is run, and the
-          // editor asks nobody who they are.
-          SwitchListTile(
-            secondary: const Icon(Icons.code_rounded),
-            title: Text(tr('settings.codeWidgets', 'Widgets written in Dart')),
-            subtitle: Text(
-              tr(
-                'settings.codeWidgetsHelp',
-                'Lets the editor take widgets as Dart and build them into the panel. Anyone on your network who can open the editor could then run their own code here, so leave it off unless you are writing one.',
-              ),
-            ),
-            isThreeLine: true,
-            value: s.codeWidgets,
+          trailing: DropdownButton<String>(
+            value: dashboard.themes.all.any((t) => t.id == s.themeId)
+                ? s.themeId
+                : dashboard.themes.all.first.id,
+            underline: const SizedBox.shrink(),
+            items: dashboard.themes.all
+                .map((t) => DropdownMenuItem(value: t.id, child: Text(t.name)))
+                .toList(),
             onChanged: (v) {
-              s.codeWidgets = v;
+              if (v == null) return;
+              s.themeId = v;
               service.save();
             },
           ),
-        ],
+        ),
+        // Only here, on the panel: what is uploaded is run, and the
+        // editor asks nobody who they are.
+        SwitchListTile(
+          secondary: const Icon(Icons.code_rounded),
+          title: Text(tr('settings.codeWidgets', 'Widgets written in Dart')),
+          subtitle: Text(
+            tr(
+              'settings.codeWidgetsHelp',
+              'Lets the editor take widgets as Dart and build them into the panel. Anyone on your network who can open the editor could then run their own code here, so leave it off unless you are writing one.',
+            ),
+          ),
+          isThreeLine: true,
+          value: s.codeWidgets,
+          onChanged: (v) {
+            s.codeWidgets = v;
+            service.save();
+          },
+        ),
       ],
     );
   }

@@ -131,17 +131,15 @@ class DashboardWidgetConfig {
 
 /// The dashboard as a whole.
 class DashboardSettings {
-  /// Whether the dashboard is offered at all — it appears in the toolbar
-  /// only when this is on.
-  bool enabled;
+  /// Whether there is a dashboard: always, since 2.0 — it is the kiosk's
+  /// first screen. Still written to config.json, so an older build reading
+  /// it shows one too.
+  bool get enabled => true;
 
   /// Id of the theme to draw with. An unknown id falls back to the first
   /// built-in rather than failing, so deleting a custom theme leaves a
   /// working dashboard.
   String themeId;
-
-  /// Show the dashboard instead of the album grid when the app starts.
-  bool showOnLaunch;
 
   /// Port the web editor listens on. Separate from the Share Inbox's, so one
   /// can be exposed beyond the LAN without the other.
@@ -219,6 +217,10 @@ class DashboardSettings {
   /// the panel's own: read from config.json, never taken from the editor.
   String? addonsRepo;
 
+  /// Whether this panel has been given its Photo albums tile — see
+  /// [offerAlbumsTile]. Once only: a tile taken off again stays off.
+  bool albumsOffered;
+
   /// Other people's libraries of add-ons the Add-ons page lists beside the
   /// catalogue, each `owner/name` on GitHub. Added from that page. Nobody
   /// has checked what is in them: an add-on in Dart from one is installed
@@ -233,9 +235,7 @@ class DashboardSettings {
   List<String> editorPanels;
 
   DashboardSettings({
-    this.enabled = false,
     this.themeId = 'midnight',
-    this.showOnLaunch = false,
     this.editorPort = 8090,
     this.webPort = 80,
     this.hueRelay = '',
@@ -252,6 +252,7 @@ class DashboardSettings {
     this.photoSeconds = 90,
     List<DashboardWidgetConfig>? widgets,
     this.codeWidgets = false,
+    this.albumsOffered = false,
     this.addonsRepo,
     List<String>? addonLibraries,
     List<String>? editorPanels,
@@ -272,9 +273,7 @@ class DashboardSettings {
   factory DashboardSettings.fromJson(
     Map<String, dynamic> j,
   ) => DashboardSettings(
-    enabled: j['enabled'] as bool? ?? false,
     themeId: j['themeId'] as String? ?? 'midnight',
-    showOnLaunch: j['showOnLaunch'] as bool? ?? false,
     editorPort: (j['editorPort'] as num?)?.toInt() ?? 8090,
     webPort: (j['webPort'] as num?)?.toInt() ?? 80,
     hueRelay: j['hueRelay'] as String? ?? '',
@@ -308,6 +307,7 @@ class DashboardSettings {
         .where((w) => w.id.isNotEmpty && w.type.isNotEmpty)
         .toList(),
     codeWidgets: j['codeWidgets'] as bool? ?? false,
+    albumsOffered: j['albumsOffered'] as bool? ?? false,
     addonsRepo: j['addonsRepo'] is String ? j['addonsRepo'] as String : null,
     addonLibraries: [
       for (final r
@@ -322,7 +322,6 @@ class DashboardSettings {
   Map<String, dynamic> toJson() => {
     'enabled': enabled,
     'themeId': themeId,
-    'showOnLaunch': showOnLaunch,
     'editorPort': editorPort,
     'webPort': webPort,
     'hueRelay': hueRelay,
@@ -339,6 +338,7 @@ class DashboardSettings {
     'photoSeconds': photoSeconds,
     'widgets': widgets.map((w) => w.toJson()).toList(),
     'codeWidgets': codeWidgets,
+    if (albumsOffered) 'albumsOffered': true,
     if (addonsRepo != null) 'addonsRepo': addonsRepo,
     if (addonLibraries.isNotEmpty) 'addonLibraries': addonLibraries,
     'editorPanels': editorPanels,

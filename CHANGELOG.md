@@ -1,8 +1,33 @@
 # Changelog
 
-## 2.0.0-alpha.2
+## 2.0.0-alpha.3
 
-The widgets have a home of their own, and anyone can add to them.
+The widgets have a home of their own, anyone can add to them — and the
+dashboard is the kiosk's home screen.
+
+### Changed in alpha 3
+
+- **The dashboard is the first screen.** The kiosk used to open on the
+  album browser, with the dashboard a button away (and off until switched
+  on). Now it opens on the dashboard, whose top bar is the kiosk's own: the
+  greeting, the music, the Locked Folder, Settings. There is no switch for
+  the dashboard any more, and no Immich to connect before anything shows:
+  a panel without Immich is a dashboard.
+- **The albums are an add-on: Photo albums.** Everything the album browser
+  did, as a tile — covers to open onto their photos, slideshows and
+  videos; Find photos across the whole library; several albums picked for
+  one slideshow — and the whole browser, full screen, from the tile. The top
+  bar's Photos button, "show the photos" by voice and the TV remote app's
+  Photos all go to the tile.
+- **A panel that had the albums keeps them.** Updating one connected to
+  Immich fetches Photo albums and, on its first start, puts it on a page of
+  its own after the others, named Photos. Only once: take it off and it
+  stays off.
+- **Immich is optional in the installer**, and connected from Settings or
+  the Photo albums tile at any time.
+- With the top bar switched off, the button left in the corner is Settings
+  rather than Back: there is nothing behind the dashboard to go back to.
+
 
 ### Added
 
@@ -34,8 +59,8 @@ The widgets have a home of their own, and anyone can add to them.
 
 - **Every widget moved out of the app** into the catalogue, each as an
   add-on: all fifty-two, the calendar and parcels among them. The app keeps
-  what they are made from, and none of the widgets themselves. A panel being updated keeps every widget its
-  dashboard uses: the update fetches them before it builds. A new panel
+  what they are made from, and none of the widgets themselves. A panel
+  being updated keeps every widget its dashboard uses: the update fetches them before it builds. A new panel
   starts with a small set and the Add-ons page.
 
 ## 1.0.3.2
