@@ -5,7 +5,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 /// What the kiosk can be asked to do by the other apps on the panel.
-enum KioskCommand { photos, dashboard, settings, lockedFolder, camera, deck }
+enum KioskCommand { photos, dashboard, settings, lockedFolder, camera }
 
 /// What the kiosk tells the other apps, so they can draw the same control
 /// bar it does — only the buttons that would work.
@@ -46,8 +46,7 @@ class KioskState {
 /// the kiosk's own buttons open, and the Locked Folder still asks for its PIN.
 ///
 ///     GET  /state               what the bar should show
-///     POST /open/<place>        photos, dashboard, settings, locked-folder,
-///                               deck (StreamerDeck's keys)
+///     POST /open/<place>        photos, dashboard, settings, locked-folder
 ///     POST /camera              show or hide the camera
 ///     POST /dnd?muted=true      the notifications switch
 ///     POST /youtube?url=…       play a YouTube, Floatplane or Nebula video
@@ -119,7 +118,6 @@ class KioskControlService {
     'dashboard': KioskCommand.dashboard,
     'settings': KioskCommand.settings,
     'locked-folder': KioskCommand.lockedFolder,
-    'deck': KioskCommand.deck,
   };
 
   @visibleForTesting

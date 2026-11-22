@@ -111,8 +111,6 @@ import 'widgets/on_screen_keyboard.dart';
 import 'widgets/now_playing_overlay.dart';
 import 'widgets/video_overlay.dart';
 import 'app_paths.dart';
-import 'deck/deck_link.dart';
-import 'deck/deck_screen.dart';
 import 'l10n/l10n.dart';
 import 'theme.dart';
 import 'dashboard/dashboard_theme.dart';
@@ -641,20 +639,6 @@ void main() async {
     },
   );
 
-  // StreamerDeck: a computer's deck of keys, shown full screen from the top
-  // bar. The computer connects in on the inbox's port; the panel moves
-  // between pages itself and runs its own keys (lights, routines, waking
-  // the computer) so those work with the computer off.
-  final deck = DeckLink(
-    home: homeAssistant,
-    routines: () => config.config.routines,
-    runRoutine: house.runRoutine,
-    computer: (on) => computers.setPower(on),
-    keepAwake: screenIdle.noteInteraction,
-  );
-  unawaited(deck.load());
-  shareInbox.onDeck = deck.accept;
-
   // The wake words, and what is said after them: heard by a listener this
   // starts while voice control is switched on, and done here. The screen
   // is lit on the wake words, before anything is asked for.
@@ -686,7 +670,6 @@ void main() async {
         ChangeNotifierProvider.value(value: indoor),
         ChangeNotifierProvider.value(value: shareInbox),
         ChangeNotifierProvider.value(value: outbox),
-        ChangeNotifierProvider.value(value: deck),
         ChangeNotifierProvider.value(value: ytDlp),
         ChangeNotifierProvider.value(value: player),
         ChangeNotifierProvider.value(value: youtube),
@@ -734,6 +717,9 @@ void main() async {
         // Made when a Stocks or Crypto widget first asks.
         ChangeNotifierProvider(create: (_) => MarketsService()),
         ChangeNotifierProvider.value(value: homeAssistant),
+        // What runs a routine, for an add-on with keys or buttons that run
+        // one (StreamerDeck's).
+        Provider<HomeControl>.value(value: house),
         Provider<GlowmarktService>.value(value: GlowmarktService(config)),
         ChangeNotifierProvider.value(value: homey),
         ChangeNotifierProvider.value(value: customWidgets),
@@ -1096,8 +1082,6 @@ void runKioskCommand(KioskCommand command, ConfigService config) {
     case KioskCommand.camera:
       final camera = context.read<CameraService>();
       if (camera.isConfigured) camera.toggleOpen();
-    case KioskCommand.deck:
-      if (!context.read<DeckLink>().isOpen) navigator.push(DeckScreen.route());
   }
 }
 
