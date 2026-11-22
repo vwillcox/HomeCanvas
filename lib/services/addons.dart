@@ -28,8 +28,16 @@ import 'http_client.dart';
 /// builder [CodeWidgets] starts. One described in JSON is on the panel at
 /// once, through [CustomWidgets].
 ///
-/// Which repository is read is the panel's own choice — `addonsRepo` in
-/// config.json — and nothing the editor can set: what comes from it is run.
+/// Which repository is the catalogue is the panel's own choice —
+/// `addonsRepo` in config.json — and nothing the editor can set.
+///
+/// Beside it, the page can be given other people's **libraries**: any
+/// repository laid out as the catalogue is, publishing an index the same
+/// way. Their files are checked against their own index's sums and no
+/// more — nobody has reviewed them — so the page says so on each, and one
+/// written in Dart is installed only while the panel's own "Widgets
+/// written in Dart" switch is on ([allowsCode]). The catalogue comes
+/// first: a library cannot replace an add-on or a widget type it has.
 class Addons {
   Addons({
     required this.custom,
@@ -37,9 +45,13 @@ class Addons {
     String? repo,
     String? dir,
     this.appVersion = kAppVersion,
+    List<String> Function()? libraries,
+    bool Function()? allowsCode,
     Future<List<int>> Function(String url, int most)? fetch,
   }) : repo = _repo.hasMatch(repo ?? '') ? repo! : defaultRepo,
        dir = dir ?? p.join(AppPaths.config, 'addons'),
+       _libraries = libraries ?? (() => const []),
+       _allowsCode = allowsCode ?? (() => false),
        _fetch = fetch ?? _get;
 
   static const defaultRepo = 'vwillcox/HomeCanvas-Widgets';
@@ -54,6 +66,45 @@ class Addons {
   /// What is installed: a folder each, with the `addon.json` it came with.
   final String dir;
   final Future<List<int>> Function(String url, int most) _fetch;
+  final List<String> Function() _libraries;
+  final bool Function() _allowsCode;
+
+  /// How many libraries a panel reads beside the catalogue.
+  static const maxLibraries = 8;
+
+  /// The libraries read beside the catalogue, as the panel has them.
+  List<String> get libraries {
+    final seen = {repo.toLowerCase()};
+    return [
+      for (final r in _libraries())
+        if (_repo.hasMatch(r) && seen.add(r.toLowerCase())) r,
+    ].take(maxLibraries).toList();
+  }
+
+  /// Why [named] cannot be added as a library; null when it can. It is
+  /// read once here, so that what is added is a library and not a typo.
+  Future<String?> checkLibrary(String named) async {
+    if (!_repo.hasMatch(named)) {
+      return 'A library is named owner/name, as it is on GitHub.';
+    }
+    if (named.toLowerCase() == repo.toLowerCase()) {
+      return 'That is the catalogue this panel already reads.';
+    }
+    if (libraries.any((r) => r.toLowerCase() == named.toLowerCase())) {
+      return 'This panel already reads that library.';
+    }
+    if (libraries.length >= maxLibraries) {
+      return 'This panel reads $maxLibraries libraries already; take one '
+          'away first.';
+    }
+    try {
+      await index(from: named, fresh: true);
+    } on FormatException {
+      return '$named has no index this panel can read. A library publishes '
+          'index.json on a branch called $branch.';
+    }
+    return null;
+  }
 
   static final _repo = RegExp(
     r'^[A-Za-z0-9][A-Za-z0-9_.-]*/[A-Za-z0-9_][A-Za-z0-9_.-]*$',
@@ -64,11 +115,8 @@ class Addons {
   static final _part = RegExp(r'^[a-z][a-z0-9_]*\.(dart|json)$');
   static const _maxIndex = 4 * 1024 * 1024;
 
-  /// The widgets still in the app itself.
-  static const coreTypes = {'calendar', 'parcels'};
-
-  Map<String, dynamic>? _index;
-  DateTime? _read;
+  final _indexes = <String, Map<String, dynamic>>{};
+  final _read = <String, DateTime>{};
 
   static Future<List<int>> _get(String url, int most) async {
     final dio = httpClient(
@@ -94,11 +142,13 @@ class Addons {
     }
   }
 
-  /// The catalogue's index, read again after five minutes or when [fresh].
-  /// Throws a [FormatException] in words when it cannot be had.
-  Future<Map<String, dynamic>> index({bool fresh = false}) async {
-    final had = _index;
-    final read = _read;
+  /// The index of the catalogue — or of the library [from] — read again
+  /// after five minutes or when [fresh]. Throws a [FormatException] in
+  /// words when it cannot be had.
+  Future<Map<String, dynamic>> index({String? from, bool fresh = false}) async {
+    final repo = from ?? this.repo;
+    final had = _indexes[repo];
+    final read = _read[repo];
     if (!fresh &&
         had != null &&
         read != null &&
@@ -122,8 +172,8 @@ class Addons {
     if (commit is! String || !_commit.hasMatch(commit) || listed is! List) {
       throw const FormatException('The catalogue could not be read.');
     }
-    _read = DateTime.now();
-    return _index = {
+    _read[repo] = DateTime.now();
+    return _indexes[repo] = {
       'commit': commit,
       'addons': [
         for (final a in listed)
@@ -187,51 +237,110 @@ class Addons {
     return false;
   }
 
-  /// The catalogue for the page: every add-on, with whether this panel has
-  /// it, could have it, and has a tile waiting for it. [used] is the widget
-  /// types on the dashboard.
+  /// Everything on offer: the catalogue's add-ons, then each library's
+  /// that the catalogue — or a library before it — does not already have
+  /// by name or by widget type. Each carries where it is from (`source`,
+  /// `commit`) and whether that is the catalogue (`official`).
+  Future<_Offer> _offer({bool fresh = false}) async {
+    final out = _Offer();
+    final ids = <String>{};
+    final types = <String>{};
+    for (final from in [repo, ...libraries]) {
+      final official = from == repo;
+      final Map<String, dynamic> index;
+      try {
+        index = await this.index(from: from, fresh: fresh);
+      } on FormatException catch (e) {
+        if (official) {
+          out.error = e.message;
+        } else {
+          out.libraries.add({
+            'repo': from,
+            'url': 'https://github.com/$from',
+            'error': 'This library could not be read.',
+          });
+        }
+        continue;
+      }
+      var listed = 0, hidden = 0;
+      final taken = <String>{};
+      for (final a in index['addons'] as List) {
+        final entry = a as Map<String, dynamic>;
+        final brings = [for (final t in entry['types'] as List) '$t'];
+        if (ids.contains(entry['id']) || brings.any(types.contains)) {
+          hidden++;
+          continue;
+        }
+        ids.add(entry['id'] as String);
+        taken.addAll(brings);
+        listed++;
+        out.addons.add({
+          ...entry,
+          'source': from,
+          'commit': index['commit'],
+          'official': official,
+        });
+      }
+      types.addAll(taken);
+      if (!official) {
+        out.libraries.add({
+          'repo': from,
+          'url': 'https://github.com/$from',
+          'count': listed,
+          'hidden': hidden,
+        });
+      }
+    }
+    return out;
+  }
+
+  /// The page: every add-on, with whether this panel has it, could have
+  /// it, and has a tile waiting for it. [used] is the widget types on the
+  /// dashboard.
   Future<Map<String, dynamic>> listing(
     Set<String> used, {
     bool fresh = false,
   }) async {
     final have = installed();
-    Map<String, dynamic>? index;
-    String? error;
-    try {
-      index = await this.index(fresh: fresh);
-    } on FormatException catch (e) {
-      error = e.message;
-    }
-    final commit = index?['commit'];
-    final listed = [
-      for (final a in (index?['addons'] as List?) ?? const [])
-        a as Map<String, dynamic>,
-    ];
+    final offer = await _offer(fresh: fresh);
+    final listed = offer.addons;
     final ids = {for (final a in listed) a['id']};
-    // What the catalogue no longer lists is still this panel's to remove.
+    // What is no longer listed is still this panel's to remove.
     for (final e in have.entries) {
-      if (!ids.contains(e.key)) listed.add({...e.value, 'id': e.key});
+      if (ids.contains(e.key)) continue;
+      final from = e.value['repo'];
+      listed.add({
+        ...e.value,
+        'id': e.key,
+        'source': from is String ? from : repo,
+        'commit': null,
+        'official': from is! String || from == repo,
+      });
     }
     return {
       'repo': repo,
       'url': 'https://github.com/$repo',
       'appVersion': appVersion,
       'canBuild': code.available,
-      'error': ?error,
+      'codeAllowed': _allowsCode(),
+      'libraries': offer.libraries,
+      'maxLibraries': maxLibraries,
+      'error': ?offer.error,
       'addons': [
         for (final a in listed)
           {
             for (final k in const [
               'id', 'name', 'description', 'author', 'authorUrl', //
               'category', 'glyph', 'version', 'kind', 'types', 'permissions',
-              'minApp',
+              'minApp', 'source', 'official',
             ])
               k: a[k],
             'categoryName': WidgetCategory.localName('${a['category']}'),
             'listed': ids.contains(a['id']),
-            if (commit != null && a['screenshot'] is String)
+            if (a['commit'] != null && a['screenshot'] is String)
               'screenshot':
-                  '$_raw/$repo/$commit/widgets/${a['id']}/screenshot.png',
+                  '$_raw/${a['source']}/${a['commit']}/widgets/${a['id']}/'
+                  'screenshot.png',
             'installed': have[a['id']]?['version'],
             'update':
                 have[a['id']] != null &&
@@ -246,32 +355,38 @@ class Addons {
     };
   }
 
-  /// Installs [ids] from the catalogue. Null when it is done — or, for
-  /// anything in Dart, when the build has started; otherwise why not.
+  /// Installs [ids] from the catalogue or a library. Null when it is done
+  /// — or, for anything in Dart, when the build has started; otherwise why
+  /// not.
   Future<String?> install(List<String> ids) async {
     if (ids.isEmpty || ids.length > 60 || !ids.every(_id.hasMatch)) {
       return 'That is no name for an add-on.';
     }
-    final Map<String, dynamic> index;
-    try {
-      index = await this.index(fresh: true);
-    } on FormatException catch (e) {
-      return e.message;
-    }
-    final byId = {
-      for (final a in index['addons'] as List)
-        (a as Map<String, dynamic>)['id'] as String: a,
-    };
+    final offer = await _offer(fresh: true);
+    final byId = {for (final a in offer.addons) a['id'] as String: a};
     final dart = <String>[];
     final json = <Map<String, dynamic>>[];
     for (final id in ids) {
       final a = byId[id];
-      if (a == null) return 'The catalogue has no add-on called $id.';
+      if (a == null) {
+        return offer.error ?? 'There is no add-on called $id to download.';
+      }
       if (older(appVersion, '${a['minApp'] ?? '0'}')) {
         return '${a['name']} needs HomeCanvas ${a['minApp']} or newer; '
             'this panel has $appVersion.';
       }
-      a['kind'] == 'dart' ? dart.add(id) : json.add(a);
+      if (a['kind'] != 'dart') {
+        json.add(a);
+      } else if (a['official'] == true) {
+        dart.add(id);
+      } else if (!_allowsCode()) {
+        return '${a['name']} is from ${a['source']}, which nobody has '
+            'checked, and it is code that would run on the panel. To allow '
+            'it, switch on "Widgets written in Dart" in Settings → '
+            'Dashboard, on the panel itself.';
+      } else {
+        dart.add('$id@${a['source']}');
+      }
     }
     if (dart.isNotEmpty) {
       if (!code.available) {
@@ -281,7 +396,7 @@ class Addons {
       if (code.building) return 'A build is already running.';
     }
     for (final a in json) {
-      final refused = await _installDescribed(a, '${index['commit']}');
+      final refused = await _installDescribed(a);
       if (refused != null) return refused;
     }
     return dart.isEmpty ? null : code.installAddons(dart);
@@ -290,33 +405,32 @@ class Addons {
   /// One described in JSON: fetched, checked against its sum, and handed
   /// to the widgets installed from files — which check it again, as they
   /// would an upload.
-  Future<String?> _installDescribed(
-    Map<String, dynamic> a,
-    String commit,
-  ) async {
+  Future<String?> _installDescribed(Map<String, dynamic> a) async {
     final id = a['id'] as String;
+    final commit = '${a['commit']}';
+    final source = '${a['source']}';
     final files = a['files'] as List;
     final file = files.first as Map;
     if (files.length != 1 || !'${file['path']}'.endsWith('.json')) {
       return '${a['name']} is not one file of JSON.';
     }
-    final String source;
+    final String text;
     try {
       final bytes = await _fetch(
-        '$_raw/$repo/$commit/widgets/$id/${file['path']}',
+        '$_raw/$source/$commit/widgets/$id/${file['path']}',
         CustomWidgetSpec.maxBytes,
       );
       if ('${sha256.convert(bytes)}' != file['sha256']) {
         return '${a['name']} is not the file the catalogue checked. '
             'It was not installed.';
       }
-      source = utf8.decode(bytes);
+      text = utf8.decode(bytes);
     } catch (_) {
       return '${a['name']} could not be fetched.';
     }
     final CustomWidgetSpec spec;
     try {
-      spec = await custom.install(source);
+      spec = await custom.install(text);
     } on FormatException catch (e) {
       return '${a['name']}: ${e.message}';
     }
@@ -325,8 +439,8 @@ class Addons {
     await File(p.join(folder.path, 'addon.json')).writeAsString(
       '${const JsonEncoder.withIndent('  ').convert({
         for (final e in a.entries)
-          if (e.key != 'files') e.key: e.value,
-        'commit': commit,
+          if (!const {'files', 'source', 'official'}.contains(e.key)) e.key: e.value,
+        'repo': source,
         'files': [file['path']],
         'types': [spec.type],
       })}\n',
@@ -362,4 +476,11 @@ class Addons {
     }
     return null;
   }
+}
+
+/// What can be downloaded, and what was read to find out.
+class _Offer {
+  final addons = <Map<String, dynamic>>[];
+  final libraries = <Map<String, dynamic>>[];
+  String? error;
 }

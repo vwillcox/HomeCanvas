@@ -10,7 +10,7 @@
   :root {
     --bg: #0b0c10; --glass: rgba(255,255,255,.055); --line: rgba(255,255,255,.10);
     --text: #fff; --muted: rgba(255,255,255,.62); --faint: rgba(255,255,255,.38);
-    --accent: #a6c8ff; --danger: #ff8a8a; --good: #9be7b0;
+    --accent: #a6c8ff; --danger: #ff8a8a; --good: #9be7b0; --caution: #ffcf7a;
     --ui: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     color-scheme: dark;
   }
@@ -82,6 +82,24 @@
   .about .row { display: flex; gap: 8px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
   .about .have { color: var(--good); font-size: 14px; margin-right: auto; }
   .empty { color: var(--muted); grid-column: 1 / -1; }
+  .about .other { margin: 0; font-size: 13px; color: var(--caution); }
+  .about .other a { color: inherit; }
+
+  /* Other people's libraries: what this panel reads beside the catalogue. */
+  #libraries summary { cursor: pointer; font-weight: 650; font-size: 17px; min-height: 30px; }
+  #libraries p { margin: 10px 0 0; color: var(--muted); font-size: 14.5px; max-width: 78ch; }
+  #libraries .risk { color: var(--caution); }
+  #libraries ul { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
+  #libraries li { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  #libraries li .n { color: var(--faint); font-size: 13.5px; margin-right: auto; }
+  #libraries li .n.bad { color: var(--danger); }
+  #libraries form { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 14px; }
+  #libraries input[type=text] {
+    flex: 1 1 240px; min-height: 44px; padding: 0 16px; border-radius: 999px; font: inherit;
+    color: var(--text); background: rgba(0,0,0,.25); border: 1px solid var(--line);
+  }
+  #libraries label { display: flex; gap: 8px; align-items: flex-start; flex: 1 1 100%; color: var(--text); font-size: 14.5px; cursor: pointer; }
+  #libraries label input { width: 18px; height: 18px; margin: 2px 0 0; flex: none; accent-color: var(--accent); }
 
   /* Several at once: one rebuild for all of them. */
   #basket {
@@ -115,6 +133,19 @@
   <div class="chips" id="chips"></div>
 
   <section id="list"></section>
+
+  <details class="card" id="libraries">
+    <summary data-t="web.addons.libraries">Other people's libraries</summary>
+    <p data-t="web.addons.librariesWhat">Anyone can keep a library of add-ons of their own, laid out as the catalogue is. Name one here and what is in it is listed above, beside the catalogue's.</p>
+    <p class="risk" data-t="web.addons.librariesRisk">Nobody at HomeCanvas has tested or read what is in another library. An add-on written in Dart is code: once installed it runs on the panel as the panel does, and can read whatever the panel can — its settings and keys among them. What a library says its add-ons use is its own word. Add only a library whose owner you trust; what you install from one is at your own risk.</p>
+    <p id="codeOff" hidden data-t="web.addons.codeOff">Add-ons written in Dart from another library are installed only while "Widgets written in Dart" is switched on in Settings → Dashboard, on the panel itself. Those described in JSON need no switch.</p>
+    <ul id="libraryList"></ul>
+    <form id="libraryForm">
+      <input type="text" id="libraryName" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="owner/name on GitHub" data-t-placeholder="web.addons.libraryName" data-t-aria="web.addons.libraryName" aria-label="owner/name on GitHub">
+      <button id="libraryAdd" disabled data-t="web.addons.libraryAdd">Add library</button>
+      <label><input type="checkbox" id="libraryAgree"><span data-t="web.addons.libraryAgree">I understand that this library is untested, and that what I install from it is at my own risk.</span></label>
+    </form>
+  </details>
 </main>
 
 <div id="basket" hidden>
@@ -125,9 +156,10 @@
 
 <script src="/i18n.js"></script>
 <script>
-/* The catalogue of add-ons — every widget but the two the panel comes with
-   — as the panel read it from the catalogue's repository, and what of it
-   is installed here.
+/* The catalogue of add-ons — every widget there is — as the panel read it
+   from the catalogue's repository, what of it is installed here, and
+   whatever is in the libraries of other people's this panel has been
+   given: listed with the rest, and marked as nobody's but their owner's.
 
    One described in JSON is on the panel the moment it is downloaded. One
    written in Dart is built into the panel, which takes a few minutes and
@@ -151,7 +183,8 @@ function say(kind, text) {
 
 function names(ids) {
   const by = new Map((state.data ? state.data.addons : []).map(a => [a.id, a.name || a.id]));
-  return String(ids || "").split(",").filter(Boolean).map(id => by.get(id) || id).join(", ");
+  // One from a library is asked for as name@owner/name.
+  return String(ids || "").split(",").filter(Boolean).map(id => id.split("@")[0]).map(id => by.get(id) || id).join(", ");
 }
 
 /* Shows how a build stands. True while it is still going. */
@@ -269,7 +302,9 @@ function card(a) {
   } else shot.appendChild(glyph);
 
   const builds = a.kind === "dart";
-  const can = a.listed && a.compatible && (!builds || d.canBuild);
+  // Code nobody has checked waits for the panel's own switch.
+  const held = builds && !a.official && !d.codeAllowed;
+  const can = a.listed && a.compatible && (!builds || d.canBuild) && !held;
   const want = can && (!a.installed || a.update);
 
   const about = el("div", "about");
@@ -292,7 +327,17 @@ function card(a) {
   if ((a.permissions || []).length) {
     about.appendChild(el("p", "facts", t("web.addons.uses", "Uses: {what}", { what: a.permissions.join(", ") })));
   }
-  if (!a.listed) about.appendChild(el("p", "warn", t("web.addons.unlisted", "No longer in the catalogue.")));
+  if (!a.official) {
+    const other = el("p", "other", "⚠ " + t("web.addons.untested", "Untested — from") + " ");
+    const link = el("a", "", a.source);
+    link.href = "https://github.com/" + a.source; link.target = "_blank"; link.rel = "noopener";
+    other.appendChild(link);
+    about.appendChild(other);
+  }
+  if (!a.listed) about.appendChild(el("p", "warn", a.official
+    ? t("web.addons.unlisted", "No longer in the catalogue.")
+    : t("web.addons.unlistedOther", "No longer in a library this panel reads.")));
+  else if (held && !a.installed) about.appendChild(el("p", "warn", t("web.addons.held", "Code from another library: switch on \"Widgets written in Dart\" in Settings → Dashboard, on the panel, to allow it.")));
   else if (!a.compatible) about.appendChild(el("p", "warn", t("web.addons.tooNew", "Needs HomeCanvas {version} or newer.", { version: a.minApp })));
   else if (builds && !d.canBuild) about.appendChild(el("p", "warn", t("web.addons.cannotBuild", "This panel was not built where it runs, so it cannot build widgets in.")));
 
@@ -346,11 +391,12 @@ function draw() {
   };
   chip("", t("web.addons.all", "All"));
   chip("#installed", t("web.addons.installed", "Installed"));
+  if (d.addons.some(a => !a.official)) chip("#other", t("web.addons.fromOthers", "Untested"));
   [...cats].sort((x, y) => x[1].localeCompare(y[1])).forEach(([id, label]) => chip(id, label));
 
   const q = state.filter.trim().toLowerCase();
   const shown = d.addons.filter(a =>
-    (state.category === "" || (state.category === "#installed" ? !!a.installed : a.category === state.category)) &&
+    (state.category === "" || (state.category === "#installed" ? !!a.installed : state.category === "#other" ? !a.official : a.category === state.category)) &&
     (!q || [a.name, a.description, a.author, a.categoryName, a.id].join(" ").toLowerCase().includes(q)))
     .sort((x, y) => (y.wanted - x.wanted) || String(x.name).localeCompare(String(y.name)));
   const list = $("list");
@@ -363,7 +409,8 @@ function draw() {
   shown.forEach(a => list.appendChild(card(a)));
 
   // Tiles on the dashboard whose widget is not installed: one button.
-  const wanted = d.addons.filter(a => a.wanted && a.listed && a.compatible && (a.kind !== "dart" || d.canBuild));
+  // Only the catalogue's: another library's are asked for one by one.
+  const wanted = d.addons.filter(a => a.wanted && a.official && a.listed && a.compatible && (a.kind !== "dart" || d.canBuild));
   const all = $("wantedInstall");
   all.hidden = true;
   if (!state.busy && $("status").hidden) {
@@ -378,11 +425,55 @@ function draw() {
     all.onclick = () => install(wanted.map(a => a.id));
   }
 
+  drawLibraries();
+
   const picked = [...state.picked].filter(id => d.addons.some(a => a.id === id));
   $("basket").hidden = !picked.length || state.busy;
   $("basketText").textContent = t("web.addons.picked", "{n, plural, one{# add-on picked} other{# add-ons picked}} — built in together, with one restart.", { n: picked.length });
   $("basketInstall").onclick = () => install(picked);
   $("basketClear").onclick = () => { state.picked.clear(); draw(); };
+}
+
+function drawLibraries() {
+  const d = state.data, list = $("libraryList");
+  $("codeOff").hidden = !!d.codeAllowed;
+  list.innerHTML = "";
+  for (const l of d.libraries || []) {
+    const row = el("li");
+    const link = el("a", "", l.repo);
+    link.href = l.url; link.target = "_blank"; link.rel = "noopener";
+    const n = el("span", "n" + (l.error ? " bad" : ""), l.error
+      ? t("web.addons.libraryUnread", "could not be read")
+      : t("web.addons.libraryCount", "{n, plural, one{# add-on} other{# add-ons}}", { n: l.count }) +
+        (l.hidden ? " · " + t("web.addons.libraryHidden", "{n} left out, already in the catalogue", { n: l.hidden }) : ""));
+    const out = el("button", "quiet", t("web.addons.libraryRemove", "Stop reading"));
+    out.disabled = state.busy;
+    out.onclick = () => library("DELETE", "/api/addons/libraries?repo=" + encodeURIComponent(l.repo));
+    row.append(link, n, out);
+    list.appendChild(row);
+  }
+  const full = (d.libraries || []).length >= (d.maxLibraries || 8);
+  $("libraryName").disabled = full || state.busy;
+  $("libraryAdd").disabled = full || state.busy || !$("libraryAgree").checked || !$("libraryName").value.trim();
+}
+
+/* Adds a library, or stops reading one. What was installed from one stays
+   until it is removed. */
+async function library(method, path, body) {
+  say("busy", t("web.addons.libraryAsking", "Reading the library…"));
+  try {
+    const res = await fetch(path, body
+      ? { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
+      : { method });
+    if (!res.ok) { say("bad", (await res.text()) || res.statusText); return; }
+    state.data = await res.json();
+    $("libraryName").value = "";
+    $("libraryAgree").checked = false;
+    $("status").hidden = true;
+  } catch (e) {
+    say("bad", t("web.addons.couldNot", "The panel did not answer."));
+  }
+  draw();
 }
 
 async function load(fresh, quiet) {
@@ -400,6 +491,12 @@ async function load(fresh, quiet) {
 
 $("search").oninput = (e) => { state.filter = e.target.value; draw(); };
 $("refresh").onclick = () => load(true);
+$("libraryName").oninput = $("libraryAgree").onchange = () => state.data && drawLibraries();
+$("libraryForm").onsubmit = (e) => {
+  e.preventDefault();
+  const repo = $("libraryName").value.trim().replace(/^https:\/\/github\.com\//, "").replace(/(\.git)?\/?$/, "");
+  if (repo && $("libraryAgree").checked) library("POST", "/api/addons/libraries", { repo });
+};
 // Words first, so the page is drawn in the panel's language.
 loadWords().then(() => load(false));
 </script>

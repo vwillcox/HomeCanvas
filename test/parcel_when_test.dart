@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:home_canvas/dashboard/widgets/parcels_widget.dart';
+import 'package:home_canvas/dashboard/widgets/parcels_view.dart';
 import 'package:home_canvas/services/parcels_service.dart';
 
 void main() {

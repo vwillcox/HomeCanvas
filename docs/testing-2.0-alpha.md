@@ -1,9 +1,9 @@
-# Testing HomeCanvas 2.0.0 alpha 1
+# Testing HomeCanvas 2.0.0 alpha 2
 
-This alpha moves the widgets out of the app. Fifty of them now live in
+This alpha moves every widget out of the app. All fifty-two now live in
 [HomeCanvas-Widgets](https://github.com/vwillcox/HomeCanvas-Widgets) as
 **add-ons**, and the editor has an **Add-ons** page to download them from.
-Only the calendar and parcels are still built in.
+None is built in any more: the app is what widgets are made from.
 
 It is an alpha: it has passed its tests and been built, but it has not yet
 run on a panel on a wall. Try it on a panel you can afford to have out of
@@ -50,7 +50,7 @@ Tick these off, and say which failed.
 
 - [ ] Every tile you had is still there and working — none says
       "Unknown widget".
-- [ ] Settings → About says version 2.0.0-alpha.1.
+- [ ] Settings → About says version 2.0.0-alpha.2.
 
 **2. The Add-ons page**
 
@@ -95,7 +95,28 @@ Pick one you do not have — **Tides**, say — and press **Download**.
       catalogue could not be reached and still lists what is installed.
       The dashboard itself is unaffected.
 
-**8. Everything else still works** — nothing here should have changed it,
+**8. Calendar and Parcels are add-ons too** (new in alpha 2)
+
+- [ ] If your dashboard had a Calendar or Parcels tile, it is still there
+      after the update, and both show as **Installed** on the Add-ons page.
+- [ ] With Parcels removed, a tracking link shared from the phone still
+      arrives, and Your day still lists what is due.
+
+**9. Somebody else's library** (new in alpha 2)
+
+At the foot of the Add-ons page, open **Other people's libraries**.
+
+- [ ] The warning is plain: untested, and at your own risk.
+- [ ] **Add library** stays greyed out until the box is ticked.
+- [ ] A name that is not a library (`someone/nothing`) is refused, in words.
+- [ ] If you have a library to hand (the catalogue's
+      `docs/your-own-library.md` says how to make one): its add-ons are
+      listed, each marked **Untested — from …**; one written in Dart will
+      not download until "Widgets written in Dart" is switched on in
+      Settings → Dashboard on the panel; **Stop reading** takes the library
+      away again.
+
+**10. Everything else still works** — nothing here should have changed it,
 which is the point of checking: the slideshow, music, voice, the share
 inbox, the day's brief, uploading a widget of your own under
 **Custom widgets**.
@@ -132,4 +153,6 @@ has your keys in it.
   is fetched as add-ons before the first build.
 - Anyone on your network who can open the editor can download an add-on
   from the catalogue, which rebuilds the panel. Uploading Dart of your own
-  still needs the switch in Settings → Dashboard.
+  still needs the switch in Settings → Dashboard, and so does
+  installing Dart from another library.
+- Add-ons from another library are not tested by anyone but their owner.

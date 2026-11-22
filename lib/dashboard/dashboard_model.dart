@@ -219,6 +219,12 @@ class DashboardSettings {
   /// the panel's own: read from config.json, never taken from the editor.
   String? addonsRepo;
 
+  /// Other people's libraries of add-ons the Add-ons page lists beside the
+  /// catalogue, each `owner/name` on GitHub. Added from that page. Nobody
+  /// has checked what is in them: an add-on in Dart from one is installed
+  /// only while [codeWidgets] is on.
+  List<String> addonLibraries;
+
   /// Which of the web editor's panels, palette groups and list rows are
   /// folded or opened, as the editor names them. Kept here rather than in
   /// the browser so every device, and every address the panel answers to,
@@ -247,8 +253,10 @@ class DashboardSettings {
     List<DashboardWidgetConfig>? widgets,
     this.codeWidgets = false,
     this.addonsRepo,
+    List<String>? addonLibraries,
     List<String>? editorPanels,
   }) : pages = pages ?? [],
+       addonLibraries = addonLibraries ?? [],
        widgets = widgets ?? [],
        editorPanels = editorPanels ?? [];
 
@@ -301,6 +309,13 @@ class DashboardSettings {
         .toList(),
     codeWidgets: j['codeWidgets'] as bool? ?? false,
     addonsRepo: j['addonsRepo'] is String ? j['addonsRepo'] as String : null,
+    addonLibraries: [
+      for (final r
+          in j['addonLibraries'] is List
+              ? j['addonLibraries'] as List
+              : const [])
+        if (r is String) r,
+    ],
     editorPanels: cleanPanels(j['editorPanels']),
   );
 
@@ -325,6 +340,7 @@ class DashboardSettings {
     'widgets': widgets.map((w) => w.toJson()).toList(),
     'codeWidgets': codeWidgets,
     if (addonsRepo != null) 'addonsRepo': addonsRepo,
+    if (addonLibraries.isNotEmpty) 'addonLibraries': addonLibraries,
     'editorPanels': editorPanels,
   };
 

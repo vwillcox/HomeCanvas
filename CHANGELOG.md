@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.0.0-alpha.1
+## 2.0.0-alpha.2
 
 The widgets have a home of their own, and anyone can add to them.
 
@@ -20,11 +20,21 @@ The widgets have a home of their own, and anyone can add to them.
   Only what passes is listed, and a panel installs only files that match
   the sums the catalogue published.
 
+- **Other people's libraries.** Anyone can keep a library of add-ons in a
+  repository of their own, and the Add-ons page can be given it by name:
+  its add-ons are listed with the catalogue's, each marked as untested and
+  where it is from. Nobody at HomeCanvas has read them, the page says so
+  before one is added, and what is installed from one is at your own risk.
+  Code from a library is built in only while "Widgets written in Dart" is
+  switched on at the panel itself; the catalogue always comes first, so a
+  library cannot replace one of its add-ons. How to set one up is in the
+  catalogue's `docs/your-own-library.md`.
+
 ### Changed
 
-- **Fifty widgets moved out of the app** into the catalogue, each as an
-  add-on. The calendar and parcels stay, because the day's brief and the
-  share inbox lean on them. A panel being updated keeps every widget its
+- **Every widget moved out of the app** into the catalogue, each as an
+  add-on: all fifty-two, the calendar and parcels among them. The app keeps
+  what they are made from, and none of the widgets themselves. A panel being updated keeps every widget its
   dashboard uses: the update fetches them before it builds. A new panel
   starts with a small set and the Add-ons page.
 

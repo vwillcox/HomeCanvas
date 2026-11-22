@@ -10,7 +10,7 @@ import '../services/timer_service.dart' show KioskTimer;
 import '../services/weather_service.dart';
 import '../time_format.dart';
 import '../widgets/glass.dart' show greetingFor;
-import 'widgets/parcels_widget.dart' show parcelName;
+import 'widgets/parcels_view.dart' show parcelName;
 
 /// What sort of thing a line of the day is.
 enum BriefKind { event, reminder, parcel, bins, timer, rain, sunset }

@@ -23,7 +23,7 @@ import '../../widgets/lcars.dart';
 import '../../widgets/weather_overlay.dart' show weatherIcon;
 import '../dashboard_theme.dart';
 import '../day_brief.dart';
-import 'calendar_widget.dart';
+import 'calendar_view.dart';
 import 'tile_bits.dart';
 
 /// The day, put together from every tile on the panel that knows something

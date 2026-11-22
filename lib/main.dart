@@ -96,7 +96,7 @@ import 'screens/dashboard_screen.dart';
 import 'dashboard/widgets/day_brief_sheet.dart';
 import 'dashboard/widgets/weather_forecast_sheet.dart';
 import 'dashboard/widgets/tv_remote_sheet.dart';
-import 'dashboard/widgets/parcels_widget.dart'
+import 'dashboard/widgets/parcels_view.dart'
     show parcelDueNow, parcelName, parcelStage;
 import 'screens/gallery_screen.dart';
 import 'screens/home_screen.dart';
@@ -503,11 +503,14 @@ void main() async {
   // And as Dart, built into the app by the panel itself.
   final codeWidgets = CodeWidgets();
   dashboard.codeWidgets = codeWidgets;
-  // And from the catalogue: every widget but the app's own two.
+  // And from the catalogue, where every widget is, and whatever libraries
+  // of other people's this panel has been given beside it.
   dashboard.addons = Addons(
     custom: customWidgets,
     code: codeWidgets,
     repo: dashboard.settings.addonsRepo,
+    libraries: () => dashboard.settings.addonLibraries,
+    allowsCode: () => dashboard.settings.codeWidgets,
   );
 
   final homey = HomeyService(config);

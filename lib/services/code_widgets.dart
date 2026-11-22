@@ -51,6 +51,13 @@ class CodeWidgets {
   static const maxBytes = 256 * 1024;
   static final _name = RegExp(r'^[a-z][a-z0-9_]{1,39}$');
 
+  /// An add-on to fetch: its name, and after an @ the library it is from
+  /// when that is not the catalogue.
+  static final _addon = RegExp(
+    r'^[a-z][a-z0-9_]{1,39}'
+    r'(@[A-Za-z0-9][A-Za-z0-9_.-]*/[A-Za-z0-9_][A-Za-z0-9_.-]*)?$',
+  );
+
   /// What every upload must declare: the description the registry takes.
   static final _declares = RegExp(
     r'^\s*(final|var|const|DashboardWidgetType|late)\b[^;=]*\bwidgetType\s*=',
@@ -184,7 +191,7 @@ class CodeWidgets {
   /// builder does the fetching, each file checked against the catalogue's
   /// sum for it, so that what was fetched is put back if the build fails.
   Future<String?> installAddons(List<String> ids) async {
-    if (ids.isEmpty || !ids.every(_name.hasMatch)) {
+    if (ids.isEmpty || !ids.every(_addon.hasMatch)) {
       return 'That is no name for an add-on.';
     }
     return _start('addons', ids.join(','));

@@ -48,8 +48,7 @@ Around the app, a few small pieces on the Pi:
 
 ### Widgets are add-ons
 
-All but two widgets — the calendar and parcels, which the app itself reads
-— live in [HomeCanvas-Widgets](https://github.com/vwillcox/HomeCanvas-Widgets)
+Every widget lives in [HomeCanvas-Widgets](https://github.com/vwillcox/HomeCanvas-Widgets)
 and are downloaded to a panel from the editor's Add-ons page. The
 catalogue's checks publish an index of what passed, with a SHA-256 for
 every file; `lib/services/addons.dart` lists it, `scripts/addons.py`
@@ -58,6 +57,16 @@ fetches from it and refuses what does not match, and
 last good build back if the new one does not check, build or start. The
 whole path, and how to work on add-ons with the app, is in
 [`lib/dashboard/widgets/README.md`](lib/dashboard/widgets/README.md).
+
+Beside the catalogue a panel can read **other people's libraries**:
+repositories laid out the same way, named on the Add-ons page and kept as
+`addonLibraries` under `dashboard`. Their files are held to their own
+index's sums and nothing more — nobody has reviewed them — so the page
+marks each add-on from one as untested, and one written in Dart is built
+in only while the panel's own "Widgets written in Dart" switch is on. The
+catalogue is read first: a library's add-on with a name or a widget type
+the catalogue has is left out. The builder is asked for one as
+`name@owner/repository`.
 
 ### Widgets are described, not wired in
 

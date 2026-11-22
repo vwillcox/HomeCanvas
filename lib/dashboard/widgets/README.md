@@ -7,15 +7,15 @@ the options as an opaque bag.
 
 ## Where the widgets are
 
-Not here. Two are the app's own, in this folder, because the rest of the app
-leans on them: the calendar (the day's brief reads it) and parcels (a shared
-tracking link becomes one). Every other widget is an **add-on**, in a
-repository of its own —
+Not here. Every widget is an **add-on**, in a repository of its own —
 [vwillcox/HomeCanvas-Widgets](https://github.com/vwillcox/HomeCanvas-Widgets)
 — downloaded to a panel from the editor's **Add-ons** page and built in
-there. What is left in this folder beside those two is what widgets are made
-from: `tile_bits.dart`, `fit_canvas.dart`, the feed, social and video tiles,
-the sheets. An add-on imports them as `package:home_canvas/dashboard/widgets/…`.
+there. The app has none of its own. What is in this folder is what widgets
+are made from: `tile_bits.dart`, `fit_canvas.dart`, the feed, social and
+video tiles, the sheets, and the two views the rest of the app shows for
+itself — `calendar_view.dart` (the day's brief reads calendars the same way)
+and `parcels_view.dart` (a shared tracking link opens a parcel's story
+whether or not the Parcels tile is installed). An add-on imports them as `package:home_canvas/dashboard/widgets/…`.
 
 How an add-on reaches a panel:
 
@@ -41,6 +41,16 @@ Which repository is read is `addonsRepo` under `dashboard` in config.json
 (or `HOMECANVAS_ADDONS_REPO` for the scripts): `owner/name` on GitHub. It
 is the panel's own setting — what comes from it is run — and the editor
 cannot change it.
+
+Beside the catalogue a panel can read **other people's libraries**:
+repositories laid out the same way, named on the Add-ons page and kept as
+`addonLibraries` under `dashboard`. Their files are held to their own
+index's sums and nothing more — nobody has reviewed them — so the page
+marks each add-on from one as untested, and one written in Dart is built
+in only while the panel's own "Widgets written in Dart" switch is on. The
+catalogue is read first: a library's add-on with a name or a widget type
+the catalogue has is left out. The builder is asked for one as
+`name@owner/repository`.
 
 ### Working on add-ons
 
@@ -121,8 +131,7 @@ folder's `addon.json` names that file as its `entry`:
 final widgetTypes = <DashboardWidgetType>[tideWidgetType];
 ```
 
-That is the whole integration. (One of the app's own two is added to the
-list in `widgets.dart` instead.)
+That is the whole integration.
 
 ## Fetching things
 

@@ -103,6 +103,25 @@ class Fetching(unittest.TestCase):
         have = {"unifi": {"types": ["unifi_health", "unifi_isp"]}}
         self.assertEqual(addons.wanted(cat, dash, have), [])
 
+    def test_one_from_a_library_is_fetched_from_it(self):
+        other = checkout(os.path.join(self.dir, "other"), tide=dart("tide"))
+        dest = os.path.join(self.dir, "dest")
+        was = addons.REPO
+        # A folder stands in for owner/name here.
+        addons.REPO = __import__("re").compile(r".+")
+        try:
+            import sys
+            argv = sys.argv
+            sys.argv = ["addons.py", "--repo", self.repo, "fetch", "--dest", dest,
+                        "clock", f"tide@{other}"]
+            self.assertEqual(addons.main(), 0)
+            sys.argv = ["addons.py", "--repo", self.repo, "fetch", "--dest", dest, "tide"]
+            self.assertEqual(addons.main(), 1)
+        finally:
+            sys.argv = argv
+            addons.REPO = was
+        self.assertEqual(sorted(os.listdir(dest)), ["clock", "tide"])
+
     def test_a_panel_with_no_dashboard_is_given_the_starter_set(self):
         cat = addons.index(self.repo)
         self.assertEqual(addons.wanted(cat, None, {}), ["clock", "weather"])

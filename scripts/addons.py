@@ -3,6 +3,7 @@
 
     addons.py list                     what the catalogue has
     addons.py fetch --dest DIR ID…     download these, checked, into DIR
+                                       (ID@owner/name for one from a library)
     addons.py ensure                   install what this panel's dashboard needs
 
 The catalogue is a repository of its own — vwillcox/HomeCanvas-Widgets —
@@ -13,6 +14,11 @@ each of its files. Nothing is taken that does not match its sum.
 Which repository is read can be changed on the panel only: the environment's
 HOMECANVAS_ADDONS_REPO, or "addonsRepo" under "dashboard" in config.json.
 Either is `owner/name` on GitHub, or a folder — a checkout of the catalogue.
+
+Beside the catalogue a panel may read other people's libraries, listed as
+"addonLibraries" under "dashboard": repositories laid out the same way,
+which nobody but their owners has checked. The catalogue comes first; a
+library is asked only for what the catalogue does not have.
 
 `ensure` is run before a build by install.sh and sync.sh. A panel whose
 dashboard was laid out when its widgets were built in keeps them: whatever
@@ -49,9 +55,6 @@ PART = re.compile(r"^[a-z][a-z0-9_]*\.(dart|json)$")
 MAX_FILE = 512 * 1024
 MAX_INDEX = 4 * 1024 * 1024
 
-# The widgets the app still has in it: nothing need be fetched for these.
-CORE_TYPES = {"calendar", "parcels"}
-
 
 class Refused(Exception):
     """Why something was not taken, in words for whoever asked."""
@@ -75,6 +78,17 @@ def source(arg=None):
     if not REPO.match(repo):
         raise Refused(f"{repo} is neither a folder nor owner/name on GitHub.")
     return repo
+
+
+def libraries(main):
+    """The libraries this panel reads beside the catalogue [main]."""
+    dash = config().get("dashboard")
+    named = dash.get("addonLibraries") if isinstance(dash, dict) else None
+    out = []
+    for r in named if isinstance(named, list) else []:
+        if isinstance(r, str) and REPO.match(r) and r != main and r not in out:
+            out.append(r)
+    return out[:8]
 
 
 def get(url, most):
@@ -191,6 +205,8 @@ def fetch(src, cat, ids, dest):
                 out.write(data)
         manifest = {k: v for k, v in a.items() if k != "files"}
         manifest["commit"] = cat["commit"]
+        if not os.path.isdir(src):
+            manifest["repo"] = src
         manifest["files"] = [f["path"] for f in a["files"]]
         with open(os.path.join(part, "addon.json"), "w") as out:
             json.dump(manifest, out, indent=2)
@@ -249,7 +265,7 @@ def wanted(cat, dashboard, have):
         for w in (widgets if isinstance(widgets, list) else [])
         if isinstance(w, dict)
     }
-    brought = set(CORE_TYPES)
+    brought = set()
     for m in have.values():
         brought.update(m.get("types") or [])
     if not used and not have:
@@ -278,15 +294,31 @@ def main():
             # A panel that cannot reach the catalogue is still built: with
             # what it has, and the rest offered in the editor afterwards.
             try:
-                src = source(args.repo)
-                cat = index(src)
-                ids = wanted(cat, config().get("dashboard"), installed())
-                if ids:
-                    fetch(src, cat, ids, ADDONS)
-                    place_described(ids)
-                    print("Add-ons installed: " + ", ".join(ids))
+                main_src = source(args.repo)
             except Refused as e:
                 print(f"Add-ons were not fetched: {e}", file=sys.stderr)
+                return 0
+            for src in [main_src] + libraries(main_src):
+                try:
+                    cat = index(src)
+                    have = installed()
+                    if src != main_src:
+                        # A library fills gaps; it is never the starter set,
+                        # and brings no type the panel already has.
+                        if not have and not config().get("dashboard"):
+                            continue
+                        brought = {t for m in have.values() for t in m.get("types") or []}
+                        cat["addons"] = [
+                            a for a in cat["addons"] if not brought.intersection(a["types"])
+                        ]
+                    ids = wanted(cat, config().get("dashboard"), have)
+                    if ids:
+                        fetch(src, cat, ids, ADDONS)
+                        place_described(ids)
+                        where = "" if src == main_src else f" (from {src}, unchecked)"
+                        print("Add-ons installed: " + ", ".join(ids) + where)
+                except Refused as e:
+                    print(f"Add-ons were not fetched from {src}: {e}", file=sys.stderr)
             return 0
         src = source(args.repo)
         cat = index(src)
@@ -294,10 +326,15 @@ def main():
             for a in cat["addons"]:
                 print(f"{a['id']}\t{a.get('version', '')}\t{a.get('name', '')}")
         else:
-            for id in args.ids:
-                if not ID.match(id):
-                    raise Refused(f"{id} is no name for an add-on.")
-            fetch(src, cat, args.ids, args.dest)
+            # Each from the catalogue, or from the library named after its @.
+            by_source = {}
+            for spec in args.ids:
+                id, _, lib = spec.partition("@")
+                if not ID.match(id) or (lib and not REPO.match(lib)):
+                    raise Refused(f"{spec} is no name for an add-on.")
+                by_source.setdefault(lib or src, []).append(id)
+            for from_, ids in by_source.items():
+                fetch(from_, cat if from_ == src else index(from_), ids, args.dest)
     except Refused as e:
         print(e, file=sys.stderr)
         return 1

@@ -59,8 +59,13 @@ void main() {
   late Map<String, String> served;
   late CustomWidgets custom;
 
+  var libraries = <String>[];
+  var allowsCode = false;
+
   Addons addons({String? root = '/home/pi/homecanvas', String? version}) =>
       Addons(
+        libraries: () => libraries,
+        allowsCode: () => allowsCode,
         repo: 'someone/widgets',
         dir: '${dir.path}/addons',
         appVersion: version ?? '1.1.0',
@@ -94,6 +99,8 @@ void main() {
     ran = [];
     asked = [];
     served = {};
+    libraries = [];
+    allowsCode = false;
     custom = CustomWidgets(dir: '${dir.path}/widgets');
   });
   tearDown(() {
@@ -306,5 +313,109 @@ void main() {
     expect(await a.remove('../clock'), 'That add-on is not installed.');
     expect(await a.remove('clock'), isNull);
     expect(ran.single.sublist(2), ['addon-remove', 'clock']);
+  });
+
+  group('another library', () {
+    const other = 'https://raw.githubusercontent.com/friend/tiles';
+    const theirs = 'fedcba9876543210fedcba9876543210fedcba98';
+    void serveOther(List<Map<String, dynamic>> listed) =>
+        served['$other/catalogue/index.json'] = jsonEncode({
+          'schema': 1,
+          'commit': theirs,
+          'addons': listed,
+        });
+
+    test('is listed after the catalogue, and marked as not its own', () async {
+      serve([entry('clock')]);
+      serveOther([
+        entry('tide'),
+        // Neither a name nor a widget type the catalogue has is theirs.
+        entry('clock'),
+        entry('ticker', types: ['clock']),
+      ]);
+      libraries = ['friend/tiles', 'someone/widgets', 'not a repo'];
+      final l = await addons().listing(const {});
+      final by = {for (final a in l['addons'] as List) a['id']: a as Map};
+      expect(by.keys, ['clock', 'tide']);
+      expect(by['clock']!['official'], isTrue);
+      expect(by['tide']!['official'], isFalse);
+      expect(by['tide']!['source'], 'friend/tiles');
+      expect(
+        by['tide']!['screenshot'],
+        '$other/$theirs/widgets/tide/screenshot.png',
+      );
+      expect(l['codeAllowed'], isFalse);
+      expect(l['libraries'], [
+        {
+          'repo': 'friend/tiles',
+          'url': 'https://github.com/friend/tiles',
+          'count': 1,
+          'hidden': 2,
+        },
+      ]);
+    });
+
+    test('that cannot be read costs the catalogue nothing', () async {
+      serve([entry('clock')]);
+      libraries = ['friend/tiles'];
+      final l = await addons().listing(const {});
+      expect(l.containsKey('error'), isFalse);
+      expect((l['addons'] as List).single['id'], 'clock');
+      expect((l['libraries'] as List).single['error'], isNotNull);
+    });
+
+    test('has its code built in only with the panel\'s switch on', () async {
+      serve([entry('clock')]);
+      serveOther([entry('tide')]);
+      libraries = ['friend/tiles'];
+      final a = addons();
+      expect(
+        await a.install(['tide']),
+        allOf(contains('friend/tiles'), contains('Widgets written in Dart')),
+      );
+      expect(ran, isEmpty);
+      allowsCode = true;
+      expect(await a.install(['clock', 'tide']), isNull);
+      expect(ran.single.sublist(2), ['addons', 'clock,tide@friend/tiles']);
+    });
+
+    test('has its JSON taken from it, and remembered as its own', () async {
+      serve([entry('clock')]);
+      serveOther([
+        entry(
+          'sea_state',
+          kind: 'json',
+          types: ['custom_sea_state'],
+          source: described,
+        ),
+      ]);
+      served['$other/$theirs/widgets/sea_state/sea_state.json'] = described;
+      libraries = ['friend/tiles'];
+      final a = addons();
+      expect(await a.install(['sea_state']), isNull);
+      expect(a.installed()['sea_state']!['repo'], 'friend/tiles');
+      // No longer read: still listed, as theirs, to be removed.
+      libraries = [];
+      final l = await a.listing(const {});
+      final left = (l['addons'] as List).firstWhere(
+        (x) => x['id'] == 'sea_state',
+      );
+      expect(left['official'], isFalse);
+      expect(left['listed'], isFalse);
+      expect(await a.remove('sea_state'), isNull);
+    });
+
+    test('is added only if it is one, and not twice', () async {
+      serve([entry('clock')]);
+      serveOther([entry('tide')]);
+      final a = addons();
+      expect(await a.checkLibrary('friend/tiles'), isNull);
+      expect(await a.checkLibrary('friend'), contains('owner/name'));
+      expect(await a.checkLibrary('../../etc'), contains('owner/name'));
+      expect(await a.checkLibrary('someone/widgets'), contains('already'));
+      expect(await a.checkLibrary('nobody/nothing'), contains('index'));
+      libraries = ['friend/tiles'];
+      expect(await a.checkLibrary('Friend/Tiles'), contains('already'));
+    });
   });
 }

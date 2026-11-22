@@ -174,7 +174,7 @@ class _ScheduleView extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    _when(entry.event),
+                    calendarWhen(entry.event),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(color: t.textSecondary, fontSize: 13),
@@ -187,34 +187,35 @@ class _ScheduleView extends StatelessWidget {
       },
     );
   }
+}
 
-  static String _when(CalendarEvent e) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final day = DateTime(e.start.year, e.start.month, e.start.day);
-    final diff = day.difference(today).inDays;
+/// When an event is, as the schedule words it: "Today 14:00", "Tomorrow".
+String calendarWhen(CalendarEvent e) {
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final day = DateTime(e.start.year, e.start.month, e.start.day);
+  final diff = day.difference(today).inDays;
 
-    final String dayLabel;
-    if (diff == 0) {
-      dayLabel = tr('widget.calendar.today', 'Today');
-    } else if (diff == 1) {
-      dayLabel = tr('widget.calendar.tomorrow', 'Tomorrow');
-    } else if (diff < 7) {
-      dayLabel = weekdayShort(e.start);
-    } else {
-      // 28/09 in Britain, 09/28 in America.
-      dayLabel = '${weekdayShort(e.start)} ${numericDayMonth(e.start)}';
-    }
-
-    if (e.allDay) {
-      return tr('widget.calendar.allDay', '{dayLabel} · all day', {
-        'dayLabel': dayLabel,
-      });
-    }
-    final time = hhmm(e.start);
-    final where = e.location == null ? '' : ' · ${e.location}';
-    return '$dayLabel $time$where';
+  final String dayLabel;
+  if (diff == 0) {
+    dayLabel = tr('widget.calendar.today', 'Today');
+  } else if (diff == 1) {
+    dayLabel = tr('widget.calendar.tomorrow', 'Tomorrow');
+  } else if (diff < 7) {
+    dayLabel = weekdayShort(e.start);
+  } else {
+    // 28/09 in Britain, 09/28 in America.
+    dayLabel = '${weekdayShort(e.start)} ${numericDayMonth(e.start)}';
   }
+
+  if (e.allDay) {
+    return tr('widget.calendar.allDay', '{dayLabel} · all day', {
+      'dayLabel': dayLabel,
+    });
+  }
+  final time = hhmm(e.start);
+  final where = e.location == null ? '' : ' · ${e.location}';
+  return '$dayLabel $time$where';
 }
 
 /// A month at a glance: a dot per event, in its calendar's colour.
@@ -481,97 +482,3 @@ class _Hint extends StatelessWidget {
     ),
   );
 }
-
-final calendarWidgetType = DashboardWidgetType(
-  type: 'calendar',
-  category: WidgetCategory.timeAndDay,
-  name: 'Calendar',
-  description:
-      'Upcoming events from one or more published calendar links, as a '
-      'schedule or a month.',
-  glyph: '📅',
-  defaultWidth: 4,
-  defaultHeight: 3,
-  minWidth: 1,
-  minHeight: 1,
-  options: const [
-    WidgetOption(
-      key: 'view',
-      label: 'View',
-      kind: OptionKind.choice,
-      defaultValue: 'schedule',
-      choices: {
-        'schedule': 'Schedule — what’s coming up',
-        'month': 'Month — which days are busy',
-      },
-    ),
-    WidgetOption(
-      key: 'sources',
-      label: 'Calendars',
-      kind: OptionKind.list,
-      addLabel: 'Add a calendar',
-      help:
-          'Each link is the secret iCal address from Google, Apple or '
-          'Outlook — webcal:// works too. Anyone with one can read that '
-          'calendar, so treat them as passwords.',
-      fields: [
-        WidgetOption(key: 'name', label: 'Name', defaultValue: ''),
-        WidgetOption(key: 'url', label: 'Link (ICS)', defaultValue: ''),
-        WidgetOption(
-          key: 'colour',
-          label: 'Colour',
-          kind: OptionKind.colour,
-          defaultValue: '#7DD3FC',
-        ),
-      ],
-    ),
-    WidgetOption(
-      key: 'days',
-      label: 'Look ahead (days)',
-      kind: OptionKind.number,
-      defaultValue: 14,
-      help: 'Schedule view only.',
-    ),
-    WidgetOption(
-      key: 'maxEvents',
-      label: 'Most events to show',
-      kind: OptionKind.number,
-      defaultValue: 6,
-      help: 'Schedule view only.',
-    ),
-  ],
-  preview: const [
-    PreviewLine('Dentist', scale: 0.14, px: 16),
-    PreviewLine('Today 14:30', scale: 0.1, muted: true, px: 13),
-    PreviewLine('Bin day', scale: 0.14, px: 16),
-    PreviewLine('Tomorrow · all day', scale: 0.1, muted: true, px: 13),
-  ],
-  live: (config, data) {
-    final feeds = data.feeds;
-    if (feeds == null) return const [];
-    final urls = <String>[
-      for (final r in (config.options['sources'] as List?) ?? const [])
-        if (r is Map && '${r['url'] ?? ''}'.isNotEmpty) '${r['url']}',
-    ];
-    if (urls.isEmpty && '${config.options['url'] ?? ''}'.isNotEmpty) {
-      urls.add('${config.options['url']}');
-    }
-    if (urls.isEmpty) return const [];
-
-    final events = [for (final u in urls) ...feeds.calendar(u)]
-      ..sort((a, b) => a.start.compareTo(b.start));
-    final from = DateTime.now().subtract(const Duration(hours: 12));
-    final upcoming = events
-        .where((e) => e.start.isAfter(from))
-        .take(4)
-        .toList();
-    if (upcoming.isEmpty) return const [];
-    return [
-      for (final e in upcoming) ...[
-        PreviewLine(e.title, scale: 0.14, px: 16),
-        PreviewLine(_ScheduleView._when(e), scale: 0.1, muted: true, px: 13),
-      ],
-    ];
-  },
-  build: (context, w) => DashboardCalendarWidget(w: w),
-);

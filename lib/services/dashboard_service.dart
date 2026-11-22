@@ -1358,6 +1358,31 @@ class DashboardService extends ChangeNotifier {
       refused = await addons.install(ids.cast<String>());
     } else if (path == '/api/addons' && request.method == 'DELETE') {
       refused = await addons.remove(request.uri.queryParameters['id'] ?? '');
+    } else if (path == '/api/addons/libraries' && request.method == 'POST') {
+      // Another library to list. Naming one runs nothing: what is in it is
+      // installed only by asking for it, and code only with the panel's
+      // own switch on.
+      final Object? body;
+      try {
+        body = jsonDecode(await _body(request));
+      } on FormatException {
+        return _status(request, HttpStatus.badRequest);
+      }
+      final named = body is Map ? body['repo'] : null;
+      if (named is! String) return _status(request, HttpStatus.badRequest);
+      refused = await addons.checkLibrary(named.trim());
+      if (refused == null) {
+        settings.addonLibraries = [...settings.addonLibraries, named.trim()];
+        await _config.save();
+      }
+    } else if (path == '/api/addons/libraries' && request.method == 'DELETE') {
+      final named = (request.uri.queryParameters['repo'] ?? '').toLowerCase();
+      settings.addonLibraries = [
+        for (final r in settings.addonLibraries)
+          if (r.toLowerCase() != named) r,
+      ];
+      await _config.save();
+      refused = null;
     } else {
       return _status(request, HttpStatus.notFound);
     }

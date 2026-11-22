@@ -14,7 +14,7 @@ import '../screens/video_player_screen.dart';
 import '../services/kiosk_browser.dart';
 import '../services/kitchen.dart';
 import '../services/recipe.dart';
-import '../dashboard/widgets/parcels_widget.dart' show showParcel;
+import '../dashboard/widgets/parcels_view.dart' show showParcel;
 import '../services/local_file_media_source.dart';
 import '../services/parcels_service.dart';
 import '../services/share_inbox_service.dart';

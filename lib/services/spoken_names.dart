@@ -31,8 +31,9 @@ Future<VoiceAnswer?> askAssist(
     final fixed = known.correct(request(h));
     if (fixed == null || !tried.add(fixed)) continue;
     final reply = await ask(fixed);
-    if (reply != null && reply.done)
+    if (reply != null && reply.done) {
       return (heard: fixed, answer: reply.speech);
+    }
   }
   return refusal;
 }
