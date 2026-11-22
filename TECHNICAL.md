@@ -1246,7 +1246,7 @@ small control endpoint instead, **on the loopback address only**:
 | Request | Does |
 |---|---|
 | `GET /state` | which buttons would work: dashboard on, Locked Folder available, camera set up, notifications muted |
-| `POST /open/photos`, `/open/dashboard`, `/open/settings`, `/open/locked-folder`, `/open/deck` | opens that place, as the kiosk's own button would |
+| `POST /open/photos`, `/open/dashboard`, `/open/settings`, `/open/locked-folder` | opens that place, as the kiosk's own button would |
 | `POST /camera` | shows or hides the camera |
 | `POST /dnd?muted=true` | sets the notifications switch |
 | `POST /cook?url=https://…` | opens the recipe on that page to cook from — see [Recipes](#recipes) |

@@ -487,6 +487,14 @@
       "height": 3
     },
     {
+      "type": "streamerdeck",
+      "name": "StreamerDeck",
+      "description": "The keys of StreamerDeck, an app on your computer that is needed for this: the page you are on, and a tap for all of them full screen.",
+      "category": "Home lab",
+      "width": 3,
+      "height": 2
+    },
+    {
       "type": "sun_moon",
       "name": "Sun & moon",
       "description": "Sunrise and sunset, where the sun is now, how fast the days are changing, and the moon’s phase. Worked out on the panel from the place set in Settings → Weather.",

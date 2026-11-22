@@ -93,8 +93,9 @@ class ShareInboxService extends ChangeNotifier {
   LinkOutbox? outbox;
 
   /// StreamerDeck on a computer, connecting to drive the deck (`GET
-  /// /deck`): handed the request and whose token let it in. Null answers
-  /// nobody.
+  /// /deck`): handed the request and whose token let it in. The deck is an
+  /// add-on, StreamerDeck, which sets this once the app is up; null —
+  /// without it — answers nobody.
   Future<void> Function(HttpRequest request, String sender)? onDeck;
 
   /// How long a device's request for links is held open with nothing to

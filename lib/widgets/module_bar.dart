@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 import '../look.dart';
 import 'package:provider/provider.dart';
 
-import '../deck/deck_link.dart';
-import '../deck/deck_screen.dart';
 import '../screens/dashboard_screen.dart';
 import '../screens/locked_folder_screen.dart';
 import '../screens/pin_screen.dart';
@@ -111,7 +109,6 @@ class _ModuleBarState extends State<ModuleBar>
         ) !=
         null;
     final camera = context.watch<CameraService>();
-    final deck = context.watch<DeckLink?>();
 
     return Glass(
       strip: true,
@@ -157,16 +154,7 @@ class _ModuleBarState extends State<ModuleBar>
               colour: c,
               onPressed: () => openLockedFolder(context),
             ),
-          // StreamerDeck's keys, where the camera's switch was; the
-          // camera's again if there is no deck.
-          if (deck != null)
-            PillIconButton(
-              icon: Icons.apps_rounded,
-              tooltip: tr('modules.deck', 'Deck'),
-              colour: deck.connected ? accent : c,
-              onPressed: () => Navigator.of(context).push(DeckScreen.route()),
-            )
-          else if (camera.isConfigured)
+          if (camera.isConfigured)
             PillIconButton(
               icon: camera.isOpen
                   ? Icons.videocam_off_outlined
