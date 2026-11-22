@@ -252,10 +252,16 @@ case "$ACTION" in
       rm -rf "${ADDONS:?}/$id"
       mv "$d" "$ADDONS/$id"
     done
+    # Downloaded again: an update may fetch it once more.
+    # shellcheck disable=SC2086
+    python3 "$ROOT/scripts/addons.py" removed drop ${NAME//,/ } || true
     ;;
   addon-remove)
     [[ "$NAME" =~ ^[a-z][a-z0-9_]*$ ]] || fail checking "Unknown add-on."
     rm -rf "${ADDONS:?}/$NAME"
+    # Taken off by hand: an update leaves it off, even with a tile of its
+    # type still on the dashboard.
+    python3 "$ROOT/scripts/addons.py" removed add "$NAME" || true
     ;;
   rebuild) ;;
   *)

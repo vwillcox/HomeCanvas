@@ -122,6 +122,31 @@ class Fetching(unittest.TestCase):
             addons.REPO = was
         self.assertEqual(sorted(os.listdir(dest)), ["clock", "tide"])
 
+    def test_what_was_taken_off_by_hand_is_not_fetched_back(self):
+        cat = {"addons": [{"id": "history", "types": ["history"]},
+                          {"id": "clock", "types": ["clock"]}]}
+        dash = {"widgets": [{"type": "history"}, {"type": "clock"}]}
+        self.assertEqual(addons.wanted(cat, dash, {}, gone={"history"}), ["clock"])
+        # Nor the albums, taken off a panel on Immich.
+        cat["addons"].append({"id": "immich_albums", "types": ["immich_albums"]})
+        self.assertEqual(
+            addons.wanted(cat, {"widgets": [{"type": "clock"}]}, {"clock": {"types": ["clock"]}},
+                          connected=True, gone={"immich_albums"}), [])
+
+    def test_removed_is_noted_and_forgotten(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            was = addons.REMOVED
+            addons.REMOVED = os.path.join(d, "addons-removed.json")
+            try:
+                self.assertEqual(addons.removed(), set())
+                addons.note_removed(add=["history", "clock"])
+                self.assertEqual(addons.removed(), {"history", "clock"})
+                addons.note_removed(drop=["clock"])
+                self.assertEqual(addons.removed(), {"history"})
+            finally:
+                addons.REMOVED = was
+
     def test_a_panel_on_immich_keeps_its_albums(self):
         cat = {"addons": [{"id": "immich_albums", "types": ["immich_albums"]},
                           {"id": "clock", "types": ["clock"]}]}

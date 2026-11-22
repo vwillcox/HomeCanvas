@@ -5,6 +5,8 @@
     addons.py fetch --dest DIR ID…     download these, checked, into DIR
                                        (ID@owner/name for one from a library)
     addons.py ensure                   install what this panel's dashboard needs
+    addons.py removed add|drop ID…     note an add-on taken off by hand, or
+                                       downloaded again
 
 The catalogue is a repository of its own — vwillcox/HomeCanvas-Widgets —
 whose `catalogue` branch carries an index.json written by its own checks:
@@ -23,7 +25,10 @@ library is asked only for what the catalogue does not have.
 `ensure` is run before a build by install.sh and sync.sh. A panel whose
 dashboard was laid out when its widgets were built in keeps them: whatever
 its dashboard uses and does not have is fetched. A panel with no dashboard
-yet is given the starter set.
+yet is given the starter set. An add-on taken off on the Add-ons page is
+never fetched back by it, though a tile of its type may still be on the
+dashboard: it is noted in addons-removed.json beside the add-ons, until it is
+downloaded again.
 """
 
 import argparse
@@ -54,6 +59,8 @@ COMMIT = re.compile(r"^[0-9a-f]{40}$")
 PART = re.compile(r"^[a-z][a-z0-9_]*\.(dart|json)$")
 MAX_FILE = 512 * 1024
 MAX_INDEX = 4 * 1024 * 1024
+# Add-ons taken off by hand, which `ensure` leaves off.
+REMOVED = os.path.join(os.path.dirname(os.path.abspath(ADDONS)), "addons-removed.json")
 
 
 class Refused(Exception):
@@ -257,12 +264,32 @@ def installed():
     return out
 
 
+def removed():
+    """The ids of add-ons taken off by hand."""
+    try:
+        with open(REMOVED) as f:
+            ids = json.load(f)
+    except (OSError, ValueError):
+        return set()
+    return {i for i in ids if isinstance(i, str)} if isinstance(ids, list) else set()
+
+
+def note_removed(add=(), drop=()):
+    """[add] taken off by hand, [drop] wanted again."""
+    ids = (removed() | set(add)) - set(drop)
+    tmp = REMOVED + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(sorted(ids), f, indent=2)
+    os.replace(tmp, REMOVED)
+
+
 # The Photo albums: the kiosk's first screen until 2.0, an add-on since.
 ALBUMS = "immich_albums"
 
 
-def wanted(cat, dashboard, have, connected=False):
-    """The add-ons to fetch: what [dashboard] uses and [have] does not bring.
+def wanted(cat, dashboard, have, connected=False, gone=frozenset()):
+    """The add-ons to fetch: what [dashboard] uses and [have] does not bring,
+    and nothing that was taken off by hand ([gone]).
 
     A panel [connected] to Immich that has not yet been given its albums tile
     — the app adds it on its first start with them built in — is given the
@@ -287,7 +314,9 @@ def wanted(cat, dashboard, have, connected=False):
     return [
         a["id"]
         for a in cat["addons"]
-        if a["id"] not in have and missing.intersection(a["types"])
+        if a["id"] not in have
+        and a["id"] not in gone
+        and missing.intersection(a["types"])
     ]
 
 
@@ -300,7 +329,21 @@ def main():
     f.add_argument("--dest", required=True)
     f.add_argument("ids", nargs="+")
     sub.add_parser("ensure")
+    r = sub.add_parser("removed")
+    r.add_argument("how", choices=["add", "drop"])
+    r.add_argument("ids", nargs="+")
     args = p.parse_args()
+
+    if args.action == "removed":
+        ids = [i.partition("@")[0] for i in args.ids]
+        if not all(ID.match(i) for i in ids):
+            print("No name for an add-on.", file=sys.stderr)
+            return 1
+        if args.how == "add":
+            note_removed(add=ids)
+        else:
+            note_removed(drop=ids)
+        return 0
 
     try:
         if args.action == "ensure":
@@ -326,7 +369,7 @@ def main():
                         ]
                     c = config()
                     connected = bool(c.get("immichUrl")) and bool(c.get("apiKey"))
-                    ids = wanted(cat, c.get("dashboard"), have, connected)
+                    ids = wanted(cat, c.get("dashboard"), have, connected, removed())
                     if ids:
                         fetch(src, cat, ids, ADDONS)
                         place_described(ids)
