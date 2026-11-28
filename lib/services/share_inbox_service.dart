@@ -98,9 +98,16 @@ class ShareInboxService extends ChangeNotifier {
   /// without it — answers nobody.
   Future<void> Function(HttpRequest request, String sender)? onDeck;
 
-  /// How long a device's request for links is held open with nothing to
-  /// send: under the minute a reverse proxy usually lets one sit idle.
-  static const outboxWait = Duration(seconds: 50);
+  /// The longest a device's request for links is held open with nothing to
+  /// send; each device asks for its own, up to this. The phone app asks for
+  /// all of it — every answer wakes the phone, and once in five minutes
+  /// sips its battery where once in 50 seconds did not — and drops to
+  /// [proxyWait] if a reverse proxy cuts it short. The computer receiver
+  /// asks for [proxyWait].
+  static const outboxWait = Duration(minutes: 5);
+
+  /// Under the minute a reverse proxy usually lets a request sit idle.
+  static const proxyWait = Duration(seconds: 50);
 
   ShareInboxSettings get _settings => _configService.config.shareInbox;
 

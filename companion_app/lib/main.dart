@@ -161,11 +161,9 @@ class _HomeScreenState extends State<HomeScreen> {
           _deviceKey = key;
         });
       }
-      // Stopped by the system, or by an update: started again.
-      if (settings.isConfigured &&
-          !await FlutterForegroundTask.isRunningService) {
-        await LinkReceiver.restart();
-      }
+      // Stopped by the system, or still running as an older version of the
+      // app started it: started again.
+      if (settings.isConfigured) await LinkReceiver.ensureRunning();
     }
 
     // Shares that arrive while the app is already running.

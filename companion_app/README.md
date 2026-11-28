@@ -43,6 +43,16 @@ you can hide by turning off its "Collecting links" category in Android's
 settings for the app. Android asks to leave it out of battery optimisation,
 which it needs to keep listening once the phone has been still a while.
 
+It is light on the battery. The phone sleeps while it waits: the panel
+answers once every five minutes, or the moment a link is sent, and the
+answer wakes it. A panel on your home network is only asked over Wi-Fi (or
+a VPN), never over mobile data; away from home the app asks nothing, links
+wait on the panel for up to a week, and arrive when you are back. The
+notification says "Links wait on the panel" while you are away.
+
+If a reverse proxy sits in front of the panel and gives up on a request
+held five minutes, the app notices and asks for under a minute instead.
+
 Links are sealed on the panel to a key only this phone holds. The main screen
 shows its id, and the panel lists the same one in Settings → Share Inbox.
 

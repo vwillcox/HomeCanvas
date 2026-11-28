@@ -53,8 +53,10 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 # Bound into the key and the seal on the panel: LinkOutbox.label.
 LABEL = b"homecanvas/link/v1"
 
-# How long the panel is asked to hold a request with nothing to send. It
-# holds one no longer than 50 seconds whatever is asked.
+# How long the panel is asked to hold a request with nothing to send: under
+# the minute a reverse proxy usually lets one sit idle. The panel would hold
+# one for up to five minutes, which the phone app uses to save its battery;
+# a computer has none to save, and the panel tells it is on by its asking.
 WAIT = 50
 
 HOME = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
