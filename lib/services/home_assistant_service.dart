@@ -500,10 +500,13 @@ class HomeAssistantService extends ChangeNotifier {
     }
   }
 
-  /// The kinds of thing that are switched by name, out loud.
+  /// The kinds of thing a misheard name may be put right to. Only those
+  /// where on and off are harmless: Home Assistant turns a cover "on" by
+  /// opening it and a lock "off" by unlocking it, and a script or scene
+  /// may do either — "turn on the garage heater", made out as "garage
+  /// door", opened the garage. Said clearly, they still reach Assist.
   static const _switchedByName = {
-    'light', 'switch', 'fan', 'cover', 'media_player', 'climate', 'lock', //
-    'scene', 'script', 'input_boolean', 'vacuum', 'humidifier',
+    'light', 'switch', 'fan', 'media_player', 'input_boolean', 'humidifier',
   };
 
   /// What the devices that can be switched are called: for putting right

@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:home_canvas/services/config_service.dart';
+
 import 'package:home_canvas/services/home_assistant_service.dart';
 import 'package:home_canvas/services/spoken_names.dart';
 
@@ -55,6 +57,41 @@ void main() {
       ]) {
         expect(_house.correct(heard), isNull, reason: heard);
       }
+    });
+
+    test('never to more than was said', () {
+      final house = SpokenNames(['Front door lock', 'Hallway', 'Kettle']);
+      expect(house.correct('turn off the front door'), isNull);
+      // As said, it is still put right.
+      expect(house.correct('turn off the front door lok'), isNotNull);
+    });
+
+    test('never to a lock, a door, or a script', () {
+      final ha = HomeAssistantService(ConfigService())
+        ..debugSet(const [
+          HaEntity(
+            id: 'light.lounge_1',
+            state: 'on',
+            attributes: {'friendly_name': 'Lounge 1'},
+          ),
+          HaEntity(
+            id: 'lock.front_door',
+            state: 'locked',
+            attributes: {'friendly_name': 'Front door'},
+          ),
+          HaEntity(
+            id: 'cover.garage_door',
+            state: 'closed',
+            attributes: {'friendly_name': 'Garage door'},
+          ),
+          HaEntity(
+            id: 'script.away',
+            state: 'off',
+            attributes: {'friendly_name': 'Away'},
+          ),
+        ]);
+      expect(ha.spokenNames, ['Lounge 1']);
+      ha.dispose();
     });
 
     test('a name it has already is left as it is', () {

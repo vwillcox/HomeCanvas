@@ -136,6 +136,12 @@ class SpokenNames {
     // said, not as made out: "lounge won" is worth asking again as "lounge
     // one".
     if (name == null || name == rest.join(' ')) return null;
+    // Never more than was said: "the front door" is not "front door lock",
+    // nor "the garage" the garage door.
+    final named = name.split(' ');
+    if (named.length > heard.length && heard.every(named.contains)) {
+      return null;
+    }
     return 'turn $onOff $name${lights && _areas.contains(name) ? ' lights' : ''}';
   }
 

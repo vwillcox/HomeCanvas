@@ -126,7 +126,13 @@ void main() {
       tvReady: () => false,
       tv: (on) async => TvSwitch.notSetUp,
       assistReady: () => true,
-      assist: (text) async => 'Done',
+      assist: (text) async {
+        // Slower than a service call, as Assist is: what is asked after it
+        // must still land after it.
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+        did.add('assist: $text');
+        return 'Done';
+      },
       stopPlaying: () async {},
       screenOff: () async {},
       say: said.add,
@@ -184,6 +190,21 @@ void main() {
       await settle();
       expect(did.where((d) => d.startsWith('homeassistant.')), isEmpty);
       expect(said, ['Leaving the heater as it is.']);
+    });
+
+    test('all the lights off, and one lamp set: the lamp last', () async {
+      control().runRoutine(
+        HomeRoutine(
+          name: 'Bedtime',
+          steps: {RoutineStep.lightsOff},
+          lights: [
+            RoutineLights(targets: ['light.bedside'], brightness: 10),
+          ],
+        ),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(did.first, 'assist: turn off all the lights');
+      expect(did.last, startsWith('light.turn_on {entity_id: [light.bedside]'));
     });
 
     test('nothing else on: nothing put off', () async {

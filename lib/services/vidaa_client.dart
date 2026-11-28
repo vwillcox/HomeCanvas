@@ -228,7 +228,31 @@ class VidaaClient {
 
   /// Connect with mutual TLS. Uses [accessToken] as password when available,
   /// otherwise the freshly generated dynamic password (needed for pairing).
-  Future<bool> connect({Duration timeout = const Duration(seconds: 10)}) async {
+  ///
+  /// Run in an error zone of its own, which the socket stays in for the life
+  /// of the session. When the set drops the connection, mqtt_client handles
+  /// the error on the socket's stream but never listens to its `done`, which
+  /// then fails with the same error, unhandled: "Connection reset by peer"
+  /// or "Broken pipe" in the log, each time the TV slept. Caught here, where
+  /// the disconnect it comes with is already being dealt with.
+  Future<bool> connect({Duration timeout = const Duration(seconds: 10)}) {
+    final result = Completer<bool>();
+    runZonedGuarded(
+      () async {
+        // Only a value comes out: an error would not cross into the
+        // caller's zone, and the caller would wait for ever.
+        final ok = await _connect(timeout);
+        if (!result.isCompleted) result.complete(ok);
+      },
+      (e, _) {
+        _log('socket: $e');
+        if (!result.isCompleted) result.complete(false);
+      },
+    );
+    return result.future;
+  }
+
+  Future<bool> _connect(Duration timeout) async {
     final creds = generateCredentials(uuid, authMethod: authMethod);
     _clientId = creds.clientId;
 
@@ -241,18 +265,44 @@ class VidaaClient {
       ctx.usePrivateKey(keyPath!);
     }
 
-    final c = MqttServerClient.withPort(host, _clientId, port)
-      ..secure = true
-      ..securityContext = ctx
-      ..onBadCertificate =
-          ((Object cert) => true) // TV cert is self-signed
-      ..keepAlivePeriod = 30
-      // Not the library's own reconnect: it offers the same password again,
-      // and once the access token has expired the set refuses it forever —
-      // the client sat in "connecting" for days, every key dropped. The
-      // owner reconnects instead, through the refresh token.
-      ..autoReconnect = false
-      ..logging(on: false);
+    // Once, and within the caller's wait: the library's own three tries,
+    // five seconds apart, outlasted it, and went on opening sockets with
+    // the same client id after the panel had given up — which could take
+    // over the live session.
+    final c =
+        MqttServerClient.withPort(
+            host,
+            _clientId,
+            port,
+            maxConnectionAttempts: 1,
+          )
+          // The network connection, TLS and all, in under half the wait;
+          // the set's answer to the MQTT connect gets the rest. Never
+          // socketTimeout: setting it cuts that answer's wait to 10ms, so
+          // the one try always failed.
+          ..connectionTimeout = (timeout.inMilliseconds * 0.4).round().clamp(
+            1000,
+            30000,
+          )
+          ..connectTimeoutPeriod = (timeout.inMilliseconds * 0.5).round().clamp(
+            1000,
+            30000,
+          )
+          ..secure = true
+          ..securityContext = ctx
+          ..onBadCertificate =
+              ((Object cert) => true) // TV cert is self-signed
+          ..keepAlivePeriod = 30
+          // A set gone from the network without a word — unplugged, or out of
+          // Wi-Fi — is let go after a ping unanswered this long, rather than
+          // seeming connected for minutes while every key went nowhere.
+          ..disconnectOnNoResponsePeriod = 15
+          // Not the library's own reconnect: it offers the same password again,
+          // and once the access token has expired the set refuses it forever —
+          // the client sat in "connecting" for days, every key dropped. The
+          // owner reconnects instead, through the refresh token.
+          ..autoReconnect = false
+          ..logging(on: false);
 
     c.onConnected = () => _log('MQTT connected');
     c.onDisconnected = () {

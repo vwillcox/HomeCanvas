@@ -174,6 +174,23 @@ void main() {
       expect(power().find('Omarchy')?.name, 'omarchy');
       expect(power().find()?.name, 'omarchy');
     });
+
+    test('a name not found is none, not another computer', () async {
+      await ask();
+      // Heard as the voice would say it: no hyphen.
+      await outbox.poll(
+        sender: 'PC',
+        publicKey: List<int>.filled(32, 7),
+        name: 'vince-laptop',
+        kind: 'computer',
+      );
+      expect(power().find('vince laptop')?.name, 'vince-laptop');
+      expect(power().find('kids laptop'), isNull);
+      expect(
+        await power().setPower(false, named: 'kids laptop'),
+        PcSwitch.none,
+      );
+    });
   });
 
   group('the Wake-on-LAN packet, across the router', () {
@@ -214,6 +231,20 @@ void main() {
       expect(pc('hey canvas p c on'), (true, null));
       expect(pc('hey canvas turn the omarchy pc off'), (false, 'omarchy'));
       expect(pc('hey canvas turn omarchy on'), (true, 'omarchy'));
+    });
+
+    test('of two, the one whose name was said', () {
+      const two = ['vince-laptop', 'kids-laptop'];
+      expect(pc('hey canvas turn off the kids laptop', computers: two), (
+        false,
+        'kids laptop',
+      ));
+      expect(pc('hey canvas turn the vince laptop off', computers: two), (
+        false,
+        'vince laptop',
+      ));
+      // Either of them: neither, rather than a guess.
+      expect(pc('hey canvas turn off the laptop', computers: two), isNull);
     });
 
     test('a scene with "PC" in its name is Home Assistant’s still', () {

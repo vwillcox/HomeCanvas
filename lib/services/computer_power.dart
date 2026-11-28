@@ -1,4 +1,5 @@
 import 'link_outbox.dart';
+import 'voice_commands.dart' show VoiceCommands;
 import 'wake_on_lan.dart';
 
 /// What became of [ComputerPower.setPower].
@@ -59,12 +60,16 @@ class ComputerPower {
 
   /// The computer [named], or with no name the one most recently heard
   /// from — [LinkOutbox.devices] has them that way round.
+  ///
+  /// A name is matched as the voice hears it, "vince-laptop" as "vince
+  /// laptop", and one that matches nothing is none: it once fell back to
+  /// the computer heard from last, so the wrong one was switched off.
   OutboxDevice? find([String? named]) {
     final all = computers;
     if (named == null) return all.firstOrNull;
-    final want = named.toLowerCase();
-    return all.where((c) => c.name.toLowerCase() == want).firstOrNull ??
-        all.firstOrNull;
+    String key(String name) => VoiceCommands.words(name).join(' ');
+    final want = key(named);
+    return all.where((c) => key(c.name) == want).firstOrNull;
   }
 
   /// Switches [named] — or the computer, with one — on or off.

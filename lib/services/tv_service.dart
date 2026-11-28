@@ -568,21 +568,55 @@ class TvService extends ChangeNotifier {
   Future<TvSwitch> setPower(bool on) async {
     if (!settings.isConfigured) return TvSwitch.notSetUp;
     var woken = false;
-    if (!_sessionUp) {
-      if (on && settings.mac.isNotEmpty) {
+    Future<void> wake() async {
+      if (on && !woken && settings.mac.isNotEmpty) {
         woken = await WakeOnLan.send(settings.mac, host);
       }
+    }
+
+    if (!_sessionUp) {
+      await wake();
       await connect();
     }
     if (conn == ConnState.needsPairing) return TvSwitch.needsPairing;
     if (!_sessionUp) return woken ? TvSwitch.woken : TvSwitch.unreachable;
     // Said by the set as each session starts, so it is seldom long.
     await _until(() => state.powerKnown, const Duration(seconds: 3));
-    // Already so — or brought so just now by the packet: either way, no key,
-    // which would only switch it back.
-    if (state.powerKnown && state.powerOn == on) return TvSwitch.already;
+    switch (powerStep(
+      on,
+      isOn: state.powerKnown ? state.powerOn : null,
+      canWake: settings.mac.isNotEmpty,
+    )) {
+      case PowerStep.already:
+        return TvSwitch.already;
+      case PowerStep.leave:
+        return TvSwitch.unknown;
+      case PowerStep.wake:
+        await wake();
+        if (woken) return TvSwitch.woken;
+      case PowerStep.key:
+    }
     _client?.sendKey('KEY_POWER');
     return TvSwitch.done;
+  }
+
+  /// What to do, with a session up, to switch the set [on] or off, when it
+  /// is on or not ([isOn], null when it would not say).
+  ///
+  /// Already so — or brought so just now by the packet — no key, which
+  /// would only switch it back. Not known, the key is never pressed for
+  /// off: it toggles, and pressed blind it may switch on, at bedtime, a set
+  /// in standby. On is the packet's to do, where there is one, sent only
+  /// then: with the power known it could wake the set as the key went, and
+  /// the key switch it straight back off.
+  @visibleForTesting
+  static PowerStep powerStep(bool on, {bool? isOn, required bool canWake}) {
+    if (isOn == on) return PowerStep.already;
+    if (isOn == null) {
+      if (!on) return PowerStep.leave;
+      if (canWake) return PowerStep.wake;
+    }
+    return PowerStep.key;
   }
 
   /// Connected, and the session not gone underneath without a word.
@@ -629,6 +663,9 @@ class TvService extends ChangeNotifier {
   }
 }
 
+/// See [TvService.powerStep].
+enum PowerStep { already, leave, wake, key }
+
 /// What became of [TvService.setPower].
 enum TvSwitch {
   /// The power key was sent.
@@ -643,6 +680,10 @@ enum TvSwitch {
 
   /// It answered nothing, and there was no other way to reach it.
   unreachable,
+
+  /// It answers, but would not say whether it is on, so the power key —
+  /// which toggles — was not pressed.
+  unknown,
 
   /// It answers, but this panel is not paired with it yet.
   needsPairing,

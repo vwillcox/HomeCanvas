@@ -117,6 +117,9 @@ void main() {
         'hey canvas turn lounge one off',
         'hey canvas turn the lamp on',
         'hey canvas turn it off',
+        // A floor is some of the lights, not all of them.
+        'hey canvas turn off the lights upstairs',
+        'hey canvas turn the downstairs lights off',
       ]) {
         expect(_panel().resolve(said), isNull, reason: said);
       }

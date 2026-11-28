@@ -204,23 +204,30 @@ class HomeControl {
     final lightsOff = steps.contains(RoutineStep.lightsOff);
     final artMatrixOn = steps.contains(RoutineStep.artMatrixOn);
     final artMatrixOff = steps.contains(RoutineStep.artMatrixOff);
-    final problems = await Future.wait([
+    // The house's lights one after another, while the TV and the Art Matrix
+    // go at once: all of them on or off first, then what is asked, then the
+    // lights set. "The lights off" with "the bedside lamp at 10%" leaves
+    // the lamp on; together, Assist's "all off" landed after it and put it
+    // out. In the order given too, a scene then a light in it.
+    Future<List<String?>> house() async => [
+      if ((lightsOn || lightsOff) && assistReady()) await _lights(!lightsOff),
+      if (r.ask.isNotEmpty && assistReady()) await _asks(r.ask),
+      if ((r.lights.isNotEmpty || r.otherLightsOff) && assistReady())
+        await _setLights(r),
+    ];
+    final others = Future.wait([
       // Off, if both are ticked: the safer of the two to have done.
       if ((tvOn || tvOff) && tvReady())
         // A set that cannot be reached when it is to go off very likely is
         // off already; nothing to say about it at bedtime.
         _tv(!tvOff, quietIfGone: tvOff),
-      if ((lightsOn || lightsOff) && assistReady()) _lights(!lightsOff),
       // As the TV: off if both, and one not answering at bedtime is very
       // likely unplugged, which is off enough.
       if ((artMatrixOn || artMatrixOff) && artMatrixReady())
         _artMatrix(() => artMatrix(!artMatrixOff), quietIfGone: artMatrixOff),
-      // One after another, in the order given: a scene and then a light
-      // in it would otherwise race.
-      if (r.ask.isNotEmpty && assistReady()) _asks(r.ask),
-      if ((r.lights.isNotEmpty || r.otherLightsOff) && assistReady())
-        _setLights(r),
     ]);
+    final lit = house();
+    final problems = [...await others, ...await lit];
     for (final p in problems.nonNulls) {
       say(p);
     }
@@ -318,6 +325,8 @@ class HomeControl {
       TvSwitch.done || TvSwitch.already || TvSwitch.woken => null,
       TvSwitch.unreachable when quietIfGone => null,
       TvSwitch.unreachable => "The TV isn't answering.",
+      TvSwitch.unknown =>
+        "The TV wouldn't say whether it was on, so I left it.",
       TvSwitch.needsPairing =>
         'The TV needs pairing again: in Settings, under TV.',
       TvSwitch.notSetUp => null,

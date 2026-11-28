@@ -541,9 +541,13 @@ class VoiceCommands {
 
   /// What may come with them in a switching, besides the asking and the
   /// filler: "power off the TV", "shut all the lights off in the house".
+  ///
+  /// Not "upstairs" or "downstairs": "the lights upstairs" are some of them,
+  /// and Home Assistant knows which floor is which. Taken as all of them, as
+  /// they once were, they switched off every light in the house.
   static const _switchLoose = {
     'all', 'every', 'both', 'power', 'shut', 'in', 'house', 'everywhere', //
-    'downstairs', 'upstairs', 'whole', 'home', 'them', 'it',
+    'whole', 'home', 'them', 'it',
   };
 
   /// "Turn the TV off", "lights on", "switch off the telly and the lights":
@@ -567,7 +571,7 @@ class VoiceCommands {
     final named = {
       for (final c in computers) words(c).join(' '): words(c).toSet(),
     };
-    String? computer;
+    final nameWords = <String>{};
     var saidComputer = false;
     final on = said.contains('on');
     // "Lights out", "kill the lights".
@@ -584,16 +588,34 @@ class VoiceCommands {
         saidComputer = true;
       } else if (_artMatrixWords.contains(w)) {
         things.add(HomeThing.artMatrix);
-      } else if (named.entries.where((e) => e.value.contains(w)).firstOrNull
-          case final MapEntry<String, Set<String>> e) {
+      } else if (named.values.any((name) => name.contains(w))) {
         things.add(HomeThing.computer);
-        computer = e.key;
+        nameWords.add(w);
       } else if (!const {'on', 'off', 'out', 'kill'}.contains(w) &&
           !_asking.contains(w) &&
           !_filler.contains(w) &&
           !_switchLoose.contains(w)) {
         return null;
       }
+    }
+    // The computer the most of whose name was said: "the kids laptop" is
+    // the kids', not whichever laptop's name came first. Two as good — "the
+    // laptop", with two — is neither, rather than a guess at one.
+    String? computer;
+    if (nameWords.isNotEmpty) {
+      var best = 0;
+      var tied = false;
+      for (final MapEntry(:key, :value) in named.entries) {
+        final heard = value.intersection(nameWords).length;
+        if (heard > best) {
+          best = heard;
+          computer = key;
+          tied = false;
+        } else if (heard == best) {
+          tied = true;
+        }
+      }
+      if (tied) return null;
     }
     // A computer's name with the lights or the TV, and no "PC": a name like
     // any other — "the office lights" — for Home Assistant.
