@@ -141,6 +141,16 @@ run() {
 
 # ---- get the code ------------------------------------------------------------
 
+# Updates the copy in $1 to the latest version. The registry of widgets built
+# in is written again before every build, so a copy that has been built has
+# its own version of it — and git will not pull over that once an update
+# changes the file (as 2.0 does for every 1.x panel). It is put back as it
+# came first: the build writes it again anyway.
+pull_latest() {
+  git -C "$1" checkout -q -- lib/dashboard/widgets/custom/custom_registry.dart 2>/dev/null || true
+  git -C "$1" pull --ff-only "${@:2}"
+}
+
 # Arrived through curl rather than from a copy of the code? Fetch the code,
 # then carry on from the copy's own installer, so every helper it uses is the
 # version that came with it.
@@ -167,7 +177,7 @@ if [ -z "$SELF_DIR" ] || [ ! -f "$SELF_DIR/pubspec.yaml" ] ||
   fi
   if [ -d "$APP_DIR/.git" ]; then
     echo "  Updating the copy in $APP_DIR…"
-    git -C "$APP_DIR" pull --ff-only -q || die "Couldn't update $APP_DIR — local changes in the way?"
+    pull_latest "$APP_DIR" -q || die "Couldn't update $APP_DIR — local changes in the way?"
   elif grep -qs '^name: home_canvas' "$APP_DIR/pubspec.yaml" && [ -f "$APP_DIR/install.sh" ]; then
     # Copied here rather than downloaded (scripts/sync.sh does that): it
     # can't fetch updates itself, so carry on with the copy as it is.
@@ -374,7 +384,7 @@ if [ -x "$BINARY" ] && [ -f "$UNIT" ]; then
     step() { echo; echo "${B}${C}$*${N}"; }
     step "Updating"
     if [ -d "$APP_DIR/.git" ]; then
-      run "Fetching the latest version" git -C "$APP_DIR" pull --ff-only || die "Couldn't update — local changes in $APP_DIR?"
+      run "Fetching the latest version" pull_latest "$APP_DIR" || die "Couldn't update — local changes in $APP_DIR?"
     else
       warn "This copy was put here from another computer, not downloaded, so it"
       warn "can't fetch updates itself — send the new version the same way."

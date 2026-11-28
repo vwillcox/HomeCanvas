@@ -48,6 +48,9 @@ generate() {
   local i=0 imports="" entries="" addons=""
   # Add-ons written in Dart: "id<TAB>entry" for each, as its addon.json
   # says. One described in JSON is not built in; the app reads it as it is.
+  # addons.py says which, because it knows where each came from: one in
+  # Dart from a third-party library is built in only while the panel's
+  # "Widgets written in Dart" switch is on, however it got into the folder.
   while IFS=$'\t' read -r id entry; do
     [ -n "$id" ] || continue
     mkdir -p "$DEST/addons/$id"
@@ -60,23 +63,7 @@ generate() {
       mkdir -p "$ROOT/test/addons/$id"
       cp -r "$ADDONS/$id/test/." "$ROOT/test/addons/$id/"
     fi
-  done < <(ADDONS="$ADDONS" python3 - <<'PY'
-import json, os, re
-root = os.environ["ADDONS"]
-name = re.compile(r"^[a-z][a-z0-9_]{1,39}$")
-part = re.compile(r"^[a-z][a-z0-9_]*\.dart$")
-for id in sorted(os.listdir(root)) if os.path.isdir(root) else []:
-    try:
-        with open(os.path.join(root, id, "addon.json")) as f:
-            m = json.load(f)
-    except (OSError, ValueError):
-        continue
-    entry = m.get("entry", "")
-    if (m.get("kind") == "dart" and name.match(id) and part.match(entry)
-            and os.path.isfile(os.path.join(root, id, entry))):
-        print(f"{id}\t{entry}")
-PY
-  )
+  done < <(HOMECANVAS_ADDONS="$ADDONS" python3 "$ROOT/scripts/addons.py" dart)
   if [ "${HOMECANVAS_ADDON_TESTS:-}" = 1 ] && [ -d "$ADDONS/../tests" ]; then
     mkdir -p "$ROOT/test/addons"
     cp -r "$ADDONS/../tests/." "$ROOT/test/addons/"

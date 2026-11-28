@@ -7,6 +7,8 @@
     addons.py ensure                   install what this panel's dashboard needs
     addons.py removed add|drop ID…     note an add-on taken off by hand, or
                                        downloaded again
+    addons.py dart                     the add-ons in Dart to build in, a line
+                                       each: id<TAB>entry
 
 The catalogue is a repository of its own — vwillcox/HomeCanvas-Widgets —
 whose `catalogue` branch carries an index.json written by its own checks:
@@ -20,7 +22,11 @@ Either is `owner/name` on GitHub, or a folder — a checkout of the catalogue.
 Beside the catalogue a panel may read third-party libraries, listed as
 "addonLibraries" under "dashboard": repositories laid out the same way,
 which nobody but their owners has checked. The catalogue comes first; a
-library is asked only for what the catalogue does not have.
+library is asked only for what the catalogue does not have at all — not for
+a widget type or theme it has, even one taken off this panel by hand. An
+add-on in Dart from a library is code nobody has checked, so it is fetched,
+and built in, only while the panel's own "Widgets written in Dart" switch is
+on: "codeWidgets" under "dashboard".
 
 `ensure` is run before a build by install.sh and sync.sh. A panel whose
 dashboard was laid out when its widgets were built in keeps them: whatever
@@ -54,6 +60,9 @@ ADDONS = os.environ.get("HOMECANVAS_ADDONS") or os.path.join(
 )
 
 ID = re.compile(r"^[a-z][a-z0-9_]{1,39}$")
+# A widget type an add-on brings: the catalogue's own rule, which lets the
+# app's own camel-case names through ("sevenFm").
+TYPE = re.compile(r"^[a-z][A-Za-z0-9_]{1,39}$")
 THEME_ID = re.compile(r"^[a-z][a-z0-9-]{1,39}$")
 # The theme the app ships; every other is an add-on.
 BUILT_IN_THEMES = {"glass"}
@@ -62,6 +71,7 @@ REPO = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*/[A-Za-z0-9_][A-Za-z0-9_.-]*$")
 COMMIT = re.compile(r"^[0-9a-f]{40}$")
 # A file of an add-on: Dart beside its addon.json, or the one JSON widget.
 PART = re.compile(r"^[a-z][a-z0-9_]*\.(dart|json)$")
+DART_FILE = re.compile(r"^[a-z][a-z0-9_]*\.dart$")
 MAX_FILE = 512 * 1024
 MAX_INDEX = 4 * 1024 * 1024
 # Add-ons taken off by hand, which `ensure` leaves off.
@@ -96,11 +106,30 @@ def libraries(main):
     """The libraries this panel reads beside the catalogue [main]."""
     dash = config().get("dashboard")
     named = dash.get("addonLibraries") if isinstance(dash, dict) else None
-    out = []
+    out, seen = [], {main.lower()}
+    # GitHub does not mind the case of a name, so neither does this: the
+    # catalogue spelt otherwise is still the catalogue, as the editor has it.
     for r in named if isinstance(named, list) else []:
-        if isinstance(r, str) and REPO.match(r) and r != main and r not in out:
+        if isinstance(r, str) and REPO.match(r) and r.lower() not in seen:
+            seen.add(r.lower())
             out.append(r)
     return out[:8]
+
+
+def code_allowed(c):
+    """Whether config [c] has the panel's "Widgets written in Dart" switch on."""
+    dash = c.get("dashboard")
+    return isinstance(dash, dict) and dash.get("codeWidgets") is True
+
+
+def names(m, key, pattern):
+    """The entries of m[key] that [pattern] allows: the types or themes an
+    add-on brings, as an index or an addon.json says. Anything else in the
+    list is not a name, and is not taken for one."""
+    listed = m.get(key) if isinstance(m, dict) else None
+    if not isinstance(listed, list):
+        return []
+    return [t for t in listed if isinstance(t, str) and pattern.match(t)]
 
 
 def get(url, most):
@@ -171,12 +200,21 @@ def check_index(j):
             continue
         if a.get("kind") not in ("dart", "json", "theme"):
             continue
+        # What it brings is all names, or the add-on is not taken: one bad
+        # entry from a library is its own loss, never a failed update.
+        types, themes = a.get("types"), a.get("themes")
+        if not isinstance(types, list) or len(names(a, "types", TYPE)) != len(types):
+            continue
+        if themes is not None and not (
+                isinstance(themes, list)
+                and len(names(a, "themes", THEME_ID)) == len(themes)):
+            continue
         if a.get("kind") == "theme":
-            themes = a.get("themes")
-            if not (isinstance(themes, list) and len(themes) == 1
-                    and THEME_ID.match(str(themes[0]))
-                    and themes[0] not in BUILT_IN_THEMES):
+            if not (len(themes or []) == 1 and themes[0] not in BUILT_IN_THEMES):
                 continue
+        elif themes:
+            # Only a theme brings a theme, as the catalogue's checks have it.
+            continue
         files = a.get("files")
         if not isinstance(files, list) or not files:
             continue
@@ -186,8 +224,6 @@ def check_index(j):
             and re.fullmatch(r"[0-9a-f]{64}", str(f.get("sha256", "")))
             for f in files
         ):
-            continue
-        if not isinstance(a.get("types"), list):
             continue
         good.append(a)
     return {"commit": commit, "addons": good}
@@ -221,7 +257,11 @@ def fetch(src, cat, ids, dest):
                 )
             with open(os.path.join(part, f["path"]), "wb") as out:
                 out.write(data)
-        manifest = {k: v for k, v in a.items() if k != "files"}
+        # Where it came from is noted here, never taken from the index: a
+        # library's entry could otherwise call itself the catalogue's. One
+        # with no "repo" came from a checkout of the catalogue: a library is
+        # always owner/name.
+        manifest = {k: v for k, v in a.items() if k not in ("files", "repo")}
         manifest["commit"] = cat["commit"]
         if not os.path.isdir(src):
             manifest["repo"] = src
@@ -316,7 +356,8 @@ def theme_files():
     return {f[:-5] for f in os.listdir(THEMES) if f.endswith(".json")}
 
 
-def wanted(cat, dashboard, have, connected=False, gone=frozenset(), themes=frozenset()):
+def wanted(cat, dashboard, have, connected=False, gone=frozenset(), themes=frozenset(),
+           starters=True):
     """The add-ons to fetch: what [dashboard] uses and [have] does not bring,
     and nothing that was taken off by hand ([gone]).
 
@@ -326,19 +367,24 @@ def wanted(cat, dashboard, have, connected=False, gone=frozenset(), themes=froze
     A panel [connected] to Immich that has not yet been given its albums tile
     — the app adds it on its first start with them built in — is given the
     albums too: before 2.0 it opened on them.
+
+    A panel with nothing yet is given the [cat]'s starter set, if it has
+    [starters]: the catalogue does, a library never.
     """
     widgets = dashboard.get("widgets") if isinstance(dashboard, dict) else None
     used = {
         w.get("type")
         for w in (widgets if isinstance(widgets, list) else [])
-        if isinstance(w, dict)
+        if isinstance(w, dict) and isinstance(w.get("type"), str)
     }
     brought = set()
     for m in have.values():
-        brought.update(m.get("types") or [])
+        brought.update(names(m, "types", TYPE))
     if not used and not have:
+        if not starters:
+            return []
         return [a["id"] for a in cat["addons"] if a.get("starter") is True]
-    missing = {t for t in used if isinstance(t, str)} - brought
+    missing = used - brought
     offered = isinstance(dashboard, dict) and dashboard.get("albumsOffered") is True
     if connected and not offered:
         missing.add(ALBUMS)
@@ -357,6 +403,118 @@ def wanted(cat, dashboard, have, connected=False, gone=frozenset(), themes=froze
     ]
 
 
+def brings(a):
+    """What an add-on in an index stands for, to tell whether another has it
+    already: its name, its widget types and its themes."""
+    return ({("id", a["id"])} | {("type", t) for t in a["types"]}
+            | {("theme", t) for t in a.get("themes") or []})
+
+
+def catalogue():
+    """The catalogue this panel reads, to tell what came from it. The app's
+    own when the one named cannot be read, as the editor does."""
+    try:
+        return source()
+    except Refused:
+        return DEFAULT_REPO
+
+
+def from_catalogue(m, main):
+    """Whether the add-on with addon.json [m] came from the catalogue [main],
+    rather than a library: by the repository fetch noted, and one with none
+    noted came from a checkout of the catalogue (see fetch)."""
+    repo = m.get("repo")
+    return not isinstance(repo, str) or repo.lower() == main.lower()
+
+
+def dart_addons():
+    """The add-ons in Dart to build into the app: [(id, entry)].
+
+    One from a library is code that nobody has checked, so it is built in
+    only while the panel's own "Widgets written in Dart" switch is on —
+    whatever put it in the add-ons folder. Off, it is left out until the
+    switch is on again, and said so.
+    """
+    main, allowed = catalogue(), code_allowed(config())
+    out = []
+    for id, m in installed().items():
+        entry = m.get("entry")
+        if not (m.get("kind") == "dart" and ID.match(id)
+                and isinstance(entry, str) and DART_FILE.match(entry)
+                and os.path.isfile(os.path.join(ADDONS, id, entry))):
+            continue
+        if not allowed and not from_catalogue(m, main):
+            print(f"Add-on {id} is from {m['repo']}, which nobody has checked: it is "
+                  "built in only while \"Widgets written in Dart\" is on.",
+                  file=sys.stderr)
+            continue
+        out.append((id, entry))
+    return out
+
+
+def ensure(arg=None):
+    """Installs what this panel's dashboard needs: from the catalogue, then
+    from each library what the catalogue has no add-on for. Never fails the
+    build it is run before: a source that cannot be read, or that goes wrong
+    in a way nobody foresaw, costs only what would have come from it."""
+    # A panel that cannot reach the catalogue is still built: with what it
+    # has, and the rest offered in the editor afterwards.
+    try:
+        main_src = source(arg)
+    except Refused as e:
+        print(f"Add-ons were not fetched: {e}", file=sys.stderr)
+        return 0
+    # What the catalogue, and each library read before, has: a library is
+    # given only what none of them has, as the editor lists them. None until
+    # the catalogue has been read — without it nobody knows what it lacks.
+    offered = None
+    for src in [main_src] + libraries(main_src):
+        official = src == main_src
+        if not official and offered is None:
+            print(f"Add-ons were not fetched from {src}: without the catalogue "
+                  "there is no knowing what it lacks.", file=sys.stderr)
+            continue
+        try:
+            cat = index(src)
+            have = installed()
+            c = config()
+            if official:
+                offered = set().union(*map(brings, cat["addons"]))
+            else:
+                # A library fills gaps. It brings nothing the catalogue has —
+                # even what was taken off here by hand, whose tile may still
+                # be waiting — nor a type the panel already has, nor code
+                # unless the panel allows it.
+                theirs = [a for a in cat["addons"] if not offered & brings(a)]
+                offered |= set().union(*map(brings, theirs))
+                brought = {t for m in have.values() for t in names(m, "types", TYPE)}
+                dressed = {t for m in have.values() for t in names(m, "themes", THEME_ID)}
+                cat["addons"] = [
+                    a for a in theirs
+                    if not brought.intersection(a["types"])
+                    and not dressed.intersection(a.get("themes") or [])
+                    and (a["kind"] != "dart" or code_allowed(c))
+                ]
+            connected = bool(c.get("immichUrl")) and bool(c.get("apiKey"))
+            ids = wanted(cat, c.get("dashboard"), have, connected, removed(),
+                         theme_files(), starters=official)
+            if ids:
+                try:
+                    fetch(src, cat, ids, ADDONS)
+                finally:
+                    # What landed before anything went wrong is installed now,
+                    # and would never be fetched again to be put in place.
+                    place_described(ids)
+                where = "" if official else f" (from {src}, unchecked)"
+                print("Add-ons installed: " + ", ".join(ids) + where)
+        except Refused as e:
+            print(f"Add-ons were not fetched from {src}: {e}", file=sys.stderr)
+        except Exception as e:  # whatever it was, the build goes ahead
+            print(f"Add-ons were not fetched from {src}: something went wrong "
+                  f"({type(e).__name__}: {e}).", file=sys.stderr)
+    return 0
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     p.add_argument("--repo", help="owner/name on GitHub, or a checkout")
@@ -366,6 +524,7 @@ def main():
     f.add_argument("--dest", required=True)
     f.add_argument("ids", nargs="+")
     sub.add_parser("ensure")
+    sub.add_parser("dart")
     r = sub.add_parser("removed")
     r.add_argument("how", choices=["add", "drop"])
     r.add_argument("ids", nargs="+")
@@ -382,43 +541,14 @@ def main():
             note_removed(drop=ids)
         return 0
 
+    if args.action == "ensure":
+        return ensure(args.repo)
+    if args.action == "dart":
+        for id, entry in dart_addons():
+            print(f"{id}\t{entry}")
+        return 0
+
     try:
-        if args.action == "ensure":
-            # A panel that cannot reach the catalogue is still built: with
-            # what it has, and the rest offered in the editor afterwards.
-            try:
-                main_src = source(args.repo)
-            except Refused as e:
-                print(f"Add-ons were not fetched: {e}", file=sys.stderr)
-                return 0
-            for src in [main_src] + libraries(main_src):
-                try:
-                    cat = index(src)
-                    have = installed()
-                    if src != main_src:
-                        # A library fills gaps; it is never the starter set,
-                        # and brings no type the panel already has.
-                        if not have and not config().get("dashboard"):
-                            continue
-                        brought = {t for m in have.values() for t in m.get("types") or []}
-                        dressed = {t for m in have.values() for t in m.get("themes") or []}
-                        cat["addons"] = [
-                            a for a in cat["addons"]
-                            if not brought.intersection(a["types"])
-                            and not dressed.intersection(a.get("themes") or [])
-                        ]
-                    c = config()
-                    connected = bool(c.get("immichUrl")) and bool(c.get("apiKey"))
-                    ids = wanted(cat, c.get("dashboard"), have, connected, removed(),
-                                 theme_files())
-                    if ids:
-                        fetch(src, cat, ids, ADDONS)
-                        place_described(ids)
-                        where = "" if src == main_src else f" (from {src}, unchecked)"
-                        print("Add-ons installed: " + ", ".join(ids) + where)
-                except Refused as e:
-                    print(f"Add-ons were not fetched from {src}: {e}", file=sys.stderr)
-            return 0
         src = source(args.repo)
         cat = index(src)
         if args.action == "list":
