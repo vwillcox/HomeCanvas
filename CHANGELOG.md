@@ -1,9 +1,54 @@
 # Changelog
 
-## 2.0.0-alpha.3
+## 2.0.0
 
 The widgets have a home of their own, anyone can add to them — and the
 dashboard is the kiosk's home screen.
+
+### Since alpha 3
+
+- **Spotify stays inside its limits.** The panel asked Spotify what was
+  playing every ten seconds, around the clock, and went on asking while
+  Spotify had told it to wait: one panel was shut out for over four hours.
+  It now waits when told to, asks every 5 seconds while music plays and the
+  screen is on, every 15 otherwise and once a minute after a quiet quarter
+  of an hour, and asks as a track ends. Told to wait again, it asks half as
+  often for a day.
+- **Music over Bluetooth with no track name** — a Mac playing Spotify, for
+  one — is shown as "Playing from Mac mini" rather than "Nothing playing".
+- **The phone app sips its battery** (HomeCanvas Share 1.1.0). It held the
+  phone awake, and its Wi-Fi at full power, all day and night to collect
+  links. Now it holds neither, asks a panel at home only over Wi-Fi or a VPN,
+  and waits up to five minutes for each answer instead of one. A link sent
+  while the phone sleeps arrives when it wakes. Build and install the new
+  app on the phone (see `companion_app/README.md`).
+- **Voice:**
+  - "Lights upstairs" no longer turns every light off.
+  - "Turn the laptop off", with two laptops, switches neither rather than
+    the wrong one, and a computer is matched only by its own name.
+  - A misheard name is put right only to a light, switch, fan, media player
+    or humidifier — never to a lock, a door, a cover or a script, which
+    Home Assistant would open or unlock — and never to a longer name than
+    was said: "the front door" is not "front door lock".
+- **The TV:**
+  - Its power key, which toggles, is never pressed to switch it off when
+    the set will not say whether it is on: the panel says so and leaves it.
+  - A set that drops off the network is let go after 15 seconds.
+  - "Connection reset by peer" no longer shows in the log, unhandled, each
+    time the TV sleeps.
+- **A routine's lights go in order**: all on or off first, then what it
+  asks Home Assistant, then the lights it sets. "Lights off" with "the
+  bedside lamp at 10%" leaves the lamp on.
+- **Add-ons:**
+  - Code from a third-party library is fetched, and built in, only while
+    "Widgets written in Dart" is on — at an update as well as from the
+    Add-ons page.
+  - A library is asked only for what the catalogue has nothing for.
+  - A badly made entry in a library costs only that add-on, never an
+    update.
+- **The installer puts back the file every build rewrites before it
+  pulls**, so a later update is not stopped by "local changes". A 1.x panel
+  still has the 1.x installer: see Updating below.
 
 ### Changed in alpha 3
 
@@ -75,6 +120,41 @@ dashboard is the kiosk's home screen.
   what they are made from, and none of the widgets themselves. A panel
   being updated keeps every widget its dashboard uses: the update fetches them before it builds. A new panel
   starts with a small set and the Add-ons page.
+
+### Updating
+
+From 1.x, run the installer through curl, which fetches the 2.0 one:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/vwillcox/HomeCanvas/main/install.sh | bash
+```
+
+Before it builds, the update fetches every add-on your dashboard uses, and
+the theme your panel is dressed in.
+
+Not the installer already on a 1.x panel (`bash ~/homecanvas/install.sh`):
+it stops with "Couldn't update — local changes in ~/homecanvas?" (every
+build rewrites the list of widgets built in, and git will not pull over
+it), and past that it would build 2.0 without fetching a single add-on.
+To update from the copy on the panel, put that file back — the build
+writes it again — and pull, so that the installer you run is 2.0's:
+
+```bash
+cd ~/homecanvas
+git checkout -- lib/dashboard/widgets/custom/custom_registry.dart
+git pull --ff-only
+bash install.sh
+```
+
+**From an alpha**, go back to `main`, which 2.0 is now:
+
+```bash
+cd ~/homecanvas
+git checkout -- lib/dashboard/widgets/custom/custom_registry.dart
+git checkout main
+git pull --ff-only
+bash install.sh
+```
 
 ## 1.0.3.2
 
