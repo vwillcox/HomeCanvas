@@ -5,6 +5,75 @@ Nothing else in the app needs changing: the browser editor builds its palette
 and its settings form from that descriptor, and the saved configuration keeps
 the options as an opaque bag.
 
+## Where the widgets are
+
+Not here. Every widget is an **add-on**, in a repository of its own —
+[vwillcox/HomeCanvas-Widgets](https://github.com/vwillcox/HomeCanvas-Widgets)
+— downloaded to a panel from the editor's **Add-ons** page and built in
+there. The app has none of its own. What is in this folder is what widgets
+are made from: `tile_bits.dart`, `fit_canvas.dart`, the feed, social and
+video tiles, the sheets, and the two views the rest of the app shows for
+itself — `calendar_view.dart` (the day's brief reads calendars the same way)
+and `parcels_view.dart` (a shared tracking link opens a parcel's story
+whether or not the Parcels tile is installed). An add-on imports them as `package:home_canvas/dashboard/widgets/…`.
+
+How an add-on reaches a panel:
+
+1. The catalogue's own checks (a GitHub Action there) read every add-on,
+   build it into this app and run its tests. When they pass on its `main`,
+   they write `index.json` to its `catalogue` branch: each add-on, the commit
+   it was read at, and the SHA-256 of each of its files.
+2. `lib/services/addons.dart` reads that index for the Add-ons page
+   (`assets/dashboard/addons.html`, `/api/addons`).
+3. Download starts `scripts/widget-build.sh addons <names>`, which has
+   `scripts/addons.py` fetch the files — refusing any that does not match
+   its sum — into `~/.config/homecanvas/addons/<name>/`, copies them to
+   `custom/addons/<name>/` here, writes `custom/custom_registry.dart`,
+   and rebuilds as for an uploaded widget (below): whole, or not at all.
+   An add-on described in JSON needs no build and is installed at once.
+
+`install.sh` and `scripts/sync.sh` run `scripts/addons.py ensure` before
+they build: whatever the panel's dashboard uses and does not have is
+fetched, so a panel laid out when the widgets were built in keeps them. A
+panel with no dashboard yet gets the catalogue's starter set.
+
+Which repository is read is `addonsRepo` under `dashboard` in config.json
+(or `HOMECANVAS_ADDONS_REPO` for the scripts): `owner/name` on GitHub. It
+is the panel's own setting — what comes from it is run — and the editor
+cannot change it.
+
+Beside the catalogue a panel can read **third-party libraries**:
+repositories laid out the same way, named on the Add-ons page and kept as
+`addonLibraries` under `dashboard`. Their files are held to their own
+index's sums and nothing more — nobody has reviewed them — so the page
+marks each add-on from one as untested, and one written in Dart is built
+in only while the panel's own "Widgets written in Dart" switch is on. The
+catalogue is read first: a library's add-on with a name or a widget type
+the catalogue has is left out. The builder is asked for one as
+`name@owner/repository`.
+
+### Working on add-ons
+
+With the catalogue checked out beside this repository:
+
+```bash
+HOMECANVAS_ADDONS=../HomeCanvas-Widgets/widgets HOMECANVAS_ADDON_TESTS=1 \
+  scripts/widget-build.sh generate
+```
+
+copies every add-on into `custom/addons/` and its tests into `test/addons/`
+(both git-ignored), after which `flutter run`, `flutter analyze` and
+`flutter test` see the whole app as it was. Edit the widgets in the
+catalogue's checkout and run it again. A handful of the app's own tests use
+the catalogue's widgets as their examples and say they were skipped when
+none are built in; `l10n/en-GB.arb` and the installer's catalogue are
+written from the code with them built in, so write those with them linked.
+
+`tool/addon_shots_test.dart` draws the picture each add-on is listed with.
+
+What follows is how a widget is written — for the catalogue, or to upload
+to one panel.
+
 ## 1. Write the widget
 
 ```dart
@@ -55,7 +124,14 @@ final tideWidgetType = DashboardWidgetType(
 
 ## 3. Register it
 
-Add it to the list in `widgets.dart`. That is the whole integration.
+In the catalogue, the widget's file ends by saying what it brings, and its
+folder's `addon.json` names that file as its `entry`:
+
+```dart
+final widgetTypes = <DashboardWidgetType>[tideWidgetType];
+```
+
+That is the whole integration.
 
 ## Fetching things
 

@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
+import '../map_text.dart';
 
 /// One thing to get.
 @immutable
@@ -36,7 +37,7 @@ class ShoppingItem {
 
   static ShoppingItem? fromJson(Object? j) {
     if (j is! Map) return null;
-    final text = '${j['text'] ?? ''}'.trim();
+    final text = j.text('text');
     final added = DateTime.tryParse('${j['added'] ?? ''}');
     if (text.isEmpty || added == null) return null;
     return ShoppingItem(

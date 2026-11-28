@@ -4,6 +4,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import '../l10n/l10n.dart';
+import '../map_text.dart';
+import 'http_client.dart';
 
 /// One departure from a stop.
 @immutable
@@ -69,15 +71,9 @@ class TransitousService extends ChangeNotifier {
   TransitousService({Dio? dio})
     : _dio =
           dio ??
-          Dio(
-            BaseOptions(
-              connectTimeout: const Duration(seconds: 10),
-              receiveTimeout: const Duration(seconds: 15),
-              // Transitous asks its users to say who they are.
-              headers: const {
-                'User-Agent': 'HomeCanvas/1.0 (home dashboard panel)',
-              },
-            ),
+          httpClient(
+            // Transitous asks its users to say who they are.
+            headers: const {'User-Agent': homeCanvasAgent},
           );
 
   final Dio _dio;
@@ -217,7 +213,7 @@ class TransitousService extends ChangeNotifier {
   /// one; some write "?" for a line they don't name.
   static String _lineName(Map s) {
     for (final k in ['displayName', 'routeShortName', 'routeLongName']) {
-      final v = '${s[k] ?? ''}'.trim();
+      final v = s.text(k);
       if (v.isNotEmpty && v != '?') return v;
     }
     return '';
@@ -255,7 +251,7 @@ class TransitousService extends ChangeNotifier {
           realTime: s['realTime'] == true,
           colour: colour(s['routeColor']),
           textColour: colour(s['routeTextColor']),
-          operator: '${s['agencyName'] ?? ''}'.trim(),
+          operator: s.text('agencyName'),
         ),
       );
     }

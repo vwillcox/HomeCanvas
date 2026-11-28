@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import '../map_text.dart';
 
 /// What a check found.
 enum CheckState { up, slow, down, unknown }
@@ -34,10 +35,10 @@ class ServiceTarget {
   final String? mac;
 
   static ServiceTarget? fromRow(Map<String, dynamic> row) {
-    final target = '${row['target'] ?? ''}'.trim();
+    final target = row.text('target');
     if (target.isEmpty) return null;
-    final name = '${row['name'] ?? ''}'.trim();
-    final mac = '${row['mac'] ?? ''}'.trim();
+    final name = row.text('name');
+    final mac = row.text('mac');
     return ServiceTarget(
       name: name.isEmpty ? target : name,
       target: target,
@@ -123,6 +124,11 @@ class ServiceChecker {
   }
 
   Future<CheckResult> _ping(String host) async {
+    // A name only, never an option: "-i 0.002" would otherwise reach ping
+    // as one, from a tile's settings.
+    if (!RegExp(r'^[A-Za-z0-9][A-Za-z0-9.:\-]*$').hasMatch(host)) {
+      return const CheckResult(CheckState.down, detail: 'not a host');
+    }
     final r = await Process.run('ping', [
       '-c',
       '1',

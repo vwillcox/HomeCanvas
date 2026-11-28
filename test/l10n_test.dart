@@ -5,6 +5,8 @@ import 'package:home_canvas/dashboard/widget_registry.dart';
 import 'package:home_canvas/dashboard/widgets/widgets.dart';
 import 'package:home_canvas/l10n/l10n.dart';
 
+import 'needs_addons.dart';
+
 void main() {
   tearDown(() => L10n.instance.debugUse('en-GB', const {}));
 
@@ -42,6 +44,7 @@ void main() {
   });
 
   test('widget settings reach the editor translated by key', () {
+    if (skippedWithoutAddons()) return;
     registerBuiltInWidgets();
     L10n.instance.debugUse('fr', {
       'widget.news.name': 'Actualités',

@@ -51,8 +51,10 @@ class ScrollingText extends StatefulWidget {
   State<ScrollingText> createState() => _ScrollingTextState();
 }
 
+// Not the single-ticker mixin: each new text or width makes a new
+// controller, and that one allows only one in the state's whole life.
 class _ScrollingTextState extends State<ScrollingText>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   AnimationController? _controller;
   Animation<double>? _offset;
   double _overflow = 0;

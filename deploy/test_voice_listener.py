@@ -107,6 +107,50 @@ class TheWakeWords(unittest.TestCase):
         )
 
 
+class Answers(unittest.TestCase):
+    """The kiosk asks something out loud, then has whatever is said next
+    taken, without the wake words."""
+
+    def test_how_long_to_listen(self):
+        self.assertEqual(vl.listen_for({"listen": 7}), 70)
+        self.assertEqual(vl.listen_for({"listen": 2.5}), 25)
+        # Never for long: the room is not to be listened to all day.
+        self.assertEqual(vl.listen_for({"listen": 3600}), 300)
+        for nothing in ({}, {"listen": "soon"}, {"listen": None}, {"listen": -4}):
+            self.assertEqual(vl.listen_for(nothing), 0)
+
+    def test_what_it_is_told_a_line_at_a_time(self):
+        inbox = []
+        vl.told(['{"listen": 7}\n', "not json\n", "[1]\n", '{"other": 1}\n'], inbox)
+        self.assertEqual(inbox, [{"listen": 7}, {"other": 1}])
+
+    def test_the_panel_asking_is_dropped(self):
+        hearing = vl.Hearing()
+        for _ in range(10):
+            hearing.chunk(b"..", QUIET)
+        for _ in range(8):
+            hearing.chunk(b"..", LOUD)  # "Heater on or off?", half heard
+        hearing.drop()
+        said = [hearing.chunk(b"..", QUIET) for _ in range(10)]
+        self.assertEqual([s for s in said if s is not None], [])
+        # And the room is still known: a quiet room's hiss is not talk.
+        self.assertGreater(len(hearing.levels), 10)
+
+    def test_a_one_word_answer_is_not_a_knock(self):
+        def said(shortest):
+            hearing = vl.Hearing()
+            hearing.shortest = shortest
+            out = []
+            for level in [QUIET] * 10 + [LOUD] * 2 + [QUIET] * 8:
+                sound = hearing.chunk(b"..", level)
+                if sound is not None:
+                    out.append(sound)
+            return out
+
+        self.assertEqual(said(vl.Hearing.SHORTEST), [])
+        self.assertEqual(len(said(2)), 1)
+
+
 class Loudness(unittest.TestCase):
     def test_of_silence_and_of_a_steady_level(self):
         self.assertEqual(vl.loudness(struct.pack("<4h", 0, 0, 0, 0)), 0)

@@ -23,6 +23,16 @@ Each thing heard is a line of JSON on standard output:
                                             when the first means nothing
     {"event": "error", "message": "…"}      and why it is not listening
 
+And it is told, a line of JSON on standard input:
+
+    {"listen": 7}                           take whatever is said next as
+                                            if after the wake words, while
+                                            nothing is heard for up to seven
+                                            seconds: the answer to something
+                                            the panel has just asked out
+                                            loud. A "heard" with no text
+                                            when nothing is.
+
 Run by the kiosk while voice control is switched on, with the Python that
 has sherpa-onnx in it:
 
@@ -43,6 +53,7 @@ import os
 import struct
 import subprocess
 import sys
+import threading
 import time
 import urllib.parse
 import urllib.request
@@ -102,6 +113,8 @@ class Hearing:
     LONGEST = 80
 
     def __init__(self):
+        # Shorter for an answer, which may be one word: "on".
+        self.shortest = self.SHORTEST
         # How loud the last five seconds were, for telling speech from room.
         self.levels = collections.deque(maxlen=50)
         self.before = collections.deque(maxlen=self.LEAD)
@@ -147,7 +160,15 @@ class Hearing:
         said, loud = self.sound, self.loud
         self.sound = None
         self.before.clear()
-        return b"".join(said) if loud >= self.SHORTEST else None
+        return b"".join(said) if loud >= self.shortest else None
+
+    def drop(self):
+        """Forgets anything half heard — the panel's own voice asking — but
+        not how loud the room is."""
+        self.sound = None
+        self.loud = 0
+        self.before.clear()
+        self.droning = False
 
 
 # The wake words: "hey canvas" unless the kiosk says otherwise (--wake).
@@ -171,6 +192,28 @@ def tell_kiosk(texts):
             return
         except OSError:
             pass  # Not understood is a 404: the other hearing is tried.
+
+
+def told(stream, inbox):
+    """Reads what the kiosk tells this, a line of JSON at a time, into
+    [inbox] — in its own thread, as the microphone is read in this one."""
+    for line in stream:
+        try:
+            message = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(message, dict):
+            inbox.append(message)
+
+
+def listen_for(message):
+    """Tenths of a second to listen without the wake words, from a
+    {"listen": seconds} message; 0 for none."""
+    try:
+        seconds = float(message.get("listen", 0))
+    except (TypeError, ValueError):
+        return 0
+    return max(0, min(int(seconds * 10), 300))
 
 
 def load_recognisers():
@@ -264,6 +307,10 @@ def main():
     hearing = Hearing()
     # Tenths of a second left for the rest, after "hey canvas" and a pause.
     waiting = 0
+    # What the kiosk has told this, not yet acted on.
+    inbox = collections.deque()
+    if not args.file:
+        threading.Thread(target=told, args=(sys.stdin, inbox), daemon=True).start()
     say("ready")
 
     while True:
@@ -273,10 +320,18 @@ def main():
                 return 0
             say("error", message="the microphone stopped")
             return 1
+        while inbox:
+            answer = listen_for(inbox.popleft())
+            if answer:
+                # Whatever was being heard was the panel asking.
+                hearing.drop()
+                hearing.shortest = 2
+                waiting = answer
         sound = hearing.chunk(chunk, loudness(chunk))
         if waiting and hearing.sound is None and sound is None:
             waiting -= 1
             if not waiting:
+                hearing.shortest = Hearing.SHORTEST
                 tell([])  # Woken, and then nothing.
         if sound is None:
             continue
@@ -296,6 +351,7 @@ def main():
             if not waiting:
                 say("wake")
             waiting = 0
+            hearing.shortest = Hearing.SHORTEST
             keep(sound)
             tell(texts)
 

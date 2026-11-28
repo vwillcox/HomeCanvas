@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import '../config/app_config.dart' show ScreenSettings;
 import 'config_service.dart';
 import 'playback_source.dart';
+import 'http_client.dart';
 
 /// Switches the panel off by itself once there's nothing worth showing —
 /// no slideshow, nothing playing, and nobody touching it — and brings it
@@ -33,11 +34,9 @@ class ScreenIdleService {
   /// Both playback sources; either one playing counts as "in use".
   final List<PlaybackSource> _sources;
 
-  final Dio _dio = Dio(
-    BaseOptions(
-      connectTimeout: const Duration(seconds: 3),
-      receiveTimeout: const Duration(seconds: 3),
-    ),
+  final Dio _dio = httpClient(
+    connect: const Duration(seconds: 3),
+    receive: const Duration(seconds: 3),
   );
 
   Timer? _timer;
@@ -55,6 +54,12 @@ class ScreenIdleService {
   /// Whether a video is playing — YouTube, which is not a [PlaybackSource]
   /// but is every bit as much a reason to leave the screen on.
   bool Function()? videoPlaying;
+
+  /// Whether the radio is playing — the Radio and StreamingSoundtracks
+  /// tiles, which play on the panel itself rather than through a
+  /// [PlaybackSource]. Listened to with nobody looking, so it is as much use
+  /// as music from a phone.
+  bool Function()? radioPlaying;
 
   ScreenSettings get _settings => _configService.config.screen;
 
@@ -96,6 +101,14 @@ class ScreenIdleService {
     _offByUs = false;
   }
 
+  /// Someone asked for the panel dark — a bedtime routine. Not counted as
+  /// this service's own switch-off, so music starting does not undo it:
+  /// that is for a screen that went dark by itself. A touch brings it back.
+  Future<void> sleep() async {
+    await _setScreen(on: false);
+    _offByUs = false;
+  }
+
   /// Set by [SlideshowScreen] while it's on screen — a running slideshow is
   /// the whole point of the display, so it never counts as idle.
   set slideshowRunning(bool running) {
@@ -114,12 +127,14 @@ class ScreenIdleService {
     if (showing) noteInteraction();
   }
 
-  bool get _musicPlaying =>
+  /// Whether anything is playing: music, the radio or a video.
+  bool get playing =>
       _sources.any((s) => s.available && s.now.isPlaying) ||
-      (videoPlaying?.call() ?? false);
+      (videoPlaying?.call() ?? false) ||
+      (radioPlaying?.call() ?? false);
 
   Future<void> _tick() async {
-    final playing = _musicPlaying;
+    final playing = this.playing;
     final startedPlaying = playing && !_musicWasPlaying;
     _musicWasPlaying = playing;
 

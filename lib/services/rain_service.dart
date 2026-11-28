@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'config_service.dart';
 import '../time_format.dart';
 import '../l10n/l10n.dart';
+import 'http_client.dart';
 
 /// A quarter of an hour of rain forecast.
 @immutable
@@ -119,12 +120,7 @@ class RainService extends ChangeNotifier {
   RainService.withSlots(this._config, List<RainSlot> slots) : _slots = slots;
 
   final ConfigService _config;
-  final Dio _dio = Dio(
-    BaseOptions(
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 15),
-    ),
-  );
+  final Dio _dio = httpClient();
   Timer? _timer;
   List<RainSlot>? _slots;
   String? _error;

@@ -9,6 +9,8 @@ import 'package:home_canvas/dashboard/widgets/widgets.dart';
 import 'package:home_canvas/services/timer_service.dart';
 import 'package:home_canvas/services/timer_sounds.dart';
 
+import 'needs_addons.dart';
+
 Uint8List _mp3() =>
     Uint8List.fromList([...'ID3'.codeUnits, ...List.filled(20, 0)]);
 
@@ -152,6 +154,7 @@ void main() {
   });
 
   test('the timers tile offers the sounds, with the chime by default', () {
+    if (skippedWithoutAddons()) return;
     registerBuiltInWidgets();
     final options = WidgetRegistry.find('timers')!.options;
     final sound = options.firstWhere((o) => o.key == 'sound');

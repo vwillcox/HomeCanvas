@@ -88,7 +88,16 @@ class _TvInputsSheetState extends State<TvInputsSheet> {
   }
 
   void _close() {
-    if (mounted) Navigator.of(context).maybePop();
+    if (!mounted) return;
+    // This sheet only: a screen opened over it since — a recipe from a
+    // share — stays where it is, and the sheet goes from underneath it.
+    final route = ModalRoute.of(context);
+    if (route == null) return;
+    if (route.isCurrent) {
+      Navigator.of(context).pop();
+    } else if (route.isActive) {
+      Navigator.of(context).removeRoute(route);
+    }
   }
 
   void _pick(TvService tv, TvSource s) {

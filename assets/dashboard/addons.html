@@ -1,0 +1,617 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0c10">
+<title data-t="web.addons.title">Add-ons</title>
+<style>
+  /* The kiosk's glass look, as on the notes and custom widgets pages. */
+  :root {
+    --bg: #0b0c10; --glass: rgba(255,255,255,.055); --line: rgba(255,255,255,.10);
+    --text: #fff; --muted: rgba(255,255,255,.62); --faint: rgba(255,255,255,.38);
+    --accent: #a6c8ff; --danger: #ff8a8a; --good: #9be7b0; --caution: #ffcf7a;
+    --ui: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; color: var(--text); font: 16px/1.45 var(--ui);
+    background: radial-gradient(900px 600px at 8% -12%, rgba(166,200,255,.16), transparent 70%), var(--bg);
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 1180px; margin: 0 auto; padding: 28px 16px 120px; display: grid; gap: 16px; }
+  h1 { margin: 0; font-size: 30px; letter-spacing: -.02em; }
+  .sub { margin: 2px 0 0; color: var(--muted); font-size: 16px; max-width: 70ch; }
+  a { color: var(--accent); }
+  .card { padding: 16px; border-radius: 22px; background: var(--glass); border: 1px solid var(--line); }
+  button {
+    font: inherit; font-weight: 650; border: none; border-radius: 999px; padding: 0 20px;
+    background: #fff; color: #0b0c10; cursor: pointer; min-height: 42px;
+  }
+  button:disabled { opacity: .45; cursor: default; }
+  button.quiet { background: transparent; color: var(--text); border: 1px solid var(--line); font-weight: 500; }
+  button.danger { background: transparent; color: var(--danger); border: 1px solid rgba(255,138,138,.4); font-weight: 500; }
+  button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .home {
+    display: inline-flex; align-items: center; gap: 6px; margin-bottom: 14px;
+    padding: 6px 14px; border-radius: 999px; font-size: 14px; text-decoration: none;
+    color: var(--muted); background: var(--glass); border: 1px solid var(--line);
+  }
+  .home:hover, .home:focus-visible { color: #fff; background: rgba(255,255,255,.09); }
+
+  /* What the panel is doing, or what went wrong. */
+  #status { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  #status[hidden] { display: none; }
+  #status .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); flex: none; }
+  #status.busy .dot { animation: pulse 1.2s ease-in-out infinite; }
+  #status.bad .dot { background: var(--danger); }
+  #status.good .dot { background: var(--good); }
+  @keyframes pulse { 50% { opacity: .25; } }
+  @media (prefers-reduced-motion: reduce) { #status.busy .dot { animation: none; } }
+  /* How far a build has got: three steps, and the time the last one took. */
+  #progress { flex: 1 1 100%; display: grid; gap: 6px; }
+  #progress[hidden] { display: none; }
+  #progress .bar { height: 8px; border-radius: 999px; background: rgba(255,255,255,.12); overflow: hidden; }
+  #progress .fill { height: 100%; width: 0; border-radius: 999px; background: var(--accent); transition: width 1s linear; }
+  #progress .steps { display: flex; gap: 6px 18px; flex-wrap: wrap; font-size: 13.5px; color: var(--faint); }
+  #progress .steps .now { color: var(--text); font-weight: 650; }
+  #progress .steps .done { color: var(--good); }
+  #progress .left { margin-left: auto; color: var(--muted); }
+  @media (prefers-reduced-motion: reduce) { #progress .fill { transition: none; } }
+  #errors { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; line-height: 1.45; margin: 0;
+            padding: 10px; border-radius: 8px; border: 1px solid rgba(255,90,90,.5); max-height: 320px; overflow: auto; }
+
+  .tools { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  #search {
+    flex: 1 1 240px; min-height: 44px; padding: 0 16px; border-radius: 999px; font: inherit;
+    color: var(--text); background: var(--glass); border: 1px solid var(--line);
+  }
+  #category {
+    flex: 0 1 240px; min-height: 44px; padding: 0 40px 0 16px; border-radius: 999px; font: inherit;
+    color: var(--text); background-color: var(--glass); border: 1px solid var(--line);
+    appearance: none; cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23ffffff' stroke-opacity='.62' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 16px center;
+  }
+  #category option { background: #16181d; color: #fff; }
+  #category:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  #list { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+  .addon { display: flex; flex-direction: column; overflow: hidden; padding: 0; }
+  .addon.picked { border-color: var(--accent); }
+  .shot { position: relative; aspect-ratio: 16 / 10; background: rgba(0,0,0,.35); display: grid; place-items: center; }
+  .shot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+  .shot .glyph { font-size: 54px; }
+  .about .cat { margin: 0; color: var(--accent); font-size: 12.5px; letter-spacing: .04em; text-transform: uppercase; }
+  .about .pick { display: inline-flex; align-items: center; gap: 6px; min-height: 42px; color: var(--muted); font-size: 14px; cursor: pointer; }
+  .about .pick input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+  .about { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .about h2 { margin: 0; font-size: 18px; }
+  .about .by { margin: 0; color: var(--muted); font-size: 14px; }
+  /* Every card the same: a name on one line, four lines of what it does. */
+  .about h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .about .what {
+    margin: 0; color: var(--muted); font-size: 14.5px; line-height: 1.45; height: calc(4 * 1.45em);
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; line-clamp: 4; overflow: hidden;
+  }
+  .about .facts { margin: 0; color: var(--faint); font-size: 13px; }
+  .about .warn { margin: 0; color: var(--danger); font-size: 13px; }
+  /* What can be done with it, at the foot of every card and in one order:
+     whether it is here, the tick for picking it with others, the button. */
+  .about .acts { margin-top: auto; padding-top: 8px; display: grid; gap: 4px; }
+  .about .line { min-height: 42px; display: flex; align-items: center; gap: 14px; }
+  .about .have { color: var(--good); font-size: 14px; }
+  .about .row { display: flex; gap: 8px; align-items: center; min-height: 42px; }
+  .about .row button { flex: 1; }
+  .empty { color: var(--muted); grid-column: 1 / -1; }
+  .about .other { margin: 0; font-size: 13px; color: var(--caution); }
+  .about .other a { color: inherit; }
+
+  /* Third-party libraries: what this panel reads beside the catalogue. */
+  #libraries summary { cursor: pointer; font-weight: 650; font-size: 17px; min-height: 30px; }
+  #libraries p { margin: 10px 0 0; color: var(--muted); font-size: 14.5px; max-width: 78ch; }
+  #libraries .risk { color: var(--caution); }
+  #libraries ul { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
+  #libraries li { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  #libraries li .n { color: var(--faint); font-size: 13.5px; margin-right: auto; }
+  #libraries li .n.bad { color: var(--danger); }
+  #libraries form { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 14px; }
+  #libraries input[type=text] {
+    flex: 1 1 240px; min-height: 44px; padding: 0 16px; border-radius: 999px; font: inherit;
+    color: var(--text); background: rgba(0,0,0,.25); border: 1px solid var(--line);
+  }
+  #libraries label { display: flex; gap: 8px; align-items: flex-start; flex: 1 1 100%; color: var(--text); font-size: 14.5px; cursor: pointer; }
+  #libraries label input { width: 18px; height: 18px; margin: 2px 0 0; flex: none; accent-color: var(--accent); }
+
+  /* Several at once: one rebuild for all of them. */
+  #basket {
+    position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    background: rgba(11,12,16,.92); border-top: 1px solid var(--line); backdrop-filter: blur(12px);
+    display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap;
+  }
+  #basket[hidden] { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <a class="home" href="/" data-t="web.common.backToDashboard">← Dashboard</a>
+    <h1 data-t="web.addons.title">Add-ons</h1>
+    <p class="sub"><span data-t="web.addons.sub">Widgets and themes for the dashboard, from the HomeCanvas catalogue. Download one and it is added to the panel.</span>
+      <a id="repo" href="https://github.com/vwillcox/HomeCanvas-Widgets" target="_blank" rel="noopener" data-t="web.addons.contribute">Make one of your own and send it in</a></p>
+  </header>
+
+  <section class="card" id="status" hidden role="status" aria-live="polite">
+    <span class="dot" aria-hidden="true"></span>
+    <span id="statusText"></span>
+    <button id="wantedInstall" hidden></button>
+    <div id="progress" hidden>
+      <div class="bar" id="progressBar" role="progressbar" aria-valuemin="0" aria-valuemax="100"><div class="fill" id="progressFill"></div></div>
+      <div class="steps"><span id="step1"></span><span id="step2"></span><span id="step3"></span><span class="left" id="progressLeft"></span></div>
+    </div>
+  </section>
+  <pre id="errors" hidden></pre>
+
+  <div class="tools">
+    <input id="search" type="search" placeholder="Search add-ons" data-t-placeholder="web.addons.search" data-t-aria="web.addons.search" aria-label="Search add-ons">
+    <select id="category" data-t-aria="web.addons.show" aria-label="Which add-ons to show"></select>
+    <button class="quiet" id="refresh" data-t="web.addons.refresh">Look again</button>
+  </div>
+
+  <section id="list"></section>
+
+  <details class="card" id="libraries">
+    <summary data-t="web.addons.libraries">Third-party libraries</summary>
+    <p data-t="web.addons.librariesWhat">Anyone can keep a library of add-ons of their own, laid out as the catalogue is. Name one here and what is in it is listed above, beside the catalogue's.</p>
+    <p class="risk" data-t="web.addons.librariesRisk">Nobody at HomeCanvas has tested or read what is in another library. An add-on written in Dart is code: once installed it runs on the panel as the panel does, and can read whatever the panel can — its settings and keys among them. What a library says its add-ons use is its own word. Add only a library whose owner you trust; what you install from one is at your own risk.</p>
+    <p id="codeOff" hidden data-t="web.addons.codeOff">Add-ons written in Dart from another library are installed only while "Widgets written in Dart" is switched on in Settings → Dashboard, on the panel itself. Those described in JSON need no switch.</p>
+    <ul id="libraryList"></ul>
+    <form id="libraryForm">
+      <input type="text" id="libraryName" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="owner/name on GitHub" data-t-placeholder="web.addons.libraryName" data-t-aria="web.addons.libraryName" aria-label="owner/name on GitHub">
+      <button id="libraryAdd" disabled data-t="web.addons.libraryAdd">Add library</button>
+      <label><input type="checkbox" id="libraryAgree"><span data-t="web.addons.libraryAgree">I understand that this library is untested, and that what I install from it is at my own risk.</span></label>
+    </form>
+  </details>
+</main>
+
+<div id="basket" hidden>
+  <span id="basketText"></span>
+  <button id="basketInstall" data-t="web.addons.downloadPicked">Download these</button>
+  <button class="quiet" id="basketClear" data-t="web.addons.clearPicked">Clear</button>
+</div>
+
+<script src="/i18n.js"></script>
+<script>
+/* The catalogue of add-ons — every widget and theme there is — as the panel read it
+   from the catalogue's repository, what of it is installed here, and
+   whatever is in the third-party libraries this panel has been given:
+   listed with the rest, and marked as nobody's but their owner's.
+
+   One described in JSON is on the panel the moment it is downloaded. One
+   written in Dart is built into the panel, which takes a few minutes and
+   ends in a restart: that is watched, through the restart, until it has
+   worked or failed. Several picked at once are built in together. */
+const state = { data: null, filter: "", category: "", picked: new Set(), busy: false, watch: null };
+const $ = (id) => document.getElementById(id);
+
+async function getJson(path) {
+  const r = await fetch(path);
+  if (!r.ok) throw new Error(path + " -> " + r.status);
+  return r.json();
+}
+
+function say(kind, text) {
+  const el = $("status");
+  el.hidden = !text;
+  el.className = "card " + kind;
+  $("statusText").textContent = text || "";
+}
+
+function names(ids) {
+  const by = new Map((state.data ? state.data.addons : []).map(a => [a.id, a.name || a.id]));
+  // One from a library is asked for as name@owner/name.
+  return String(ids || "").split(",").filter(Boolean).map(id => id.split("@")[0]).map(id => by.get(id) || id).join(", ");
+}
+
+/* The bar under what the panel says it is doing. The panel says which of
+   three steps it is on, how long it has been at it and how long its last
+   build took; between its answers — and through the restart, when it does
+   not answer — the bar goes on by this page's own clock. It never reaches
+   the end until the panel says the build has. */
+const progress = { timer: null, at: 0, elapsed: 0, expected: 150, step: "checking", removing: false };
+function drawProgress() {
+  const p = progress;
+  const elapsed = p.elapsed + (Date.now() - p.at) / 1000;
+  const order = ["checking", "building", "restarting"];
+  const now = Math.max(0, order.indexOf(p.step));
+  // Never behind the step the panel is on, never finished before it is.
+  const floor = [0, 0.08, 0.9][now];
+  const part = Math.min(0.97, Math.max(floor, elapsed / p.expected));
+  const pct = Math.round(part * 100);
+  $("progressFill").style.width = pct + "%";
+  $("progressBar").setAttribute("aria-valuenow", String(pct));
+  const labels = p.removing
+    ? [t("web.addons.stepRemove", "Remove"), t("web.addons.stepRebuild", "Rebuild"), t("web.addons.stepRestart", "Restart")]
+    : [t("web.addons.stepFetch", "Fetch and check"), t("web.addons.stepBuild", "Build"), t("web.addons.stepRestart", "Restart")];
+  labels.forEach((label, i) => {
+    const s = $("step" + (i + 1));
+    s.textContent = (i < now ? "✓ " : (i + 1) + ". ") + label;
+    s.className = i < now ? "done" : i === now ? "now" : "";
+  });
+  const left = Math.round(p.expected - elapsed);
+  $("progressLeft").textContent = left > 75
+    ? t("web.addons.minutesLeft", "about {n} minutes left", { n: Math.round(left / 60) })
+    : left > 20 ? t("web.addons.minuteLeft", "about a minute left")
+    : left > -20 ? t("web.addons.nearly", "nearly there")
+    : t("web.addons.longer", "taking longer than last time — still going");
+}
+function showProgress(b) {
+  const p = progress;
+  if (b) {
+    p.step = b.step || p.step;
+    p.removing = b.action === "addon-remove" || b.action === "remove";
+    if (typeof b.elapsed === "number") { p.elapsed = b.elapsed; p.at = Date.now(); }
+    else if (!p.at) { p.elapsed = 0; p.at = Date.now(); }
+    if (typeof b.expected === "number" && b.expected > 0) p.expected = b.expected;
+  }
+  $("progress").hidden = false;
+  drawProgress();
+  if (!p.timer) p.timer = setInterval(drawProgress, 1000);
+}
+function hideProgress() {
+  clearInterval(progress.timer);
+  progress.timer = null;
+  progress.at = 0;
+  $("progress").hidden = true;
+}
+
+/* Shows how a build stands. True while it is still going. */
+function showBuild(b, fresh) {
+  const ours = b.action === "addons" || b.action === "addon-remove";
+  $("errors").hidden = true;
+  if (b.state !== "building") hideProgress();
+  else showProgress(b);
+  if (b.state === "building") {
+    const name = ours ? names(b.name) : b.name;
+    // Taking one out is a rebuild too, and is said as what it is.
+    const steps = b.action === "addon-remove" ? {
+      checking: t("web.addons.removing", "Removing {name} from the panel…", { name }),
+      building: t("web.addons.rebuilding", "Removing {name} and rebuilding the panel without it — this takes a few minutes…", { name }),
+      restarting: t("web.addons.restartingWithout", "Restarting the panel without {name}…", { name }),
+    } : {
+      checking: t("web.addons.checking", "Fetching and checking {name}…", { name }),
+      building: t("web.addons.building", "Building {name} into the panel — this takes a few minutes…", { name }),
+      restarting: t("web.addons.restarting", "Restarting the panel with {name}…", { name }),
+    };
+    say("busy", steps[b.step] || steps.building);
+    return true;
+  }
+  if (!ours || !fresh) return false;
+  const name = names(b.name);
+  if (b.state === "failed") {
+    say("bad", b.action === "addon-remove"
+      ? t("web.addons.removeFailed", "{name} could not be removed. The panel is as it was.", { name })
+      : t("web.addons.failed", "{name} was not added. The panel is as it was.", { name }));
+    $("errors").textContent = b.error || "";
+    $("errors").hidden = !b.error;
+  } else if (b.state === "ok") {
+    say("good", b.action === "addon-remove"
+      ? t("web.addons.removed", "Removed {name}, and the panel rebuilt without it.", { name })
+      : t("web.addons.built", "{name} is built in and running. Find it in the editor, under \"Add a widget\".", { name }));
+  }
+  return false;
+}
+
+/* Asked every few seconds. The panel not answering is the restart. */
+function watch() {
+  clearInterval(state.watch);
+  state.busy = true;
+  draw();
+  state.watch = setInterval(async () => {
+    let build;
+    try { build = (await getJson("/api/widgets/build")).build; }
+    catch (e) {
+      say("busy", t("web.addons.waiting", "The panel is restarting…"));
+      progress.step = "restarting";
+      showProgress(null);
+      return;
+    }
+    if (showBuild(build, true)) return;
+    clearInterval(state.watch);
+    state.watch = null;
+    state.busy = false;
+    const said = $("statusText").textContent, kind = $("status").className;
+    await load(false, true);
+    if (said) { $("status").hidden = false; $("status").className = kind; $("statusText").textContent = said; }
+  }, 3000);
+}
+
+async function install(ids) {
+  if (!ids.length || state.busy) return;
+  state.busy = true;
+  draw();
+  say("busy", t("web.addons.asking", "Asking the panel for {name}…", { name: names(ids.join(",")) }));
+  try {
+    const res = await fetch("/api/addons/install", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids }),
+    });
+    if (!res.ok) { state.busy = false; say("bad", (await res.text()) || res.statusText); draw(); return; }
+    state.data = await res.json();
+    ids.forEach(id => state.picked.delete(id));
+    if (state.data.build && state.data.build.state === "building") { showBuild(state.data.build, true); watch(); return; }
+    state.busy = false;
+    const themes = ids.every(id => (state.data.addons.find(a => a.id === id) || {}).kind === "theme");
+    say("good", themes
+      ? t("web.addons.addedTheme", "{name} is on the panel. Dress it in it under Theme, in the editor or in Settings on the panel.", { name: names(ids.join(",")) })
+      : t("web.addons.added", "{name} is on the panel. Find it in the editor, under \"Add a widget\".", { name: names(ids.join(",")) }));
+  } catch (e) {
+    state.busy = false;
+    say("bad", t("web.addons.couldNot", "The panel did not answer."));
+  }
+  draw();
+}
+
+async function remove(a) {
+  if (state.busy) return;
+  const asked = a.kind === "theme"
+    ? (a.inUse
+      ? t("web.addons.confirmRemoveThemeInUse", "Remove {name} from the panel? It is dressed in it now, so it goes back to Glass.", { name: a.name })
+      : t("web.addons.confirmRemoveTheme", "Remove {name} from the panel?", { name: a.name }))
+    : t("web.addons.confirmRemove", "Remove {name} from the panel? Tiles of it keep their settings, for if it comes back.", { name: a.name });
+  if (!confirm(asked)) return;
+  state.busy = true;
+  draw();
+  try {
+    const res = await fetch("/api/addons?id=" + encodeURIComponent(a.id), { method: "DELETE" });
+    if (!res.ok) { state.busy = false; say("bad", (await res.text()) || res.statusText); draw(); return; }
+    state.data = await res.json();
+    if (state.data.build && state.data.build.state === "building") { showBuild(state.data.build, true); watch(); return; }
+    state.busy = false;
+    say("good", t("web.addons.removedNow", "Removed {name}.", { name: a.name }));
+  } catch (e) {
+    state.busy = false;
+    say("bad", t("web.addons.couldNot", "The panel did not answer."));
+  }
+  draw();
+}
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+
+function card(a) {
+  const d = state.data;
+  const box = el("article", "card addon" + (state.picked.has(a.id) ? " picked" : ""));
+  const shot = el("div", "shot");
+  const glyph = el("span", "glyph", a.glyph || "🧩");
+  glyph.setAttribute("aria-hidden", "true");
+  if (a.screenshot) {
+    const img = el("img");
+    img.loading = "lazy";
+    img.alt = t("web.addons.shotOf", "What {name} looks like", { name: a.name });
+    img.onerror = () => img.replaceWith(glyph);
+    img.src = a.screenshot;
+    shot.appendChild(img);
+  } else shot.appendChild(glyph);
+
+  const builds = a.kind === "dart";
+  // Code nobody has checked waits for the panel's own switch.
+  const held = builds && !a.official && !d.codeAllowed;
+  const can = a.listed && a.compatible && (!builds || d.canBuild) && !held;
+  const want = can && (!a.installed || a.update);
+
+  const about = el("div", "about");
+  if (a.category) about.appendChild(el("p", "cat", a.categoryName || a.category));
+  about.appendChild(el("h2", "", a.name || a.id));
+  const by = el("p", "by", t("web.addons.by", "by") + " ");
+  if (a.authorUrl && /^https:\/\//.test(a.authorUrl)) {
+    const link = el("a", "", a.author || "—");
+    link.href = a.authorUrl; link.target = "_blank"; link.rel = "noopener";
+    by.appendChild(link);
+  } else by.appendChild(document.createTextNode(a.author || "—"));
+  about.appendChild(by);
+  const what = el("p", "what", a.description || "");
+  what.title = a.description || "";
+  about.appendChild(what);
+  const count = (a.types || []).length;
+  about.appendChild(el("p", "facts", [
+    t("web.addons.version", "Version {version}", { version: a.version || "—" }),
+    count > 1 ? t("web.addons.tiles", "{n} widgets", { n: count }) : null,
+    a.kind === "theme" ? t("web.addons.isTheme", "a theme, on the panel at once")
+      : builds ? t("web.addons.isBuilt", "built into the panel") : t("web.addons.isInstant", "on the panel at once"),
+  ].filter(Boolean).join(" · ")));
+  if ((a.permissions || []).length) {
+    about.appendChild(el("p", "facts", t("web.addons.uses", "Uses: {what}", { what: a.permissions.join(", ") })));
+  }
+  if (!a.official) {
+    const other = el("p", "other", "⚠ " + t("web.addons.untested", "Untested — from") + " ");
+    const link = el("a", "", a.source);
+    link.href = "https://github.com/" + a.source; link.target = "_blank"; link.rel = "noopener";
+    other.appendChild(link);
+    about.appendChild(other);
+  }
+  if (!a.listed) about.appendChild(el("p", "warn", a.official
+    ? t("web.addons.unlisted", "No longer in the catalogue.")
+    : t("web.addons.unlistedOther", "No longer in a library this panel reads.")));
+  else if (held && !a.installed) about.appendChild(el("p", "warn", t("web.addons.held", "Code from another library: switch on \"Widgets written in Dart\" in Settings → Dashboard, on the panel, to allow it.")));
+  else if (!a.compatible) about.appendChild(el("p", "warn", t("web.addons.tooNew", "Needs HomeCanvas {version} or newer.", { version: a.minApp })));
+  else if (builds && !d.canBuild) about.appendChild(el("p", "warn", t("web.addons.cannotBuild", "This panel was not built where it runs, so it cannot build widgets in.")));
+
+  // The foot of the card, the same on every one: a line saying whether it
+  // is installed and holding the tick for picking it with others — empty
+  // when neither applies, so the buttons below sit level across a row.
+  const acts = el("div", "acts");
+  const line = el("div", "line");
+  if (a.installed) line.appendChild(el("span", "have", "✓ " + (a.inUse
+    ? t("web.addons.inUse", "Installed, and in use")
+    : t("web.addons.installed", "Installed"))));
+  // Several built in together cost one restart, not one each.
+  if (want && builds) {
+    const pick = el("label", "pick");
+    const tick = el("input");
+    tick.type = "checkbox";
+    tick.checked = state.picked.has(a.id);
+    tick.disabled = state.busy;
+    tick.onchange = () => { tick.checked ? state.picked.add(a.id) : state.picked.delete(a.id); draw(); };
+    pick.append(tick, el("span", "", t("web.addons.pick", "Pick with others")));
+    line.appendChild(pick);
+  }
+  const row = el("div", "row");
+  if (want) {
+    const get = el("button", "", a.update
+      ? t("web.addons.update", "Update")
+      : "⬇ " + t("web.addons.download", "Download"));
+    get.disabled = state.busy;
+    get.onclick = () => install([a.id]);
+    row.appendChild(get);
+  }
+  if (a.installed) {
+    const out = el("button", "danger", t("web.addons.remove", "Remove"));
+    out.disabled = state.busy || (builds && !d.canBuild);
+    out.onclick = () => remove(a);
+    row.appendChild(out);
+  }
+  acts.append(line, row);
+  about.appendChild(acts);
+  box.append(shot, about);
+  return box;
+}
+
+function draw() {
+  const d = state.data;
+  if (!d) return;
+  $("repo").href = d.url;
+
+  // The palette's groups, for narrowing the list to one.
+  const cats = new Map();
+  for (const a of d.addons) if (a.category) cats.set(a.category, a.categoryName || a.category);
+  const choose = $("category");
+  choose.innerHTML = "";
+  const option = (id, label) => {
+    const o = el("option", "", label);
+    o.value = id;
+    choose.appendChild(o);
+  };
+  option("", t("web.addons.allGroups", "All groups"));
+  option("#installed", t("web.addons.installed", "Installed"));
+  if (d.addons.some(a => !a.official)) option("#other", t("web.addons.fromOthers", "Untested"));
+  [...cats].sort((x, y) => x[1].localeCompare(y[1])).forEach(([id, label]) => option(id, label));
+  // A group that has emptied — its last add-on removed — is not left chosen.
+  if (![...choose.options].some(o => o.value === state.category)) state.category = "";
+  choose.value = state.category;
+
+  const q = state.filter.trim().toLowerCase();
+  const shown = d.addons.filter(a =>
+    (state.category === "" || (state.category === "#installed" ? !!a.installed : state.category === "#other" ? !a.official : a.category === state.category)) &&
+    (!q || [a.name, a.description, a.author, a.categoryName, a.id].join(" ").toLowerCase().includes(q)))
+    .sort((x, y) => (y.wanted - x.wanted) || String(x.name).localeCompare(String(y.name)));
+  const list = $("list");
+  list.innerHTML = "";
+  if (!shown.length) {
+    list.appendChild(el("p", "empty", d.error && !d.addons.length
+      ? d.error
+      : t("web.addons.none", "Nothing matches.")));
+  }
+  shown.forEach(a => list.appendChild(card(a)));
+
+  // Tiles on the dashboard whose widget is not installed: one button.
+  // Only the catalogue's: another library's are asked for one by one.
+  const wanted = d.addons.filter(a => a.wanted && a.official && a.listed && a.compatible && (a.kind !== "dart" || d.canBuild));
+  const all = $("wantedInstall");
+  all.hidden = true;
+  if (!state.busy && $("status").hidden) {
+    if (d.error) say("bad", d.error);
+    else if (wanted.length) {
+      say("", t("web.addons.wanted", "{n, plural, one{Your dashboard is waiting for # add-on} other{Your dashboard is waiting for # add-ons}}: {names}.", { n: wanted.length, names: wanted.map(a => a.name).join(", ") }));
+    }
+  }
+  if (!state.busy && wanted.length && $("status").className.trim() === "card") {
+    all.hidden = false;
+    all.textContent = t("web.addons.wantedInstall", "Download them");
+    all.onclick = () => install(wanted.map(a => a.id));
+  }
+
+  drawLibraries();
+
+  const picked = [...state.picked].filter(id => d.addons.some(a => a.id === id));
+  $("basket").hidden = !picked.length || state.busy;
+  $("basketText").textContent = t("web.addons.picked", "{n, plural, one{# add-on picked} other{# add-ons picked}} — built in together, with one restart.", { n: picked.length });
+  $("basketInstall").onclick = () => install(picked);
+  $("basketClear").onclick = () => { state.picked.clear(); draw(); };
+}
+
+function drawLibraries() {
+  const d = state.data, list = $("libraryList");
+  $("codeOff").hidden = !!d.codeAllowed;
+  list.innerHTML = "";
+  for (const l of d.libraries || []) {
+    const row = el("li");
+    const link = el("a", "", l.repo);
+    link.href = l.url; link.target = "_blank"; link.rel = "noopener";
+    const n = el("span", "n" + (l.error ? " bad" : ""), l.error
+      ? t("web.addons.libraryUnread", "could not be read")
+      : t("web.addons.libraryCount", "{n, plural, one{# add-on} other{# add-ons}}", { n: l.count }) +
+        (l.hidden ? " · " + t("web.addons.libraryHidden", "{n} left out, already in the catalogue", { n: l.hidden }) : ""));
+    const out = el("button", "quiet", t("web.addons.libraryRemove", "Stop reading"));
+    out.disabled = state.busy;
+    out.onclick = () => library("DELETE", "/api/addons/libraries?repo=" + encodeURIComponent(l.repo));
+    row.append(link, n, out);
+    list.appendChild(row);
+  }
+  const full = (d.libraries || []).length >= (d.maxLibraries || 8);
+  $("libraryName").disabled = full || state.busy;
+  $("libraryAdd").disabled = full || state.busy || !$("libraryAgree").checked || !$("libraryName").value.trim();
+}
+
+/* Adds a library, or stops reading one. What was installed from one stays
+   until it is removed. */
+async function library(method, path, body) {
+  say("busy", t("web.addons.libraryAsking", "Reading the library…"));
+  try {
+    const res = await fetch(path, body
+      ? { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
+      : { method });
+    if (!res.ok) { say("bad", (await res.text()) || res.statusText); return; }
+    state.data = await res.json();
+    $("libraryName").value = "";
+    $("libraryAgree").checked = false;
+    $("status").hidden = true;
+  } catch (e) {
+    say("bad", t("web.addons.couldNot", "The panel did not answer."));
+  }
+  draw();
+}
+
+async function load(fresh, quiet) {
+  try {
+    state.data = await getJson("/api/addons" + (fresh ? "?fresh=1" : ""));
+  } catch (e) {
+    say("bad", t("web.addons.couldNot", "The panel did not answer."));
+    return;
+  }
+  if (!quiet) { $("status").hidden = true; $("errors").hidden = true; }
+  // A build begun before this page was opened is still to be watched.
+  if (state.data.build && showBuild(state.data.build, false)) { watch(); return; }
+  draw();
+}
+
+$("search").oninput = (e) => { state.filter = e.target.value; draw(); };
+$("category").onchange = (e) => { state.category = e.target.value; draw(); };
+$("refresh").onclick = () => load(true);
+$("libraryName").oninput = $("libraryAgree").onchange = () => state.data && drawLibraries();
+$("libraryForm").onsubmit = (e) => {
+  e.preventDefault();
+  const repo = $("libraryName").value.trim().replace(/^https:\/\/github\.com\//, "").replace(/(\.git)?\/?$/, "");
+  if (repo && $("libraryAgree").checked) library("POST", "/api/addons/libraries", { repo });
+};
+// Words first, so the page is drawn in the panel's language.
+loadWords().then(() => load(false));
+</script>
+</body>
+</html>

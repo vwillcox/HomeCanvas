@@ -1,12 +1,13 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:dbus/dbus.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' show Icons, IconData;
 
+import '../l10n/l10n.dart';
+import 'http_client.dart';
+import 'itunes_art.dart';
 import 'playback_source.dart';
 import 'screen_state.dart';
 
@@ -130,7 +131,10 @@ class NowPlayingService extends ChangeNotifier implements PlaybackSource {
   NowPlaying get now => _now;
 
   @override
-  bool get available => _player != null;
+  bool get available => _player != null || _testing;
+
+  /// Set by HOMECANVAS_TEST_TRACK: a phone that isn't there, playing a song.
+  bool _testing = false;
 
   String? _artUrl;
   @override
@@ -138,7 +142,14 @@ class NowPlayingService extends ChangeNotifier implements PlaybackSource {
   String _artForKey = '';
   final Map<String, String?> _artCache = {};
 
+  /// The title as the sender gave it, which [now] may not show: see
+  /// [shownTitle].
+  String _sentTitle = '';
+  final _dio = httpClient();
+
   Future<void> start() async {
+    final test = Platform.environment['HOMECANVAS_TEST_TRACK'] ?? '';
+    if (test.isNotEmpty) return _pretend(test);
     try {
       _client = DBusClient.system();
       await _findPlayer();
@@ -151,6 +162,43 @@ class NowPlayingService extends ChangeNotifier implements PlaybackSource {
     } catch (e) {
       debugPrint('NowPlayingService.start error: $e');
     }
+  }
+
+  /// HOMECANVAS_TEST_TRACK=`artist|title|album|seconds|from`: plays that
+  /// song from `from` seconds in, on no phone at all — the full player, its
+  /// cover and its lyrics, on a machine with no Bluetooth to speak of.
+  /// Several songs, split by `;`, play one after another, round and round.
+  void _pretend(String spec) {
+    final songs = spec.split(';').where((s) => s.trim().isNotEmpty).toList();
+    var playing = 0;
+    void play(int i) {
+      final p = songs[i].split('|');
+      String at(int i) => i < p.length ? p[i].trim() : '';
+      _now = NowPlaying(
+        artist: at(0),
+        title: at(1),
+        album: at(2),
+        duration: Duration(seconds: int.tryParse(at(3)) ?? 240),
+        position: Duration(seconds: int.tryParse(at(4)) ?? 0),
+        status: 'playing',
+        deviceName: 'Phone',
+      );
+      _artForKey = _now.trackKey;
+      unawaited(_lookupArtwork(_now.artist, _now.title));
+      notifyListeners();
+    }
+
+    _testing = true;
+    play(playing);
+    _positionTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      final next = _now.position + const Duration(seconds: 1);
+      if (next >= _now.duration) {
+        playing = (playing + 1) % songs.length;
+        return play(playing);
+      }
+      _now = _now.copyWith(position: next);
+      notifyListeners();
+    });
   }
 
   /// One subscription covers everything under org.bluez: the phone appearing
@@ -287,12 +335,31 @@ class NowPlayingService extends ChangeNotifier implements PlaybackSource {
     _transport = null;
     _transportPath = null;
     _now = const NowPlaying();
+    _sentTitle = '';
     _artUrl = null;
     _artForKey = '';
     _idleTimer?.cancel();
     _idleTimer = null;
     _idleHidden = false;
     notifyListeners();
+  }
+
+  /// Whether the sender said what is playing. AVRCP's "Not Provided" is it
+  /// saying it has not.
+  static bool named(String title) =>
+      title.isNotEmpty && title != 'Not Provided';
+
+  /// What to call the track. Some senders say they are playing and never say
+  /// what — a Mac playing Spotify, for one — and showed as nothing playing
+  /// while music came out of the panel. Named after the device instead, with
+  /// the controls still working: as Spotify's own "Playing on Spotify" for
+  /// audio it will not name. Paused and unnamed is nothing, as there.
+  @visibleForTesting
+  static String shownTitle(String title, String status, String device) {
+    if (named(title) || status != 'playing') return title;
+    return tr('nowPlaying.playingFrom', 'Playing from {device}', {
+      'device': device.isEmpty ? 'Bluetooth' : device,
+    });
   }
 
   /// Friendly name of the phone, from the parent Device1 object.
@@ -331,7 +398,7 @@ class NowPlayingService extends ChangeNotifier implements PlaybackSource {
     String? deviceName,
     bool notify = true,
   }) {
-    var title = _now.title;
+    var title = _sentTitle;
     var artist = _now.artist;
     var album = _now.album;
     var duration = _now.duration;
@@ -361,8 +428,10 @@ class NowPlayingService extends ChangeNotifier implements PlaybackSource {
         ? Duration(milliseconds: (props['Position'] as DBusUint32).value)
         : _now.position;
 
+    _sentTitle = title;
+    final device = deviceName ?? _now.deviceName;
     _now = NowPlaying(
-      title: title,
+      title: shownTitle(title, status, device),
       artist: artist,
       album: album,
       duration: duration,
@@ -370,12 +439,12 @@ class NowPlayingService extends ChangeNotifier implements PlaybackSource {
       status: status,
       repeat: repeat,
       shuffle: shuffleRaw != 'off',
-      deviceName: deviceName ?? _now.deviceName,
+      deviceName: device,
     );
 
     _updateIdleTimer();
 
-    if (_now.hasTrack && _now.trackKey != _artForKey) {
+    if (named(title) && _now.hasTrack && _now.trackKey != _artForKey) {
       _artForKey = _now.trackKey;
       unawaited(_lookupArtwork(_now.artist, _now.title));
     }
@@ -549,52 +618,11 @@ class NowPlayingService extends ChangeNotifier implements PlaybackSource {
     }
     _artUrl = null;
     notifyListeners();
-    try {
-      final r = await Dio().get(
-        'https://itunes.apple.com/search',
-        queryParameters: {
-          'term': '$artist $title'.trim(),
-          'entity': 'song',
-          'limit': 3,
-        },
-        options: Options(
-          // iTunes replies with Content-Type: text/javascript, so Dio won't
-          // decode it automatically — take the body as text and parse it here.
-          responseType: ResponseType.plain,
-          sendTimeout: const Duration(seconds: 8),
-          receiveTimeout: const Duration(seconds: 8),
-        ),
-      );
-      final body = r.data is String
-          ? jsonDecode(r.data as String) as Map<String, dynamic>
-          : (r.data as Map).cast<String, dynamic>();
-      final results = (body['results'] as List?) ?? const [];
-      String? art;
-      for (final item in results) {
-        final a = (item['artistName'] ?? '').toString().toLowerCase();
-        // Prefer a result whose artist actually matches.
-        if (artist.isEmpty ||
-            a.contains(artist.toLowerCase().split(' ').first)) {
-          art = (item['artworkUrl100'] ?? '').toString();
-          break;
-        }
-      }
-      art ??= results.isNotEmpty
-          ? (results.first['artworkUrl100'] ?? '').toString()
-          : null;
-      if (art != null && art.isNotEmpty) {
-        art = art.replaceAll('100x100bb', '600x600bb');
-      } else {
-        art = null;
-      }
-      _artCache[key] = art;
-      if (_artForKey == key) {
-        _artUrl = art;
-        notifyListeners();
-      }
-    } catch (e) {
-      debugPrint('artwork lookup error: $e');
-      _artCache[key] = null;
+    final art = await itunesSongArt(_dio, artist: artist, song: title);
+    _artCache[key] = art;
+    if (_artForKey == key) {
+      _artUrl = art;
+      notifyListeners();
     }
   }
 

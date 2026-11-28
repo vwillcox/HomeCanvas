@@ -5,6 +5,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import '../l10n/l10n.dart';
+import '../map_text.dart';
+import 'http_client.dart';
 
 /// One roadside camera.
 @immutable
@@ -54,14 +56,9 @@ class TrafficCamsService extends ChangeNotifier {
   TrafficCamsService({required this.home, Dio? dio})
     : _dio =
           dio ??
-          Dio(
-            BaseOptions(
-              connectTimeout: const Duration(seconds: 10),
-              receiveTimeout: const Duration(seconds: 30),
-              headers: const {
-                'User-Agent': 'HomeCanvas/1.0 (home dashboard panel)',
-              },
-            ),
+          httpClient(
+            receive: const Duration(seconds: 30),
+            headers: const {'User-Agent': homeCanvasAgent},
           );
 
   final Dio _dio;
@@ -138,7 +135,7 @@ class TrafficCamsService extends ChangeNotifier {
       out.add(
         TrafficCam(
           id: '${p['id'] ?? ''}',
-          name: '${p['commonName'] ?? ''}'.trim(),
+          name: p.text('commonName'),
           imageUrl: image,
           lat: (p['lat'] as num?)?.toDouble(),
           lon: (p['lon'] as num?)?.toDouble(),

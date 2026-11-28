@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import '../l10n/l10n.dart';
+import 'http_client.dart';
 
 /// A high or low tide.
 @immutable
@@ -57,14 +58,7 @@ class TideTable {
 /// beach, not for navigation.
 class TidesService extends ChangeNotifier {
   TidesService({required this.home, Dio? dio})
-    : _dio =
-          dio ??
-          Dio(
-            BaseOptions(
-              connectTimeout: const Duration(seconds: 10),
-              receiveTimeout: const Duration(seconds: 20),
-            ),
-          );
+    : _dio = dio ?? httpClient(receive: const Duration(seconds: 20));
 
   final Dio _dio;
 

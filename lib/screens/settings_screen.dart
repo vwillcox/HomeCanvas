@@ -16,6 +16,7 @@ import '../services/config_service.dart';
 import '../services/dashboard_service.dart';
 import '../services/homey_service.dart';
 import '../services/indoor_sensor_service.dart';
+import '../services/link_outbox.dart';
 import '../services/locked_folder_service.dart';
 import '../services/media_cache.dart';
 import '../services/now_playing_service.dart';
@@ -38,7 +39,9 @@ import '../widgets/lcars.dart';
 import '../widgets/language_tile.dart';
 import '../l10n/l10n.dart';
 import 'about_screen.dart';
+import 'routines_settings.dart';
 import 'setup_screen.dart';
+import '../services/http_client.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -196,6 +199,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           GlassSection(
             title: tr('settings.television', 'Television'),
             children: [const _TvSettingsTile()],
+          ),
+          GlassSection(
+            title: tr('settings.artMatrix', 'Art Matrix'),
+            children: [const _ArtMatrixSettingsTile()],
           ),
           GlassSection(
             title: tr('settings.camera', 'Camera'),
@@ -997,6 +1004,23 @@ class _NowPlayingSettingsTile extends StatelessWidget {
             ),
           ),
         if (s.enabled)
+          SwitchListTile(
+            secondary: const Icon(Icons.lyrics),
+            title: Text(tr('settings.lyrics', 'Lyrics')),
+            subtitle: Text(
+              tr(
+                'settings.lyricsHint',
+                'The words beside the full player, the line being sung lit. Looked up on LRCLIB, which is sent the song\'s artist, title, album and length.',
+              ),
+            ),
+            isThreeLine: true,
+            value: s.lyrics,
+            onChanged: (v) {
+              s.lyrics = v;
+              config.save();
+            },
+          ),
+        if (s.enabled)
           ListTile(
             leading: const Icon(Icons.picture_in_picture_alt),
             title: Text(tr('settings.position', 'Position')),
@@ -1145,7 +1169,7 @@ class _HomeAssistantSettingsTile extends StatelessWidget {
 
     if (saved != true) return;
     s.enabled = enabled;
-    s.baseUrl = url.text.trim().replaceAll(RegExp(r'/+$'), '');
+    s.baseUrl = trimAddress(url.text);
     s.token = token.text.trim();
     s.temperatureEntity = temp.text.trim();
     s.humidityEntity = hum.text.trim();
@@ -1953,6 +1977,8 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
                   ),
                 ],
               ),
+              if (widget.shareInbox.outbox case final outbox?)
+                _OutboxDevices(outbox: outbox),
             ],
           ),
         ),
@@ -1971,6 +1997,95 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
   }
 }
 
+/// The phones and computers that collect links sent from the panel, each
+/// with its key id to compare with the one the app or receiver shows.
+class _OutboxDevices extends StatelessWidget {
+  const _OutboxDevices({required this.outbox});
+
+  final LinkOutbox outbox;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: outbox,
+      builder: (context, _) {
+        final devices = outbox.devices;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 18),
+            Text(
+              tr('settings.receivingLinks', 'Receiving links'),
+              style: TextStyle(
+                color: context.look.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              tr(
+                'settings.receivingLinksHelp',
+                'Phones and computers a link can be sent to with “Send to…”. '
+                    'One appears here once it has asked for links with a '
+                    'sender’s token.',
+              ),
+              style: TextStyle(color: context.look.textSecondary, fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            if (devices.isEmpty)
+              Text(
+                tr('settings.noDevicesYet', 'None yet'),
+                style: TextStyle(color: context.look.textSecondary),
+              ),
+            for (final d in devices)
+              Row(
+                children: [
+                  Icon(
+                    d.kind == 'computer'
+                        ? Icons.computer_rounded
+                        : Icons.phone_android_rounded,
+                    size: 20,
+                    color: context.look.textSecondary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 3,
+                    child: Text(
+                      '${d.name} · ${d.sender}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: context.look.textPrimary),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      d.kid,
+                      style: TextStyle(
+                        color: context.look.textSecondary,
+                        fontFamily: 'monospace',
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.delete,
+                      size: 20,
+                      color: Color(0xFFFF8A8A),
+                    ),
+                    tooltip: tr('settings.forget', 'Forget'),
+                    onPressed: () => outbox.forget(d.kid),
+                  ),
+                ],
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
 /// Switching the panel off by itself when there's nothing worth showing.
 /// The switching is done by the same host-side service Alexa drives, so a
 /// touch brings it back — see [ScreenIdleService].
@@ -1982,6 +2097,22 @@ class _ShareInboxDialogState extends State<_ShareInboxDialog> {
 /// sliders keep their levels while it is on, so turning it off puts each
 /// back where it was.
 class _SoundSettingsTile extends StatelessWidget {
+  /// "22:00".
+  static String _hour(int h) => '${h.toString().padLeft(2, '0')}:00';
+
+  static Widget _hourPicker(int value, void Function(int) set) =>
+      DropdownButton<int>(
+        value: value.clamp(0, 23),
+        underline: const SizedBox.shrink(),
+        items: [
+          for (var h = 0; h < 24; h++)
+            DropdownMenuItem(value: h, child: Text(_hour(h))),
+        ],
+        onChanged: (h) {
+          if (h != null) set(h);
+        },
+      );
+
   const _SoundSettingsTile();
 
   @override
@@ -2082,6 +2213,60 @@ class _SoundSettingsTile extends StatelessWidget {
           value: s.speechVolume,
           set: (v) => s.speechVolume = v,
         ),
+        SwitchListTile(
+          secondary: const Icon(Icons.bedtime_outlined),
+          title: Text(tr('settings.quieterAtNight', 'Quieter at night')),
+          subtitle: Text(
+            tr(
+              'settings.quieterAtNightAbout',
+              'Speech no louder than the level below from {from} until {until} — replies to “{wake}”, reminders, notes read out. Timers keep their own volume.',
+              {
+                'from': _hour(s.nightFrom),
+                'until': _hour(s.nightUntil),
+                'wake': service.config.screen.wakeWord.phrase,
+              },
+            ),
+          ),
+          isThreeLine: true,
+          value: s.quietNights,
+          onChanged: (on) {
+            s.quietNights = on;
+            service.save();
+          },
+        ),
+        if (s.quietNights) ...[
+          slider(
+            icon: Icons.nights_stay_outlined,
+            title: tr('settings.speechAtNight', 'Speech at night'),
+            help: tr(
+              'settings.speechAtNightAbout',
+              'Never louder than Speech above, whatever this is set to.',
+            ),
+            value: s.nightSpeechVolume,
+            set: (v) => s.nightSpeechVolume = v,
+          ),
+          ListTile(
+            leading: const Icon(Icons.schedule),
+            title: Text(tr('settings.night', 'Night')),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _hourPicker(s.nightFrom, (h) {
+                  s.nightFrom = h;
+                  service.save();
+                }),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  child: Text('–'),
+                ),
+                _hourPicker(s.nightUntil, (h) {
+                  s.nightUntil = h;
+                  service.save();
+                }),
+              ],
+            ),
+          ),
+        ],
         slider(
           icon: Icons.menu_book_outlined,
           title: tr('settings.newsReader', 'News reader'),
@@ -2193,6 +2378,7 @@ class _ScreenSettingsTile extends StatelessWidget {
           ),
         ],
         const _VoiceControlTile(),
+        const RoutinesTile(),
       ],
     );
   }
@@ -2501,90 +2687,69 @@ class _DashboardSettingsTile extends StatelessWidget {
 
     return Column(
       children: [
-        SwitchListTile(
-          secondary: const Icon(Icons.dashboard_outlined),
-          title: Text(tr('settings.widgetDashboard', 'Widget dashboard')),
+        ListTile(
+          leading: const Icon(Icons.open_in_browser),
+          title: Text(
+            tr('settings.arrangeItInABrowser', 'Arrange it in a browser'),
+          ),
+          isThreeLine:
+              dashboard.editorIpAddress != null ||
+              dashboard.webPortNote != null,
+          subtitle: Text(
+            [
+              dashboard.editorAddress,
+              if (dashboard.editorIpAddress != null)
+                'or ${dashboard.editorIpAddress}',
+              ?dashboard.webPortNote,
+            ].join('\n'),
+          ),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => _editPort(context),
+        ),
+        ListTile(
+          leading: const Icon(Icons.palette_outlined),
+          title: Text(tr('settings.theme', 'Theme')),
+          // It dresses every screen now, not just the dashboard.
           subtitle: Text(
             tr(
-              'settings.aScreenOfWidgetsClock',
-              'A screen of widgets — clock, weather, calendar, news, now playing — arranged from a browser. Adds a button to the top bar.',
+              'settings.theWholeKioskSLook',
+              '{name} · the whole kiosk\'s look',
+              {'name': theme.name},
             ),
           ),
-          isThreeLine: true,
-          value: s.enabled,
-          onChanged: (v) async {
-            s.enabled = v;
-            await service.save();
-            await dashboard.refreshFromSettings();
-          },
-        ),
-        if (s.enabled) ...[
-          ListTile(
-            leading: const Icon(Icons.open_in_browser),
-            title: Text(
-              tr('settings.arrangeItInABrowser', 'Arrange it in a browser'),
-            ),
-            isThreeLine:
-                dashboard.editorIpAddress != null ||
-                dashboard.webPortNote != null,
-            subtitle: Text(
-              [
-                dashboard.editorAddress,
-                if (dashboard.editorIpAddress != null)
-                  'or ${dashboard.editorIpAddress}',
-                ?dashboard.webPortNote,
-              ].join('\n'),
-            ),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _editPort(context),
-          ),
-          ListTile(
-            leading: const Icon(Icons.palette_outlined),
-            title: Text(tr('settings.theme', 'Theme')),
-            // It dresses every screen now, not just the dashboard.
-            subtitle: Text(
-              tr(
-                'settings.theWholeKioskSLook',
-                '{name} · the whole kiosk\'s look',
-                {'name': theme.name},
-              ),
-            ),
-            trailing: DropdownButton<String>(
-              value: dashboard.themes.all.any((t) => t.id == s.themeId)
-                  ? s.themeId
-                  : dashboard.themes.all.first.id,
-              underline: const SizedBox.shrink(),
-              items: dashboard.themes.all
-                  .map(
-                    (t) => DropdownMenuItem(value: t.id, child: Text(t.name)),
-                  )
-                  .toList(),
-              onChanged: (v) {
-                if (v == null) return;
-                s.themeId = v;
-                service.save();
-              },
-            ),
-          ),
-          // Only here, on the panel: what is uploaded is run, and the
-          // editor asks nobody who they are.
-          SwitchListTile(
-            secondary: const Icon(Icons.code_rounded),
-            title: Text(tr('settings.codeWidgets', 'Widgets written in Dart')),
-            subtitle: Text(
-              tr(
-                'settings.codeWidgetsHelp',
-                'Lets the editor take widgets as Dart and build them into the panel. Anyone on your network who can open the editor could then run their own code here, so leave it off unless you are writing one.',
-              ),
-            ),
-            isThreeLine: true,
-            value: s.codeWidgets,
+          trailing: DropdownButton<String>(
+            value: dashboard.themes.all.any((t) => t.id == s.themeId)
+                ? s.themeId
+                : dashboard.themes.all.first.id,
+            underline: const SizedBox.shrink(),
+            items: dashboard.themes.all
+                .map((t) => DropdownMenuItem(value: t.id, child: Text(t.name)))
+                .toList(),
             onChanged: (v) {
-              s.codeWidgets = v;
+              if (v == null) return;
+              s.themeId = v;
               service.save();
             },
           ),
-        ],
+        ),
+        // Only here, on the panel: what is uploaded is run, and the
+        // editor asks nobody who they are.
+        SwitchListTile(
+          secondary: const Icon(Icons.code_rounded),
+          title: Text(tr('settings.codeWidgets', 'Widgets written in Dart')),
+          subtitle: Text(
+            tr(
+              'settings.codeWidgetsHelp',
+              'Lets the editor take widgets as Dart and build them into the panel. Anyone on your network who can open the editor could then run their own code here, so leave it off unless you are writing one.',
+            ),
+          ),
+          isThreeLine: true,
+          value: s.codeWidgets,
+          onChanged: (v) {
+            s.codeWidgets = v;
+            service.save();
+          },
+        ),
       ],
     );
   }
@@ -2794,6 +2959,109 @@ class _TvSettingsTile extends StatelessWidget {
         ),
       );
     }
+  }
+}
+
+/// The Art Matrix: an LED display on the home network, switched on and off
+/// and dimmed by voice, and in a routine. See `ArtMatrixService`.
+class _ArtMatrixSettingsTile extends StatelessWidget {
+  const _ArtMatrixSettingsTile();
+
+  Future<void> _edit(BuildContext context) async {
+    final service = context.read<ConfigService>();
+    final s = service.config.artMatrix;
+    final host = TextEditingController(text: s.host);
+
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(tr('settings.artMatrix', 'Art Matrix')),
+        content: SizedBox(
+          width: 600,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                tr(
+                  'settings.artMatrixHelp',
+                  'Its name on your home network, arty.local, or its IP address if the panel can’t find it by name. An address anywhere else is refused.',
+                ),
+                style: TextStyle(
+                  color: context.look.textSecondary,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: host,
+                autocorrect: false,
+                style: const TextStyle(fontSize: 18),
+                decoration: InputDecoration(
+                  labelText: tr('settings.address', 'Address'),
+                  hintText: 'arty.local',
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(tr('settings.cancel', 'Cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(tr('settings.save', 'Save')),
+          ),
+        ],
+      ),
+    );
+    if (saved != true) return;
+    s.host = ArtMatrixSettings.hostOf(host.text);
+    await service.save();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final service = context.watch<ConfigService>();
+    final s = service.config.artMatrix;
+    return Column(
+      children: [
+        SwitchListTile(
+          secondary: const Icon(Icons.grid_on),
+          title: Text(tr('settings.artMatrixVoice', 'Art Matrix by voice')),
+          subtitle: Text(
+            tr(
+              'settings.artMatrixAbout',
+              'Switches the Art Matrix LED display on and off, and sets its brightness: “turn the Art Matrix off”, “Art Matrix brightness 40”. Also in routines.',
+            ),
+          ),
+          isThreeLine: true,
+          value: s.enabled,
+          onChanged: (v) {
+            s.enabled = v;
+            service.save();
+          },
+        ),
+        if (s.enabled)
+          ListTile(
+            leading: const Icon(Icons.lan_outlined),
+            title: Text(tr('settings.address', 'Address')),
+            subtitle: Text(
+              s.host.isEmpty
+                  ? tr(
+                      'settings.artMatrixNoAddress',
+                      'Not set — voice requests for it go to Home Assistant',
+                    )
+                  : s.host,
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _edit(context),
+          ),
+      ],
+    );
   }
 }
 

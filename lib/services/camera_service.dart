@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import '../config/app_config.dart' show CameraSettings;
 import 'config_service.dart';
 import '../l10n/l10n.dart';
+import 'http_client.dart';
 
 /// One lens the phone is willing to open, as reported by `/info.json`.
 class PhoneLens {
@@ -81,11 +82,9 @@ class CameraService extends ChangeNotifier {
   }
 
   final ConfigService _config;
-  final Dio _dio = Dio(
-    BaseOptions(
-      connectTimeout: const Duration(seconds: 4),
-      receiveTimeout: const Duration(seconds: 5),
-    ),
+  final Dio _dio = httpClient(
+    connect: const Duration(seconds: 4),
+    receive: const Duration(seconds: 5),
   );
 
   CameraSettings get settings => _config.config.camera;

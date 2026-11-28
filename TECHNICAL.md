@@ -27,9 +27,9 @@ borderless under the **labwc** Wayland compositor on Raspberry Pi OS. State is
 held in `ChangeNotifier` services handed down with `provider`; each screen and
 widget watches the ones it needs. Configuration is one JSON file,
 `~/.config/homecanvas/config.json`, read and written by `ConfigService`;
-things the household adds — notes, the shopping list, chores done — are kept in
-small files beside it (`notes.json`, `shopping.json`, `chores.json`), written
-atomically through a temporary file.
+things the household adds — notes, the shopping list, chores done, parcels on
+their way — are kept in small files beside it (`notes.json`, `shopping.json`,
+`chores.json`, `parcels.json`), written atomically through a temporary file.
 
 Around the app, a few small pieces on the Pi:
 
@@ -45,6 +45,28 @@ Around the app, a few small pieces on the Pi:
 ---
 
 ## The dashboard
+
+### Widgets are add-ons
+
+Every widget lives in [HomeCanvas-Widgets](https://github.com/vwillcox/HomeCanvas-Widgets)
+and are downloaded to a panel from the editor's Add-ons page. The
+catalogue's checks publish an index of what passed, with a SHA-256 for
+every file; `lib/services/addons.dart` lists it, `scripts/addons.py`
+fetches from it and refuses what does not match, and
+`scripts/widget-build.sh` builds what was fetched into the app, putting the
+last good build back if the new one does not check, build or start. The
+whole path, and how to work on add-ons with the app, is in
+[`lib/dashboard/widgets/README.md`](lib/dashboard/widgets/README.md).
+
+Beside the catalogue a panel can read **third-party libraries**:
+repositories laid out the same way, named on the Add-ons page and kept as
+`addonLibraries` under `dashboard`. Their files are held to their own
+index's sums and nothing more — nobody has reviewed them — so the page
+marks each add-on from one as untested, and one written in Dart is built
+in only while the panel's own "Widgets written in Dart" switch is on. The
+catalogue is read first: a library's add-on with a name or a widget type
+the catalogue has is left out. The builder is asked for one as
+`name@owner/repository`.
 
 ### Widgets are described, not wired in
 
@@ -111,7 +133,8 @@ browser cannot post to them.
 | Request | Does |
 |---|---|
 | `GET /` | the editor (`assets/dashboard/editor.html`) |
-| `GET /api/schema` | the widget types, groups, themes, fonts, sizes and dynamic lists (Home Assistant entities, albums) |
+| `GET /api/schema` | the widget types, groups, themes, fonts and sizes |
+| `GET /api/lists` | the pickers' dynamic lists (Home Assistant entities, Homey devices, albums), all asked for at once |
 | `GET /api/dashboard`, `PUT /api/dashboard` | the saved dashboard |
 | `GET /api/preview` | the panel's live content, for the editor's chrome |
 | `POST /api/render` | a PNG of one widget, drawn by the app |
@@ -142,6 +165,42 @@ surprise; pausing is stopping the animation, and a paused dot breathes so a
 held page reads as held rather than stuck. Any touch on a page restarts its
 time, and the page stays put while the full music player is open.
 
+### Every page at once
+
+`PageOverview` (`lib/dashboard/page_overview.dart`) puts every page showing
+now on screen as a card, to choose one from. Each page in the `PageView` sits in
+a `RepaintBoundary` of its own, and the page showing is pictured from it with
+`toImage`, at 0.3 of its size: two and a half seconds after it arrives, once
+whatever it fetched on the way is in, and every three minutes while it stays.
+The page being left is pictured afresh, at 0.6, as the overview opens, so what
+shrinks into its card is the page exactly as it was. Thirteen pages come to
+about 10 MB. Nothing is pictured while a page is half turned, has a tile lifted
+off it, or can't be seen. A picture of a page laid out since — `pageLayout`
+hashes its tiles, their places and the theme — isn't shown; the card draws
+`PageMap` instead, the page's tiles at their places on the grid, named. A
+picture over ten minutes old says when it was taken, so a clock in it isn't
+read as the time. An unnamed page is called after its two biggest tiles
+("News feed · On this day +2"), which says which page it is where "Page 4"
+doesn't.
+
+`arrangeCards` tries every number of columns and keeps whichever makes the
+cards biggest, each the page's own shape so nothing of it is cut off; a short
+last row is centred. Off a console, the page being looked at shrinks from the
+whole grid into its card while the others arrive round it, nearest first. A
+card touched grows back out over its page — which the `PageView` has already
+jumped to underneath — and gives way to it at the very end, so anything that
+changed meanwhile isn't a jump. On LCARS nothing glides: the cards come up one
+at a time, each a panel's elbow in a colour of its own with the page's name and
+number on the bar, and the one chosen is lit, then shown.
+
+The pages don't turn while it is up. It opens from the top bar's Dashboard
+button, touched while on the dashboard (`ModuleBar.onAgain`) — a button of its
+own crowded the greeting out of a bar with thirteen pages in it — or, with the
+top bar off, from an All pages button beside the floating dots. Two fingers
+drawn together on the dashboard open it too, seen by a `Listener` that takes
+nothing from the tiles. Back, a touch between the cards, two fingers spread, or
+the same button again put it away; a page dot chooses that page's card.
+
 ### The photo background
 
 `PhotoBackdrop` sits behind the grid: a pool of Immich photos (the whole
@@ -152,7 +211,7 @@ topped up before it runs out rather than repeated. Its current photo is what
 
 ### Music on the dashboard
 
-The home screen's full-screen player, `NowPlayingOverlay`, is reused: a
+The full-screen player, `NowPlayingOverlay`, is reused: a
 `NowPlayingOverlayController` handed to the tiles through an `InheritedWidget`
 (`NowPlayingOpener`) lets a Now playing tile or the top bar's controls open it
 from wherever they are — it grows out of whatever was tapped and shrinks back
@@ -394,6 +453,55 @@ visualiser ends up screaming at the first note of the next one. Its range was
 measured off this panel rather than guessed: five seconds of ordinary music put
 the median band about 17 dB below the peaks, which is why `rangeDb` is 34.
 
+### Lyrics
+
+With **Lyrics** on (the button in the full player's header, or Settings →
+Music), the player looks up the song's words on [LRCLIB](https://lrclib.net)
+and, when it has some, gives them the middle of the screen: the cover and
+the song move to a column on the left, the words take the rest.
+
+**Finding them** (`lib/services/lyrics.dart`). First `GET /api/get` with the
+artist, title, album and length in whole seconds — LRCLIB's exact match.
+Failing that, `GET /api/search` by the title as a lyrics site files it (no
+"- Remastered 2011", no "(feat. …)") and the first of several artists, and
+the best of what comes back: same artist, same name (`sameName`, shared with
+the artwork lookup), no more than four seconds longer or shorter — a live
+take or a radio edit has its words at other times — and timed words before
+plain ones before an instrumental. The answer is kept for the last forty
+songs, a "none" included, so going back to a song or opening the player
+again asks nothing. A network that was down is not kept as a "none".
+
+**Parsing.** LRC lines can carry several times (a chorus sung twice), an
+`[offset:]`, and tags that are not words. A line with no words is a break;
+runs of them are one, none is kept at the end, and one is put in front when
+the singing doesn't start for four seconds, so the intro has something to
+show. Plain words have no times: they scroll with the song, as far down the
+words as the song is through.
+
+**Following the song** (`lib/widgets/lyrics_view.dart`). Both sources report
+the position about once a second; between reports the view counts on from
+the last one, and checks ten times a second which line is due — 250 ms
+early, enough to have read it as it is sung. It rebuilds only when the line
+changes or a break fills a step. A report landing a moment behind the count
+doesn't light the previous line again; only a real move back, a seek, does.
+The line being sung is brought to 36% of the way down with
+`Scrollable.ensureVisible`; drag the words and they stay where they were
+put until four seconds after letting go. With Spotify a line is a button
+that seeks there; AVRCP can't seek, so a touch there closes the player like
+anywhere else.
+
+**Looks.** Off a console, the words are large and bold, the line being sung
+full strength and the rest dimmed and a touch smaller, fading out at the top
+and bottom of the view; a break is three dots that light as it passes. On a
+console nothing glides: the words step up a line at a time, each line's time
+is on a block down the side (lit for the line being sung, unlit once sung, a
+colour to a verse), and a break is a row of segments counting across.
+
+While the next song's words are looked for, the player keeps the layout it
+had, so a run of songs with words doesn't flick to the plain player and back
+between each. An instrumental shows the plain player with "Instrumental"
+under the album.
+
 ### Spotify
 
 The Web API control uses OAuth Authorization Code with PKCE, so no client secret
@@ -443,18 +551,28 @@ of genuinely nothing before folding away.
 
 ### The photo browser
 
-The home screen leads with a greeting, the date and the library in numbers,
-with the controls gathered into one frosted pill at the top right rather than a
-title bar. Albums are cards with the cover edge to edge and the name over a
-shadow at the foot, sortable by **Recent**, **A–Z** or **Most items**. **Empty
-albums are hidden** — a grey tile that opens onto "This album is empty" is not
-worth a place on a wall of photographs — and the counts in the header only
-count what is shown.
+Until 2.0 the kiosk opened on the albums. Since, it opens on the dashboard —
+whose top bar is the kiosk's: the greeting, the music, the Locked Folder,
+Settings — and the albums are an add-on, **Photo albums**
+(`immich_albums`, in the catalogue), so a panel without Immich is simply a
+dashboard. Nothing asks for Immich before the dashboard shows; the
+connection is made in Settings, or from the tile.
 
-When something is playing and the now-playing player is switched on, a **mini
-player** sits above the albums, with its own previous, play/pause and next.
-Tap anywhere else on it and the full player grows out of it; close the full
-player and it shrinks back into it, wherever the page has scrolled to.
+The tile is the browser at the tile's size: covers that open onto their
+album, Find photos, a tick button to pick several albums for one slideshow
+(not a hold, which on the dashboard brings a tile close), and the whole
+browser, full screen, a touch away. The top bar's **Photos** button — shown
+only when there is an albums tile — "show the photos" by voice and the TV
+remote app's Photos turn to its page and bring it close
+(`DashboardScreen.showPhotos`). A panel updated from 1.x that was connected
+to Immich is given the tile once, on a page of its own after the others
+(`lib/dashboard/photos_tile.dart`; `scripts/addons.py ensure` fetches the
+add-on for it).
+
+Albums are cards with the cover edge to edge and the name over a shadow at
+the foot, sortable by **Recent**, **A–Z** or **Most items**. **Empty albums
+are hidden** — a grey tile that opens onto "This album is empty" is not worth
+a place on a wall of photographs — and the counts only count what is shown.
 
 Inside an album there is a large header with the counts and the years it
 covers, a Slideshow button, and a photo wall with thin gaps. Headings follow
@@ -605,6 +723,45 @@ Checked against the live feeds before it shipped: all 25 WIRED coupon posts
 hidden, and nothing from the BBC or The Verge. **Hide promo codes, coupons and
 sponsored posts** in the widget's settings turns it off.
 
+### Topics, a town's own news, and a story told once
+
+Each feed on the News tile can be given a **Topic**. With the tile set to tabs,
+feeds that share one share a tab, blended into one list as the tile already
+blends feeds, so "Tech", "AI", "UK" and "Colchester" can each be six papers
+deep. A feed with no topic keeps a tab of its own, so a tile set up before
+topics existed is unchanged. Topics are matched without regard to case
+(`lib/services/news_mix.dart`, `newsTabs`).
+
+**Only headlines mentioning** narrows a feed to some words or places. It exists
+because a town's paper is mostly not about the town: of the Daily Gazette's 50
+items one afternoon, 15 were about Colchester and the rest were the group's
+county wire (the M25, Harlow, Stansted). The words are looked for as whole
+words in the headline, its summary and its address, since a local story is
+often "Man jailed after break-in" with the village only in the page's name
+(`…/26685825.tiptree-man-…`). `colchesterPlaces` lists the town and the
+places round it.
+
+**The same story from several feeds is told once**, under the best-ranked
+telling, with "also The Guardian UK, BBC News UK" on its time line. Touching it
+lists the other outlets' headlines, each a touch from its page (`sameStories`).
+Headlines are compared on their words without the little ones, each weighted
+by how rare it is among the headlines being blended: "Essex" in a county's
+news or "AI" in AI news says nothing about which story it is, while "abattoir"
+says a lot. Two headlines are one story when they share at least three words
+making up half the weight of the shorter. Only across feeds: one outlet is
+never "also" itself, and a paper's two pieces on one crash stay two.
+
+The threshold was set against the live feeds on 3 November 2026. At 0.5, 21
+feeds in four topics merged 16 stories, every one a real match ("Virgin Media O2 to
+cut thousands of jobs" from Sky, the Guardian and the Independent). At 0.4 it
+also merged an Apple-in-China story with a different iOS release, and "new UK
+law changes" with an immigration piece.
+
+The editor offers **ready-made sets** beside "Add a feed", one for each topic,
+from feeds checked that day. `WidgetOption.presets` is generic: any list
+option can declare sets of rows, and the editor adds a set less any row it
+already has.
+
 ### The full forecast
 
 Tap the weather widget for the whole picture, over the dashboard:
@@ -626,6 +783,39 @@ forecast** in the widget's settings turns it off.
 
 The hourly data is one extra field on the request the widget already makes —
 `forecast_hours=25`, so "the next day" still reaches the same hour tomorrow.
+
+### Your day
+
+Touch the greeting at the top of the dashboard or the photos, or say "what's
+my day" (also "what's on today", "good morning", "brief me"), for the day on
+one screen (`showDayBrief`, `lib/dashboard/widgets/day_brief_sheet.dart`):
+
+- **The weather** — now, high and low, when rain is likely for the rest of
+  the day (from the first hour at 50% or more to the first below), sunset,
+  and the next eight hours.
+- **Today** — every timed thing in order with a line at *now*: what is over
+  dimmed, the next thing lit. All-day things come first.
+- **Tomorrow** — the same, with its forecast on the panel's bar.
+
+Nothing new is fetched for it. `gatherDayBrief` reads what the panel already
+holds: the calendar tiles' feeds (`DashboardCalendarWidget.feedsOf`, through
+`FeedService`'s cache), reminders, parcels with a day (and any out for
+delivery), running timers, each bins tile's next collection ("Bins out
+tonight" the day before), and the weather. `DayBrief.gather`
+(`lib/dashboard/day_brief.dart`) puts it in order and is pure, so a day can be
+tested at any moment.
+
+**Read it to me** says it in a few sentences — the greeting, the weather,
+what is still to come today, and tomorrow's first four — through the news
+reader's voice (`ArticleReader.say`): the music is paused while it reads and
+carries on after, and the reading bar shows it with pause and stop. Asked
+for by voice, it opens and reads at once. It closes after three minutes, or
+when the reading ends if that is later.
+
+On a console the sheet is there at once and its rows light in steps; on the
+other looks it fades in over a blurred panel. With the dashboard's top bar
+crowded — music playing and a dozen pages — a console's greeting says only
+"Morning" (`LcarsTextBar.short`) rather than "Good …".
 
 ### Switching TV inputs
 
@@ -707,6 +897,120 @@ the endpoints.
 Set `requireEncryption` in `config.json` to reject anything unsealed with a 412,
 once every phone is on a version that encrypts.
 
+### Links the other way
+
+**Send to…** on a post, a news story or an open page sends its link to a phone
+or a computer. The panel can't reach either, so they ask it: `GET /outbox` on
+the same port, with a sender's bearer token, held open for up to 50 seconds
+and answered the moment a link is sent. The companion app does this from a
+foreground service once "Receive links from the panel" is on; on a computer,
+`companion_pc/homecanvas-links` does it and opens each link in the browser.
+
+Each device makes its own X25519 key and sends the public half with every
+request (`X-Device-Key`, with `X-Device-Name` and `X-Device-Kind` for the
+picker). A link is sealed to that key as it is queued — a fresh key pair per
+link, HKDF-SHA256 with `homecanvas/link/v1` in the info, ChaCha20-Poly1305 —
+so the panel only ever stores and sends it in a form the one device can open,
+and nothing in between can read it. The label keeps a link from ever being
+taken for a share, or a share for a link. A device's key id is shown on it and
+in Settings → Share Inbox, to compare.
+
+`?after=` is the newest link id the device has handled: the panel drops what
+it has and sends what it hasn't, so a reply lost on the way is sent again.
+What waits goes after a week (`~/.config/homecanvas/outbox.json`); a device
+not heard from in a month is no longer offered, nor one whose sender has been
+removed. The format is in `lib/services/link_outbox.dart`.
+
+### Parcels
+
+A share whose JSON body is `{"type": "parcel", "content": "<link or number>",
+"label": "<what it is>"}` goes on the Parcels tile; so does any `link` or
+`text` share that turns out to be a tracking link or number, rather than
+popping up as a link or going on the Notes board. `ParcelRef.find` in
+`lib/services/parcel_carriers.dart` decides: a link to Royal Mail, Parcelforce,
+DPD, Evri, Yodel, DHL, UPS, FedEx, InPost or an Amazon delivery page; a number
+in a carrier's own shape (`AB123456789GB`, `1Z…`, Evri's `H…`, `TBA…`); or a
+run of digits beside a carrier's name in a few words about a delivery. A
+`parcel` share that holds no number at all is refused with a 400.
+
+Without a tracking service a parcel is its name, its carrier and that
+carrier's own page, opened on the panel. With one set on the tile —
+[17TRACK](https://api.17track.net) or [Ship24](https://docs.ship24.com), each
+with the household's own key — `ParcelsService` looks every undelivered parcel
+up half-hourly: 17TRACK's number registered once (its quota), Ship24's tracker
+made once (its plan's count), then read for nothing. Neither carrier's site is
+scraped; their tracking pages are for people. A refused key stops the round
+and is not tried again for six hours unless it changes or someone presses
+Check now. A parcel seen to go out for delivery, come, wait to be collected, be
+missed or go wrong puts up a card (the share card, with its chime, Do Not
+Disturb permitting) that opens the parcel. Delivered parcels go after the
+tile's "keep" setting; one never delivered stops being looked up after 45 days.
+
+**When it is coming.** A parcel's day and window (`Parcel.expected`, and
+`expectedTo` for the end) come from three places, the service's first:
+
+- *What was shared.* `findDeliveryWindow` (`lib/services/parcel_when.dart`)
+  reads the words a parcel was shared with — the email or text the link came
+  in. Only lines about the delivery count (an email also has the day it was
+  ordered and sent), unless the whole share is a line or two. It reads a date
+  ("Wednesday 4th November", `03/11/2026`, ISO), a word for the day ("today",
+  "tomorrow", "Thursday"), and a window: "between 10:15 and 11:15", "9am-1pm",
+  "1-3pm", or an end alone ("by 10pm"). Dates are day first; one more than a
+  week gone is next year's.
+- *Somebody saying.* When? (on the frame's foot and on the sheet) is a day of
+  the coming week and a part of it — morning 8–12, afternoon 12–17, evening
+  17–21 — or the carrier's slot to the quarter hour, an hour, two or four
+  long. Not known clears it.
+- *The service.* A day from 17TRACK or Ship24 replaces one said
+  (`Parcel.dueSaid`); the service saying nothing leaves it be.
+
+When a parcel's window opens — or at 08:00 on a day with no time to it — the
+panel says so once, on the share card: "Trainers: Due now, until 11:15". The
+service's clock ticks every minute for this; parcels are still looked up
+half-hourly. A window
+already open as it is said, or gone by unseen, is not announced; nor is a
+parcel already here. What was last announced is kept in `toldDue`, so a
+restart does not say it again. On a page-sized tile the list's column ends in
+*the week ahead*: a row a day for seven days (today lit, an overdue parcel
+kept on it), then Later and No day yet, each parcel a touch away.
+
+A Parcels tile given a page to itself (at least 1000 wide, 460 high and
+wider than tall) lays out as a list beside a frame. Touching a parcel shows
+its carrier's page *in* the frame, with Back, Reload and Close page along its
+top and the parcel's own buttons along its foot. Flutter has no web view on
+Linux, and Firefox cannot be built into another program, so that page is a
+real Firefox window (`SideBrowser`, `lib/services/side_browser.dart`) with no
+toolbars of its own, laid exactly over the hole the frame leaves for it:
+
+- **Placing it.** Wayland gives a program no say in where its windows go, so
+  `SideBrowser` writes a labwc window rule for app_id `homecanvas-side` —
+  `MoveTo` and `ResizeTo` for the hole, and `ToggleAlwaysOnTop` — into
+  `~/.config/labwc/rc.xml` between `<!-- homecanvas-side -->` markers, and
+  sends labwc a SIGHUP. It is rewritten only when the hole moves; the file as
+  it was first is kept as `rc.xml.before-homecanvas-side`. Without a user
+  `rc.xml` it is created only if labwc runs with `-m` (merging the system's),
+  as Raspberry Pi OS starts it.
+- **Steering it.** Firefox is started with `--remote-debugging-port 0` and the
+  tile's buttons reach it through WebDriver BiDi (`BidiClient`): `navigate`
+  for another parcel in the same window, `traverseHistory` for Back,
+  `reload`.
+- **Keeping up with the tile.** Every 300 ms while it is up, the tile checks
+  its hole is on screen, at its own size and not covered — by asking the
+  kiosk's own hit testing at the middle and near the corners, which catches a
+  dialog, the page overview or a share card alike. If not, the window is
+  minimised (`wlrctl toplevel minimize`), and focused back when it is. If the
+  hole moves, the rule is rewritten and Firefox restarted there.
+- **Closing it.** Only by being closed: Close page, or leaving the tile —
+  another dashboard page, another screen — or anything else opening a browser
+  window. It has no timeout of its own: touches on the page never reach the
+  kiosk, so a timer would close it in the middle of being read.
+
+Every Firefox window the kiosk opens asks sites for their dark look
+(`layout.css.prefers-color-scheme.content-override` = 0), so a site that
+follows the system's setting shows dark; one with only a switch of its own,
+as DPD's, stays as it is. Without labwc or Firefox the frame shows the
+parcel's story, and its page opens in a window of its own as before.
+
 ### Reading notes aloud
 
 Text only. A photo has nothing to read, and a link spoken aloud is a stream of
@@ -729,6 +1033,63 @@ reading it out should not mean sending it anywhere.
 
 Text is handed to piper on its standard input, never as a command-line
 argument, so nothing in a note can become part of a command.
+
+### Recipes
+
+A link shared from the phone is looked at as its card appears
+(`Kitchen.recipeAt`, `lib/services/kitchen.dart`): the page is fetched once,
+with a browser's user agent, and searched for schema.org `Recipe` data in a
+JSON-LD script — on its own, in a list, or in an `@graph` among the page's
+other things (`Recipe.fromHtml`, `lib/services/recipe.dart`). Nearly every
+recipe site publishes one for search engines. When there is one the card
+says *Recipe shared* and the dish, and a touch opens `CookScreen`
+(`lib/screens/cook_screen.dart`) instead of the browser. A site that turns
+the panel's request away opens as a link, as before.
+
+What is read, and how:
+
+- **The method** may be one string with a line to a step, "1. … 2. …" run
+  together, a list of strings, or `HowToStep`s in named `HowToSection`s. A
+  short version given before the full one ("Abbreviated Recipe") is dropped;
+  a step that starts with its own title, "Brown the chicken - Heat…", has it
+  taken off as a heading.
+- **Ingredients** are tidied of what recipe plugins leave in them — "(Note
+  1)", doubled brackets, "(, sliced)" — and read for an amount, a measure
+  and a name (`Ingredient.parse`): "2 1/2 cups", "½ tsp", "2-3", "400g /
+  14oz", "For the drizzle: 175g sugar". Scaled, grams and millilitres round
+  as a cook would (455g, not 454.5), spoons and cups come out in the
+  fractions they come in (1½, ¾), "1 egg" becomes "2 eggs", and amounts in
+  brackets follow unless they are *each*.
+- **Amounts in the method** with a measure — "100g", "2 tbsp" — are scaled
+  and marked; counts ("2 eggs"), lengths ("a 20cm tin") and temperatures
+  are not (`stepPieces`).
+- **Times** in a step — "5-6 minutes", "1½ hours", "half an hour", "1 hour
+  20 minutes" — become touchable chips (`StepTime.find`). A range starts at
+  its shorter end. Each is named for the cooking word before it in its
+  sentence, so the timer is *Simmer* or *Bake*, and it is an ordinary
+  kitchen timer (`TimerService`): it carries on, and rings and speaks, after
+  the recipe is closed.
+- **The ingredients a step uses** are those with a word of their name in it,
+  plural or not; words that only say what kind ("baking", "dry") do not
+  count on their own.
+
+While a `CookScreen` is the top route it sets `Kitchen.listening`, which
+`runVoiceCommand` asks before `VoiceCommands`. `CookCommands.parse`
+(`lib/services/cook_voice.dart`, pure) answers for anything about the
+cooking and null for anything else, which then goes on as usual. Steps and
+answers are spoken through a `PiperSpeechOutput` of the kitchen's own, a
+sentence or two at a time so the first words come quickly, at the speech
+volume and not at all under Do Not Disturb; a new step cuts the last one
+off. The screen is counted as in use every 50 seconds while a recipe is
+open.
+
+Every recipe opened is kept in `~/.config/homecanvas/recipes.json` (mode
+600, the latest first, at most 60) with the step it was left at and for how
+many: opened again within 18 hours, it comes back there. Saved, a recipe
+needs neither the site nor the network. The Meal plan tile opens tonight's
+dinner when a kept recipe has every word of its name, and the recipe book
+otherwise; `POST /cook?url=` on the control endpoint opens any page's
+recipe.
 
 ---
 
@@ -861,8 +1222,8 @@ cannot drift apart:
   accent from the top left, and the safe area.
 - **`GlassSection`** — a titled group of rows on a glass card, as in Settings.
 
-The home screen, albums, Settings, the Locked Folder, PIN entry, About and
-first-run setup all use them.
+The albums, Settings, the Locked Folder, PIN entry, About and the Immich
+connection all use them.
 
 **The dashboard** matches through its **Glass** theme — the same background,
 glow and accent (the accent is taken from the app's own colour scheme, and a
@@ -888,6 +1249,7 @@ small control endpoint instead, **on the loopback address only**:
 | `POST /open/photos`, `/open/dashboard`, `/open/settings`, `/open/locked-folder` | opens that place, as the kiosk's own button would |
 | `POST /camera` | shows or hides the camera |
 | `POST /dnd?muted=true` | sets the notifications switch |
+| `POST /cook?url=https://…` | opens the recipe on that page to cook from — see [Recipes](#recipes) |
 
 on `127.0.0.1:8766`, one up from `screen_control.py`'s 8765. Nothing on the
 network can reach it — a request to the Pi's own LAN address is refused — and
@@ -936,7 +1298,9 @@ session token rather than an API key.
 | [Glances](https://github.com/nicolargo/glances) | Servers | The v4 web API (`/api/4/…`), with v3 as a fallback; the `smart` plugin for disk health. |
 | UniFi Network | the Network widgets | The console's integration API with an `X-API-KEY`. |
 | Home Assistant | Home Assistant, Updates, the indoor sensor | REST API with a long-lived token. |
+| Art Matrix | Voice, routines | On the LAN, no auth: `POST /display?on=1` or `on=0`, and `POST /display?brightness=N&on=1` (1–100, kept by the display), each answered with `{"on": …, "brightness": …}`. The name (`arty.local`, by mDNS) is looked up each time, IPv4 only, and used only if every address is on the home network; the request goes to the address found. 3 s to connect, 5 s for the answer. |
 | iTunes Search API | Bluetooth artwork | By artist and track, which matches far more reliably than album. |
+| [LRCLIB](https://lrclib.net) | Lyrics in the full player | `/api/get` by artist, title, album and length, then `/api/search`. No key. |
 
 **Disk health** is derived from Glances' SMART attributes: *failing* if any
 normalised value is at or below its threshold or the drive reports a failure;
@@ -977,7 +1341,6 @@ screenshots or testing a screen in isolation. Inert unless set.
 
 | Variable | Opens |
 |---|---|
-| `HOMECANVAS_TEST_ALBUMGRID=<albumId>` | an album's asset grid (`HOMECANVAS_TEST_ALBUMNAME` sets its title) |
 | `HOMECANVAS_TEST_GALLERY=<albumId>` | the photo viewer (`HOMECANVAS_TEST_GALLERY_INDEX` picks the photo) |
 | `HOMECANVAS_TEST_SLIDESHOW=<albumId>` | the slideshow |
 | `HOMECANVAS_TEST_VIDEO=<assetId>` | the video player |
@@ -988,7 +1351,9 @@ screenshots or testing a screen in isolation. Inert unless set.
 | `HOMECANVAS_TEST_NOWPLAYING=1` | the now-playing panel on a blank background |
 | `HOMECANVAS_TEST_DASHBOARD=<page>` | the dashboard, opened at that page |
 | `HOMECANVAS_TEST_POPUP=forecast` or `inputs` | with the above, opens the full forecast or the TV inputs over the dashboard |
-| `HOMECANVAS_TEST_PLAYER=small` or `full` | the home screen with the player shrunk to the mini player, or the full player opened as soon as music is playing |
+| `HOMECANVAS_TEST_OVERVIEW=1` or `tour` | with the dashboard, every page at once a few seconds in; `tour` first visits each page for long enough to picture it |
+| `HOMECANVAS_TEST_PLAYER=small` or `full` | the player shrunk, or the full player opened as soon as music is playing |
+| `HOMECANVAS_TEST_TRACK=artist\|title\|album\|seconds\|from` | a phone that isn't there playing that song, from `from` seconds in — with `HOMECANVAS_TEST_PLAYER=full`, the full player and its lyrics on any machine. Several songs, split by `;`, play in turn |
 | `HOMECANVAS_TEST_THEME=<id>` | the whole kiosk in that theme, without saving it |
 | `HOMECANVAS_TEST_WEATHER=expanded` | with the slideshow, the weather panel opened |
 
@@ -1008,6 +1373,7 @@ lib/
     widget_registry.dart       # DashboardWidgetType, options, groups
     dashboard_model.dart       # the saved dashboard: widgets, pages, look
     schedule.dart              # hours for pages and widgets
+    page_overview.dart         # every page at once, to choose from
     tile_renderer.dart         # draws a widget off-screen for the editor
     photo_backdrop.dart        # photos behind the dashboard
     widgets/                   # one file per widget, plus fit helpers
@@ -1016,10 +1382,12 @@ lib/
     immich_service.dart        # Immich REST client + response caching
     dashboard_service.dart     # the editor's web server
     now_playing_service.dart   # BlueZ AVRCP over D-Bus + artwork lookup
+    lyrics.dart                # LRCLIB lookup, LRC parsing
     spotify_service.dart       # Web API control, OAuth PKCE
     share_inbox_service.dart   # the HTTP listener for shares
     sealed_share.dart          # X25519 + ChaCha20-Poly1305, key rotation
     tv_service.dart            # Hisense VIDAA over MQTT
+    art_matrix_service.dart    # the Art Matrix LED display, over HTTP
     …                          # and one service per outside source:
                                # weather, trains, carbon, Govee, UniFi,
                                # Glances, Home Assistant, notes, chores…
@@ -1105,6 +1473,7 @@ designers on the About screen.
 | [Immich](https://immich.app) · [src](https://github.com/immich-app/immich) | Your own photo server (the whole point) | AGPL-3.0 |
 | [Open-Meteo](https://open-meteo.com) | Weather forecast — no API key required | Free for non-commercial use, [CC BY 4.0](https://open-meteo.com/en/license) |
 | [iTunes Search API](https://performance-partners.apple.com/search-api) | Album artwork lookup | Free, no key · Apple terms |
+| [LRCLIB](https://lrclib.net) · [src](https://github.com/tranxuanthang/lrclib) | Song lyrics, timed to the line | Free, no key |
 | [Spotify Web API](https://developer.spotify.com/documentation/web-api) | Playback control, liked songs and playlists | Requires your own free Developer app + Premium |
 | [postcodes.io](https://postcodes.io) · [src](https://github.com/ideal-postcodes/postcodes.io) | UK postcode → coordinates | MIT, data under [OGL](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/) |
 | [IP Webcam](https://play.google.com/store/apps/details?id=com.pas.webcam) | The phone-as-camera stream and its control API | Free / paid app, third-party |

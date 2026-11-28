@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'widget_registry.dart';
+import '../time_format.dart';
 
 /// A widget somebody wrote without rebuilding the app: a JSON file saying
 /// what it is called, what settings it has, where its data comes from and
@@ -391,10 +392,7 @@ String customFill(
       'plus' => n == null ? null : n + (num.tryParse(arg) ?? 0),
       'upper' => v?.toString().toUpperCase(),
       'lower' => v?.toString().toLowerCase(),
-      'time' =>
-        at == null
-            ? v
-            : '${'${at.hour}'.padLeft(2, '0')}:${'${at.minute}'.padLeft(2, '0')}',
+      'time' => at == null ? v : hhmm(at),
       'date' => at == null ? v : '${at.day} ${_months[at.month - 1]}',
       'or' => v == null || '$v'.isEmpty ? arg : v,
       _ => v,

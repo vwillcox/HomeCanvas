@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../app_version.dart';
 import '../look.dart';
 
 import '../config/credits.dart';
@@ -6,7 +7,6 @@ import '../widgets/glass.dart';
 import '../l10n/l10n.dart';
 
 /// Version shown on the About screen. Keep in step with pubspec.yaml.
-const String kAppVersion = '1.0.0';
 
 /// Attribution for everything this app is built on: Dart packages, system
 /// libraries, network services, and the code that came from elsewhere.

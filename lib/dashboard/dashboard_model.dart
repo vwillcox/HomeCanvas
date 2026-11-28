@@ -131,17 +131,15 @@ class DashboardWidgetConfig {
 
 /// The dashboard as a whole.
 class DashboardSettings {
-  /// Whether the dashboard is offered at all — it appears in the toolbar
-  /// only when this is on.
-  bool enabled;
+  /// Whether there is a dashboard: always, since 2.0 — it is the kiosk's
+  /// first screen. Still written to config.json, so an older build reading
+  /// it shows one too.
+  bool get enabled => true;
 
   /// Id of the theme to draw with. An unknown id falls back to the first
   /// built-in rather than failing, so deleting a custom theme leaves a
   /// working dashboard.
   String themeId;
-
-  /// Show the dashboard instead of the album grid when the app starts.
-  bool showOnLaunch;
 
   /// Port the web editor listens on. Separate from the Share Inbox's, so one
   /// can be exposed beyond the LAN without the other.
@@ -213,6 +211,22 @@ class DashboardSettings {
   /// own, never the editor's to change.
   bool codeWidgets;
 
+  /// Where the Add-ons page's catalogue is read from, as `owner/name` on
+  /// GitHub; null for the catalogue the app comes with. What is installed
+  /// from it is built into the panel and run, so like [codeWidgets] it is
+  /// the panel's own: read from config.json, never taken from the editor.
+  String? addonsRepo;
+
+  /// Whether this panel has been given its Photo albums tile — see
+  /// [offerAlbumsTile]. Once only: a tile taken off again stays off.
+  bool albumsOffered;
+
+  /// Third-party libraries of add-ons the Add-ons page lists beside the
+  /// catalogue, each `owner/name` on GitHub. Added from that page. Nobody
+  /// has checked what is in them: an add-on in Dart from one is installed
+  /// only while [codeWidgets] is on.
+  List<String> addonLibraries;
+
   /// Which of the web editor's panels, palette groups and list rows are
   /// folded or opened, as the editor names them. Kept here rather than in
   /// the browser so every device, and every address the panel answers to,
@@ -221,9 +235,7 @@ class DashboardSettings {
   List<String> editorPanels;
 
   DashboardSettings({
-    this.enabled = false,
-    this.themeId = 'midnight',
-    this.showOnLaunch = false,
+    this.themeId = 'glass',
     this.editorPort = 8090,
     this.webPort = 80,
     this.hueRelay = '',
@@ -240,8 +252,12 @@ class DashboardSettings {
     this.photoSeconds = 90,
     List<DashboardWidgetConfig>? widgets,
     this.codeWidgets = false,
+    this.albumsOffered = false,
+    this.addonsRepo,
+    List<String>? addonLibraries,
     List<String>? editorPanels,
   }) : pages = pages ?? [],
+       addonLibraries = addonLibraries ?? [],
        widgets = widgets ?? [],
        editorPanels = editorPanels ?? [];
 
@@ -254,54 +270,58 @@ class DashboardSettings {
         if (s.isNotEmpty && s.length <= 200) s,
   ];
 
-  factory DashboardSettings.fromJson(Map<String, dynamic> j) =>
-      DashboardSettings(
-        enabled: j['enabled'] as bool? ?? false,
-        themeId: j['themeId'] as String? ?? 'midnight',
-        showOnLaunch: j['showOnLaunch'] as bool? ?? false,
-        editorPort: (j['editorPort'] as num?)?.toInt() ?? 8090,
-        webPort: (j['webPort'] as num?)?.toInt() ?? 80,
-        hueRelay: j['hueRelay'] as String? ?? '',
-        // Migrated from the three-way settings these replaced.
-        roundedCorners:
-            j['roundedCorners'] as bool? ??
-            (j['corners'] == null ? true : j['corners'] != 'square'),
-        tileShadows:
-            j['tileShadows'] as bool? ??
-            (j['shadows'] == null ? true : j['shadows'] != 'off'),
-        // Floored at 3s: anything quicker is unreadable, and a config typo
-        // of 1 would make the panel strobe.
-        pageSeconds: () {
-          final v = (j['pageSeconds'] as num?)?.toInt() ?? 0;
-          return v <= 0 ? 0 : v.clamp(3, 3600);
-        }(),
-        tapToFlip: j['tapToFlip'] as bool? ?? false,
-        pagesPaused: j['pagesPaused'] as bool? ?? false,
-        topBar: j['topBar'] as bool? ?? true,
-        pages: [
-          for (final p in (j['pages'] as List? ?? const []))
-            DashboardPage.fromJson(p),
-        ],
-        photoBackground: j['photoBackground'] as bool? ?? false,
-        photoAlbum: j['photoAlbum'] as String? ?? '',
-        photoDim: ((j['photoDim'] as num?)?.toDouble() ?? 0.5).clamp(0.0, 0.9),
-        photoSeconds: ((j['photoSeconds'] as num?)?.toInt() ?? 90).clamp(
-          15,
-          3600,
-        ),
-        widgets: ((j['widgets'] as List?) ?? const [])
-            .whereType<Map<String, dynamic>>()
-            .map(DashboardWidgetConfig.fromJson)
-            .where((w) => w.id.isNotEmpty && w.type.isNotEmpty)
-            .toList(),
-        codeWidgets: j['codeWidgets'] as bool? ?? false,
-        editorPanels: cleanPanels(j['editorPanels']),
-      );
+  factory DashboardSettings.fromJson(
+    Map<String, dynamic> j,
+  ) => DashboardSettings(
+    themeId: j['themeId'] as String? ?? 'glass',
+    editorPort: (j['editorPort'] as num?)?.toInt() ?? 8090,
+    webPort: (j['webPort'] as num?)?.toInt() ?? 80,
+    hueRelay: j['hueRelay'] as String? ?? '',
+    // Migrated from the three-way settings these replaced.
+    roundedCorners:
+        j['roundedCorners'] as bool? ??
+        (j['corners'] == null ? true : j['corners'] != 'square'),
+    tileShadows:
+        j['tileShadows'] as bool? ??
+        (j['shadows'] == null ? true : j['shadows'] != 'off'),
+    // Floored at 3s: anything quicker is unreadable, and a config typo
+    // of 1 would make the panel strobe.
+    pageSeconds: () {
+      final v = (j['pageSeconds'] as num?)?.toInt() ?? 0;
+      return v <= 0 ? 0 : v.clamp(3, 3600);
+    }(),
+    tapToFlip: j['tapToFlip'] as bool? ?? false,
+    pagesPaused: j['pagesPaused'] as bool? ?? false,
+    topBar: j['topBar'] as bool? ?? true,
+    pages: [
+      for (final p in (j['pages'] as List? ?? const []))
+        DashboardPage.fromJson(p),
+    ],
+    photoBackground: j['photoBackground'] as bool? ?? false,
+    photoAlbum: j['photoAlbum'] as String? ?? '',
+    photoDim: ((j['photoDim'] as num?)?.toDouble() ?? 0.5).clamp(0.0, 0.9),
+    photoSeconds: ((j['photoSeconds'] as num?)?.toInt() ?? 90).clamp(15, 3600),
+    widgets: ((j['widgets'] as List?) ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(DashboardWidgetConfig.fromJson)
+        .where((w) => w.id.isNotEmpty && w.type.isNotEmpty)
+        .toList(),
+    codeWidgets: j['codeWidgets'] as bool? ?? false,
+    albumsOffered: j['albumsOffered'] as bool? ?? false,
+    addonsRepo: j['addonsRepo'] is String ? j['addonsRepo'] as String : null,
+    addonLibraries: [
+      for (final r
+          in j['addonLibraries'] is List
+              ? j['addonLibraries'] as List
+              : const [])
+        if (r is String) r,
+    ],
+    editorPanels: cleanPanels(j['editorPanels']),
+  );
 
   Map<String, dynamic> toJson() => {
     'enabled': enabled,
     'themeId': themeId,
-    'showOnLaunch': showOnLaunch,
     'editorPort': editorPort,
     'webPort': webPort,
     'hueRelay': hueRelay,
@@ -318,6 +338,9 @@ class DashboardSettings {
     'photoSeconds': photoSeconds,
     'widgets': widgets.map((w) => w.toJson()).toList(),
     'codeWidgets': codeWidgets,
+    if (albumsOffered) 'albumsOffered': true,
+    if (addonsRepo != null) 'addonsRepo': addonsRepo,
+    if (addonLibraries.isNotEmpty) 'addonLibraries': addonLibraries,
     'editorPanels': editorPanels,
   };
 

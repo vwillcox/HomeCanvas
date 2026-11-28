@@ -24,6 +24,7 @@ class HueRelay {
   /// usernames are long random strings that will never be one of these.
   static const _ownApi = {
     'schema',
+    'lists',
     'preview',
     'background.jpg',
     'render',
@@ -35,6 +36,7 @@ class HueRelay {
     'volume',
     'homey',
     'widgets',
+    'addons',
     'sounds',
     'list',
     'notes',

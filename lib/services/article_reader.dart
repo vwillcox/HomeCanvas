@@ -10,6 +10,7 @@ import 'article_text.dart';
 import 'elevenlabs_tts.dart';
 import 'plain_text.dart';
 import 'tts_service.dart';
+import 'http_client.dart';
 
 /// Where the reader's words become sound. An interface so the reading —
 /// fetching, chunking, looking ahead, pausing, skipping — can be tested
@@ -253,6 +254,39 @@ class ArticleReader extends ChangeNotifier {
     await _readFrom(run);
   }
 
+  /// Reads [paragraphs] the panel put together itself — the day's brief —
+  /// as an article is read: the music paused, the reading bar up under
+  /// [title], in the main voice.
+  Future<void> say({
+    required String title,
+    required List<String> paragraphs,
+  }) async {
+    final taking = _started;
+    final run = ++_run;
+    if (taking) await output.stop();
+    _title = plainText(title);
+    _author = null;
+    _voice = null;
+    _cloud = null;
+    _link = null;
+    _summaryOnly = false;
+    _speed = 1;
+    _index = 0;
+    _chunks = speakableChunks(
+      paragraphs.map(speakable).where((p) => p.isNotEmpty).toList(),
+    );
+    if (_chunks.isEmpty) {
+      if (taking) await _finish();
+      return;
+    }
+    if (!taking) {
+      _started = true;
+      onStart?.call();
+    }
+    _set(ReaderStatus.reading);
+    await _readFrom(run);
+  }
+
   Future<void> _readFrom(int run) async {
     final voice = _voice;
     final speed = _speed;
@@ -353,19 +387,15 @@ class ArticleReader extends ChangeNotifier {
 
   /// A browser's user agent: some sites serve a stripped page, or nothing,
   /// to anything that does not look like one.
-  static final Dio _dio = Dio(
-    BaseOptions(
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 15),
-      responseType: ResponseType.bytes,
-      headers: {
-        'User-Agent':
-            'Mozilla/5.0 (X11; Linux aarch64; rv:128.0) Gecko/20100101 '
-            'Firefox/128.0',
-        'Accept': 'text/html,application/xhtml+xml',
-        'Accept-Language': 'en-GB,en;q=0.8',
-      },
-    ),
+  static final Dio _dio = httpClient(
+    responseType: ResponseType.bytes,
+    headers: {
+      'User-Agent':
+          'Mozilla/5.0 (X11; Linux aarch64; rv:128.0) Gecko/20100101 '
+          'Firefox/128.0',
+      'Accept': 'text/html,application/xhtml+xml',
+      'Accept-Language': 'en-GB,en;q=0.8',
+    },
   );
 
   /// The most of a page taken: news pages run to a few hundred kilobytes,

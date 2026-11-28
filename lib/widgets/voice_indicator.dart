@@ -12,7 +12,9 @@ import 'glass.dart';
 /// Mostly this is the answer: listening, then the words as they were heard,
 /// or that nothing was made of them. Seeing "show socks" is how you find
 /// out why the stocks did not appear. What Home Assistant says back, when
-/// it was asked, is shown under the words.
+/// it was asked, is shown under the words. A question the panel asks — a
+/// routine's "Do you want the heater on or off?" — is shown with its
+/// answers to touch, for when saying them is no good.
 class VoiceIndicator extends StatelessWidget {
   const VoiceIndicator({super.key});
 
@@ -25,7 +27,9 @@ class VoiceIndicator extends StatelessWidget {
         status == VoiceStatus.awake ||
         status == VoiceStatus.asking ||
         status == VoiceStatus.done ||
-        status == VoiceStatus.missed;
+        status == VoiceStatus.missed ||
+        status == VoiceStatus.answering;
+    final asking = status == VoiceStatus.answering;
     final words = switch (status) {
       VoiceStatus.asking => '${voice.heard}…',
       VoiceStatus.done => voice.heard,
@@ -38,6 +42,7 @@ class VoiceIndicator extends StatelessWidget {
         'Didn’t understand “{heard}”',
         {'heard': voice.heard},
       ),
+      VoiceStatus.answering => voice.question,
       _ => tr('voice.listening', 'Listening…'),
     };
     final answer = status == VoiceStatus.done ? voice.answer : '';
@@ -45,7 +50,10 @@ class VoiceIndicator extends StatelessWidget {
       left: 0,
       right: 0,
       top: 96,
+      // Touchable only while it asks something: otherwise it floats over
+      // whatever is under it and must not take its touches.
       child: IgnorePointer(
+        ignoring: !asking,
         child: AnimatedSlide(
           offset: showing ? Offset.zero : const Offset(0, -0.6),
           duration: const Duration(milliseconds: 220),
@@ -64,6 +72,9 @@ class VoiceIndicator extends StatelessWidget {
                     padding: const EdgeInsets.fromLTRB(20, 12, 26, 12),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: asking
+                          ? CrossAxisAlignment.start
+                          : CrossAxisAlignment.center,
                       children: [
                         Icon(
                           status == VoiceStatus.missed
@@ -82,7 +93,7 @@ class VoiceIndicator extends StatelessWidget {
                             children: [
                               Text(
                                 words,
-                                maxLines: 1,
+                                maxLines: asking ? 2 : 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   color: answer.isEmpty
@@ -101,6 +112,28 @@ class VoiceIndicator extends StatelessWidget {
                                     color: look.textPrimary,
                                     fontSize: 22,
                                     fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              if (asking && voice.choices.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 12),
+                                  child: Wrap(
+                                    spacing: 12,
+                                    runSpacing: 8,
+                                    children: [
+                                      for (final c in voice.choices)
+                                        FilledButton.tonal(
+                                          style: FilledButton.styleFrom(
+                                            minimumSize: const Size(120, 56),
+                                            textStyle: const TextStyle(
+                                              fontSize: 20,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          onPressed: () => voice.choose(c),
+                                          child: Text(c),
+                                        ),
+                                    ],
                                   ),
                                 ),
                             ],

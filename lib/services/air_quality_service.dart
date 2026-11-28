@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'config_service.dart';
 import 'retry_schedule.dart';
 import '../l10n/l10n.dart';
+import 'http_client.dart';
 
 /// How much of something there is, in the words a forecast would use.
 enum Level { none, low, moderate, high, veryHigh }
@@ -150,12 +151,7 @@ class AirQualityService extends ChangeNotifier {
   final RetrySchedule _retry = RetrySchedule(
     settled: const Duration(minutes: 30),
   );
-  final Dio _dio = Dio(
-    BaseOptions(
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 15),
-    ),
-  );
+  final Dio _dio = httpClient();
 
   AirQuality? _current;
   AirQuality? get current => _current;

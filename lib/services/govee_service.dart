@@ -7,6 +7,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart' show Color;
 import '../l10n/l10n.dart';
+import '../map_text.dart';
+import 'http_client.dart';
 
 /// A Govee light or plug, and what it is doing.
 class GoveeDevice {
@@ -55,11 +57,9 @@ class GoveeService extends ChangeNotifier {
   GoveeService({Dio? dio, this.listen = true})
     : _dio =
           dio ??
-          Dio(
-            BaseOptions(
-              connectTimeout: const Duration(seconds: 8),
-              receiveTimeout: const Duration(seconds: 10),
-            ),
+          httpClient(
+            connect: const Duration(seconds: 8),
+            receive: const Duration(seconds: 10),
           );
 
   static const _multicast = '239.255.255.250';
@@ -277,7 +277,7 @@ class GoveeService extends ChangeNotifier {
         () => GoveeDevice(id: id, sku: '${raw['sku'] ?? ''}', name: id),
       );
       d.cloud = true;
-      final name = '${raw['deviceName'] ?? ''}'.trim();
+      final name = raw.text('deviceName');
       if (name.isNotEmpty) d.name = name;
       d.canDim = caps.contains('devices.capabilities.range:brightness');
       d.canColour = caps.contains(

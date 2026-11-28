@@ -1,5 +1,161 @@
 # Changelog
 
+## 2.0.0
+
+The widgets have a home of their own, anyone can add to them — and the
+dashboard is the kiosk's home screen.
+
+### Since alpha 3
+
+- **Spotify stays inside its limits.** The panel asked Spotify what was
+  playing every ten seconds, around the clock, and went on asking while
+  Spotify had told it to wait: one panel was shut out for over four hours.
+  It now waits when told to, asks every 5 seconds while music plays and the
+  screen is on, every 15 otherwise and once a minute after a quiet quarter
+  of an hour, and asks as a track ends. Told to wait again, it asks half as
+  often for a day.
+- **Music over Bluetooth with no track name** — a Mac playing Spotify, for
+  one — is shown as "Playing from Mac mini" rather than "Nothing playing".
+- **The phone app sips its battery** (HomeCanvas Share 1.1.0). It held the
+  phone awake, and its Wi-Fi at full power, all day and night to collect
+  links. Now it holds neither, asks a panel at home only over Wi-Fi or a VPN,
+  and waits up to five minutes for each answer instead of one. A link sent
+  while the phone sleeps arrives when it wakes. Build and install the new
+  app on the phone (see `companion_app/README.md`).
+- **Voice:**
+  - "Lights upstairs" no longer turns every light off.
+  - "Turn the laptop off", with two laptops, switches neither rather than
+    the wrong one, and a computer is matched only by its own name.
+  - A misheard name is put right only to a light, switch, fan, media player
+    or humidifier — never to a lock, a door, a cover or a script, which
+    Home Assistant would open or unlock — and never to a longer name than
+    was said: "the front door" is not "front door lock".
+- **The TV:**
+  - Its power key, which toggles, is never pressed to switch it off when
+    the set will not say whether it is on: the panel says so and leaves it.
+  - A set that drops off the network is let go after 15 seconds.
+  - "Connection reset by peer" no longer shows in the log, unhandled, each
+    time the TV sleeps.
+- **A routine's lights go in order**: all on or off first, then what it
+  asks Home Assistant, then the lights it sets. "Lights off" with "the
+  bedside lamp at 10%" leaves the lamp on.
+- **Add-ons:**
+  - Code from a third-party library is fetched, and built in, only while
+    "Widgets written in Dart" is on — at an update as well as from the
+    Add-ons page.
+  - A library is asked only for what the catalogue has nothing for.
+  - A badly made entry in a library costs only that add-on, never an
+    update.
+- **The installer puts back the file every build rewrites before it
+  pulls**, so a later update is not stopped by "local changes". A 1.x panel
+  still has the 1.x installer: see Updating below.
+
+### Changed in alpha 3
+
+- **Themes are add-ons too.** The app ships Glass, its own look; the other
+  sixteen — LCARS, Aurora, Paper, Terminal and the rest — are in the
+  catalogue, under **Themes** on the Add-ons page. A theme is on the panel
+  the moment it is downloaded, with no rebuild. Updating a panel fetches the
+  theme it is dressed in; removing that theme puts it back on Glass. Anyone
+  can send one in, or keep themes in a third-party library: they are
+  colours and measures, no code, and the catalogue checks each before it is
+  listed.
+- **"Other people's libraries" are now "third-party libraries"**, on the
+  Add-ons page and in the docs.
+- **An add-on taken off stays off.** Removing one left any tile of it on the
+  dashboard, so the next update fetched it back. Removals are remembered now,
+  until it is downloaded again.
+- **The dashboard is the first screen.** The kiosk used to open on the
+  album browser, with the dashboard a button away (and off until switched
+  on). Now it opens on the dashboard, whose top bar is the kiosk's own: the
+  greeting, the music, the Locked Folder, Settings. There is no switch for
+  the dashboard any more, and no Immich to connect before anything shows:
+  a panel without Immich is a dashboard.
+- **The albums are an add-on: Photo albums.** Everything the album browser
+  did, as a tile — covers to open onto their photos, slideshows and
+  videos; Find photos across the whole library; several albums picked for
+  one slideshow — and the whole browser, full screen, from the tile. The top
+  bar's Photos button, "show the photos" by voice and the TV remote app's
+  Photos all go to the tile.
+- **A panel that had the albums keeps them.** Updating one connected to
+  Immich fetches Photo albums and, on its first start, puts it on a page of
+  its own after the others, named Photos. Only once: take it off and it
+  stays off.
+- **Immich is optional in the installer**, and connected from Settings or
+  the Photo albums tile at any time.
+- With the top bar switched off, the button left in the corner is Settings
+  rather than Back: there is nothing behind the dashboard to go back to.
+
+
+### Added
+
+- **Add-ons.** The editor has a new page listing every widget in the
+  [HomeCanvas-Widgets](https://github.com/vwillcox/HomeCanvas-Widgets)
+  catalogue: what each does, a picture of it, who wrote it and which group
+  it belongs to. **Download** adds it to the panel. One written in Dart is
+  built into the panel by the panel itself — a few minutes and a restart,
+  and if it does not build or start the panel goes back to how it was; one
+  described in JSON is there at once. Pick several and they are built in
+  together.
+- **Widgets from anyone.** A widget is sent to the catalogue as a pull
+  request. A GitHub Action reads it for what it should not do, a second
+  builds it into HomeCanvas and runs its tests, and a maintainer reads it.
+  Only what passes is listed, and a panel installs only files that match
+  the sums the catalogue published.
+
+- **Third-party libraries.** Anyone can keep a library of add-ons in a
+  repository of their own, and the Add-ons page can be given it by name:
+  its add-ons are listed with the catalogue's, each marked as untested and
+  where it is from. Nobody at HomeCanvas has read them, the page says so
+  before one is added, and what is installed from one is at your own risk.
+  Code from a library is built in only while "Widgets written in Dart" is
+  switched on at the panel itself; the catalogue always comes first, so a
+  library cannot replace one of its add-ons. How to set one up is in the
+  catalogue's `docs/your-own-library.md`.
+
+### Changed
+
+- **Every widget moved out of the app** into the catalogue, each as an
+  add-on: all fifty-two, the calendar and parcels among them. The app keeps
+  what they are made from, and none of the widgets themselves. A panel
+  being updated keeps every widget its dashboard uses: the update fetches them before it builds. A new panel
+  starts with a small set and the Add-ons page.
+
+### Updating
+
+From 1.x, run the installer through curl, which fetches the 2.0 one:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/vwillcox/HomeCanvas/main/install.sh | bash
+```
+
+Before it builds, the update fetches every add-on your dashboard uses, and
+the theme your panel is dressed in.
+
+Not the installer already on a 1.x panel (`bash ~/homecanvas/install.sh`):
+it stops with "Couldn't update — local changes in ~/homecanvas?" (every
+build rewrites the list of widgets built in, and git will not pull over
+it), and past that it would build 2.0 without fetching a single add-on.
+To update from the copy on the panel, put that file back — the build
+writes it again — and pull, so that the installer you run is 2.0's:
+
+```bash
+cd ~/homecanvas
+git checkout -- lib/dashboard/widgets/custom/custom_registry.dart
+git pull --ff-only
+bash install.sh
+```
+
+**From an alpha**, go back to `main`, which 2.0 is now:
+
+```bash
+cd ~/homecanvas
+git checkout -- lib/dashboard/widgets/custom/custom_registry.dart
+git checkout main
+git pull --ff-only
+bash install.sh
+```
+
 ## 1.0.3.2
 
 Videos play with a picture again, and HomeCanvas is built with the latest

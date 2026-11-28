@@ -141,6 +141,16 @@ run() {
 
 # ---- get the code ------------------------------------------------------------
 
+# Updates the copy in $1 to the latest version. The registry of widgets built
+# in is written again before every build, so a copy that has been built has
+# its own version of it — and git will not pull over that once an update
+# changes the file (as 2.0 does for every 1.x panel). It is put back as it
+# came first: the build writes it again anyway.
+pull_latest() {
+  git -C "$1" checkout -q -- lib/dashboard/widgets/custom/custom_registry.dart 2>/dev/null || true
+  git -C "$1" pull --ff-only "${@:2}"
+}
+
 # Arrived through curl rather than from a copy of the code? Fetch the code,
 # then carry on from the copy's own installer, so every helper it uses is the
 # version that came with it.
@@ -167,7 +177,7 @@ if [ -z "$SELF_DIR" ] || [ ! -f "$SELF_DIR/pubspec.yaml" ] ||
   fi
   if [ -d "$APP_DIR/.git" ]; then
     echo "  Updating the copy in $APP_DIR…"
-    git -C "$APP_DIR" pull --ff-only -q || die "Couldn't update $APP_DIR — local changes in the way?"
+    pull_latest "$APP_DIR" -q || die "Couldn't update $APP_DIR — local changes in the way?"
   elif grep -qs '^name: home_canvas' "$APP_DIR/pubspec.yaml" && [ -f "$APP_DIR/install.sh" ]; then
     # Copied here rather than downloaded (scripts/sync.sh does that): it
     # can't fetch updates itself, so carry on with the copy as it is.
@@ -340,7 +350,7 @@ check_system() {
 
 echo
 echo "${B}Welcome to HomeCanvas${N}"
-echo "${DIM}Photos from Immich and a dashboard for your wall.${N}"
+echo "${DIM}A dashboard for your wall — with your Immich photos on it, if you have Immich.${N}"
 echo
 say "This machine:  ${B}$OS_NAME${N}, $(uname -m), desktop: $DESKTOP"
 say "HomeCanvas:    $APP_DIR"
@@ -374,14 +384,14 @@ if [ -x "$BINARY" ] && [ -f "$UNIT" ]; then
     step() { echo; echo "${B}${C}$*${N}"; }
     step "Updating"
     if [ -d "$APP_DIR/.git" ]; then
-      run "Fetching the latest version" git -C "$APP_DIR" pull --ff-only || die "Couldn't update — local changes in $APP_DIR?"
+      run "Fetching the latest version" pull_latest "$APP_DIR" || die "Couldn't update — local changes in $APP_DIR?"
     else
       warn "This copy was put here from another computer, not downloaded, so it"
       warn "can't fetch updates itself — send the new version the same way."
       warn "Rebuilding what's here."
     fi
     FL=$(flutter_cmd)
-    run "Building (this takes a few minutes)" bash -c "cd '$APP_DIR' && bash scripts/widget-build.sh generate && '$FL' pub get && '$FL' build linux --release" || die "The build failed."
+    run "Building (this takes a few minutes)" bash -c "cd '$APP_DIR' && python3 scripts/addons.py ensure && bash scripts/widget-build.sh generate && '$FL' pub get && '$FL' build linux --release" || die "The build failed."
     systemctl --user restart homecanvas.service 2>/dev/null || true
     # The screen controller runs from the same copy, so it is restarted to
     # pick up its new version too — only if it was set up.
@@ -398,7 +408,7 @@ say "  1. check what's installed          6. give it a name on your network"
 say "  2. install anything missing        7. start it automatically"
 say "  3. install Flutter                 8. set up the touchscreen"
 say "  4. build HomeCanvas                9. put the editor on a simple address"
-say "  5. connect it to your Immich"
+say "  5. connect it to Immich (if you use it)"
 say "${DIM}Nothing is changed without saying what first. It asks for your password"
 say "to install things.${N}"
 echo
@@ -469,7 +479,7 @@ fi
 # 4 -------------------------------------------------------------------------
 step "Building HomeCanvas"
 say "${DIM}This takes a few minutes on a Raspberry Pi.${N}"
-run "Building" bash -c "cd '$APP_DIR' && bash scripts/widget-build.sh generate && '$FL' build linux --release" || die "The build failed."
+run "Building" bash -c "cd '$APP_DIR' && python3 scripts/addons.py ensure && bash scripts/widget-build.sh generate && '$FL' build linux --release" || die "The build failed."
 [ -x "$BINARY" ] || die "The build finished, but $BINARY isn't there."
 ok "Built"
 
@@ -487,9 +497,11 @@ else
   change=y
 fi
 if [ "$change" = y ]; then
-  say "HomeCanvas shows the photos on your Immich server. You'll need its"
-  say "address, and an API key from Immich: ${B}Account Settings → API Keys${N}."
-  say "${DIM}(Leave the address empty to skip — you can do this on the screen later.)${N}"
+  say "The Photo albums widget, and the other photo widgets, show the photos"
+  say "on your Immich server. You'll need its address, and an API key from"
+  say "Immich: ${B}Account Settings → API Keys${N}."
+  say "${DIM}(No Immich? Leave the address empty to skip — the dashboard works"
+  say "without it, and it can be connected later in Settings.)${N}"
   while true; do
     url=$(ask_text "Immich address, e.g. https://photos.example.com" "")
     url="${url%/}"

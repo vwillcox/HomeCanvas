@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:home_canvas/dashboard/dashboard_theme.dart';
 
+import 'theme_fixtures.dart';
+
 /// WCAG contrast ratio between two opaque colours.
 double contrast(Color a, Color b) {
   final la = a.computeLuminance(), lb = b.computeLuminance();
@@ -34,7 +36,9 @@ void main() {
   // A new theme has to be readable, however good it looks: body text at
   // WCAG AA or better, secondary text and the accent at the large-text
   // minimum, since both are used big or as marks on a panel across a room.
-  for (final t in kBuiltInThemes) {
+  // Glass, and the copies of the catalogue's themes the tests draw with;
+  // the catalogue checks its own files the same way (tests/themes_test.dart).
+  for (final t in testThemes) {
     group('the ${t.name} theme', () {
       test('keeps its text readable on its tiles', () {
         for (final tile in tileColours(t)) {
@@ -70,7 +74,7 @@ void main() {
   }
 
   test('every theme has an id of its own', () {
-    final ids = kBuiltInThemes.map((t) => t.id).toList();
+    final ids = testThemes.map((t) => t.id).toList();
     expect(ids.toSet().length, ids.length);
   });
 

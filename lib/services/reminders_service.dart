@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
+import '../map_text.dart';
 
 /// Something to be reminded of, and when.
 @immutable
@@ -58,13 +59,13 @@ class Reminder {
 
   static Reminder? fromJson(Object? j) {
     if (j is! Map) return null;
-    final text = '${j['text'] ?? ''}'.trim();
+    final text = j.text('text');
     final created = DateTime.tryParse('${j['created'] ?? ''}');
     if (text.isEmpty || created == null) return null;
     return Reminder(
       id: '${j['id'] ?? created.microsecondsSinceEpoch}',
       text: text,
-      from: '${j['from'] ?? ''}'.trim(),
+      from: j.text('from'),
       created: created.toLocal(),
       due: DateTime.tryParse('${j['due'] ?? ''}')?.toLocal(),
       allDay: j['allDay'] == true,

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import '../models/immich_models.dart';
 import 'config_service.dart';
 import 'media_source.dart';
+import 'http_client.dart';
 
 enum UnlockResult { success, wrongPin, notConfigured, error }
 
@@ -40,15 +41,13 @@ class LockedFolderService extends ChangeNotifier {
     if (_client == null || _clientFor != base) {
       _client?.close();
       _clientFor = base;
-      _client = Dio(
-        BaseOptions(
-          baseUrl: base,
-          headers: {'Accept': 'application/json'},
-          connectTimeout: const Duration(seconds: 12),
-          receiveTimeout: const Duration(seconds: 30),
-          // Accept 2xx-4xx so we can inspect status codes ourselves.
-          validateStatus: (s) => s != null && s < 500,
-        ),
+      _client = httpClient(
+        baseUrl: base,
+        headers: {'Accept': 'application/json'},
+        connect: const Duration(seconds: 12),
+        receive: const Duration(seconds: 30),
+        // Accept 2xx-4xx so we can inspect status codes ourselves.
+        validateStatus: (s) => s != null && s < 500,
       );
     }
     return _client!;

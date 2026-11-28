@@ -226,6 +226,24 @@ void main() {
       expect(heard<VoiceGo>('show the forecast').place, VoicePlace.forecast);
     });
 
+    test('the day, however it is asked for', () {
+      for (final said in [
+        "what's my day",
+        'Hey Canvas, what is my day looking like?',
+        "how's my day looking",
+        "what's on today",
+        'what is happening today',
+        "what's the plan for today",
+        'brief me',
+        'give me the morning briefing',
+        'hey canvas good morning',
+        'show me my day',
+        'today',
+      ]) {
+        expect(heard<VoiceGo>(said).place, VoicePlace.today, reason: said);
+      }
+    });
+
     test('the TV remote is the remote itself, not the page its tile is on', () {
       for (final said in [
         'open the remote',
@@ -298,6 +316,20 @@ void main() {
       }
       for (final said in ['resume', 'carry on', 'continue']) {
         expect(heard<VoicePausePages>(said).paused, isFalse);
+      }
+    });
+
+    test('every page at once', () {
+      for (final said in [
+        'show me all the pages',
+        'all pages',
+        'show every page',
+        'page overview',
+        'overview',
+        'zoom out',
+        'hey canvas show all my pages',
+      ]) {
+        heard<VoiceOverview>(said);
       }
     });
 
@@ -384,6 +416,82 @@ void main() {
     expect(_panel().resolve('next page'), isA<VoiceTurnPage>());
     expect(_panel().resolve('turn it down'), isA<VoiceMusic>());
     expect(_panel().resolve('stop the music'), isA<VoiceMusic>());
+  });
+
+  group('a tile brought close', () {
+    (int, String)? lifted(String heard) => switch (_panel().resolve(heard)) {
+      VoiceLiftTile(:final page, :final tile) => (page, tile),
+      _ => null,
+    };
+
+    test('by its name, however it is asked for', () {
+      expect(lifted('bring the news closer'), (0, 'news-0'));
+      expect(lifted('hey canvas zoom in on the stocks'), (4, 'stocks-4'));
+      expect(lifted('make the weather bigger'), (0, 'weather-0'));
+      expect(lifted('show me the fuel prices up close'), (5, 'fuel-5'));
+      expect(lifted('enlarge the servers'), (2, 'servers-2'));
+      expect(lifted('network clients larger please'), (3, 'unifi_clients-3'));
+    });
+
+    test('only for something on the dashboard', () {
+      // Nothing by that name: not a tile, so not brought close.
+      expect(lifted('make it bigger'), isNull);
+      expect(lifted('zoom in on the garden'), isNull);
+      // "Close" on its own is still "back", and the page is still the page.
+      expect(_panel().resolve('close'), isA<VoiceGo>());
+      expect(_panel().resolve('close it'), isA<VoiceGo>());
+      expect(_page('show the stocks'), 4);
+    });
+  });
+
+  group('photos asked for', () {
+    VoiceFindPhotos? find(String said) {
+      final action = _panel().resolve(said);
+      return action is VoiceFindPhotos ? action : null;
+    }
+
+    test('by what is in them, who, where or when', () {
+      expect(find('show me photos of the beach')!.asked, 'of the beach');
+      expect(
+        find('Hey Canvas, show me pictures of Ellie at the beach')!.asked,
+        'of ellie at the beach',
+      );
+      expect(find('find photos from 2019')!.asked, 'from 2019');
+      expect(find('show me beach photos')!.asked, 'beach');
+      expect(
+        find('photos of the dog in the snow')!.asked,
+        'of the dog in the snow',
+      );
+    });
+
+    test('as a slideshow, however "slideshow" is heard', () {
+      final a = find('play a slideshow of ellie')!;
+      expect(a.slideshow, isTrue);
+      expect(a.asked, 'of ellie');
+      expect(find('start a slide show of the beach')!.slideshow, isTrue);
+      expect(find('photos of the beach')!.slideshow, isFalse);
+    });
+
+    test('even asked as a question', () {
+      expect(find('do we have any photos of snow'), isNotNull);
+    });
+
+    test('photos alone are still the albums', () {
+      expect(_panel().resolve('show me the photos'), isA<VoiceGo>());
+      expect(_panel().resolve('photo albums'), isA<VoiceGo>());
+      expect(find('show me all the photos'), isNull);
+      expect(find('show the pictures'), isNull);
+    });
+
+    test('a photo brought closer is still the tile', () {
+      expect(find('bring the photo closer'), isNull);
+    });
+
+    test('nothing of photos is taken for them', () {
+      expect(find('show me the news'), isNull);
+      expect(find('show me the stocks'), isNull);
+      expect(_page('show the stocks'), 4);
+    });
   });
 
   test('"turn", misheard at the start, is put right for Home Assistant', () {

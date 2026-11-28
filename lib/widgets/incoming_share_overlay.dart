@@ -7,11 +7,16 @@ import 'package:provider/provider.dart';
 
 import 'burn_in_drift.dart';
 import '../models/immich_models.dart';
+import '../screens/cook_screen.dart';
 import '../screens/shared_image_screen.dart';
 import '../screens/shared_text_screen.dart';
 import '../screens/video_player_screen.dart';
 import '../services/kiosk_browser.dart';
+import '../services/kitchen.dart';
+import '../services/recipe.dart';
+import '../dashboard/widgets/parcels_view.dart' show showParcel;
 import '../services/local_file_media_source.dart';
+import '../services/parcels_service.dart';
 import '../services/share_inbox_service.dart';
 import '../services/video_link.dart';
 import '../services/video_player_service.dart';
@@ -75,6 +80,7 @@ class _IncomingShareOverlayState extends State<IncomingShareOverlay>
     // Opening something else while a video fills the screen: the video moves
     // aside into picture-in-picture rather than hiding what was opened.
     final player = context.read<VideoPlayerService>();
+    final parcels = context.read<ParcelsService>();
     if (player.view == VideoView.full) player.showPip();
     switch (item.type) {
       case ShareType.image:
@@ -98,19 +104,45 @@ class _IncomingShareOverlayState extends State<IncomingShareOverlay>
             ),
           ),
         );
+      case ShareType.notice when item.parcel != null:
+        final parcel = parcels.find(item.parcel!);
+        if (parcel != null) await showParcel(navigator.context, parcel.id);
       case ShareType.text:
+      case ShareType.notice:
         await navigator.push(
           MaterialPageRoute(
             builder: (_) =>
                 SharedTextScreen(text: item.content!, sender: item.sender),
           ),
         );
+      case ShareType.parcel:
+        // Its place on the Parcels list, where it went as it arrived.
+        final ref = item.parcel;
+        final parcel = ref == null ? null : parcels.find(ref);
+        if (parcel != null) {
+          await showParcel(navigator.context, parcel.id);
+        } else {
+          await _openLink(ref?.url ?? item.content!);
+        }
       case ShareType.link:
         // A YouTube, Floatplane or Nebula link plays here, full screen,
         // rather than in a browser window that closes itself two minutes in.
         final video = VideoLink.parse(item.content!);
         if (video != null) {
           await player.play(video);
+          break;
+        }
+        // A recipe opens to cook from, a step at a time, rather than as a
+        // page of someone's life story with a method at the bottom. Mostly
+        // known already: the card asked as it arrived.
+        final recipe = await context
+            .read<Kitchen>()
+            .recipeAt(item.content!)
+            .timeout(const Duration(seconds: 6), onTimeout: () => null);
+        if (recipe != null) {
+          await navigator.push(
+            MaterialPageRoute(builder: (_) => CookScreen(recipe: recipe)),
+          );
         } else {
           await _openLink(item.content!);
         }
@@ -160,6 +192,13 @@ class _IncomingShareOverlayState extends State<IncomingShareOverlay>
     proc.kill();
   }
 
+  /// The recipe on a shared link's page, looked for as the card shows, so
+  /// it can say so — and open to cook from straight away.
+  Future<Recipe?>? _recipeIn(SharedItem item) =>
+      item.type == ShareType.link && VideoLink.parse(item.content!) == null
+      ? context.read<Kitchen>().recipeAt(item.content!)
+      : null;
+
   Rect _cardRect(Size screen) {
     final left = screen.width - _size.width - _margin.right;
     final top = screen.height - _size.height - _margin.bottom;
@@ -197,11 +236,15 @@ class _IncomingShareOverlayState extends State<IncomingShareOverlay>
                           child: child,
                         ),
                       ),
-                      child: _Card(
-                        item: item,
-                        pendingCount: service.pendingCount,
-                        onTap: () => _open(service, item),
-                        onDismiss: service.dismiss,
+                      child: FutureBuilder<Recipe?>(
+                        future: _recipeIn(item),
+                        builder: (context, recipe) => _Card(
+                          item: item,
+                          recipe: recipe.data,
+                          pendingCount: service.pendingCount,
+                          onTap: () => _open(service, item),
+                          onDismiss: service.dismiss,
+                        ),
                       ),
                     ),
                   ),
@@ -276,12 +319,16 @@ class _CloseLinkButton extends StatelessWidget {
 
 class _Card extends StatelessWidget {
   final SharedItem item;
+
+  /// The recipe on a shared link's page, once it is known to have one.
+  final Recipe? recipe;
   final int pendingCount;
   final VoidCallback onTap;
   final VoidCallback onDismiss;
 
   const _Card({
     required this.item,
+    this.recipe,
     required this.pendingCount,
     required this.onTap,
     required this.onDismiss,
@@ -292,16 +339,25 @@ class _Card extends StatelessWidget {
 
   IconData get _icon => _video != null
       ? Icons.smart_display
+      : recipe != null
+      ? Icons.restaurant_menu
       : switch (item.type) {
           ShareType.image => Icons.image,
           ShareType.gif => Icons.gif_box,
           ShareType.video => Icons.movie,
           ShareType.link => Icons.link,
           ShareType.text => Icons.notes,
+          ShareType.notice when item.parcel != null =>
+            Icons.local_shipping_outlined,
+          ShareType.notice => Icons.notifications_active,
+          ShareType.parcel => Icons.local_shipping_outlined,
         };
 
-  String get _label =>
-      _video == null ? _typeLabel : '${_video!.siteName} video';
+  String get _label => _video != null
+      ? '${_video!.siteName} video'
+      : recipe != null
+      ? tr('share.recipeShared', 'Recipe shared')
+      : _typeLabel;
 
   String get _typeLabel => switch (item.type) {
     ShareType.image => tr('share.photoShared', 'Photo shared'),
@@ -309,7 +365,30 @@ class _Card extends StatelessWidget {
     ShareType.video => tr('share.videoShared', 'Video shared'),
     ShareType.link => tr('share.linkShared', 'Link shared'),
     ShareType.text => tr('share.noteShared', 'Note shared'),
+    ShareType.notice => item.sender,
+    ShareType.parcel =>
+      item.parcel == null || item.parcel!.carrier == Carrier.unknown
+          ? tr('share.parcelToTrack', 'Parcel to track')
+          : tr('share.carrierParcelToTrack', '{carrier} parcel to track', {
+              'carrier': item.parcel!.carrier.name,
+            }),
   };
+
+  /// The line under it: who it is from, and for a parcel what it is.
+  String get _detail {
+    if (recipe != null) {
+      return tr('share.recipeFrom', '{what} · from {name}', {
+        'what': recipe!.name,
+        'name': item.sender,
+      });
+    }
+    final from = item.title ?? 'From ${item.sender}';
+    if (item.type != ShareType.parcel || item.title == null) return from;
+    return tr('share.parcelFrom', '{what} · from {name}', {
+      'what': item.title!,
+      'name': item.sender,
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -359,7 +438,7 @@ class _Card extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'From ${item.sender}${pendingCount > 1 ? ' · +${pendingCount - 1} more' : ''}',
+                      '$_detail${pendingCount > 1 ? ' · +${pendingCount - 1} more' : ''}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(

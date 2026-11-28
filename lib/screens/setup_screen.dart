@@ -74,6 +74,9 @@ class _SetupScreenState extends State<SetupScreen> {
     final canSave = _url.text.trim().isNotEmpty && _key.text.trim().isNotEmpty;
     return ModernScaffold(
       header: ScreenHeader(
+        // Opened from Settings or the albums tile, never a gate any more:
+        // there is always somewhere to go back to.
+        onBack: () => Navigator.of(context).maybePop(),
         title: tr('setup.connectToImmich', 'Connect to Immich'),
         subtitle: tr(
           'setup.yourServerAddressAndAn',

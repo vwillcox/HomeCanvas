@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../l10n/l10n.dart';
+import '../map_text.dart';
 
 /// When something is shown: between two times of day, on some days.
 ///
@@ -98,7 +99,7 @@ class DashboardPage {
 
   static DashboardPage fromJson(Object? j) => j is Map
       ? DashboardPage(
-          name: '${j['name'] ?? ''}'.trim(),
+          name: j.text('name'),
           schedule: Schedule.fromJson(j['schedule']),
         )
       : const DashboardPage();

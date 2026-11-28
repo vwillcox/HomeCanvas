@@ -6,7 +6,9 @@ import 'package:home_canvas/look.dart';
 import 'package:home_canvas/theme.dart';
 import 'package:home_canvas/widgets/glass.dart';
 
-DashboardTheme byId(String id) => kBuiltInThemes.firstWhere((t) => t.id == id);
+import 'theme_fixtures.dart';
+
+DashboardTheme byId(String id) => testThemes.firstWhere((t) => t.id == id);
 
 void main() {
   group('the app theme, built from the kiosk\'s theme', () {

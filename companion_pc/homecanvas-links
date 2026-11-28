@@ -1,0 +1,329 @@
+#!/usr/bin/env python3
+"""Opens links sent from the HomeCanvas panel on this computer.
+
+Touch "Send to…" on a post or a news story, pick this computer, and the page
+opens in your browser here. The panel cannot reach a computer, so this asks
+it: a request held open on the Share Inbox's port, answered the moment a
+link is sent or after a minute with nothing, then asked again.
+
+Each link is sealed on the panel to this computer's own key, kept in
+~/.config/homecanvas-links/, so nothing in between can read it — the same
+end-to-end encryption shares from the phone have. See lib/services/
+link_outbox.dart for the format.
+
+Set it up once, with the panel's Share Inbox address and a sender's token
+from its Settings → Share Inbox:
+
+    homecanvas-links setup http://192.168.1.57:8081 TOKEN
+
+The panel can also switch this computer off — "hey canvas, turn the PC
+off" — through the same sealed channel: a notice comes up for half a minute
+with a button to keep it on, then it shuts down. And on: this tells the
+panel the hardware address it wakes on, for a Wake-on-LAN packet, which
+needs Wake-on-LAN switched on in the firmware and for the network card.
+
+then run it, or let homecanvas-links.service run it:
+
+    homecanvas-links            collect and open links until stopped
+    homecanvas-links --once     collect what is waiting, then stop
+"""
+
+import base64
+import calendar
+import hashlib
+import json
+import os
+import socket
+import subprocess
+import sys
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+from pathlib import Path
+
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric.x25519 import (
+    X25519PrivateKey,
+    X25519PublicKey,
+)
+from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+
+# Bound into the key and the seal on the panel: LinkOutbox.label.
+LABEL = b"homecanvas/link/v1"
+
+# How long the panel is asked to hold a request with nothing to send: under
+# the minute a reverse proxy usually lets one sit idle. The panel would hold
+# one for up to five minutes, which the phone app uses to save its battery;
+# a computer has none to save, and the panel tells it is on by its asking.
+WAIT = 50
+
+HOME = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
+DIR = HOME / "homecanvas-links"
+CONFIG = DIR / "config.json"
+KEY = DIR / "device_key"
+STATE = DIR / "state.json"
+
+# A "switch off" older than this when it arrives is not done: it waited in
+# the panel's outbox while this computer was off, and the asking is over.
+POWER_FRESH = 120
+
+# How long the notice is up before switching off, with a way to stop it.
+POWER_NOTICE = 30
+
+
+def log(message):
+    print(message, flush=True)
+
+
+def write_private(path, data):
+    """Writes [data] readable by this user only, from before it is in it."""
+    DIR.mkdir(parents=True, exist_ok=True)
+    os.chmod(DIR, 0o700)
+    part = path.with_suffix(".part")
+    fd = os.open(part, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "wb") as f:
+        f.write(data)
+    part.replace(path)
+
+
+def device_key():
+    """This computer's key, made the first time."""
+    if KEY.exists():
+        return X25519PrivateKey.from_private_bytes(KEY.read_bytes())
+    key = X25519PrivateKey.generate()
+    write_private(
+        KEY,
+        key.private_bytes(
+            serialization.Encoding.Raw,
+            serialization.PrivateFormat.Raw,
+            serialization.NoEncryption(),
+        ),
+    )
+    return key
+
+
+def public_bytes(key):
+    return key.public_key().public_bytes(
+        serialization.Encoding.Raw, serialization.PublicFormat.Raw
+    )
+
+
+def key_id(public):
+    """As the panel works it out: LinkOutbox.keyId."""
+    return hashlib.sha256(public).digest()[:8].hex()
+
+
+def open_sealed(key, sealed):
+    """The plaintext of a link sealed to [key] — LinkOutbox.sealLink."""
+    if sealed.get("v") != 1:
+        raise ValueError(f"sealed with version {sealed.get('v')}; this speaks 1")
+    epk = base64.b64decode(sealed["epk"])
+    shared = key.exchange(X25519PublicKey.from_public_bytes(epk))
+    derived = HKDF(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=base64.b64decode(sealed["salt"]),
+        info=LABEL + f"|{sealed['kid']}|{sealed['epk']}".encode(),
+    ).derive(shared)
+    return ChaCha20Poly1305(derived).decrypt(
+        bytes(12), base64.b64decode(sealed["box"]), LABEL
+    )
+
+
+def show(link):
+    """Opens a web page and says where it came from. Nothing but a web page:
+    a link that is anything else is not opened, whoever sealed it."""
+    url = link.get("url", "")
+    if urllib.parse.urlsplit(url).scheme not in ("http", "https"):
+        log(f"Not opening {url!r}: not a web page")
+        return
+    log(f"Opening {url}")
+    subprocess.Popen(["xdg-open", url], start_new_session=True)
+    where = link.get("from") or urllib.parse.urlsplit(url).hostname or "HomeCanvas"
+    title = link.get("title") or url
+    if len(title) > 200:
+        title = title[:199] + "…"
+    try:
+        subprocess.run(
+            ["notify-send", "-a", "HomeCanvas", "-i", "web-browser",
+             f"From the panel · {where}", title],
+            timeout=5,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+
+def wake_mac():
+    """The hardware address of the card the default route leaves by — the
+    one a Wake-on-LAN packet from the panel would reach. None if there is
+    no such card, or it is not a real one."""
+    try:
+        with open("/proc/net/route") as routes:
+            next(routes)
+            for line in routes:
+                fields = line.split()
+                if len(fields) > 1 and fields[1] == "00000000":
+                    mac = Path(f"/sys/class/net/{fields[0]}/address").read_text().strip()
+                    return mac if mac and mac != "00:00:00:00:00:00" else None
+    except (OSError, StopIteration):
+        pass
+    return None
+
+
+def switch_off(command):
+    """Switches this computer off, as the panel asked — after a notice with a
+    button to keep it on. Asked too long ago, it is not done."""
+    try:
+        # The panel's clock, in UTC: "2026-11-17T23:40:12.123456Z".
+        at = calendar.timegm(time.strptime(command.get("at", "")[:19], "%Y-%m-%dT%H:%M:%S"))
+        age = time.time() - at
+    except (ValueError, OverflowError):
+        age = POWER_FRESH + 1
+    if age > POWER_FRESH:
+        log(f"Not switching off: asked {int(age)} seconds ago")
+        return
+    log("The panel asked this computer to switch off")
+    started = time.monotonic()
+    kept = False
+    try:
+        answer = subprocess.run(
+            ["notify-send", "-a", "HomeCanvas", "-u", "critical",
+             "-i", "system-shutdown", "-t", str(POWER_NOTICE * 1000),
+             "-A", "keep=Keep it on", "--wait",
+             f"Switching off in {POWER_NOTICE} seconds",
+             "Asked for on the HomeCanvas panel."],
+            capture_output=True, text=True, timeout=POWER_NOTICE + 5, check=False,
+        )
+        kept = answer.stdout.strip() == "keep"
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    if kept:
+        log("Kept on: the notice's button was pressed")
+        return
+    # Closed early is not "keep it on": the rest of the half minute still.
+    left = POWER_NOTICE - (time.monotonic() - started)
+    if left > 0:
+        time.sleep(left)
+    log("Switching off")
+    subprocess.run(["systemctl", "poweroff"], check=False)
+
+
+def handle(item):
+    """One thing from the panel: a link to open, or a command."""
+    if item.get("do") == "power":
+        if item.get("state") == "off":
+            switch_off(item)
+        else:
+            log(f"Not a power command this knows: {item.get('state')!r}")
+        return
+    show(item)
+
+
+def collect(config, key, after, wait):
+    """Asks once. Returns the links' ids and contents, newest last."""
+    query = urllib.parse.urlencode({"after": after, "wait": wait})
+    request = urllib.request.Request(
+        f"{config['address']}/outbox?{query}",
+        headers={
+            "Authorization": f"Bearer {config['token']}",
+            "X-Device-Key": base64.b64encode(public_bytes(key)).decode(),
+            "X-Device-Name": urllib.parse.quote(
+                config.get("name") or socket.gethostname()
+            ),
+            "X-Device-Kind": "computer",
+            # For switching it on from the panel: see wake_mac.
+            **({"X-Device-Wake": mac} if (mac := wake_mac()) else {}),
+        },
+    )
+    with urllib.request.urlopen(request, timeout=wait + 20) as response:
+        return json.load(response).get("items", [])
+
+
+def run(once=False):
+    if not CONFIG.exists():
+        sys.exit(
+            "Not set up. Run: homecanvas-links setup ADDRESS TOKEN\n"
+            "(the panel's Share Inbox address and a sender's token from its "
+            "Settings → Share Inbox)"
+        )
+    config = json.loads(CONFIG.read_text())
+    key = device_key()
+    after = json.loads(STATE.read_text()).get("after", 0) if STATE.exists() else 0
+    log(
+        f"Collecting links from {config['address']} — this computer's key is "
+        f"{key_id(public_bytes(key))}, as the panel's Settings → Share Inbox "
+        f"should show it."
+    )
+    pause = 2
+    while True:
+        try:
+            items = collect(config, key, after, 0 if once else WAIT)
+            pause = 2
+        except urllib.error.HTTPError as e:
+            if e.code == 401:
+                log("The panel turned the token down: was its sender removed?")
+                pause = 300
+            else:
+                log(f"The panel answered {e.code}: {e.read()[:200]!r}")
+                pause = min(pause * 2, 60)
+            if once:
+                sys.exit(1)
+            time.sleep(pause)
+            continue
+        except (urllib.error.URLError, OSError, ValueError) as e:
+            log(f"Could not reach the panel: {e}")
+            if once:
+                sys.exit(1)
+            time.sleep(pause)
+            pause = min(pause * 2, 60)
+            continue
+
+        opened = []
+        for item in items:
+            try:
+                opened.append(json.loads(open_sealed(key, item["sealed"])))
+            except Exception as e:  # One bad link must not stop the rest.
+                log(f"Could not open a link: {e!r}")
+            after = max(after, item["id"])
+        # Written before anything is done with them: a "switch off" must not
+        # be collected again after the computer comes back.
+        if items:
+            write_private(STATE, json.dumps({"after": after}).encode())
+        for item in opened:
+            try:
+                handle(item)
+            except Exception as e:
+                log(f"Could not act on it: {e!r}")
+        if once:
+            return
+
+
+def setup(address, token, name=None):
+    address = address.rstrip("/")
+    if "://" not in address:
+        address = "http://" + address
+    config = {"address": address, "token": token}
+    if name:
+        config["name"] = name
+    write_private(CONFIG, json.dumps(config, indent=2).encode())
+    key = device_key()
+    log(f"Saved. This computer's key is {key_id(public_bytes(key))}.")
+
+
+def main(argv):
+    if argv[:1] == ["setup"] and len(argv) in (3, 4):
+        setup(*argv[1:])
+    elif argv in ([], ["--once"]):
+        run(once=bool(argv))
+    else:
+        sys.exit(__doc__)
+
+
+if __name__ == "__main__":
+    try:
+        main(sys.argv[1:])
+    except KeyboardInterrupt:
+        pass

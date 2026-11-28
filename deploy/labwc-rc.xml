@@ -10,7 +10,7 @@
 
       killall -HUP labwc
 
-  `labwc --reconfigure` looks like it should do this and does nothing to the
+  `labwc -r` (reconfigure) looks like it should do this and does nothing to the
   already-running compositor, which makes a change appear not to have worked.
 -->
 <openbox_config xmlns="http://openbox.org/3.4/rc">
@@ -40,6 +40,14 @@
     -->
     <windowRule identifier="firefox" serverDecoration="no"/>
     <windowRule identifier="chromium" serverDecoration="no"/>
+
+    <!--
+      A web page shown inside a tile (the Parcels tile's carrier pages) gets
+      a rule of its own, for app_id "homecanvas-side": where the tile's hole
+      is, its size, and always on top. HomeCanvas writes and rewrites it
+      itself, between <!- - homecanvas-side - -> markers, whenever the hole
+      moves — there is nothing to add here by hand.
+    -->
   </windowRules>
 
 </openbox_config>

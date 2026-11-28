@@ -1,4 +1,10 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:home_canvas/services/config_service.dart';
 import 'package:home_canvas/services/spotify_service.dart';
 
 void main() {
@@ -163,6 +169,154 @@ void main() {
       expect(SpotifyService.emptyLongEnough(null, t0), isFalse);
     });
   });
+
+  group('a 429 on the player', () {
+    test('is not asked again until Retry-After has passed', () async {
+      final spotify = _Spotify([429], retryAfter: '3600');
+      await spotify.service.pollOnce();
+      await spotify.service.pollOnce();
+      await spotify.service.pollOnce();
+      expect(spotify.playerAsks, 1);
+      spotify.service.dispose();
+    });
+
+    test('a short block is asked again once it is over', () async {
+      final spotify = _Spotify([429, 429]);
+      await spotify.service.pollOnce();
+      await spotify.service.pollOnce();
+      expect(spotify.playerAsks, 2);
+      spotify.service.dispose();
+    });
+
+    test('slows every poll after it, up to four times', () async {
+      final spotify = _Spotify([204, 429, 429, 429]);
+      final every = <Duration?>[];
+      for (var i = 0; i < 4; i++) {
+        await spotify.service.pollOnce();
+        every.add(spotify.service.pollEvery);
+      }
+      expect(every, const [
+        Duration(seconds: 15),
+        Duration(seconds: 30),
+        Duration(seconds: 60),
+        Duration(seconds: 60),
+      ]);
+      spotify.service.dispose();
+    });
+
+    test('hides what was playing, for Bluetooth to show instead', () async {
+      final spotify = _Spotify([200, 429]);
+      await spotify.service.pollOnce();
+      expect(spotify.service.available, isTrue);
+      expect(spotify.service.now.title, 'Centuries');
+      await spotify.service.pollOnce();
+      expect(spotify.service.available, isFalse);
+      spotify.service.dispose();
+    });
+  });
+
+  group('how often the player is asked', () {
+    test('every five seconds while music plays on a lit screen', () async {
+      final spotify = _Spotify([200]);
+      await spotify.service.pollOnce();
+      expect(spotify.service.pollEvery, const Duration(seconds: 5));
+      spotify.service.dispose();
+    });
+
+    test('every fifteen while nothing plays', () async {
+      final spotify = _Spotify([204]);
+      await spotify.service.pollOnce();
+      expect(spotify.service.pollEvery, const Duration(seconds: 15));
+      spotify.service.dispose();
+    });
+
+    test('a tap while an ask is on its way is asked about after it', () async {
+      final spotify = _Spotify([200, 200], hold: true);
+      final first = spotify.service.pollOnce();
+      await spotify.service.next();
+      expect(spotify.playerAsks, 1);
+      spotify.gate.complete();
+      await first;
+      await pumpEventQueue();
+      expect(spotify.playerAsks, 2);
+      spotify.service.dispose();
+    });
+
+    test('music starting over Bluetooth asks at once, but not twice', () async {
+      final spotify = _Spotify([204, 204]);
+      spotify.service.nudge();
+      spotify.service.nudge();
+      await pumpEventQueue();
+      expect(spotify.playerAsks, 1);
+      spotify.service.dispose();
+    });
+  });
+}
+
+/// A connected [SpotifyService] whose player polls are answered, in turn,
+/// with [statuses]: 200 is a track playing, 204 nothing, 429 a block of
+/// [retryAfter] seconds.
+class _Spotify implements HttpClientAdapter {
+  _Spotify(this.statuses, {this.retryAfter = '0', this.hold = false}) {
+    final config = ConfigService();
+    config.config.spotify
+      ..clientId = 'client'
+      ..refreshToken = 'refresh';
+    service = SpotifyService(config, dio: Dio()..httpClientAdapter = this);
+  }
+
+  final List<int> statuses;
+  final String retryAfter;
+  late final SpotifyService service;
+  int playerAsks = 0;
+
+  /// With [hold], the first player ask is not answered until [gate] is.
+  final bool hold;
+  final gate = Completer<void>();
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    const json = {
+      Headers.contentTypeHeader: ['application/json'],
+    };
+    if (options.uri.path.endsWith('/api/token')) {
+      return ResponseBody.fromString(
+        jsonEncode({'access_token': 'token', 'expires_in': 3600}),
+        200,
+        headers: json,
+      );
+    }
+    // The liked-status check, and anything else that is not the player.
+    if (!options.uri.path.endsWith('/me/player')) {
+      return ResponseBody.fromString('[false]', 200, headers: json);
+    }
+    final ask = playerAsks++;
+    if (hold && ask == 0) await gate.future;
+    final status = statuses[ask];
+    return switch (status) {
+      200 => ResponseBody.fromString(
+        jsonEncode(_reply(item: _track)),
+        200,
+        headers: json,
+      ),
+      204 => ResponseBody.fromString('', 204),
+      _ => ResponseBody.fromString(
+        '{}',
+        status,
+        headers: {
+          ...json,
+          'retry-after': [retryAfter],
+        },
+      ),
+    };
+  }
+
+  @override
+  void close({bool force = false}) {}
 }
 
 // --- Spotify's DJ, podcasts and gaps ---------------------------------------

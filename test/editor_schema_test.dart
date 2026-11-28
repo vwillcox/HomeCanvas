@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:home_canvas/dashboard/widget_registry.dart';
 import 'package:home_canvas/dashboard/widgets/widgets.dart';
 
+import 'needs_addons.dart';
+
 /// What the browser editor reads to draw its preview. It is the only
 /// consumer, and it is JavaScript, so nothing else would notice a field
 /// going missing.
@@ -10,6 +12,7 @@ void main() {
   setUpAll(registerBuiltInWidgets);
 
   test('every widget type tells the editor whether it fits itself', () {
+    if (skippedWithoutAddons()) return;
     for (final t in WidgetRegistry.all) {
       expect(t.toJson()['fitsItself'], t.fitsItself, reason: t.type);
     }
@@ -26,6 +29,7 @@ void main() {
   });
 
   test('fixed-size text previews at its real size', () {
+    if (skippedWithoutAddons()) return;
     // Lists draw their text at fixed sizes on a tile of any height; sized as
     // a share of the tile instead, a tall news tile previewed its headlines
     // three times too big.

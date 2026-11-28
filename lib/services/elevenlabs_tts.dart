@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'http_client.dart';
 
 /// Which ElevenLabs voice to read in, from the news widget's settings.
 @immutable
@@ -46,12 +47,9 @@ class ElevenLabsTts {
   ElevenLabsTts({Dio? dio})
     : _dio =
           dio ??
-          Dio(
-            BaseOptions(
-              connectTimeout: const Duration(seconds: 10),
-              receiveTimeout: const Duration(seconds: 30),
-              responseType: ResponseType.bytes,
-            ),
+          httpClient(
+            receive: const Duration(seconds: 30),
+            responseType: ResponseType.bytes,
           );
 
   final Dio _dio;

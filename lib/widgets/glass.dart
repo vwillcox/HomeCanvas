@@ -413,10 +413,14 @@ class HeaderTitle extends StatelessWidget {
     this.subtitle,
     this.colour,
     this.secondary,
+    this.short,
   });
 
   final String title;
   final String? subtitle;
+
+  /// A shorter [title], for a console's bar too crowded for the whole of it.
+  final String? short;
 
   /// The theme's text colours unless given.
   final Color? colour;
@@ -430,7 +434,7 @@ class HeaderTitle extends StatelessWidget {
     if (look.isLcars) {
       // A console's text bar: the title in the accent, and the line under
       // it as the small print on the bar that runs on beside.
-      return LcarsTextBar(title: title, note: subtitle);
+      return LcarsTextBar(title: title, note: subtitle, short: short);
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -467,11 +471,20 @@ class HeaderTitle extends StatelessWidget {
 /// Keeps its own one-minute timer, so the greeting turns over at noon and
 /// the date at midnight without rebuilding the screen around it.
 class GreetingTitle extends StatefulWidget {
-  const GreetingTitle({super.key, this.detail, this.colour, this.secondary});
+  const GreetingTitle({
+    super.key,
+    this.detail,
+    this.colour,
+    this.secondary,
+    this.onTap,
+  });
 
   final String? detail;
   final Color? colour;
   final Color? secondary;
+
+  /// Touched: the day, at a glance — see `showDayBrief`.
+  final VoidCallback? onTap;
 
   @override
   State<GreetingTitle> createState() => _GreetingTitleState();
@@ -491,15 +504,29 @@ class _GreetingTitleState extends State<GreetingTitle>
   }
 
   @override
-  Widget build(BuildContext context) => HeaderTitle(
-    colour: widget.colour,
-    secondary: widget.secondary,
-    title: greetingFor(_now),
-    subtitle: [
-      longDate(_now),
-      if (widget.detail != null) widget.detail!,
-    ].join('  ·  '),
-  );
+  Widget build(BuildContext context) {
+    final title = HeaderTitle(
+      colour: widget.colour,
+      secondary: widget.secondary,
+      title: greetingFor(_now),
+      short: greetingShort(_now),
+      subtitle: [
+        longDate(_now),
+        if (widget.detail != null) widget.detail!,
+      ].join('  ·  '),
+    );
+    final onTap = widget.onTap;
+    if (onTap == null) return title;
+    return Semantics(
+      button: true,
+      label: tr('brief.title', 'Your day'),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: title,
+      ),
+    );
+  }
 }
 
 /// The solid, pill-shaped button used for a screen's one main action —
@@ -636,6 +663,15 @@ class ModernScaffold extends StatelessWidget {
 }
 
 /// "Good morning" and so on, by the hour.
+/// The greeting in a word, for a crowded bar: "Morning", "Evening".
+String greetingShort(DateTime t) {
+  final h = t.hour;
+  if (h >= 5 && h < 12) return tr('greeting.short.morning', 'Morning');
+  if (h >= 12 && h < 17) return tr('greeting.short.afternoon', 'Afternoon');
+  if (h >= 17 && h < 22) return tr('greeting.short.evening', 'Evening');
+  return tr('greeting.short.night', 'Night');
+}
+
 String greetingFor(DateTime t) {
   final h = t.hour;
   if (h >= 5 && h < 12) return tr('greeting.morning', 'Good morning');

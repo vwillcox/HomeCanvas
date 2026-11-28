@@ -292,6 +292,28 @@ void main() {
       await r.stop();
     });
 
+    test('says what the panel put together, music paused and back', () async {
+      final r = reader();
+      unawaited(
+        r.say(
+          title: 'Your day',
+          paragraphs: ['Good morning.', 'Rain is likely from 3 pm.'],
+        ),
+      );
+      await settle();
+      expect(r.title, 'Your day');
+      expect(r.status, ReaderStatus.reading);
+      expect(started, 1);
+      for (var i = 0; i < 2; i++) {
+        await settle();
+        out.finishOne();
+      }
+      await settle();
+      expect(out.said, ['Good morning.', 'Rain is likely from 3 pm.']);
+      expect(r.active, isFalse);
+      expect(ended, 1);
+    });
+
     test('stop ends it at once, and the music comes back once', () async {
       final r = reader();
       unawaited(r.read(title: 'Scheme extended', link: 'https://x/1'));

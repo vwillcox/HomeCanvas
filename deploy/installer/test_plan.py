@@ -100,23 +100,22 @@ class Config(unittest.TestCase):
                 "apiKey": "secret"}
 
     def test_replace(self):
-        c = plan.apply_dashboard(self.old(), CAT, {"weather", "news"}, "lcars", "replace", True)
+        c = plan.apply_dashboard(self.old(), CAT, {"weather", "news"}, "lcars", "replace")
         d = c["dashboard"]
         self.assertEqual(d["themeId"], "lcars")
-        self.assertTrue(d["enabled"] and d["showOnLaunch"])
+        self.assertTrue(d["enabled"])
         self.assertEqual({w["type"] for w in d["widgets"]}, {"weather", "news"})
         self.assertEqual(c["apiKey"], "secret")
 
     def test_add_goes_on_new_pages_with_new_ids(self):
-        d = plan.apply_dashboard(self.old(), CAT, {"weather"}, "lcars", "add", None)["dashboard"]
+        d = plan.apply_dashboard(self.old(), CAT, {"weather"}, "lcars", "add")["dashboard"]
         self.assertEqual(d["widgets"][0]["id"], "w7")
         self.assertEqual(d["widgets"][1]["id"], "w8")
         self.assertEqual(d["widgets"][1]["page"], 1)
         self.assertEqual(d["pages"][0]["name"], "Mine")
-        self.assertNotIn("showOnLaunch", d)
 
     def test_keep_changes_only_the_theme(self):
-        d = plan.apply_dashboard(self.old(), CAT, {"weather"}, "paper", "keep", None)["dashboard"]
+        d = plan.apply_dashboard(self.old(), CAT, {"weather"}, "paper", "keep")["dashboard"]
         self.assertEqual(d["themeId"], "paper")
         self.assertEqual([w["type"] for w in d["widgets"]], ["clock"])
 

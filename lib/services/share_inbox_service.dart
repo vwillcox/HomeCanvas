@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
@@ -9,12 +10,17 @@ import 'package:path/path.dart' as p;
 
 import '../config/app_config.dart' show ShareInboxSettings;
 import 'config_service.dart';
+import 'link_outbox.dart';
+import 'parcel_carriers.dart';
 import 'sealed_share.dart';
 import 'sealed_stream.dart';
 import 'tts_service.dart';
 import 'media_cache.dart';
 
-enum ShareType { link, text, image, gif, video }
+/// What arrived. [notice] is the panel's own news rather than a share — a
+/// Mastodon or Bluesky notification — given the same card and chime.
+/// [parcel] is a tracking link or number, for the Parcels tile.
+enum ShareType { link, text, image, gif, video, notice, parcel }
 
 /// One thing someone shared to the kiosk from the companion app.
 class SharedItem {
@@ -27,11 +33,22 @@ class SharedItem {
   /// Local file path, for [ShareType.image]/[ShareType.gif]/[ShareType.video].
   final String? localPath;
 
+  /// For [ShareType.notice]: what the card says, where a share says who it
+  /// is from. [sender] is then where the notice is from — "Mastodon".
+  /// For [ShareType.parcel]: what the sender called it, if anything.
+  final String? title;
+
+  /// For [ShareType.parcel]: the parcel [content] was found to be. For a
+  /// [ShareType.notice], the parcel it is news of.
+  final ParcelRef? parcel;
+
   SharedItem({
     required this.type,
     required this.sender,
     this.content,
     this.localPath,
+    this.title,
+    this.parcel,
   });
 }
 
@@ -70,6 +87,27 @@ class ShareInboxService extends ChangeNotifier {
 
   /// Told about each thing shared, so text can also go on the Notes board.
   void Function(SharedItem item)? onShared;
+
+  /// Links sent from the panel to a phone or computer, collected here by
+  /// those holding a sender's token. Null answers nobody.
+  LinkOutbox? outbox;
+
+  /// StreamerDeck on a computer, connecting to drive the deck (`GET
+  /// /deck`): handed the request and whose token let it in. The deck is an
+  /// add-on, StreamerDeck, which sets this once the app is up; null —
+  /// without it — answers nobody.
+  Future<void> Function(HttpRequest request, String sender)? onDeck;
+
+  /// The longest a device's request for links is held open with nothing to
+  /// send; each device asks for its own, up to this. The phone app asks for
+  /// all of it — every answer wakes the phone, and once in five minutes
+  /// sips its battery where once in 50 seconds did not — and drops to
+  /// [proxyWait] if a reverse proxy cuts it short. The computer receiver
+  /// asks for [proxyWait].
+  static const outboxWait = Duration(minutes: 5);
+
+  /// Under the minute a reverse proxy usually lets a request sit idle.
+  static const proxyWait = Duration(seconds: 50);
 
   ShareInboxSettings get _settings => _configService.config.shareInbox;
 
@@ -141,6 +179,11 @@ class ShareInboxService extends ChangeNotifier {
   /// the network cannot see it.
   static const String sealedMime = 'application/vnd.kiosk.sealed';
 
+  /// A request as the listener would handle it, for tests with a server
+  /// of their own.
+  @visibleForTesting
+  Future<void> handle(HttpRequest request) => _handleRequest(request);
+
   Future<void> _handleRequest(HttpRequest request) async {
     final path = request.uri.path;
 
@@ -166,6 +209,37 @@ class ShareInboxService extends ChangeNotifier {
           }),
         );
       await request.response.close();
+      return;
+    }
+
+    if (request.method == 'GET' && path == '/deck') {
+      final sender = _senderFor(request);
+      final deck = onDeck;
+      if (sender == null || deck == null) {
+        request.response.statusCode = sender == null
+            ? HttpStatus.unauthorized
+            : HttpStatus.notFound;
+        await request.response.close();
+        return;
+      }
+      try {
+        await deck(request, sender);
+      } catch (e) {
+        debugPrint('ShareInbox: deck request error: $e');
+      }
+      return;
+    }
+
+    if (request.method == 'GET' && path == '/outbox') {
+      try {
+        await _handleOutbox(request);
+      } catch (e) {
+        debugPrint('ShareInbox: outbox request error: $e');
+        try {
+          request.response.statusCode = HttpStatus.internalServerError;
+          await request.response.close();
+        } catch (_) {}
+      }
       return;
     }
 
@@ -217,6 +291,10 @@ class ShareInboxService extends ChangeNotifier {
         await request.response.close();
         return;
       }
+    } on _TooLarge {
+      debugPrint('ShareInbox: refused an oversized share from $sender');
+      request.response.statusCode = HttpStatus.requestEntityTooLarge;
+      await request.response.close();
     } on SealedAuthException catch (e) {
       debugPrint('ShareInbox: rejected a sealed share from $sender: $e');
       request.response.statusCode = HttpStatus.unauthorized;
@@ -232,6 +310,73 @@ class ShareInboxService extends ChangeNotifier {
       request.response.statusCode = HttpStatus.internalServerError;
       await request.response.close();
     }
+  }
+
+  /// A device collecting the links sent to it: see [LinkOutbox].
+  ///
+  /// `X-Device-Key` is its X25519 public key, base64; `X-Device-Name`
+  /// (percent-encoded) and `X-Device-Kind` (`phone` or `computer`) say how
+  /// to offer it; a computer's `X-Device-Wake` is the hardware address it
+  /// wakes on. `?after=` is the newest id it has handled, `?wait=` how
+  /// many seconds it will wait for something, up to [outboxWait].
+  Future<void> _handleOutbox(HttpRequest request) async {
+    final sender = _senderFor(request);
+    final outbox = this.outbox;
+    if (sender == null || outbox == null) {
+      request.response.statusCode = sender == null
+          ? HttpStatus.unauthorized
+          : HttpStatus.notFound;
+      await request.response.close();
+      return;
+    }
+    List<int>? key;
+    try {
+      key = base64Decode(request.headers.value('x-device-key') ?? '');
+    } on FormatException {
+      key = null;
+    }
+    if (key == null || key.length != 32) {
+      request.response
+        ..statusCode = HttpStatus.badRequest
+        ..write('X-Device-Key must be a base64 X25519 public key.');
+      await request.response.close();
+      return;
+    }
+    final kind = request.headers.value('x-device-kind') == 'computer'
+        ? 'computer'
+        : 'phone';
+    var name = '';
+    try {
+      name = Uri.decodeComponent(
+        request.headers.value('x-device-name') ?? '',
+      ).trim();
+    } on ArgumentError {
+      name = '';
+    }
+    if (name.isEmpty) name = kind == 'computer' ? 'Computer' : 'Phone';
+    if (name.length > 60) name = name.substring(0, 60);
+    final q = request.uri.queryParameters;
+    final poll = await outbox.poll(
+      sender: sender,
+      publicKey: key,
+      name: name,
+      kind: kind,
+      after: int.tryParse(q['after'] ?? '') ?? 0,
+      // Where it is, and what it wakes on, for switching a computer on —
+      // see ComputerPower.
+      address: request.connectionInfo?.remoteAddress,
+      wakeMac: request.headers.value('x-device-wake'),
+      wait: Duration(
+        seconds: (int.tryParse(q['wait'] ?? '') ?? 0).clamp(
+          0,
+          outboxWait.inSeconds,
+        ),
+      ),
+    );
+    request.response
+      ..headers.contentType = ContentType.json
+      ..write(jsonEncode(poll.toJson()));
+    await request.response.close();
   }
 
   /// The name behind the bearer token, or null when it matches nobody.
@@ -314,11 +459,7 @@ class ShareInboxService extends ChangeNotifier {
     );
 
     if (open.mime == 'application/json') {
-      final bytes = <int>[];
-      await for (final chunk in plaintext.stream) {
-        bytes.addAll(chunk);
-      }
-      await _handleJson(request, bytes, sender);
+      await _handleJson(request, await _drain(plaintext.stream), sender);
       return;
     }
     await _handleFile(request, plaintext.stream, sender, open.mime);
@@ -332,16 +473,41 @@ class ShareInboxService extends ChangeNotifier {
     final body = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
     final kindStr = body['type'] as String?;
     final content = (body['content'] as String? ?? '').trim();
-    if ((kindStr != 'link' && kindStr != 'text') || content.isEmpty) {
+    if (!const {'link', 'text', 'parcel'}.contains(kindStr) ||
+        content.isEmpty) {
       request.response.statusCode = HttpStatus.badRequest;
       await request.response.close();
       return;
     }
+    // A tracking link or number goes on the Parcels tile, whether it was
+    // sent as one or shared from a carrier's email like any other link.
+    final parcel = ParcelRef.find(content, explicit: kindStr == 'parcel');
+    if (kindStr == 'parcel' && parcel == null) {
+      request.response
+        ..statusCode = HttpStatus.badRequest
+        ..write('That is not a tracking number or a tracking link.');
+      await request.response.close();
+      return;
+    }
+    final label = body['label'] is String
+        ? (body['label'] as String).trim()
+        : '';
     _enqueue(
       SharedItem(
-        type: kindStr == 'link' ? ShareType.link : ShareType.text,
+        type: parcel != null
+            ? ShareType.parcel
+            : kindStr == 'link'
+            ? ShareType.link
+            : ShareType.text,
         sender: sender,
         content: content,
+        // Kept to a line, as the Parcels list keeps it.
+        title: parcel == null || label.isEmpty
+            ? null
+            : label.length > 60
+            ? label.substring(0, 60)
+            : label,
+        parcel: parcel,
       ),
     );
     await _respondOk(request);
@@ -369,7 +535,7 @@ class ShareInboxService extends ChangeNotifier {
     try {
       // A sealed stream raises at the end if it was cut short, so reaching
       // the end of this without error is what proves the file whole.
-      await sink.addStream(body);
+      await sink.addStream(_capped(body, maxFileBytes));
       await sink.close();
     } catch (e) {
       await sink.close();
@@ -391,12 +557,31 @@ class ShareInboxService extends ChangeNotifier {
     await request.response.close();
   }
 
+  /// The most a link or a piece of text may run to: a phone's share of
+  /// either is a few hundred bytes.
+  static const maxJsonBytes = 1024 * 1024;
+
+  /// The most a shared file may run to — a long video from a phone — so
+  /// that a sender, or a stolen token, cannot fill the card.
+  static const maxFileBytes = 2 * 1024 * 1024 * 1024;
+
   Future<List<int>> _drain(Stream<List<int>> stream) async {
-    final bytes = <int>[];
-    await for (final chunk in stream) {
-      bytes.addAll(chunk);
+    final bytes = BytesBuilder(copy: false);
+    await for (final chunk in _capped(stream, maxJsonBytes)) {
+      bytes.add(chunk);
     }
-    return bytes;
+    return bytes.takeBytes();
+  }
+
+  /// [stream] as it is, until it has sent more than [max] bytes: then it
+  /// ends with [_TooLarge].
+  static Stream<List<int>> _capped(Stream<List<int>> stream, int max) async* {
+    var total = 0;
+    await for (final chunk in stream) {
+      total += chunk.length;
+      if (total > max) throw const _TooLarge();
+      yield chunk;
+    }
   }
 
   ShareType? _typeForMime(String mime) {
@@ -424,6 +609,26 @@ class ShareInboxService extends ChangeNotifier {
         return mime.startsWith('image/') ? '.jpg' : '.bin';
     }
   }
+
+  /// Puts up a card of the panel's own — [title] on it, [text] when it is
+  /// opened — with the chime a share gets, and wakes the screen for it,
+  /// unless Do Not Disturb is on.
+  ///
+  /// A notice about [parcel] opens it, rather than [text].
+  void notice({
+    required String from,
+    required String title,
+    required String text,
+    ParcelRef? parcel,
+  }) => _enqueue(
+    SharedItem(
+      type: ShareType.notice,
+      sender: from,
+      title: title,
+      content: text,
+      parcel: parcel,
+    ),
+  );
 
   void _enqueue(SharedItem item) {
     _queue.add(item);
@@ -519,4 +724,9 @@ class ShareInboxService extends ChangeNotifier {
     _chime?.dispose();
     super.dispose();
   }
+}
+
+/// A share bigger than the inbox takes.
+class _TooLarge implements Exception {
+  const _TooLarge();
 }

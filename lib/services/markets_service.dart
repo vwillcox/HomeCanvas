@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../l10n/l10n.dart';
+import '../map_text.dart';
+import 'http_client.dart';
 
 /// A price, how it has moved, and the recent path it took to get there.
 @immutable
@@ -110,13 +112,9 @@ class Quote {
 /// Widgets call [ensureStocks] and [ensureCoins] as often as they like —
 /// each only fetches what is older than the age it is given.
 class MarketsService extends ChangeNotifier {
-  final Dio _dio = Dio(
-    BaseOptions(
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 15),
-      // Yahoo turns away requests with no browser-like agent.
-      headers: const {'User-Agent': 'Mozilla/5.0 (X11; Linux) HomeCanvas/1.0'},
-    ),
+  final Dio _dio = httpClient(
+    // Yahoo turns away requests with no browser-like agent.
+    headers: const {'User-Agent': 'Mozilla/5.0 (X11; Linux) HomeCanvas/1.0'},
   );
 
   final Map<String, Quote> _quotes = {};
@@ -392,8 +390,8 @@ class MarketsService extends ChangeNotifier {
     final symbol = '${meta['symbol'] ?? ''}';
     // Indices are best by their short name ("FTSE 100"), companies by their
     // long one ("VODAFONE GROUP PLC ORD USD0.20" is a listing, not a name).
-    final long = '${meta['longName'] ?? ''}'.trim();
-    final short = '${meta['shortName'] ?? ''}'.trim();
+    final long = meta.text('longName');
+    final short = meta.text('shortName');
     final name = meta['instrumentType'] == 'EQUITY' && long.isNotEmpty
         ? _plainCompany(long)
         : (short.isNotEmpty ? short : (long.isNotEmpty ? long : symbol));

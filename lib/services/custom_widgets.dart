@@ -11,6 +11,7 @@ import '../dashboard/custom_widget_spec.dart';
 import '../dashboard/widget_registry.dart';
 import '../dashboard/widgets/custom_widget.dart';
 import '../l10n/l10n.dart';
+import 'http_client.dart';
 
 /// What a custom widget's source last answered, or why it did not.
 class CustomAnswer {
@@ -32,14 +33,9 @@ class CustomWidgets extends ChangeNotifier {
     : dir = dir ?? p.join(AppPaths.config, 'widgets'),
       _dio =
           dio ??
-          Dio(
-            BaseOptions(
-              connectTimeout: const Duration(seconds: 8),
-              receiveTimeout: const Duration(seconds: 15),
-              headers: const {
-                'User-Agent': 'HomeCanvas/1.0 (home dashboard panel)',
-              },
-            ),
+          httpClient(
+            connect: const Duration(seconds: 8),
+            headers: const {'User-Agent': homeCanvasAgent},
           );
 
   final String dir;

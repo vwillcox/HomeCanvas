@@ -10,6 +10,7 @@ import 'config_service.dart';
 import 'private_file.dart';
 import 'retry_schedule.dart';
 import 'vidaa_client.dart';
+import 'wake_on_lan.dart';
 import '../l10n/l10n.dart';
 
 /// Talks to a Hisense VIDAA television.
@@ -82,7 +83,7 @@ class TvService extends ChangeNotifier {
     final secs = (_accessExpiry - 600 - _nowSec()).clamp(60, 1 << 30);
     _renewal = Timer(Duration(seconds: secs), () {
       _renewal = null;
-      if (_wanted) unawaited(_attempt(renew: true));
+      if (_wanted) unawaited(_attemptOnce(renew: true));
     });
   }
 
@@ -232,7 +233,7 @@ class TvService extends ChangeNotifier {
     if (!_wanted) return;
     _retry = Timer(_schedule.next(hasContent: false), () {
       _retry = null;
-      if (_wanted && conn != ConnState.connected) unawaited(_attempt());
+      if (_wanted && conn != ConnState.connected) unawaited(_attemptOnce());
     });
   }
 
@@ -244,6 +245,9 @@ class TvService extends ChangeNotifier {
   /// Build a fresh client (optionally token-authenticated) and connect it.
   Future<bool> _openAndConnect(String? token) async {
     _client?.disconnect();
+    // The set says whether it is on to each session as it begins; until
+    // this one has heard, what an old one heard may no longer be so.
+    state.powerKnown = false;
     late final VidaaClient client;
     client = VidaaClient(
       host: host,
@@ -262,21 +266,36 @@ class TvService extends ChangeNotifier {
         }
       },
       onLost: () {
-        if (!identical(_client, client) || conn != ConnState.connected) return;
+        if (!identical(_client, client)) return;
+        // A pairing session counts too. Ignoring its loss left the widget
+        // asking for a PIN over a connection that was gone: "Show PIN" was
+        // dropped as "not sent, not connected", nothing came up on the TV,
+        // and nothing tried again, for days.
+        if (conn != ConnState.connected && conn != ConnState.needsPairing) {
+          return;
+        }
         _cancelRenewal();
         _setConn(ConnState.connecting, retry: true);
       },
     );
     _client = client;
     try {
-      return await _client!.connect();
+      final ok = await _client!.connect();
+      if (!ok && token != null && !client.refused) _unanswered = true;
+      return ok;
     } catch (e) {
       // Recorded, not acted on: this is one route out of several the caller
       // is still working through, and whether to retry is its decision.
       lastError = '$e';
+      if (token != null) _unanswered = true;
       return false;
     }
   }
+
+  /// Set during an attempt when a token was offered and the television never
+  /// answered — see [VidaaClient.refused]. Such an attempt proves nothing
+  /// about the tokens, so it ends in a retry rather than in pairing.
+  bool _unanswered = false;
 
   void _finishConnected() {
     // Not the state: asking for it puts the pairing code up on the TV, and
@@ -301,6 +320,38 @@ class TvService extends ChangeNotifier {
     }
     _setConn(ConnState.connected);
     _scheduleRenewal();
+    _learnMac();
+  }
+
+  /// Notes the set's hardware address, for Wake-on-LAN, from the panel's
+  /// neighbour table — where reaching the set has just put it. Read again on
+  /// every connection, so a new set at the same address is picked up too.
+  void _learnMac() {
+    try {
+      final mac = macIn(File('/proc/net/arp').readAsStringSync(), host);
+      if (mac == null || mac == settings.mac) return;
+      settings.mac = mac;
+      unawaited(_config.save());
+      debugPrint('[vidaa] the television is $mac, for Wake-on-LAN');
+    } catch (_) {
+      // Not Linux, or no table to read: Wake-on-LAN just isn't available.
+    }
+  }
+
+  /// The hardware address `/proc/net/arp` gives [ip], or null when it has
+  /// none — not listed, or a lookup that was never answered.
+  @visibleForTesting
+  static String? macIn(String arpTable, String ip) {
+    for (final line in arpTable.split('\n').skip(1)) {
+      final f = line.trim().split(RegExp(r'\s+'));
+      if (f.length < 4 || f[0] != ip || f[2] == '0x0') continue;
+      final mac = f[3].toLowerCase();
+      if (WakeOnLan.magicPacket(mac) == null || mac == '00:00:00:00:00:00') {
+        continue;
+      }
+      return mac;
+    }
+    return null;
   }
 
   /// The television's inputs, empty until it has answered.
@@ -321,8 +372,17 @@ class TvService extends ChangeNotifier {
     _wanted = true;
     _cancelRetry();
     _schedule.reset();
-    await _attempt();
+    await _attemptOnce();
   }
+
+  /// The attempt under way, if one is: a second asker waits for it rather
+  /// than starting another, which would drop the first one's session from
+  /// under it.
+  Future<void>? _attempting;
+
+  Future<void> _attemptOnce({bool renew = false}) => _attempting ??= _attempt(
+    renew: renew,
+  ).whenComplete(() => _attempting = null);
 
   /// Stop trying, and drop any session.
   ///
@@ -370,6 +430,7 @@ class TvService extends ChangeNotifier {
       return;
     }
     await _loadToken();
+    _unanswered = false;
 
     // A) Access token still valid -> use it directly.
     if (!renew && _accessValid && await _openAndConnect(_accessToken)) {
@@ -383,6 +444,20 @@ class TvService extends ChangeNotifier {
     // C) We have some access token of unknown validity -> try it anyway.
     if (_accessToken != null && await _openAndConnect(_accessToken)) {
       _finishConnected();
+      return;
+    }
+    // Not D while the set has not answered a token. A drop in the network
+    // made all three time out, it came back in time for D, and a panel with
+    // a refresh token good for weeks was put into pairing — from which it
+    // never retried. Pairing is for tokens the set has turned down.
+    if (_unanswered) {
+      _setConn(
+        ConnState.error,
+        err: tr('widget.tv.couldNotConnectTo', 'Could not connect to {host}', {
+          'host': host,
+        }),
+        retry: true,
+      );
       return;
     }
     // D) No usable credentials -> connect unauthenticated for pairing.
@@ -426,10 +501,16 @@ class TvService extends ChangeNotifier {
 
   /// Pair again, for when the remote has stopped working: puts the code up
   /// on the TV, connecting first if there is no session to ask through.
+  ///
+  /// What the widget's "Show PIN" calls too, rather than [startPairing]: that
+  /// one only sends, and a pairing session can be gone by the time someone
+  /// gets to the button.
   Future<void> pairAgain() async {
     _wanted = true;
     _cancelRetry();
-    if (_client == null || conn != ConnState.connected) {
+    // The session itself, not [conn]: a pairing session still up is fine to
+    // ask through, and one marked connected may not be.
+    if (!(_client?.isConnected ?? false)) {
       _setConn(ConnState.connecting);
       try {
         await _loadAssets();
@@ -475,6 +556,91 @@ class TvService extends ChangeNotifier {
     return false;
   }
 
+  /// Switches the set on or off, as asked — not a press of the power key,
+  /// which only flips it whichever way it is, and which "turn the TV off"
+  /// must not do to a set that is already off.
+  ///
+  /// Connects first if there is no session: the panel may never have shown
+  /// a TV tile since it started. A set in standby is still on the network
+  /// and takes the power key; one switched off beyond that answers nothing,
+  /// and is sent a Wake-on-LAN packet instead, before trying to connect
+  /// rather than after half a minute of not getting through.
+  Future<TvSwitch> setPower(bool on) async {
+    if (!settings.isConfigured) return TvSwitch.notSetUp;
+    var woken = false;
+    Future<void> wake() async {
+      if (on && !woken && settings.mac.isNotEmpty) {
+        woken = await WakeOnLan.send(settings.mac, host);
+      }
+    }
+
+    if (!_sessionUp) {
+      await wake();
+      await connect();
+    }
+    if (conn == ConnState.needsPairing) return TvSwitch.needsPairing;
+    if (!_sessionUp) return woken ? TvSwitch.woken : TvSwitch.unreachable;
+    // Said by the set as each session starts, so it is seldom long.
+    await _until(() => state.powerKnown, const Duration(seconds: 3));
+    switch (powerStep(
+      on,
+      isOn: state.powerKnown ? state.powerOn : null,
+      canWake: settings.mac.isNotEmpty,
+    )) {
+      case PowerStep.already:
+        return TvSwitch.already;
+      case PowerStep.leave:
+        return TvSwitch.unknown;
+      case PowerStep.wake:
+        await wake();
+        if (woken) return TvSwitch.woken;
+      case PowerStep.key:
+    }
+    _client?.sendKey('KEY_POWER');
+    return TvSwitch.done;
+  }
+
+  /// What to do, with a session up, to switch the set [on] or off, when it
+  /// is on or not ([isOn], null when it would not say).
+  ///
+  /// Already so — or brought so just now by the packet — no key, which
+  /// would only switch it back. Not known, the key is never pressed for
+  /// off: it toggles, and pressed blind it may switch on, at bedtime, a set
+  /// in standby. On is the packet's to do, where there is one, sent only
+  /// then: with the power known it could wake the set as the key went, and
+  /// the key switch it straight back off.
+  @visibleForTesting
+  static PowerStep powerStep(bool on, {bool? isOn, required bool canWake}) {
+    if (isOn == on) return PowerStep.already;
+    if (isOn == null) {
+      if (!on) return PowerStep.leave;
+      if (canWake) return PowerStep.wake;
+    }
+    return PowerStep.key;
+  }
+
+  /// Connected, and the session not gone underneath without a word.
+  bool get _sessionUp => isConnected && (_client?.isConnected ?? false);
+
+  /// Waits for [ok], as long as [within]; whether it came.
+  Future<bool> _until(bool Function() ok, Duration within) async {
+    if (ok()) return true;
+    final came = Completer<void>();
+    void check() {
+      if (ok() && !came.isCompleted) came.complete();
+    }
+
+    addListener(check);
+    try {
+      await came.future.timeout(within);
+    } on TimeoutException {
+      // Not said in time; the caller makes do.
+    } finally {
+      removeListener(check);
+    }
+    return ok();
+  }
+
   // --- command surface used by the UI ---
   void key(String k) => _client?.sendKey(k);
   void volumeUp() => _client?.sendKey('KEY_VOLUMEUP');
@@ -495,6 +661,35 @@ class TvService extends ChangeNotifier {
     _client?.disconnect();
     super.dispose();
   }
+}
+
+/// See [TvService.powerStep].
+enum PowerStep { already, leave, wake, key }
+
+/// What became of [TvService.setPower].
+enum TvSwitch {
+  /// The power key was sent.
+  done,
+
+  /// The set already was as asked.
+  already,
+
+  /// It answered nothing, and was sent a Wake-on-LAN packet — which it may
+  /// or may not act on.
+  woken,
+
+  /// It answered nothing, and there was no other way to reach it.
+  unreachable,
+
+  /// It answers, but would not say whether it is on, so the power key —
+  /// which toggles — was not pressed.
+  unknown,
+
+  /// It answers, but this panel is not paired with it yet.
+  needsPairing,
+
+  /// There is no television in Settings.
+  notSetUp,
 }
 
 /// The TV client certificate or key is absent, empty, or a placeholder.

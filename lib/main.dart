@@ -19,6 +19,7 @@ import 'services/brightness_service.dart';
 import 'services/bins_service.dart';
 import 'services/carbon_service.dart';
 import 'services/markets_service.dart';
+import 'services/seven_fm.dart';
 import 'services/tfl_service.dart';
 import 'services/transitous_service.dart';
 import 'services/planes_service.dart';
@@ -28,15 +29,23 @@ import 'services/fuel_service.dart';
 import 'services/reminders_service.dart';
 import 'services/chores_service.dart';
 import 'services/govee_service.dart';
+import 'services/addons.dart';
 import 'services/code_widgets.dart';
 import 'services/custom_widgets.dart';
 import 'services/glowmarkt_service.dart';
 import 'services/home_assistant_service.dart';
+import 'services/computer_power.dart';
+import 'services/art_matrix_service.dart';
+import 'services/home_control.dart';
+import 'services/spoken_names.dart';
 import 'services/homey_service.dart';
+import 'services/radio_service.dart';
+import 'services/radio_stations.dart';
 import 'services/railcam_service.dart';
 import 'services/rain_service.dart';
 import 'services/notes_service.dart';
 import 'services/shopping_service.dart';
+import 'services/parcels_service.dart';
 import 'services/timer_service.dart';
 import 'services/timer_sounds.dart';
 import 'dashboard/widgets/widgets.dart';
@@ -44,6 +53,7 @@ import 'services/audio_levels_service.dart';
 import 'services/background_pause.dart';
 import 'services/kiosk_browser.dart';
 import 'services/kiosk_control_service.dart';
+import 'services/kitchen.dart';
 import 'services/floatplane_site.dart';
 import 'services/nebula_site.dart';
 import 'services/video_link.dart';
@@ -58,16 +68,19 @@ import 'services/dashboard_service.dart';
 import 'services/feed_service.dart';
 import 'services/immich_service.dart';
 import 'services/indoor_sensor_service.dart';
+import 'services/link_outbox.dart';
 import 'services/locked_folder_service.dart';
 import 'services/media_cache.dart';
 import 'services/now_playing_service.dart';
 import 'services/screen_idle_service.dart';
+import 'services/routines.dart';
 import 'services/voice_commands.dart';
 import 'services/voice_service.dart';
 import 'widgets/voice_indicator.dart';
 import 'widgets/konami_overlay.dart';
 import 'services/screen_state.dart';
 import 'services/share_inbox_service.dart';
+import 'services/social_notifier.dart';
 import 'services/spotify_service.dart';
 import 'services/lan_speedtest_service.dart';
 import 'services/speedtest_service.dart';
@@ -77,15 +90,18 @@ import 'services/unifi_service.dart';
 import 'services/weather_service.dart';
 import 'widgets/module_bar.dart' show openLockedFolder;
 import 'screens/about_screen.dart';
-import 'screens/album_screen.dart';
+import 'screens/cook_screen.dart';
+import 'dashboard/photos_tile.dart';
 import 'screens/dashboard_screen.dart';
+import 'dashboard/widgets/day_brief_sheet.dart';
 import 'dashboard/widgets/weather_forecast_sheet.dart';
 import 'dashboard/widgets/tv_remote_sheet.dart';
+import 'dashboard/widgets/parcels_view.dart'
+    show parcelDueNow, parcelName, parcelStage;
 import 'screens/gallery_screen.dart';
-import 'screens/home_screen.dart';
 import 'screens/locked_folder_screen.dart';
+import 'screens/photo_search_screen.dart';
 import 'screens/settings_screen.dart';
-import 'screens/setup_screen.dart';
 import 'screens/slideshow_screen.dart';
 import 'screens/video_player_screen.dart';
 import 'widgets/camera_overlay.dart';
@@ -137,6 +153,26 @@ void main() async {
   // to show. A no-op until the one-time login is done in Settings.
   final spotify = SpotifyService(config)..screen = screen;
   unawaited(spotify.start());
+  // Music starting over Bluetooth is often Spotify, on the phone or a Mac:
+  // Spotify is asked at once, rather than at its next, slower poll.
+  var bluetoothPlaying = false;
+  nowPlaying.addListener(() {
+    final playing = nowPlaying.now.isPlaying;
+    if (playing && !bluetoothPlaying) spotify.nudge();
+    bluetoothPlaying = playing;
+  });
+
+  // Internet radio for the Radio widget. Music already playing is paused
+  // rather than talked over.
+  final radio = RadioService(
+    file: p.join(AppPaths.config, 'radio.json'),
+    onStart: () {
+      for (final PlaybackSource p in [spotify, nowPlaying]) {
+        if (p.available && p.now.isPlaying) unawaited(p.playPause());
+      }
+    },
+  );
+  unawaited(radio.load());
 
   // Lets the companion phone app share a photo/GIF/video/link/note to the
   // kiosk directly — no separate relay, just a small HTTP listener here.
@@ -144,12 +180,23 @@ void main() async {
   // the inbox, so speech being unavailable is not the inbox's problem.
   final speech = TtsService();
 
-  final shareInbox = ShareInboxService(config)..speech = speech;
+  // Links sent from the panel to a phone or computer, which collect them
+  // from the inbox's port.
+  final outbox = LinkOutbox(
+    senders: () => config.config.shareInbox.senderTokens.map((t) => t.name),
+  );
+  unawaited(outbox.load());
+
+  final shareInbox = ShareInboxService(config)
+    ..speech = speech
+    ..outbox = outbox;
   unawaited(shareInbox.start());
 
   // Reads a news article aloud, pausing whatever is playing while it does
   // and carrying it on afterwards — only if it was playing to begin with.
   PlaybackSource? pausedForReading;
+  // The radio has no pause, so it is stopped and tuned in again after.
+  RadioStation? radioForReading;
   final reader = ArticleReader(
     output: PiperSpeechOutput(speech),
     voiceFor: speech.voiceFor,
@@ -158,6 +205,11 @@ void main() async {
     // off mid-article brings the voice straight back.
     volume: () => config.config.shareInbox.readerOut,
     onStart: () {
+      if (radio.playing) {
+        radioForReading = radio.station;
+        unawaited(radio.stop());
+        return;
+      }
       for (final PlaybackSource p in [spotify, nowPlaying]) {
         if (p.available && p.now.isPlaying) {
           pausedForReading = p;
@@ -167,6 +219,9 @@ void main() async {
       }
     },
     onEnd: () {
+      final station = radioForReading;
+      radioForReading = null;
+      if (station != null) unawaited(radio.play(station));
       final p = pausedForReading;
       pausedForReading = null;
       if (p != null && p.available && !p.now.isPlaying) {
@@ -179,6 +234,14 @@ void main() async {
   // the editor's palette and each widget's settings form are both generated
   // from the registry.
   registerBuiltInWidgets();
+  // The albums were the first screen before 2.0; a panel that had them is
+  // given them as a tile, once.
+  if (offerAlbumsTile(
+    config.config.dashboard,
+    immichConnected: config.isConfigured,
+  )) {
+    await config.save();
+  }
 
   // Feeds for the dashboard's calendar and news widgets, shared by URL so two
   // widgets on the same feed cost one fetch.
@@ -236,12 +299,15 @@ void main() async {
   // playing keeps the screen on.
   final player = VideoPlayerService(config, ytDlp, sites)
     ..onStart = () {
+      unawaited(radio.stop());
       for (final PlaybackSource p in [spotify, nowPlaying]) {
         if (p.available && p.now.isPlaying) unawaited(p.playPause());
       }
     }
     ..start();
   screenIdle.videoPlaying = () => player.playing;
+  // The radio too, which plays on the panel with nobody looking at it.
+  screenIdle.radioPlaying = () => radio.playing;
   // Their sign-in pages, for signing in from a computer instead of the panel.
   dashboard.videoSites = sites;
 
@@ -250,6 +316,8 @@ void main() async {
   // the cameras YouTube carries.
   final railcam = RailcamService();
   dashboard.railcams = railcam.choices;
+  // The Radio widget's dropdown of stations that come with the app.
+  dashboard.extraLists['radioStations'] = () async => radioStationChoices();
   player.finders['railcam'] = (link, height) => railcam.find(
     link,
     maxHeight: height,
@@ -315,7 +383,53 @@ void main() async {
     }
     ..start();
 
+  // Parcels on their way: tracking links and numbers shared from a phone,
+  // looked up with the service the Parcels tile is set to, and a card when
+  // one is out for delivery or has come.
+  final parcels = ParcelsService(config);
+  parcels.onNews = (p) {
+    if (!parcels.settings.tell) return;
+    final stage = parcelStage(p, tracking: true);
+    final latest = p.latest;
+    shareInbox.notice(
+      from: tr('widget.parcels.parcels', 'Parcels'),
+      title: '${parcelName(p)}: $stage',
+      text: [
+        '${parcelName(p)} — $stage',
+        ?latest?.text,
+        ?latest?.location,
+      ].join('\n'),
+      parcel: ParcelRef(carrier: p.carrier, number: p.number, url: p.url),
+    );
+  };
+  parcels.onDue = (p) {
+    if (!parcels.settings.tell) return;
+    final due = parcelDueNow(p);
+    shareInbox.notice(
+      from: tr('widget.parcels.parcels', 'Parcels'),
+      title: '${parcelName(p)}: $due',
+      text: '${parcelName(p)} — $due\n${p.carrier.name}',
+      parcel: ParcelRef(carrier: p.carrier, number: p.number, url: p.url),
+    );
+  };
+  await parcels.load();
+  parcels.start();
+
   shareInbox.onShared = (item) {
+    final parcel = item.parcel;
+    if (item.type == ShareType.parcel && parcel != null) {
+      parcels.add(
+        parcel,
+        label: item.title,
+        from: item.sender,
+        // A carrier's email or text says when, as often as not — in its
+        // words, or in a subject shared along with the link.
+        due:
+            findDeliveryWindow(item.content ?? '', DateTime.now()) ??
+            findDeliveryWindow(item.title ?? '', DateTime.now()),
+      );
+      return;
+    }
     final text = (item.content ?? '').trim();
     if (item.type != ShareType.text || text.isEmpty) return;
     final reminder = parseReminder(text, DateTime.now());
@@ -356,6 +470,15 @@ void main() async {
   );
   dashboard.timerSounds = timerSounds;
 
+  // Recipes to cook from, a step at a time: kept once cooked, and read out
+  // in the kiosk's voice, at the volume shares are read at.
+  final kitchen = Kitchen(
+    output: PiperSpeechOutput(speech),
+    volume: () => inbox().speechOut,
+    muted: () => inbox().dndMuted,
+  );
+  unawaited(kitchen.load());
+
   // Bin-day reminders, spoken the evening before whether or not the
   // dashboard is showing.
   final bins = BinsService(
@@ -365,6 +488,10 @@ void main() async {
       await speech.speak(text, volume: inbox().speechOut);
     },
   )..start();
+
+  // New Mastodon and Bluesky notifications, for the accounts whose tiles
+  // ask, popped up as a share is: the card, the chime, the screen woken.
+  SocialNotifier(config, onNotices: shareInbox.notice).start();
 
   // Home Assistant entities for the dashboard, over the connection set up
   // for the indoor sensor. Idle until a widget asks; the editor's entity
@@ -386,7 +513,18 @@ void main() async {
   await customWidgets.load();
   dashboard.customWidgets = customWidgets;
   // And as Dart, built into the app by the panel itself.
-  dashboard.codeWidgets = CodeWidgets();
+  final codeWidgets = CodeWidgets();
+  dashboard.codeWidgets = codeWidgets;
+  // And from the catalogue, where every widget and theme is, and whatever
+  // third-party libraries this panel has been given beside it.
+  dashboard.addons = Addons(
+    custom: customWidgets,
+    code: codeWidgets,
+    onThemes: dashboard.reloadThemes,
+    repo: dashboard.settings.addonsRepo,
+    libraries: () => dashboard.settings.addonLibraries,
+    allowsCode: () => dashboard.settings.codeWidgets,
+  );
 
   final homey = HomeyService(config);
   dashboard.homeyDevices = homey.choices;
@@ -416,24 +554,106 @@ void main() async {
   // What the panel makes nothing of is asked of Home Assistant's Assist —
   // the lights, the heating, "what's the temperature indoors" — and its
   // answer is shown, and said at the speech volume unless Do Not Disturb
-  // is on.
-  Future<String?> askHomeAssistant(String heard) async {
-    final answer = await homeAssistant.converse(
-      VoiceCommands.forAssist(heard, wake: config.config.screen.wakeWord),
+  // is on. Every hearing is tried, and then each with a misheard device
+  // name put right — "turn around you one on" is Lounge 1.
+  Future<VoiceAnswer?> askHomeAssistant(List<String> heard) async {
+    final reply = await askAssist(
+      heard,
+      request: (h) =>
+          VoiceCommands.forAssist(h, wake: config.config.screen.wakeWord),
+      ask: homeAssistant.ask,
+      names: () async {
+        await Future.wait([
+          homeAssistant.refresh(),
+          homeAssistant.refreshAreas(),
+        ]);
+        return SpokenNames(
+          homeAssistant.spokenNames,
+          areas: [for (final a in homeAssistant.areas) a.name],
+        );
+      },
     );
-    if (answer != null && !inbox().dndMuted) {
-      unawaited(speech.speak(answer, volume: inbox().speechOut));
+    if (reply != null && !inbox().dndMuted) {
+      unawaited(speech.speak(reply.answer, volume: inbox().speechOut));
     }
-    return answer;
+    return reply;
   }
+
+  // The television, made here rather than when a TV tile first asks: voice
+  // can switch it with no tile on screen. Making it costs nothing; it
+  // connects only when something wants it to.
+  final tv = TvService(config);
+
+  // The Art Matrix LED display: on, off and its brightness by voice, over
+  // its own HTTP API on the home network.
+  final artMatrix = ArtMatrixService(() => config.config.artMatrix);
+
+  // "Turn the TV off", "lights on", "I'm going to bed". The lights go
+  // through Home Assistant's Assist, which knows which lights there are;
+  // what went wrong is said, what went right is only shown.
+  // A computer collecting links from the panel can be switched by voice
+  // too: off through its own receiver, on by Wake-on-LAN.
+  final computers = ComputerPower(outbox);
+  // Made below: a routine's question is answered through it.
+  late final VoiceService voice;
+  final house = HomeControl(
+    service: homeAssistant.service,
+    lightsOnBesides: homeAssistant.lightsOnBesides,
+    question: (q) async {
+      if (!inbox().dndMuted) {
+        await speech.speak(q.prompt, volume: inbox().speechOut);
+        // The last of the panel's own voice out of the room before it
+        // listens: it is not the answer.
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+      }
+      final on = tr('voice.answerOn', 'On');
+      final off = tr('voice.answerOff', 'Off');
+      final heard = await voice.listenForAnswer(q.prompt, choices: [on, off]);
+      if (heard == null) return null;
+      if (heard.length == 1 && heard.first == on) return true;
+      if (heard.length == 1 && heard.first == off) return false;
+      for (final h in heard) {
+        final answer = RoutineQuestion.answer(VoiceCommands.words(h));
+        if (answer != null) return answer;
+      }
+      return null;
+    },
+    computerReady: () => computers.any,
+    computerNames: () => computers.names,
+    computer: (on, named) => computers.setPower(on, named: named),
+    tvReady: () => config.config.tv.isConfigured,
+    tv: tv.setPower,
+    artMatrixReady: () => config.config.artMatrix.isConfigured,
+    artMatrix: artMatrix.setPower,
+    artMatrixBrightness: artMatrix.setBrightness,
+    assistReady: () => homeAssistant.configured,
+    // Done, or not: a refusal ("no device called…") is not the lights off.
+    assist: (text) async {
+      final reply = await homeAssistant.ask(text);
+      return reply != null && reply.done ? reply.speech : null;
+    },
+    stopPlaying: () async {
+      await radio.stop();
+      if (player.view != VideoView.closed) await player.close();
+      for (final PlaybackSource p in [spotify, nowPlaying]) {
+        if (p.available && p.now.isPlaying) await p.playPause();
+      }
+    },
+    screenOff: screenIdle.sleep,
+    say: (text) {
+      if (!inbox().dndMuted) {
+        unawaited(speech.speak(text, volume: inbox().speechOut));
+      }
+    },
+  );
 
   // The wake words, and what is said after them: heard by a listener this
   // starts while voice control is switched on, and done here. The screen
   // is lit on the wake words, before anything is asked for.
-  final voice = VoiceService(
+  voice = VoiceService(
     enabled: () => config.config.screen.voiceControl,
     wake: () => config.config.screen.wakeWord,
-    act: (heard) => runVoiceCommand(heard, config, screenIdle),
+    act: (heard) => runVoiceCommand(heard, config, screenIdle, house),
     ask: askHomeAssistant,
     onWake: () {
       unawaited(screenIdle.wake());
@@ -453,8 +673,11 @@ void main() async {
         ChangeNotifierProvider.value(value: weather),
         ChangeNotifierProvider.value(value: nowPlaying),
         ChangeNotifierProvider.value(value: spotify),
+        ChangeNotifierProvider.value(value: radio),
+        Provider(create: (_) => SevenFmService()),
         ChangeNotifierProvider.value(value: indoor),
         ChangeNotifierProvider.value(value: shareInbox),
+        ChangeNotifierProvider.value(value: outbox),
         ChangeNotifierProvider.value(value: ytDlp),
         ChangeNotifierProvider.value(value: player),
         ChangeNotifierProvider.value(value: youtube),
@@ -467,7 +690,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => CameraService(config)),
         ChangeNotifierProvider.value(value: feeds),
         ChangeNotifierProvider.value(value: dashboard),
-        ChangeNotifierProvider(create: (_) => TvService(config)),
+        ChangeNotifierProvider.value(value: tv),
         // Owned above the dashboard so a test keeps running while you
         // page away from the widget, and the result is still there when
         // you come back.
@@ -480,8 +703,10 @@ void main() async {
         ChangeNotifierProvider.value(value: notes),
         ChangeNotifierProvider<RemindersService?>.value(value: reminders),
         ChangeNotifierProvider.value(value: shopping),
+        ChangeNotifierProvider.value(value: parcels),
         ChangeNotifierProvider.value(value: chores),
         ChangeNotifierProvider.value(value: timers),
+        ChangeNotifierProvider.value(value: kitchen),
         ChangeNotifierProvider.value(value: bins),
         // Made when an Air & pollen widget first asks, and not before.
         ChangeNotifierProvider(create: (_) => AirQualityService(config)),
@@ -500,6 +725,9 @@ void main() async {
         // Made when a Stocks or Crypto widget first asks.
         ChangeNotifierProvider(create: (_) => MarketsService()),
         ChangeNotifierProvider.value(value: homeAssistant),
+        // What runs a routine, for an add-on with keys or buttons that run
+        // one (StreamerDeck's).
+        Provider<HomeControl>.value(value: house),
         Provider<GlowmarktService>.value(value: GlowmarktService(config)),
         ChangeNotifierProvider.value(value: homey),
         ChangeNotifierProvider.value(value: customWidgets),
@@ -520,7 +748,7 @@ void main() async {
         final context = rootNavigatorKey.currentContext;
         final camera = context?.read<CameraService>();
         return KioskState(
-          dashboard: config.config.dashboard.enabled,
+          dashboard: true,
           lockedFolder: context?.read<LockedFolderService>().canUse ?? false,
           camera: camera?.isConfigured ?? false,
           cameraOpen: camera?.isOpen ?? false,
@@ -534,14 +762,21 @@ void main() async {
         unawaited(player.play(link));
         return true;
       },
+      cook: (url) {
+        final context = rootNavigatorKey.currentContext;
+        if (context == null || !url.startsWith('http')) return false;
+        unawaited(screenIdle.wake());
+        unawaited(openRecipeAt(context, url));
+        return true;
+      },
       setDnd: (muted) {
         config.config.shareInbox.dndMuted = muted;
         unawaited(config.save());
       },
       screenLit: screen.set,
       voice: (heard) async =>
-          runVoiceCommand(heard, config, screenIdle) ??
-          await askHomeAssistant(heard),
+          runVoiceCommand(heard, config, screenIdle, house) ??
+          (await askHomeAssistant([heard]))?.answer,
     ).start(),
   );
 }
@@ -552,15 +787,10 @@ void main() async {
 /// to the dashboard.
 void showRemindersPage(ConfigService config) {
   final settings = config.config.dashboard;
-  if (!settings.enabled) return;
   final tile = settings.widgets.where((w) => w.type == 'reminders').firstOrNull;
   if (tile == null) return;
   DashboardScreen.requestedPage.value = tile.page;
-  if (DashboardScreen.isOpen) return;
-  final navigator = rootNavigatorKey.currentState;
-  if (navigator == null) return;
-  navigator.popUntil((route) => route.isFirst);
-  navigator.push(DashboardScreen.route());
+  rootNavigatorKey.currentState?.popUntil((route) => route.isFirst);
 }
 
 /// A very quiet beep: "hey canvas" was heard, and the panel is listening.
@@ -587,17 +817,12 @@ Future<void> _listeningBeep() async {
   }
 }
 
-/// The dashboard itself on screen, whatever was on top of it or in its
-/// place — Settings, a forecast, the albums. Null when it cannot be shown.
+/// The dashboard itself on screen, whatever was on top of it — Settings, a
+/// forecast, an album. It is the first screen, so everything else is on top
+/// of it. Null when there is no navigator yet.
 NavigatorState? _toDashboard(ConfigService config) {
   final navigator = rootNavigatorKey.currentState;
-  if (navigator == null || !config.config.dashboard.enabled) return null;
-  var there = false;
-  navigator.popUntil((route) {
-    there = route.settings.name == DashboardScreen.routeName;
-    return there || route.isFirst;
-  });
-  if (!there) navigator.push(DashboardScreen.route());
+  navigator?.popUntil((route) => route.isFirst);
   return navigator;
 }
 
@@ -608,23 +833,93 @@ String? runVoiceCommand(
   String heard,
   ConfigService config,
   ScreenIdleService screen,
+  HomeControl home,
 ) {
   final navigator = rootNavigatorKey.currentState;
   final context = rootNavigatorKey.currentContext;
   if (navigator == null || context == null) return null;
+  // A recipe being cooked hears first: "next" is its next step, not the
+  // next page, and "how much flour" is a question for it.
+  final cooking = Kitchen.listening?.call(heard);
+  if (cooking != null) {
+    unawaited(screen.wake());
+    unawaited(KioskBrowser.focusKiosk());
+    return cooking;
+  }
   final settings = config.config.dashboard;
-  final action = VoiceCommands.of(
+  final commands = VoiceCommands.of(
     settings,
     wake: config.config.screen.wakeWord,
-  ).resolve(heard);
+    routines: config.config.routines,
+    computers: home.computerNames(),
+  );
+  final action = commands.resolve(heard);
   if (action == null) return null;
 
-  // Spoken to, so looked at: lit, and counted as use.
-  unawaited(screen.wake());
-  // The TV remote app, or a browser, may be in front of the kiosk.
-  unawaited(KioskBrowser.focusKiosk());
+  // The house rather than the panel — "turn the TV off", "I'm going to
+  // bed" — changes nothing on screen, so whatever is in front stays there;
+  // and a routine for bed is about to put the screen out.
+  if (action is! VoiceSwitch &&
+      action is! VoiceRoutine &&
+      action is! VoiceArtMatrixBrightness) {
+    // Spoken to, so looked at: lit, and counted as use.
+    unawaited(screen.wake());
+    // The TV remote app, or a browser, may be in front of the kiosk.
+    unawaited(KioskBrowser.focusKiosk());
+  }
+
+  final radio = context.read<RadioService>();
+  // Steps the radio along the dashboard's stations, or the catalogue's
+  // when it has no Radio tile.
+  String? stepRadio(int by) {
+    final here = commands.radioStationsHere;
+    final next = radio.stepFrom(here.isEmpty ? radioStations : here, by);
+    if (next == null) return null;
+    unawaited(radio.play(next));
+    return next.name;
+  }
 
   switch (action) {
+    case VoiceSwitch(:final things, :final on, :final computer):
+      return home.switchThings(things, on: on, computer: computer);
+    case VoiceArtMatrixBrightness(:final level):
+      return home.setArtMatrixBrightness(level);
+    case VoiceRoutine(:final routine):
+      return home.runRoutine(routine);
+    case VoiceRadio(:final ask, :final station):
+      switch (ask) {
+        case VoiceRadioAsk.play:
+          final pick = station == null
+              ? (radio.station ?? commands.radioStationsHere.firstOrNull)
+              : commands.stationFor(station);
+          if (pick == null) return null;
+          unawaited(radio.play(pick));
+          return pick.name;
+        case VoiceRadioAsk.stop:
+          unawaited(radio.stop());
+          return 'radio off';
+        case VoiceRadioAsk.next:
+          return stepRadio(1);
+        case VoiceRadioAsk.previous:
+          return stepRadio(-1);
+      }
+    // While the radio plays, "stop", "louder" and "next" are its.
+    case VoiceMusic(:final ask) when radio.playing:
+      switch (ask) {
+        case VoiceMusicAsk.pause || VoiceMusicAsk.mute:
+          unawaited(radio.stop());
+          return 'radio off';
+        case VoiceMusicAsk.louder || VoiceMusicAsk.quieter:
+          final up = ask == VoiceMusicAsk.louder;
+          unawaited(radio.setVolume(radio.volume + (up ? 10 : -10)));
+          return up ? 'louder' : 'quieter';
+        case VoiceMusicAsk.next:
+          return stepRadio(1);
+        case VoiceMusicAsk.previous:
+          return stepRadio(-1);
+        case VoiceMusicAsk.play || VoiceMusicAsk.unmute:
+          return 'playing';
+      }
     case VoiceMusic(:final ask):
       // Whatever the panel's own player would be showing: Spotify when it
       // has something, a phone over Bluetooth otherwise.
@@ -662,8 +957,41 @@ String? runVoiceCommand(
     case VoiceKonami():
       KonamiOverlay.said.value++;
       return '+30 lives';
+    case VoiceCook(:final name):
+      final saved = name == null ? null : context.read<Kitchen>().named(name);
+      if (saved == null) {
+        // The book, to choose from — saying so when one was asked for by
+        // a name it does not have.
+        unawaited(
+          navigator.push(
+            MaterialPageRoute(builder: (_) => RecipeBookScreen(missing: name)),
+          ),
+        );
+        return 'recipes';
+      }
+      // Asked for out loud, so read out loud: the hands are busy.
+      unawaited(
+        navigator.push(
+          MaterialPageRoute(
+            builder: (_) => CookScreen(recipe: saved.recipe, read: true),
+          ),
+        ),
+      );
+      return 'cook ${saved.recipe.name}';
+    case VoiceFindPhotos(:final asked, :final slideshow):
+      if (!context.read<ImmichService>().config.isConfigured) return null;
+      // Over whatever is showing, so "back" returns to it: the photos
+      // found, and a slideshow of them when one was asked for.
+      unawaited(
+        navigator.push(
+          MaterialPageRoute(
+            builder: (_) =>
+                PhotoSearchScreen(asked: asked, slideshow: slideshow),
+          ),
+        ),
+      );
+      return slideshow ? 'slideshow $asked' : 'photos $asked';
     case VoiceShowPage(:final page):
-      if (!settings.enabled) return null;
       // A page asked for by name is wanted for longer than its turn: held
       // there until "resume", or a tap on the page dots. An open dashboard
       // is told; one about to open reads it from the settings.
@@ -677,6 +1005,13 @@ String? runVoiceCommand(
       if (_toDashboard(config) == null) return null;
       DashboardScreen.requestedPage.value = page;
       return 'page ${page + 1}';
+    case VoiceLiftTile(:final page, :final tile):
+      // Its page first, then the tile, once the page is up. The pages are
+      // held only while it is: it is brought close for a look, not kept.
+      if (_toDashboard(config) == null) return null;
+      DashboardScreen.requestedPage.value = page;
+      DashboardScreen.requestedLift.value = tile;
+      return 'closer';
     case VoiceTurnPage(:final by):
       // Onto the dashboard first, if it is not showing: there is no page
       // to turn from anywhere else.
@@ -684,6 +1019,10 @@ String? runVoiceCommand(
       if (_toDashboard(config) == null) return null;
       if (turn) DashboardScreen.requestedTurn.value = by;
       return by > 0 ? 'next page' : 'previous page';
+    case VoiceOverview():
+      if (_toDashboard(config) == null) return null;
+      DashboardScreen.requestedOverview.value = true;
+      return 'all pages';
     case VoicePausePages(:final paused):
       if (DashboardScreen.isOpen) {
         DashboardScreen.requestedPause.value = paused;
@@ -703,8 +1042,9 @@ String? runVoiceCommand(
           unawaited(navigator.maybePop());
           return 'back';
         case VoicePlace.photos:
-          navigator.popUntil((route) => route.isFirst);
-          return 'photos';
+          // The photos are a tile now: its page, and the tile brought close.
+          if (_toDashboard(config) == null) return null;
+          return DashboardScreen.showPhotos(settings) ? 'photos' : null;
         case VoicePlace.dashboard:
           return _toDashboard(config) == null ? null : 'dashboard';
         case VoicePlace.forecast:
@@ -713,6 +1053,10 @@ String? runVoiceCommand(
           );
           unawaited(showWeatherForecast(context, theme));
           return 'forecast';
+        case VoicePlace.today:
+          // The day at a glance, and read out: it was asked for out loud.
+          unawaited(showDayBrief(context, read: true));
+          return 'your day';
         case VoicePlace.remote:
           // The dashboard's TV remote widget, as large as the panel —
           // not the remote app, which is a different remote.
@@ -734,10 +1078,9 @@ void runKioskCommand(KioskCommand command, ConfigService config) {
   switch (command) {
     case KioskCommand.photos:
       navigator.popUntil((route) => route.isFirst);
+      DashboardScreen.showPhotos(config.config.dashboard);
     case KioskCommand.dashboard:
-      if (!config.config.dashboard.enabled) return;
       navigator.popUntil((route) => route.isFirst);
-      navigator.push(DashboardScreen.route());
     case KioskCommand.settings:
       navigator.push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
     case KioskCommand.lockedFolder:
@@ -898,7 +1241,12 @@ class _AppScrollBehavior extends MaterialScrollBehavior {
   };
 }
 
-/// Shows setup until a connection is configured, then the album browser.
+/// The first screen: the dashboard. Everything else opens on top of it.
+///
+/// It once was the album browser, with setup in front of it until Immich was
+/// connected. The albums are a widget now — an add-on — so the panel is
+/// useful before, or without, Immich: the connection is set in Settings, or
+/// from the albums tile itself.
 class _RootGate extends StatelessWidget {
   const _RootGate();
 
@@ -947,16 +1295,6 @@ class _RootGate extends StatelessWidget {
       );
     }
 
-    final testAlbumGrid = Platform.environment['HOMECANVAS_TEST_ALBUMGRID'];
-    if (testAlbumGrid != null && testAlbumGrid.isNotEmpty) {
-      return AlbumScreen(
-        album: Album(
-          id: testAlbumGrid,
-          name: Platform.environment['HOMECANVAS_TEST_ALBUMNAME'] ?? 'Album',
-          assetCount: 0,
-        ),
-      );
-    }
     if ((Platform.environment['HOMECANVAS_TEST_ABOUT'] ?? '').isNotEmpty) {
       return const AboutScreen();
     }
@@ -964,9 +1302,6 @@ class _RootGate extends StatelessWidget {
       return const SettingsScreen();
     }
     final testDashboard = Platform.environment['HOMECANVAS_TEST_DASHBOARD'];
-    if (testDashboard != null && testDashboard.isNotEmpty) {
-      return DashboardScreen(initialPage: int.tryParse(testDashboard) ?? 0);
-    }
     if ((Platform.environment['HOMECANVAS_TEST_NOWPLAYING'] ?? '').isNotEmpty) {
       return const Scaffold(
         backgroundColor: Color(0xFF101828),
@@ -983,8 +1318,7 @@ class _RootGate extends StatelessWidget {
       return _DebugLockedVideoLoader(pin: testLockedVideo);
     }
 
-    final configured = context.watch<ConfigService>().isConfigured;
-    return configured ? const HomeScreen() : const SetupScreen();
+    return DashboardScreen(initialPage: int.tryParse(testDashboard ?? '') ?? 0);
   }
 }
 

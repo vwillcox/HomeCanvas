@@ -1,9 +1,17 @@
 # Themes
 
-Seventeen themes ship with HomeCanvas: dark and light, glassy, glossy and
-flat, and one drawn as a starship's console. A theme dresses the **whole kiosk**: the dashboard, the photo browser,
-the music player, the weather panel, Settings and the rest. Photos and videos
-themselves are always shown on black.
+Seventeen themes: dark and light, glassy, glossy and flat, and one drawn as
+a starship's console. A theme dresses the **whole kiosk**: the dashboard, the
+photo albums, the music player, the weather panel, Settings and the rest.
+Photos and videos themselves are always shown on black.
+
+**Since 2.0 the app ships one, Glass.** The other sixteen are **add-ons**, in
+the [HomeCanvas-Widgets](https://github.com/vwillcox/HomeCanvas-Widgets)
+catalogue beside the widgets: open **Add-ons** in the editor, choose
+**Themes**, and **Download**. A theme is on the panel at once — no rebuild,
+no restart. A panel updated from 1.x keeps the theme it was dressed in: the
+update fetches it. Remove the theme a panel is dressed in and it goes back to
+Glass.
 
 Pick one in the dashboard editor's **Look** panel (at `http://<pi>:8090`), or in
 **Settings → Display → Dashboard → Theme** on the panel itself. Each picture
@@ -26,7 +34,7 @@ below is the same dashboard page on the real panel, in that theme.
 
 ### Glass
 
-*Glassy · the default.* The kiosk's own look: near-black with a soft blue glow
+*Glassy · the default, and the one built in.* The kiosk's own look: near-black with a soft blue glow
 from the top left, frosted tiles with tight gaps, and a pale blue accent.
 
 ![Glass](docs/screenshots/themes/glass.jpg)
@@ -188,8 +196,14 @@ glass, no shadow.
 A theme is a JSON file. Copy
 [`deploy/theme-template.json`](deploy/theme-template.json) into
 `~/.config/homecanvas/themes/` on the Pi, change it, and restart the kiosk.
-It appears in both pickers. A file with the same `id` as a built-in theme
-replaces that theme.
+It appears in both pickers. A file with the same `id` as a downloaded theme
+replaces it.
+
+To share one, send it to the catalogue as an add-on — a folder with an
+`addon.json`, its `theme.json` and a picture of it on a panel; the
+catalogue's `CONTRIBUTING.md` says how — or keep it in a third-party library
+of your own. The catalogue checks every theme's colours, measures and font
+before it is listed.
 
 | Setting | What it does |
 |---|---|
@@ -203,7 +217,7 @@ replaces that theme.
 | `style` | `"lcars"` draws the theme as a console, like LCARS. Leave it out for tiles |
 | `palette` | With `style: "lcars"`, the colours its bars and blocks are drawn in, taken in turn |
 
-Colours are `#rrggbb`, or `#aarrggbb` for see-through. The built-in themes are
-held to WCAG contrast levels by a test (`test/theme_contrast_test.dart`): body
-text at 7:1 against its tiles, secondary text at 3.5:1 and the accent at 3:1.
-That's worth matching in your own.
+Colours are `#rrggbb`, or `#aarrggbb` for see-through. The catalogue's themes
+are held to WCAG contrast levels by a test (`tests/themes_test.dart` there):
+body text at 7:1 against its tiles, secondary text at 3.5:1 and the accent at
+3:1. That's worth matching in your own.

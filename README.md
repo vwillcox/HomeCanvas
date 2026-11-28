@@ -25,7 +25,8 @@ Browse your albums, pinch to zoom photos, play videos, run a slideshow, and see
 the local weather. It doubles as a speaker (Bluetooth or Spotify Connect), takes
 photos and notes shared from a phone, and switches to a dashboard of nearly
 forty widgets — clock, weather, calendar, news, trains, bins, chores, your
-network and your servers — that you arrange from a browser.
+network and your servers — that you arrange from a browser. It comes in
+[fourteen languages](#features), from Welsh and Irish to Polish and Swedish.
 
 Built with Flutter as a native Linux app, so it stays smooth on a Pi.
 
@@ -43,10 +44,10 @@ Built with Flutter as a native Linux app, so it stays smooth on a Pi.
 
 ### Photos
 
-| The home screen | An album |
+| The albums | An album |
 |---|---|
-| ![The home screen: a greeting, a mini player and the albums](docs/screenshots/home.jpg) | ![An album's photo wall](docs/screenshots/album.jpg) |
-| A greeting and the library in numbers, a mini player while music plays, and the albums. | A photo wall with headings that follow the photos rather than the calendar. |
+| ![The albums: covers in a grid](docs/screenshots/home.jpg) | ![An album's photo wall](docs/screenshots/album.jpg) |
+| The Photo albums add-on — a tile on the dashboard, or the whole browser full screen. (Pictured before 2.0, when the albums were the first screen.) | A photo wall with headings that follow the photos rather than the calendar. |
 
 | Photo viewer | Slideshow |
 |---|---|
@@ -69,8 +70,42 @@ Ken Burns pan with a cross-fade between slides *(also as
 When music is playing the player takes over the screen, with the album art
 blurred behind, a visualiser of what is actually coming out of the speaker, and
 controls sized for a thumb — like, shuffle, repeat and add-to-playlist included.
-Shrink it and it tucks into the mini player on the home screen, or into the Now
-playing tile on the dashboard.
+Shrink it and it tucks into the dashboard's top bar, or into the Now playing
+tile.
+
+| Sing along | On a console |
+|---|---|
+| ![The player with the song's words beside the cover, the line being sung lit](docs/screenshots/now-playing-lyrics.jpg) | ![The same in LCARS: each line's time on a block down the side](docs/screenshots/now-playing-lyrics-lcars.jpg) |
+
+And it sings along. The song's words sit beside the cover, the line being
+sung lit and held at the same height as the song goes on — big enough to
+read from across the room. Through an intro or a solo the break fills as it
+passes, so the next line never catches you out. Touch a line and the song
+goes there (with Spotify); drag to read ahead. In LCARS each line's time is
+on a block down the side, a colour to a verse, lit as it is sung. The words
+come from [LRCLIB](https://lrclib.net), free and open; an instrumental says
+so, and the Lyrics button on the player turns them off.
+
+### Cooking
+
+| A step at a time | On a console |
+|---|---|
+| ![A recipe open to cook from: the ingredients scaled for 24, the flour lit, and the step in large type with a bake timer counting down inside it](docs/screenshots/cook.jpg) | ![The same in LCARS: a block down the side for each step, the step being cooked lit](docs/screenshots/cook-lcars.jpg) |
+
+Share a recipe from your phone and the panel opens it to cook from — the
+method a step at a time, in type you can read from the hob, and none of the
+life story above it. The ingredients the step uses are lit in the list beside
+it; touch each one as it comes out of the cupboard. Every time in a step is a
+timer to touch: *"bake for 30–35 minutes"* starts a Bake timer that counts
+down right there in the sentence. Cooking for more, or fewer? Change the
+number and every amount follows, the ones in the method too.
+
+And with your hands in the dough: *"hey canvas, next"*, *"go back"*, *"how
+much flour?"*, *"start the timer"*, *"make it for six"*. Everything you cook
+is kept, so *"let's cook the traybake"* finds it again next week — or touch
+tonight's dinner on the Meal plan tile. It reads the recipe the page
+publishes for search engines, which nearly every recipe site and blog does;
+a page without one opens as a link.
 
 ### The dashboard
 
@@ -80,6 +115,25 @@ A 12×8 grid of widgets in pages that turn themselves — or hold, with the paus
 beside the page dots. Play and pause are in the top bar on every page whenever
 something is playing. Pages can have hours of their own: a morning page from
 six till nine, a night page after ten.
+
+![The weather tile brought close: it fills the screen over the blurred dashboard](docs/screenshots/dashboard-closer.jpg)
+
+Hold any tile to bring it close. It lifts out of the grid and fills the
+screen, larger and with room for more — a dozen headlines rather than five —
+so it reads from across the room. Without getting up: *"hey canvas, bring
+the news closer"*. Back, or a tap on the dashboard around it, puts it back in
+its place; left alone, it goes back by itself.
+
+| All pages | All pages, LCARS |
+|---|---|
+| ![Every page of the dashboard at once, each a picture of how it last looked, with its name underneath](docs/screenshots/dashboard-all-pages.jpg) | ![The same on the LCARS console: each page in a panel of its own colour, its name and number on the bar](docs/screenshots/dashboard-all-pages-lcars.jpg) |
+
+Pinch the dashboard, or touch Dashboard in the top bar — already lit, since
+you're on it — and it steps back to show every page at once: the page you were
+on shrinks into its place among the others, each a picture of how it looked
+when it last came round, named — or, for a page you never named, called after
+what's on it. Touch one and it grows back out to fill the screen. From the
+sofa: *"hey canvas, show me all the pages"*.
 
 | Home lab | Network |
 |---|---|
@@ -173,6 +227,14 @@ and a close button the kiosk draws itself.
 a full-screen viewer with pinch-zoom, double-tap zoom and swipe; video via
 libmpv with speed, scrub, zoom and volume; portrait and landscape uncropped.
 
+**Find photos** — ask for any photo in words, by touch or out loud: *"hey
+canvas, show me photos of Ellie at the beach in 2019"*. Who, where and when
+narrow it down — the people Immich has named, the places it knows, years,
+seasons, decades — and what is in them is found by Immich's own image search,
+which looks at the photos themselves: no tags, no albums made beforehand.
+*"A slideshow of the snow"* goes straight into one. Every photo found has
+**More like this**, so one photo leads you through the library to the next.
+
 **YouTube** — links shared from the phone play on the panel, full screen or
 as a picture-in-picture window you can drag and resize over anything else; a
 dashboard widget lists your subscriptions to pick from, and signing in brings
@@ -188,16 +250,21 @@ Spotify on it directly as a Connect device named "Kiosk". With Premium the panel
 controls the account: seek, like, add to a playlist, pick the device, see the
 queue.
 
-**The dashboard** — nearly forty widgets in groups, arranged from a browser:
+**The dashboard** — widgets in groups, arranged from a browser. They are
+**add-ons**: the editor's Add-ons page lists the
+[catalogue](https://github.com/vwillcox/HomeCanvas-Widgets) with a picture
+of each, and Download adds one to the panel. Anyone can
+[send one in](https://github.com/vwillcox/HomeCanvas-Widgets/blob/main/CONTRIBUTING.md).
+What the catalogue starts with:
 
 | Group | Widgets |
 |---|---|
 | Time & day | Clock, Calendar, Timers, Sun & moon, Countdowns (with bank holidays) |
 | Weather & air | Weather with a full forecast, Air & pollen, Rain soon |
 | Photos, music & TV | Now playing, TV remote, Photo, On this day, Immich library, Birthdays |
-| Around the house | Bin day, Notes, Shopping list, Grid carbon, Lights (Govee), Home Assistant, Meal plan, Chores & rewards |
+| Around the house | Bin day, Notes, Shopping list, Parcels (Royal Mail, DPD, Evri and more, shared from your phone; the delivery slot read from the email it came in, a heads-up as the slot opens, and the week ahead at a glance; on a page of its own, each carrier's tracking page right there in the tile), Grid carbon, Lights (Govee), Home Assistant, Meal plan, Chores & rewards |
 | Getting out | Train departures |
-| News & reference | News feeds (with adverts filtered out), On this day in history, Omarchy hotkeys |
+| News & reference | News feeds (a tab per topic, a town's own news, a story told once, adverts filtered out), Mastodon, Bluesky, On this day in history, Omarchy hotkeys |
 | Network | UniFi health, Who's home, UniFi devices, Network clients, WAN throughput, ISP speed test, Speed test, LAN speed test |
 | Home lab | Servers (with SMART disk health), Services, Certificates, Updates |
 
@@ -208,7 +275,11 @@ of your own photos behind the tiles.
 **Share Inbox** — a companion Android app (in this repo) shares photos, GIFs,
 videos, links and notes to the kiosk from any app's share sheet, from anywhere,
 **end-to-end encrypted** with a fresh key per message. Notes can be read aloud
-by a voice that runs on the Pi.
+by a voice that runs on the Pi. New Mastodon and Bluesky notifications can pop
+up on the panel the same way, from the accounts their tiles sign in to. And the
+other way: **Send to…** on a post, a news story or an open page puts it on your
+phone as a notification, or opens it in your computer's browser
+([companion_pc](companion_pc/README.md)) — sealed to that device's own key.
 
 **A phone as a camera** — an old Android phone running IP Webcam becomes a
 camera in a corner window; pinch to drive the phone's own zoom.
@@ -216,9 +287,30 @@ camera in a corner window; pinch to drive the phone's own zoom.
 **Private content** — opens Immich's Locked Folder with your PIN, and re-locks
 when you leave.
 
+**Your day** — touch the greeting, or say "hey canvas, what's my day?", for
+the whole day on one screen: the weather and the next few hours, everything
+on today in order with now marked (calendar, reminders, parcels due, timers,
+the bins), and tomorrow. It reads it out, too, pausing the music while it
+does.
+
 **Voice control** — say "hey canvas, show the stocks", "next page" or "pause the
 music"; anything else goes to Home Assistant. Heard and understood on the Pi;
 see [VOICE.md](VOICE.md).
+
+**Cook from it** — a recipe shared from your phone opens a step at a time,
+with its times as timers to touch, its amounts scaled for however many you
+are cooking for, and a voice that answers "how much flour?" with your hands
+full. Kept, to cook again.
+
+**In your language** — British English, American English, French, German,
+Spanish, Italian, Dutch, European Portuguese, Polish, Swedish, Norwegian,
+Danish, Welsh and Irish, all bundled in: pick one under Settings → System →
+Language on the panel, or under Screen in the editor, and both change together.
+Every language but British English was translated by AI and hasn't been
+checked by a person yet, which the picker says beside its name; anything a pack
+lacks shows in British English. Corrections from native speakers are welcome
+in [Discussions](https://github.com/vwillcox/HomeCanvas/discussions). Voice
+commands stay in British English for now.
 
 **Built for a wall** — panels drift slowly against burn-in; the screen turns
 itself off when idle and wakes on touch (or by voice, through Alexa); starts on
@@ -275,7 +367,10 @@ extras: Spotify, the weather, Home Assistant, sharing from your phone.
 HomeCanvas talks to your own Immich server, and to a public service only when
 you add a widget that needs one — Open-Meteo for the weather, National Grid ESO
 for grid carbon, Realtime Trains for departures — sending no more than that
-widget needs: a place, a postcode district, a station. No analytics, no
+widget needs: a place, a postcode district, a station. While music plays, the
+song's artist, title, album and length go to LRCLIB for its words (turn
+Lyrics off and they don't), and for music over Bluetooth, which carries no
+cover, its artist and title go to iTunes for one. No analytics, no
 accounts of ours. Your credentials live in `~/.config/homecanvas/config.json` on
 the device and are never committed. Shares from the companion app are
 end-to-end encrypted, so even a reverse proxy in the path cannot read them.

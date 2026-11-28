@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -300,6 +302,25 @@ void main() {
       await tester.pump(const Duration(minutes: 2, seconds: 1));
       await tester.pumpAndSettle();
       expect(find.text('NEXT 7 DAYS'), findsNothing);
+      await finish(tester, fake);
+    });
+
+    testWidgets('closing itself leaves a screen opened over it alone', (
+      tester,
+    ) async {
+      final fake = await pumpSheet(tester, sample());
+      unawaited(
+        Navigator.of(tester.element(find.text('NEXT 7 DAYS'))).push(
+          MaterialPageRoute<void>(
+            builder: (_) => const Scaffold(body: Text('cooking')),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(minutes: 2, seconds: 1));
+      await tester.pumpAndSettle();
+      expect(find.text('cooking'), findsOneWidget);
+      expect(find.text('NEXT 7 DAYS', skipOffstage: false), findsNothing);
       await finish(tester, fake);
     });
 

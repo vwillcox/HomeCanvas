@@ -121,8 +121,26 @@ class TvState {
   String? sourceName;
   int? volume;
   bool muted = false;
+
+  /// Whether the set is on, as it last said — see [powerKnown].
   bool powerOn = true;
+
+  /// Whether the set has said if it is on since this session began. It does
+  /// so to every client as it connects, and again on every change.
+  bool powerKnown = false;
   Map<String, dynamic> raw = {};
+
+  /// Reads [powerOn] from a state broadcast's `statetype`. "fake_sleep_0" is
+  /// standby: the screen dark, the set still on the network and listening —
+  /// which is how a power key can bring it back. "fake_sleep_1" comes as it
+  /// wakes, just before the input it wakes to; anything else is a set in use.
+  /// Read as the Tufty bridge's own VIDAA remote reads it.
+  void notePower(Object? statetype) {
+    final kind = '${statetype ?? ''}'.toLowerCase();
+    if (kind.isEmpty) return;
+    powerOn = !(kind == 'fake_sleep_0' || kind.contains('off'));
+    powerKnown = true;
+  }
 
   /// The inputs the TV reports, in its own order. Empty until the first
   /// sourcelist reply arrives.
@@ -189,13 +207,52 @@ class VidaaClient {
 
   String get clientId => _clientId;
 
+  /// Whether the session is up right now — not whether it was once.
+  bool get isConnected =>
+      _client?.connectionStatus?.state == MqttConnectionState.connected;
+
+  /// Set by a failed [connect] when the television answered and said no to
+  /// the password, as opposed to not answering at all.
+  ///
+  /// The difference decides whether pairing is needed. Tested against the
+  /// set: a token it does not accept is turned away at once, under a second,
+  /// with `notAuthorized`. A connect that times out or hits a socket error
+  /// says nothing about the token — the set was off the network — and
+  /// treating it as a refusal sent a panel with a good refresh token off to
+  /// pair again after a Wi-Fi drop.
+  bool refused = false;
+
   // Command topics
   String _tvTopic(String svc, String action) =>
       '/remoteapp/tv/$svc/$_clientId/actions/$action';
 
   /// Connect with mutual TLS. Uses [accessToken] as password when available,
   /// otherwise the freshly generated dynamic password (needed for pairing).
-  Future<bool> connect({Duration timeout = const Duration(seconds: 10)}) async {
+  ///
+  /// Run in an error zone of its own, which the socket stays in for the life
+  /// of the session. When the set drops the connection, mqtt_client handles
+  /// the error on the socket's stream but never listens to its `done`, which
+  /// then fails with the same error, unhandled: "Connection reset by peer"
+  /// or "Broken pipe" in the log, each time the TV slept. Caught here, where
+  /// the disconnect it comes with is already being dealt with.
+  Future<bool> connect({Duration timeout = const Duration(seconds: 10)}) {
+    final result = Completer<bool>();
+    runZonedGuarded(
+      () async {
+        // Only a value comes out: an error would not cross into the
+        // caller's zone, and the caller would wait for ever.
+        final ok = await _connect(timeout);
+        if (!result.isCompleted) result.complete(ok);
+      },
+      (e, _) {
+        _log('socket: $e');
+        if (!result.isCompleted) result.complete(false);
+      },
+    );
+    return result.future;
+  }
+
+  Future<bool> _connect(Duration timeout) async {
     final creds = generateCredentials(uuid, authMethod: authMethod);
     _clientId = creds.clientId;
 
@@ -208,18 +265,44 @@ class VidaaClient {
       ctx.usePrivateKey(keyPath!);
     }
 
-    final c = MqttServerClient.withPort(host, _clientId, port)
-      ..secure = true
-      ..securityContext = ctx
-      ..onBadCertificate =
-          ((Object cert) => true) // TV cert is self-signed
-      ..keepAlivePeriod = 30
-      // Not the library's own reconnect: it offers the same password again,
-      // and once the access token has expired the set refuses it forever —
-      // the client sat in "connecting" for days, every key dropped. The
-      // owner reconnects instead, through the refresh token.
-      ..autoReconnect = false
-      ..logging(on: false);
+    // Once, and within the caller's wait: the library's own three tries,
+    // five seconds apart, outlasted it, and went on opening sockets with
+    // the same client id after the panel had given up — which could take
+    // over the live session.
+    final c =
+        MqttServerClient.withPort(
+            host,
+            _clientId,
+            port,
+            maxConnectionAttempts: 1,
+          )
+          // The network connection, TLS and all, in under half the wait;
+          // the set's answer to the MQTT connect gets the rest. Never
+          // socketTimeout: setting it cuts that answer's wait to 10ms, so
+          // the one try always failed.
+          ..connectionTimeout = (timeout.inMilliseconds * 0.4).round().clamp(
+            1000,
+            30000,
+          )
+          ..connectTimeoutPeriod = (timeout.inMilliseconds * 0.5).round().clamp(
+            1000,
+            30000,
+          )
+          ..secure = true
+          ..securityContext = ctx
+          ..onBadCertificate =
+              ((Object cert) => true) // TV cert is self-signed
+          ..keepAlivePeriod = 30
+          // A set gone from the network without a word — unplugged, or out of
+          // Wi-Fi — is let go after a ping unanswered this long, rather than
+          // seeming connected for minutes while every key went nowhere.
+          ..disconnectOnNoResponsePeriod = 15
+          // Not the library's own reconnect: it offers the same password again,
+          // and once the access token has expired the set refuses it forever —
+          // the client sat in "connecting" for days, every key dropped. The
+          // owner reconnects instead, through the refresh token.
+          ..autoReconnect = false
+          ..logging(on: false);
 
     c.onConnected = () => _log('MQTT connected');
     c.onDisconnected = () {
@@ -238,9 +321,14 @@ class VidaaClient {
         .startClean();
     c.connectionMessage = connMsg;
 
+    refused = false;
     try {
       await c.connect().timeout(timeout);
     } catch (e) {
+      final rc = c.connectionStatus?.returnCode;
+      refused =
+          rc == MqttConnectReturnCode.notAuthorized ||
+          rc == MqttConnectReturnCode.badUsernameOrPassword;
       _log('connect error: $e');
       c.disconnect();
       return false;
@@ -317,6 +405,7 @@ class VidaaClient {
     } else if (topic == '/remoteapp/mobile/broadcast/ui_service/state') {
       if (d != null) {
         state.raw = d;
+        state.notePower(d['statetype']);
         state.sourceId = d['sourceid']?.toString();
         state.sourceName = d['sourcename']?.toString();
         _remarkActive();
@@ -432,9 +521,18 @@ class VidaaClient {
     String pin, {
     Duration timeout = const Duration(seconds: 12),
   }) async {
+    // Not int.parse: an empty box or a stray letter threw out of the tap
+    // handler and left the Pair button greyed out for good.
+    final code = int.tryParse(pin);
+    if (code == null) return null;
+    // Nothing to wait twelve seconds for if the code cannot be sent.
+    if (!isConnected) {
+      _log('PIN not sent, not connected');
+      return null;
+    }
     _publish(
       _tvTopic('ui_service', 'authenticationcode'),
-      jsonEncode({'authNum': int.parse(pin)}),
+      jsonEncode({'authNum': code}),
     );
     try {
       await _authAccepted.future.timeout(timeout);

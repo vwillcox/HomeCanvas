@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import 'config_service.dart';
+import 'http_client.dart';
 
 /// How finely a smart meter's history is asked for. Glowmarkt's own names.
 enum GlowPeriod {
@@ -27,18 +28,13 @@ class GlowmarktService {
   GlowmarktService(this._config, {Dio? dio})
     : _dio =
           dio ??
-          Dio(
-            BaseOptions(
-              baseUrl: 'https://api.glowmarkt.com/api/v0-1/',
-              connectTimeout: const Duration(seconds: 10),
-              // Its totals over months can take half a minute to add up.
-              receiveTimeout: const Duration(seconds: 60),
-              // The Bright app's own: Glowmarkt wants one, and this is what
-              // every Bright client sends.
-              headers: {
-                'applicationId': 'b0f1b774-a586-4f72-9edd-27ead8aa7a8d',
-              },
-            ),
+          httpClient(
+            baseUrl: 'https://api.glowmarkt.com/api/v0-1/',
+            // Its totals over months can take half a minute to add up.
+            receive: const Duration(seconds: 60),
+            // The Bright app's own: Glowmarkt wants one, and this is what
+            // every Bright client sends.
+            headers: {'applicationId': 'b0f1b774-a586-4f72-9edd-27ead8aa7a8d'},
           );
 
   final ConfigService _config;

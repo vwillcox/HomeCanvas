@@ -321,6 +321,11 @@ coming out of the Pi's speaker. Tap it to change style — bars, waveform, off �
 or set it in **Settings → Music → Visualiser**. It is still when the audio is
 not playing on this device, since there is then nothing here to draw.
 
+**Lyrics.** The expanded player shows the song's words beside the cover, the
+line being sung lit, from the free [LRCLIB](https://lrclib.net) — nothing to
+set up. The Lyrics button at the top of the player, or **Settings → Music →
+Lyrics**, turns them off; then the song's name isn't sent there.
+
 ### Spotify
 
 Two independent features — set up either or both. Both need Spotify Premium.

@@ -64,6 +64,7 @@ class KioskControlService {
     required this.run,
     required this.setDnd,
     this.playVideo,
+    this.cook,
     this.screenLit,
     this.voice,
     this.port = defaultPort,
@@ -79,6 +80,10 @@ class KioskControlService {
 
   /// Plays a video link; false when it is not one the panel can play.
   final bool Function(String url)? playVideo;
+
+  /// Opens the recipe on the page at a link, to cook from; false when it
+  /// is not a link.
+  final bool Function(String url)? cook;
 
   /// Told whether the screen is lit — see `ScreenState`.
   final void Function(bool lit)? screenLit;
@@ -187,6 +192,13 @@ class KioskControlService {
           });
         }
         return await reply(HttpStatus.ok, {'ok': true, 'did': did});
+      }
+      if (path == '/cook' && cook != null) {
+        final url = request.uri.queryParameters['url'] ?? '';
+        if (!cook!(url)) {
+          return await reply(HttpStatus.badRequest, {'error': 'url=https://…'});
+        }
+        return await reply(HttpStatus.ok, {'ok': true});
       }
       if (path == '/youtube' && playVideo != null) {
         final url = request.uri.queryParameters['url'] ?? '';

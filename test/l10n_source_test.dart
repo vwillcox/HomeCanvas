@@ -8,6 +8,8 @@ import 'package:home_canvas/dashboard/widget_registry.dart';
 import 'package:home_canvas/dashboard/widgets/widgets.dart';
 import 'package:home_canvas/l10n/l10n.dart';
 
+import 'needs_addons.dart';
+
 /// `l10n/en-GB.arb` is every string the app shows, by key, in British
 /// English — the file every language pack translates. It is written from the
 /// code, never by hand:
@@ -20,6 +22,7 @@ void main() {
   setUpAll(registerBuiltInWidgets);
 
   test('the source pack lists every string in the app', () {
+    if (skippedWithoutAddons()) return;
     final source = sourceStrings();
     final file = File('l10n/en-GB.arb');
     final written = const JsonEncoder.withIndent('  ').convert({
@@ -43,6 +46,7 @@ void main() {
   });
 
   test('every pack translates keys the app has, placeholders intact', () {
+    if (skippedWithoutAddons()) return;
     final source = sourceStrings();
     for (final f in Directory('assets/l10n').listSync().whereType<File>()) {
       if (!f.path.endsWith('.arb')) continue;
@@ -98,7 +102,7 @@ Map<String, String> sourceStrings() {
       add(key, english, 'font ${f.family}');
     }
   }
-  for (final c in WidgetCategory.order) {
+  for (final c in [...WidgetCategory.order, WidgetCategory.themes]) {
     add('category.${c.toLowerCase()}', c, 'WidgetCategory');
   }
 
