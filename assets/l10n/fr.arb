@@ -2255,5 +2255,6 @@
   "widget.youtube.option.source.label": "Afficher",
   "widget.youtube.option.url.help": "Pour « Une seule vidéo » : collez le lien du bouton Partager de YouTube. Un t= dans le lien démarre la vidéo à partir de ce moment.",
   "widget.youtube.option.url.label": "Lien de la vidéo",
-  "widget.youtube.pasteAYoutubeFloatplaneOr": "Collez un lien YouTube, Floatplane ou Nebula dans les réglages de ce widget, dans l'éditeur."
+  "widget.youtube.pasteAYoutubeFloatplaneOr": "Collez un lien YouTube, Floatplane ou Nebula dans les réglages de ce widget, dans l'éditeur.",
+  "nowPlaying.playingFrom": "Lecture depuis {device}"
 }

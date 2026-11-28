@@ -2255,5 +2255,6 @@
   "widget.youtube.option.source.label": "Mostrar",
   "widget.youtube.option.url.help": "Para \"Um vídeo\": cole o link do botão Partilhar do YouTube. Um t= no link inicia o vídeo a partir desse ponto.",
   "widget.youtube.option.url.label": "Link do vídeo",
-  "widget.youtube.pasteAYoutubeFloatplaneOr": "Cole uma ligação do YouTube, Floatplane ou Nebula nas definições deste mosaico, no editor."
+  "widget.youtube.pasteAYoutubeFloatplaneOr": "Cole uma ligação do YouTube, Floatplane ou Nebula nas definições deste mosaico, no editor.",
+  "nowPlaying.playingFrom": "A tocar a partir de {device}"
 }

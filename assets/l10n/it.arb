@@ -2255,5 +2255,6 @@
   "widget.youtube.option.source.label": "Mostra",
   "widget.youtube.option.url.help": "Per \"Un video\": incolla il link dal pulsante Condividi di YouTube. Un t= al suo interno avvia il video da quel punto.",
   "widget.youtube.option.url.label": "Link del video",
-  "widget.youtube.pasteAYoutubeFloatplaneOr": "Incolla un link YouTube, Floatplane o Nebula nelle impostazioni di questo widget nell'editor."
+  "widget.youtube.pasteAYoutubeFloatplaneOr": "Incolla un link YouTube, Floatplane o Nebula nelle impostazioni di questo widget nell'editor.",
+  "nowPlaying.playingFrom": "In riproduzione da {device}"
 }

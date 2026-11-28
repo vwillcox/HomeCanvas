@@ -2255,5 +2255,6 @@
   "widget.youtube.option.source.label": "Visa",
   "widget.youtube.option.url.help": "För \"En video\": klistra in länken från YouTubes Dela-knapp. Ett t= i den startar videon därifrån.",
   "widget.youtube.option.url.label": "Videolänk",
-  "widget.youtube.pasteAYoutubeFloatplaneOr": "Klistra in en YouTube-, Floatplane- eller Nebula-länk i den här widgetens inställningar i redigeraren."
+  "widget.youtube.pasteAYoutubeFloatplaneOr": "Klistra in en YouTube-, Floatplane- eller Nebula-länk i den här widgetens inställningar i redigeraren.",
+  "nowPlaying.playingFrom": "Spelas från {device}"
 }

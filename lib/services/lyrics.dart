@@ -303,7 +303,9 @@ class LyricsFinder {
     String album,
     Duration duration,
   ) async {
-    if (title.trim().isEmpty) return (null, true);
+    // No artist, nothing to look for: a player that only says what it is
+    // playing on ("Playing on Spotify") would find some song of that name.
+    if (title.trim().isEmpty || artist.trim().isEmpty) return (null, true);
     // The exact record first, which LRCLIB matches on all four; then a
     // search, for a title with "- Remastered" on it or an album it files
     // under another name.

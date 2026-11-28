@@ -2255,5 +2255,6 @@
   "widget.youtube.option.source.label": "Mostrar",
   "widget.youtube.option.url.help": "Para «Un vídeo»: pega el enlace del botón Compartir de YouTube. Un t= en él inicia el vídeo desde ese punto.",
   "widget.youtube.option.url.label": "Enlace del vídeo",
-  "widget.youtube.pasteAYoutubeFloatplaneOr": "Pega un enlace de YouTube, Floatplane o Nebula en los ajustes de este widget en el editor."
+  "widget.youtube.pasteAYoutubeFloatplaneOr": "Pega un enlace de YouTube, Floatplane o Nebula en los ajustes de este widget en el editor.",
+  "nowPlaying.playingFrom": "Reproduciendo desde {device}"
 }

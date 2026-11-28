@@ -274,6 +274,7 @@
   "modules.refresh": "Refresh",
   "modules.settings": "Settings",
   "modules.tvRemote": "TV Remote",
+  "nowPlaying.playingFrom": "Playing from {device}",
   "pin.cancel": "Cancel",
   "pin.pinMustBeAtLeast": "PIN must be at least 4 digits",
   "player.addToPlaylist": "Add to playlist",

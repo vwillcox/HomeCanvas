@@ -2255,5 +2255,6 @@
   "widget.youtube.option.source.label": "Vis",
   "widget.youtube.option.url.help": "Til “Én video”: indsæt linket fra YouTubes Del-knap. Et t= i det starter videoen derfra.",
   "widget.youtube.option.url.label": "Videolink",
-  "widget.youtube.pasteAYoutubeFloatplaneOr": "Indsæt et YouTube-, Floatplane- eller Nebula-link i feltets indstillinger i editoren."
+  "widget.youtube.pasteAYoutubeFloatplaneOr": "Indsæt et YouTube-, Floatplane- eller Nebula-link i feltets indstillinger i editoren.",
+  "nowPlaying.playingFrom": "Afspiller fra {device}"
 }

@@ -2255,5 +2255,6 @@
   "widget.youtube.option.source.label": "Taispeáin",
   "widget.youtube.option.url.help": "Do \"Físeán amháin\": greamaigh an nasc ó chnaipe Share YouTube. Tosaíonn t= ann an físeán ón bpointe sin.",
   "widget.youtube.option.url.label": "Nasc físeáin",
-  "widget.youtube.pasteAYoutubeFloatplaneOr": "Greamaigh nasc YouTube, Floatplane nó Nebula i socruithe na giuirléide seo san eagarthóir."
+  "widget.youtube.pasteAYoutubeFloatplaneOr": "Greamaigh nasc YouTube, Floatplane nó Nebula i socruithe na giuirléide seo san eagarthóir.",
+  "nowPlaying.playingFrom": "Á sheinm ó {device}"
 }

@@ -2255,5 +2255,6 @@
   "widget.youtube.option.source.label": "Vis",
   "widget.youtube.option.url.help": "For «Én video»: lim inn lenken fra YouTubes Del-knapp. En t= i den starter videoen derfra.",
   "widget.youtube.option.url.label": "Videolenke",
-  "widget.youtube.pasteAYoutubeFloatplaneOr": "Lim inn en YouTube-, Floatplane- eller Nebula-lenke i denne widgetens innstillinger i redigeringsverktøyet."
+  "widget.youtube.pasteAYoutubeFloatplaneOr": "Lim inn en YouTube-, Floatplane- eller Nebula-lenke i denne widgetens innstillinger i redigeringsverktøyet.",
+  "nowPlaying.playingFrom": "Spilles av fra {device}"
 }

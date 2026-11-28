@@ -2255,5 +2255,6 @@
   "widget.youtube.option.source.label": "Pokaż",
   "widget.youtube.option.url.help": "Dla „Jeden film”: wklej link z przycisku Udostępnij w YouTube. Parametr t= w linku uruchamia film od tego miejsca.",
   "widget.youtube.option.url.label": "Link do filmu",
-  "widget.youtube.pasteAYoutubeFloatplaneOr": "Wklej link YouTube, Floatplane lub Nebula w ustawieniach tego widżetu w edytorze."
+  "widget.youtube.pasteAYoutubeFloatplaneOr": "Wklej link YouTube, Floatplane lub Nebula w ustawieniach tego widżetu w edytorze.",
+  "nowPlaying.playingFrom": "Odtwarzane z urządzenia {device}"
 }

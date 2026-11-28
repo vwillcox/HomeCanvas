@@ -2255,5 +2255,6 @@
   "widget.youtube.option.source.label": "Tonen",
   "widget.youtube.option.url.help": "Voor \"Eén video\": plak de link van de knop Delen van YouTube. Een t= erin start de video vanaf dat punt.",
   "widget.youtube.option.url.label": "Videolink",
-  "widget.youtube.pasteAYoutubeFloatplaneOr": "Plak een YouTube-, Floatplane- of Nebula-link bij de instellingen van deze widget in de editor."
+  "widget.youtube.pasteAYoutubeFloatplaneOr": "Plak een YouTube-, Floatplane- of Nebula-link bij de instellingen van deze widget in de editor.",
+  "nowPlaying.playingFrom": "Speelt af vanaf {device}"
 }

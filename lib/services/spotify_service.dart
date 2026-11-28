@@ -83,8 +83,30 @@ class SpotifyService extends ChangeNotifier implements PlaybackSource {
       'user-read-recently-played user-top-read';
 
   static const Duration idleTimeout = Duration(minutes: 1);
-  static const Duration _activePoll = Duration(seconds: 2);
-  static const Duration _idlePoll = Duration(seconds: 10);
+
+  /// How often Spotify is asked what is playing. Every ask counts against
+  /// the panel's Spotify app, whose limit Spotify does not publish: asked
+  /// every 2s with music on all day, the panel was shut out for hours and
+  /// said nothing was playing all morning. So it asks as seldom as still
+  /// looks live — the position ticks on here, the end of a track is asked
+  /// about when it comes ([_askAtTrackEnd]), anything done on the panel is
+  /// asked about at once, and so is music starting over Bluetooth ([nudge]):
+  ///
+  /// - [_activePoll] while music plays on a lit screen, for what is done
+  ///   elsewhere (a skip on the phone);
+  /// - [_idlePoll] otherwise, often enough to see music start;
+  /// - [_quietPoll] once nothing has played for [_quietAfter]: overnight,
+  ///   and most of the day.
+  static const Duration _activePoll = Duration(seconds: 5);
+  static const Duration _idlePoll = Duration(seconds: 15);
+  static const Duration _quietPoll = Duration(minutes: 1);
+  static const Duration _quietAfter = Duration(minutes: 15);
+
+  /// Each 429 on the player doubles those, up to [_maxSlower] times, until
+  /// [_forgiveAfter] passes without one: if the limit is tighter than they
+  /// allow, the panel settles under it rather than finding it again daily.
+  static const int _maxSlower = 4;
+  static const Duration _forgiveAfter = Duration(days: 1);
 
   /// Advances the shown position between real polls, so the progress bar
   /// moves on its own instead of jumping once every [_activePoll] — the
@@ -109,23 +131,27 @@ class SpotifyService extends ChangeNotifier implements PlaybackSource {
   void _screenChanged() {
     if (!_settings.isConfigured) return;
     if (_lit) {
-      unawaited(_poll());
+      unawaited(_poll(asked: true));
       _tickTimer ??= Timer.periodic(_tick, (_) => _advancePosition());
-      if (_now.isPlaying) _speedUpPolling();
     } else {
       _tickTimer?.cancel();
       _tickTimer = null;
-      _slowDownPolling();
+      _endTimer?.cancel();
+      _endTimer = null;
     }
+    _reschedule();
   }
 
   final ConfigService _configService;
-  final Dio _dio = httpClient(
-    connect: const Duration(seconds: 6),
-    receive: const Duration(seconds: 8),
-  );
+  final Dio _dio;
 
-  SpotifyService(this._configService);
+  SpotifyService(this._configService, {@visibleForTesting Dio? dio})
+    : _dio =
+          dio ??
+          httpClient(
+            connect: const Duration(seconds: 6),
+            receive: const Duration(seconds: 8),
+          );
 
   SpotifySettings get _settings => _configService.config.spotify;
 
@@ -133,7 +159,28 @@ class SpotifyService extends ChangeNotifier implements PlaybackSource {
   DateTime? _accessTokenExpiry;
   Timer? _pollTimer;
   Timer? _tickTimer;
-  bool _fastPolling = false;
+
+  /// The interval [_pollTimer] runs at.
+  Duration? _every;
+
+  /// The ask for just after the track playing ends.
+  Timer? _endTimer;
+
+  /// An ask is on its way: another is not started over it, which would
+  /// only count twice. The time it was started, for [nudge].
+  bool _polling = false;
+  DateTime? _polledAt;
+
+  /// Something was done, or happened, while an ask was on its way, whose
+  /// answer may already be out of date: asked again once it is in.
+  bool _askAgain = false;
+
+  /// When music was last seen playing, or polling began.
+  DateTime _lastPlaying = DateTime.now();
+
+  /// How many times slower than the intervals above, and since when.
+  int _slower = 1;
+  DateTime? _limitedAt;
 
   NowPlaying _now = const NowPlaying();
   @override
@@ -180,10 +227,11 @@ class SpotifyService extends ChangeNotifier implements PlaybackSource {
   /// Kept deliberately infrequent. This endpoint is rate-limited far more
   /// tightly than the player one, and its answer changes rarely — polling it
   /// every 2s (the main poll interval) earned an hours-long 429 block, and
-  /// even 20s was more than it tolerates sustained.
+  /// even 20s was more than it tolerates sustained. A new track is always
+  /// checked; this is only for a like made elsewhere during one.
   DateTime? _lastLikedRecheckAt;
   String? _lastLikedRecheckTrackId;
-  static const Duration _likedRecheckInterval = Duration(minutes: 1);
+  static const Duration _likedRecheckInterval = Duration(minutes: 3);
 
   /// When Spotify 429s, it says how long to stay away for — sometimes hours.
   /// Retrying regardless (as this used to) never recovers and only keeps the
@@ -230,10 +278,9 @@ class SpotifyService extends ChangeNotifier implements PlaybackSource {
   /// Call after settings change — right after [connect] or [disconnect].
   void refreshFromSettings() {
     _pollTimer?.cancel();
-    // _speedUpPolling() is a no-op while this is set, so leaving it true
-    // after cancelling the timer above means polling never restarts and the
-    // panel sits frozen on whatever it last saw.
-    _fastPolling = false;
+    _pollTimer = null;
+    _endTimer?.cancel();
+    _endTimer = null;
     if (_settings.isConfigured) {
       _beginPolling();
     } else {
@@ -248,8 +295,9 @@ class SpotifyService extends ChangeNotifier implements PlaybackSource {
   }
 
   void _beginPolling() {
-    unawaited(_poll());
-    _speedUpPolling();
+    _lastPlaying = DateTime.now();
+    unawaited(_poll(asked: true));
+    _reschedule();
     if (_lit) _tickTimer ??= Timer.periodic(_tick, (_) => _advancePosition());
   }
 
@@ -427,6 +475,7 @@ display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
 
   Future<void> disconnect() async {
     _pollTimer?.cancel();
+    _pollTimer = null;
     _accessToken = null;
     _settings.clientId = '';
     _settings.refreshToken = '';
@@ -592,10 +641,42 @@ display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
 
   // ---- Polling --------------------------------------------------------------
 
-  Future<void> _poll() async {
-    final token = await _validAccessToken();
-    if (token == null) return;
+  /// One poll of the player, for the tests.
+  @visibleForTesting
+  Future<void> pollOnce() => _poll();
+
+  /// How often the player is being asked, for the tests.
+  @visibleForTesting
+  Duration? get pollEvery => _every;
+
+  /// Asks now, unless it was asked a moment ago: music has started where
+  /// the panel can tell — over Bluetooth — and it may well be Spotify.
+  void nudge() {
+    if (!_settings.isConfigured) return;
+    final at = _polledAt;
+    if (at != null && DateTime.now().difference(at) < _nudgeGap) return;
+    unawaited(_poll(asked: true));
+  }
+
+  static const Duration _nudgeGap = Duration(seconds: 3);
+
+  /// [asked] is for anything but the timer: something done on the panel,
+  /// or music starting, whose ask must not be lost to one already going.
+  Future<void> _poll({bool asked = false}) async {
+    // The timers keep firing through a 429; the poll itself must not. It
+    // used to ask every ten seconds through a block of hours, each reply a
+    // fresh 429 counting the same block down — the asking that keeps it
+    // alive, as [_rateLimitedUntil] says.
+    if (_rateLimited('player poll')) return;
+    if (_polling) {
+      if (asked) _askAgain = true;
+      return;
+    }
+    _polling = true;
+    _polledAt = DateTime.now();
     try {
+      final token = await _validAccessToken();
+      if (token == null) return;
       final r = await _dio.get(
         '$_apiBase/me/player',
         // Without this a podcast episode comes back as `item: null` — which
@@ -609,10 +690,80 @@ display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
       }
       _applyPlayerState((r.data as Map).cast<String, dynamic>());
     } catch (e) {
-      if (!_noteIfRateLimited(e, 'player poll')) {
+      if (_noteIfRateLimited(e, 'player poll')) {
+        _limited();
+      } else {
         debugPrint('Spotify poll error: $e');
       }
+    } finally {
+      _polling = false;
+      _reschedule();
+      if (_askAgain) {
+        _askAgain = false;
+        unawaited(_poll(asked: true));
+      }
     }
+  }
+
+  /// The player answered 429: slower from now on (see [_maxSlower]), and
+  /// nothing shown until the block passes. What was showing would only go
+  /// stale, and with it gone the phone over Bluetooth can show what it
+  /// knows instead.
+  void _limited() {
+    _slower = min(_slower * 2, _maxSlower);
+    _limitedAt = DateTime.now();
+    _endTimer?.cancel();
+    _endTimer = null;
+    if (!_available) return;
+    _available = false;
+    _now = const NowPlaying();
+    _artUrl = null;
+    _isLiked = false;
+    _likedCheckedForTrackId = null;
+    notifyListeners();
+  }
+
+  /// How often to ask, for what is on the screen now.
+  Duration get _wantedEvery {
+    final now = DateTime.now();
+    final limited = _limitedAt;
+    if (limited != null && now.difference(limited) >= _forgiveAfter) {
+      _slower = 1;
+      _limitedAt = null;
+    }
+    final Duration every;
+    if (_lit && _available && _now.isPlaying) {
+      every = _activePoll;
+    } else if (now.difference(_lastPlaying) >= _quietAfter) {
+      every = _quietPoll;
+    } else {
+      every = _idlePoll;
+    }
+    return every * _slower;
+  }
+
+  /// Sets [_pollTimer] going at [_wantedEvery], if it is not already.
+  void _reschedule() {
+    if (!_settings.isConfigured) return;
+    final every = _wantedEvery;
+    if (_pollTimer != null && every == _every) return;
+    _pollTimer?.cancel();
+    _every = every;
+    _pollTimer = Timer.periodic(every, (_) => _poll());
+  }
+
+  /// Asks again just after the track ends, so the next one shows as it
+  /// starts rather than up to a whole interval later.
+  void _askAtTrackEnd() {
+    _endTimer?.cancel();
+    _endTimer = null;
+    if (!_lit || !_now.isPlaying || _now.duration <= Duration.zero) return;
+    final left = _now.duration - _now.position;
+    if (left <= Duration.zero) return;
+    _endTimer = Timer(left + const Duration(seconds: 1), () {
+      _endTimer = null;
+      unawaited(_poll(asked: true));
+    });
   }
 
   /// When the replies started saying nothing is playing, or null while they
@@ -637,7 +788,8 @@ display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
       _lastLikedRecheckTrackId = null;
       notifyListeners();
     }
-    _slowDownPolling();
+    _endTimer?.cancel();
+    _endTimer = null;
   }
 
   void _applyPlayerState(Map<String, dynamic> data) {
@@ -647,7 +799,7 @@ display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
       return;
     }
     _emptySince = null;
-    _speedUpPolling();
+    if (reply.now.isPlaying) _lastPlaying = DateTime.now();
 
     final device = data['device'] as Map<String, dynamic>?;
     final trackId = reply.now.trackId;
@@ -679,30 +831,9 @@ display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
       if (vol > 0) _volumeBeforeMute = vol;
     }
     _available = true;
+    _askAtTrackEnd();
     _updateIdleTimer();
     notifyListeners();
-  }
-
-  /// Poll briskly while a track is showing, and back off when nothing is —
-  /// there's no point hammering the API once a minute has gone by with
-  /// nothing to report.
-  void _speedUpPolling() {
-    if (_fastPolling) return;
-    // Nobody is looking: the idle rate still sees music start.
-    if (!_lit) {
-      _pollTimer ??= Timer.periodic(_idlePoll, (_) => _poll());
-      return;
-    }
-    _fastPolling = true;
-    _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(_activePoll, (_) => _poll());
-  }
-
-  void _slowDownPolling() {
-    if (!_fastPolling) return;
-    _fastPolling = false;
-    _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(_idlePoll, (_) => _poll());
   }
 
   /// Playing -> show immediately and cancel any pending hide.
@@ -754,7 +885,7 @@ display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
       }
     }
     // Reflect the change immediately rather than waiting for the next poll.
-    unawaited(_poll());
+    unawaited(_poll(asked: true));
   }
 
   @override
@@ -1054,7 +1185,7 @@ display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
         debugPrint('Spotify transferPlayback error: $e');
       }
     }
-    unawaited(_poll());
+    unawaited(_poll(asked: true));
   }
 
   /// What's coming up next. The response's `queue` is upcoming items only —
@@ -1135,7 +1266,7 @@ display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
         debugPrint('Spotify play error: $e');
       }
     }
-    unawaited(_poll());
+    unawaited(_poll(asked: true));
   }
 
   Future<void> queue(SpotifyItem item) async {
@@ -1149,6 +1280,7 @@ display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
     _pollTimer?.cancel();
     _tickTimer?.cancel();
     _idleTimer?.cancel();
+    _endTimer?.cancel();
     _dio.close();
     super.dispose();
   }

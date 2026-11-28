@@ -2255,5 +2255,6 @@
   "widget.youtube.option.source.label": "Anzeigen",
   "widget.youtube.option.url.help": "Für „Ein Video“: den Link von YouTubes Teilen-Schaltfläche einfügen. Ein t= darin startet das Video ab dieser Stelle.",
   "widget.youtube.option.url.label": "Video-Link",
-  "widget.youtube.pasteAYoutubeFloatplaneOr": "Füge in den Einstellungen dieser Kachel im Editor einen YouTube-, Floatplane- oder Nebula-Link ein."
+  "widget.youtube.pasteAYoutubeFloatplaneOr": "Füge in den Einstellungen dieser Kachel im Editor einen YouTube-, Floatplane- oder Nebula-Link ein.",
+  "nowPlaying.playingFrom": "Wiedergabe von {device}"
 }

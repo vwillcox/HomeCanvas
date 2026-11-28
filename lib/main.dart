@@ -153,6 +153,14 @@ void main() async {
   // to show. A no-op until the one-time login is done in Settings.
   final spotify = SpotifyService(config)..screen = screen;
   unawaited(spotify.start());
+  // Music starting over Bluetooth is often Spotify, on the phone or a Mac:
+  // Spotify is asked at once, rather than at its next, slower poll.
+  var bluetoothPlaying = false;
+  nowPlaying.addListener(() {
+    final playing = nowPlaying.now.isPlaying;
+    if (playing && !bluetoothPlaying) spotify.nudge();
+    bluetoothPlaying = playing;
+  });
 
   // Internet radio for the Radio widget. Music already playing is paused
   // rather than talked over.

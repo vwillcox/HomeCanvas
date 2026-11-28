@@ -5,6 +5,7 @@ import 'package:dbus/dbus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' show Icons, IconData;
 
+import '../l10n/l10n.dart';
 import 'http_client.dart';
 import 'itunes_art.dart';
 import 'playback_source.dart';
@@ -140,6 +141,10 @@ class NowPlayingService extends ChangeNotifier implements PlaybackSource {
   String? get artUrl => _artUrl;
   String _artForKey = '';
   final Map<String, String?> _artCache = {};
+
+  /// The title as the sender gave it, which [now] may not show: see
+  /// [shownTitle].
+  String _sentTitle = '';
   final _dio = httpClient();
 
   Future<void> start() async {
@@ -330,12 +335,31 @@ class NowPlayingService extends ChangeNotifier implements PlaybackSource {
     _transport = null;
     _transportPath = null;
     _now = const NowPlaying();
+    _sentTitle = '';
     _artUrl = null;
     _artForKey = '';
     _idleTimer?.cancel();
     _idleTimer = null;
     _idleHidden = false;
     notifyListeners();
+  }
+
+  /// Whether the sender said what is playing. AVRCP's "Not Provided" is it
+  /// saying it has not.
+  static bool named(String title) =>
+      title.isNotEmpty && title != 'Not Provided';
+
+  /// What to call the track. Some senders say they are playing and never say
+  /// what — a Mac playing Spotify, for one — and showed as nothing playing
+  /// while music came out of the panel. Named after the device instead, with
+  /// the controls still working: as Spotify's own "Playing on Spotify" for
+  /// audio it will not name. Paused and unnamed is nothing, as there.
+  @visibleForTesting
+  static String shownTitle(String title, String status, String device) {
+    if (named(title) || status != 'playing') return title;
+    return tr('nowPlaying.playingFrom', 'Playing from {device}', {
+      'device': device.isEmpty ? 'Bluetooth' : device,
+    });
   }
 
   /// Friendly name of the phone, from the parent Device1 object.
@@ -374,7 +398,7 @@ class NowPlayingService extends ChangeNotifier implements PlaybackSource {
     String? deviceName,
     bool notify = true,
   }) {
-    var title = _now.title;
+    var title = _sentTitle;
     var artist = _now.artist;
     var album = _now.album;
     var duration = _now.duration;
@@ -404,8 +428,10 @@ class NowPlayingService extends ChangeNotifier implements PlaybackSource {
         ? Duration(milliseconds: (props['Position'] as DBusUint32).value)
         : _now.position;
 
+    _sentTitle = title;
+    final device = deviceName ?? _now.deviceName;
     _now = NowPlaying(
-      title: title,
+      title: shownTitle(title, status, device),
       artist: artist,
       album: album,
       duration: duration,
@@ -413,12 +439,12 @@ class NowPlayingService extends ChangeNotifier implements PlaybackSource {
       status: status,
       repeat: repeat,
       shuffle: shuffleRaw != 'off',
-      deviceName: deviceName ?? _now.deviceName,
+      deviceName: device,
     );
 
     _updateIdleTimer();
 
-    if (_now.hasTrack && _now.trackKey != _artForKey) {
+    if (named(title) && _now.hasTrack && _now.trackKey != _artForKey) {
       _artForKey = _now.trackKey;
       unawaited(_lookupArtwork(_now.artist, _now.title));
     }

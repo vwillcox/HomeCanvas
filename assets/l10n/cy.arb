@@ -2255,5 +2255,6 @@
   "widget.youtube.option.source.label": "Dangos",
   "widget.youtube.option.url.help": "Ar gyfer “Un fideo”: gluda'r ddolen o fotwm Rhannu YouTube. Mae t= ynddi'n dechrau'r fideo o fan yna.",
   "widget.youtube.option.url.label": "Dolen fideo",
-  "widget.youtube.pasteAYoutubeFloatplaneOr": "Gluda ddolen YouTube, Floatplane neu Nebula yng ngosodiadau'r teclyn hwn yn y golygydd."
+  "widget.youtube.pasteAYoutubeFloatplaneOr": "Gluda ddolen YouTube, Floatplane neu Nebula yng ngosodiadau'r teclyn hwn yn y golygydd.",
+  "nowPlaying.playingFrom": "Yn chwarae o {device}"
 }
